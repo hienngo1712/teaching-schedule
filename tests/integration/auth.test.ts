@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { authorizeCredentials, RateLimitedError } from "@/server/auth-credentials"
 import { db } from "@/server/db"
 import bcrypt from "bcryptjs"
+import { getAuthedCaller, publicCaller } from "../helpers/trpc"
 
 describe("Auth — authorizeCredentials", () => {
   beforeEach(async () => {
@@ -86,5 +87,69 @@ describe("Auth — authorizeCredentials", () => {
 
     const user = await authorizeCredentials("teacher", "teacher123", null)
     expect(user).not.toBeNull()
+  })
+})
+
+describe("Auth router — me / changePassword", () => {
+  it("✓ auth.me → trả user info", async () => {
+    const caller = await getAuthedCaller()
+    const me = await caller.auth.me()
+    expect(me.username).toBe("teacher")
+    expect(me).toHaveProperty("fullName")
+  })
+
+  it("✗ auth.me không có session → UNAUTHORIZED", async () => {
+    await expect(publicCaller.auth.me()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    })
+  })
+
+  it("✓ auth.changePassword đúng currentPassword → đổi thành công + login với pass mới", async () => {
+    // Reset password về default trước test (test trước có thể đã đổi)
+    await db.user.update({
+      where: { username: "teacher" },
+      data: { passwordHash: await bcrypt.hash("teacher123", 4) },
+    })
+    await db.loginAttempt.deleteMany()
+
+    const caller = await getAuthedCaller()
+    const result = await caller.auth.changePassword({
+      currentPassword: "teacher123",
+      newPassword: "NewSecret@2026",
+    })
+    expect(result.success).toBe(true)
+
+    // Login với pass cũ → fail
+    expect(await authorizeCredentials("teacher", "teacher123", null)).toBeNull()
+    // Login với pass mới → OK
+    expect(
+      await authorizeCredentials("teacher", "NewSecret@2026", null)
+    ).not.toBeNull()
+
+    // Restore
+    await db.user.update({
+      where: { username: "teacher" },
+      data: { passwordHash: await bcrypt.hash("teacher123", 4) },
+    })
+  })
+
+  it("✗ auth.changePassword sai currentPassword → BAD_REQUEST", async () => {
+    const caller = await getAuthedCaller()
+    await expect(
+      caller.auth.changePassword({
+        currentPassword: "wrong-password",
+        newPassword: "AnotherSecret@2026",
+      })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  })
+
+  it("✗ auth.changePassword newPassword < 10 ký tự → validation error", async () => {
+    const caller = await getAuthedCaller()
+    await expect(
+      caller.auth.changePassword({
+        currentPassword: "teacher123",
+        newPassword: "short",
+      })
+    ).rejects.toThrow()
   })
 })

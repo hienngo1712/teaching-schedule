@@ -130,10 +130,10 @@ Trình tự trong 1 phiên:
 - [x] **Test:** Guard route, login OK, rate limit message ✓ (build pass; verify thủ công sau khi deploy)
 
 ### Sub 2.3 — Auth tRPC (me + changePassword) + Logout
-- [ ] Tạo `src/server/trpc/routers/auth.ts` (`auth.me`, `auth.changePassword`)
-- [ ] Thêm vào root.ts
-- [ ] Cập nhật AppHeader: tên GV, nút Logout, link "Đổi mật khẩu"
-- [ ] **Test:** pass ✓
+- [x] Tạo `src/server/trpc/routers/auth.ts` (`auth.me`, `auth.changePassword`)
+- [x] Thêm vào root.ts
+- [x] Cập nhật AppHeader: tên GV, nút Logout, link "Đổi mật khẩu" (DropdownMenu + ChangePasswordDialog)
+- [x] **Test:** pass ✓ (5 cases mới: me OK/UNAUTHORIZED, changePassword OK/sai currentPw/validation)
 
 ### Sub 2.4 — `_base.service.ts` — Ownership Helper
 - [ ] Tạo `src/server/services/_base.service.ts` với `assertOwnership()`

@@ -1,14 +1,22 @@
 "use client"
 
+import { signOut, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
-import { LogOut, Menu } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { KeyRound, LogOut, Menu } from "lucide-react"
+import { ChangePasswordDialog } from "./ChangePasswordDialog"
 
 type Props = {
   onToggleSidebar?: () => void
-  fullName?: string
 }
 
-function getInitials(name?: string) {
+function getInitials(name?: string | null) {
   if (!name) return "GV"
   const parts = name.trim().split(/\s+/)
   const first = parts[0]?.[0] ?? ""
@@ -16,7 +24,10 @@ function getInitials(name?: string) {
   return (first + last).toUpperCase() || "GV"
 }
 
-export function AppHeader({ onToggleSidebar, fullName = "Giáo viên" }: Props) {
+export function AppHeader({ onToggleSidebar }: Props) {
+  const { data: session } = useSession()
+  const fullName = session?.user?.fullName ?? session?.user?.username ?? "Giáo viên"
+
   return (
     <header className="h-14 border-b border-slate-200 bg-white px-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -30,18 +41,39 @@ export function AppHeader({ onToggleSidebar, fullName = "Giáo viên" }: Props) 
           <Menu className="size-5" />
         </Button>
         <span className="text-sm text-slate-600 hidden sm:inline">
-          Xin chào, <span className="font-medium text-slate-900">{fullName}</span>
+          Xin chào,{" "}
+          <span className="font-medium text-slate-900">{fullName}</span>
         </span>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="size-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold">
-          {getInitials(fullName)}
-        </div>
-        <Button variant="ghost" size="sm" className="gap-1.5">
-          <LogOut className="size-4" />
-          <span className="hidden sm:inline">Đăng xuất</span>
-        </Button>
-      </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="size-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold hover:bg-indigo-200"
+            aria-label="Mở menu tài khoản"
+          >
+            {getInitials(fullName)}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <ChangePasswordDialog
+            trigger={
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <KeyRound className="size-4 mr-2" />
+                Đổi mật khẩu
+              </DropdownMenuItem>
+            }
+          />
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => signOut({ callbackUrl: "/login" })}
+            className="text-red-600 focus:text-red-700"
+          >
+            <LogOut className="size-4 mr-2" />
+            Đăng xuất
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   )
 }
