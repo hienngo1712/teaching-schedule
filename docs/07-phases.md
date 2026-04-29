@@ -136,9 +136,9 @@ Trình tự trong 1 phiên:
 - [x] **Test:** pass ✓ (5 cases mới: me OK/UNAUTHORIZED, changePassword OK/sai currentPw/validation)
 
 ### Sub 2.4 — `_base.service.ts` — Ownership Helper
-- [ ] Tạo `src/server/services/_base.service.ts` với `assertOwnership()`
-- [ ] **Quan trọng:** Trả `NOT_FOUND` thay `FORBIDDEN` (xem lý do trong `docs/03-api.md`)
-- [ ] Viết unit test cho `assertOwnership`:
+- [x] Tạo `src/server/services/_base.service.ts` với `assertOwnership()`
+- [x] **Quan trọng:** Trả `NOT_FOUND` thay `FORBIDDEN` (xem lý do trong `docs/03-api.md`)
+- [x] Viết unit test cho `assertOwnership`:
   - null record → NOT_FOUND ✓
   - userId khác → NOT_FOUND ✓
   - userId đúng → không throw ✓
