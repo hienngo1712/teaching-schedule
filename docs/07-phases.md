@@ -218,11 +218,11 @@ Trình tự trong 1 phiên:
 - [x] **Test:** schema tests (6 cases) + time helper tests (11 cases) pass ✓ (41/41 unit tests)
 
 ### Sub 4.1b — Subject Router ← MỚI (sub-phase riêng)
-- [ ] Tạo `src/server/trpc/routers/subject.ts` (list, create, update, delete/soft)
-- [ ] Thêm vào root.ts
-- [ ] Viết `tests/integration/subject.test.ts` (8 cases)
-- [ ] **Test:** pass ✓
-- [ ] **Review 1:** list sort đúng? isDefault constraint? Không xóa subject đang dùng?
+- [x] Tạo `src/server/trpc/routers/subject.ts` (list, create, update, delete/soft)
+- [x] Thêm vào root.ts
+- [x] Viết `tests/integration/subject.test.ts` (8 cases)
+- [x] **Test:** pass ✓ (78/78 toàn bộ test, build OK)
+- [x] **Review 1:** list sort sortOrder ASC ✓; isDefault=true tự unset cái khác ✓; chặn xóa subject đang dùng + chặn xóa subject cuối cùng ✓
 
 ### Sub 4.2 — tRPC Session Router (CRUD cơ bản)
 - [ ] Tạo `src/server/trpc/routers/session.ts` (getMonth, create, update, delete)
