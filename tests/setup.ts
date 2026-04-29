@@ -29,6 +29,14 @@ beforeAll(async () => {
       fullName: "Giáo viên Test",
     },
   })
+
+  await db.user.create({
+    data: {
+      username: "teacher2",
+      passwordHash: await bcrypt.hash("teacher123", 4),
+      fullName: "Giáo viên Test 2",
+    },
+  })
 })
 
 afterAll(async () => {

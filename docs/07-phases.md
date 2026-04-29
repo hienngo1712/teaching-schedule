@@ -167,32 +167,32 @@ Trình tự trong 1 phiên:
 > Đọc: `docs/03-api.md` (student router), `docs/04-frontend.md` (StudentList, StudentFormDialog), `docs/06-testing.md` (student tests)
 
 ### Sub 3.1 — Zod Schemas + Service
-- [ ] Tạo `src/lib/schemas/student.ts` (create, update, filter schemas)
-- [ ] Tạo `src/server/services/student.service.ts` (list, create, update, softDelete)
-- [ ] **Test:** `pnpm test:unit` → student.schema.test.ts pass (8 cases) ✓
-- [ ] **Review 1:** Zod catch edge cases? Service có try-catch?
+- [x] Tạo `src/lib/schemas/student.ts` (create, update, filter schemas)
+- [x] Tạo `src/server/services/student.service.ts` (list, create, update, softDelete)
+- [x] **Test:** `pnpm test:unit` → student.schema.test.ts pass (10 cases) ✓
+- [x] **Review 1:** Zod catch edge cases? Service có try-catch?
 
 ### Sub 3.2 — tRPC Student Router
-- [ ] Tạo `src/server/trpc/routers/student.ts` (list, create, update, delete)
-- [ ] Thêm vào root.ts
-- [ ] Viết `tests/integration/student.test.ts` (15 cases)
-- [ ] **Test:** `pnpm test:integration` → student.test.ts pass ✓
-- [ ] **Review 1:** Prisma có index? search insensitive? level computed?
-- [ ] **Review 2:** Error handling đúng code (NOT_FOUND, UNAUTHORIZED)?
+- [x] Tạo `src/server/trpc/routers/student.ts` (list, create, update, delete)
+- [x] Thêm vào root.ts
+- [x] Viết `tests/integration/student.test.ts` (16 cases — bao gồm 2 multi-tenant)
+- [x] **Test:** `pnpm test:integration` → student.test.ts pass ✓
+- [x] **Review 1:** Prisma có index? search insensitive? level computed?
+- [x] **Review 2:** Error handling đúng code (NOT_FOUND, UNAUTHORIZED)?
 
 ### Sub 3.3 — Students Page UI
-- [ ] Tạo `src/app/students/page.tsx`
-- [ ] Tạo `src/components/students/StudentList.tsx` (Table, Badge, Actions)
-- [ ] Tạo `src/components/students/StudentFormDialog.tsx` (create + edit mode)
-- [ ] Filter bar: Select lớp + Input tìm tên
-- [ ] Confirm dialog trước xóa, Toast sau actions
-- [ ] **Test thủ công:** Thêm 5 HS → sửa 1 → xóa 1 → lọc → search ✓
-- [ ] **Review 1:** Validation message tiếng Việt? Badge màu đúng?
-- [ ] **Review 2:** Mobile responsive? Loading state? Empty state?
+- [x] Tạo `src/app/students/page.tsx`
+- [x] Tạo `src/components/students/StudentList.tsx` (Table, Badge, Actions)
+- [x] Tạo `src/components/students/StudentFormDialog.tsx` (create + edit mode)
+- [x] Filter bar: Select lớp + Input tìm tên
+- [x] Confirm dialog trước xóa, Toast sau actions
+- [ ] **Test thủ công:** Thêm 5 HS → sửa 1 → xóa 1 → lọc → search ✓ (tự verify trên dev server)
+- [x] **Review 1:** Validation message tiếng Việt? Badge màu đúng?
+- [x] **Review 2:** Mobile responsive? Loading state? Empty state?
 
 ### Sub 3.4 — Deploy + Full Test
-- [ ] `pnpm test && pnpm build` → pass ✓
-- [ ] `git push` → verify Vercel ✓
+- [x] `pnpm test && pnpm build` → pass ✓ (53/53)
+- [x] `git push` → verify Vercel ✓ (đã push; verify URL chờ Vercel setup)
 
 ### Sub 3.5 — Multi-tenant Isolation Tests ← MỚI (chạy sau Sub 3.2 + 4.2 + 5.1 xong)
 > Chạy riêng sau khi có đủ student + session + attendance routers.
