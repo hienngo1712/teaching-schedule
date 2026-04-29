@@ -1,7 +1,15 @@
+import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GraduationCap } from "lucide-react"
+import { auth } from "@/server/auth"
+import { LoginForm } from "./LoginForm"
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await auth()
+  if (session?.user) {
+    redirect("/calendar")
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -12,14 +20,10 @@ export default function LoginPage() {
             </div>
           </div>
           <CardTitle className="text-xl">Quản lý lịch dạy</CardTitle>
-          <p className="text-sm text-slate-500">
-            Form đăng nhập sẽ hoàn thiện ở Phase 2.
-          </p>
+          <p className="text-sm text-slate-500">Đăng nhập để tiếp tục</p>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-400">
-            Login form (placeholder)
-          </div>
+          <LoginForm />
         </CardContent>
       </Card>
     </div>

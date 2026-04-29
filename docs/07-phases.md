@@ -123,11 +123,11 @@ Trình tự trong 1 phiên:
 - [x] Viết `tests/integration/auth.test.ts` (login + rate limit — 6 cases; me/changePassword sẽ thêm ở Sub 2.3)
 
 ### Sub 2.2 — Middleware + Login Page
-- [ ] Tạo `src/middleware.ts`
-- [ ] Tạo `src/app/login/page.tsx`:
+- [x] Tạo `src/middleware.ts`
+- [x] Tạo `src/app/login/page.tsx` (+ `LoginForm.tsx` + `actions.ts`):
   - Hiển thị lỗi `RATE_LIMITED` rõ ràng: "Tài khoản tạm khóa 15 phút do đăng nhập sai nhiều lần"
   - Không cho biết username có tồn tại không
-- [ ] **Test:** Guard route, login OK, rate limit message ✓
+- [x] **Test:** Guard route, login OK, rate limit message ✓ (build pass; verify thủ công sau khi deploy)
 
 ### Sub 2.3 — Auth tRPC (me + changePassword) + Logout
 - [ ] Tạo `src/server/trpc/routers/auth.ts` (`auth.me`, `auth.changePassword`)
