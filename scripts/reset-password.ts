@@ -2,7 +2,7 @@
 //
 // Cách dùng: pnpm user:reset-pw --username giaovien2 --password "MatKhauMoi@2026"
 import { PrismaClient } from "@prisma/client"
-import bcrypt from "bcryptjs"
+import bcrypt from "bcrypt"
 import { parseArgs } from "node:util"
 
 const db = new PrismaClient()

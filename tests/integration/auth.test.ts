@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { authorizeCredentials, RateLimitedError } from "@/server/auth-credentials"
 import { db } from "@/server/db"
-import bcrypt from "bcryptjs"
+import bcrypt from "bcrypt"
 import { getAuthedCaller, publicCaller } from "../helpers/trpc"
 
 describe("Auth — authorizeCredentials", () => {

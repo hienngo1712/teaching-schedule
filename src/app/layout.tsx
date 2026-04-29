@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import localFont from "next/font/local"
 import "./globals.css"
 import { TRPCProvider } from "@/components/providers/TRPCProvider"
-import { SessionProvider } from "@/components/providers/SessionProvider"
 import { Toaster } from "@/components/ui/sonner"
 
 const geistSans = localFont({
@@ -21,6 +20,8 @@ export const metadata: Metadata = {
   description: "Ứng dụng quản lý lịch dạy học cá nhân",
 }
 
+// Root layout: KHÔNG gọi auth() để /login không tốn JWT decode + cookie parse.
+// Auth + SessionProvider chuyển vào (app)/layout.tsx — chỉ chạy cho route protected.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,12 +32,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SessionProvider>
-          <TRPCProvider>
-            {children}
-            <Toaster richColors position="top-right" />
-          </TRPCProvider>
-        </SessionProvider>
+        <TRPCProvider>
+          {children}
+          <Toaster richColors position="top-right" />
+        </TRPCProvider>
       </body>
     </html>
   )

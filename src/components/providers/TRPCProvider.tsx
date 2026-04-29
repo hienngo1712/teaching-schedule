@@ -11,8 +11,16 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30 * 1000,
+            // Dữ liệu ít thay đổi → cache lâu hơn, tránh refetch không cần thiết.
+            staleTime: 60 * 1000,
+            gcTime: 5 * 60 * 1000,
             refetchOnWindowFocus: false,
+            refetchOnMount: false,
+            refetchOnReconnect: false,
+            retry: 1,
+          },
+          mutations: {
+            retry: 0,
           },
         },
       })

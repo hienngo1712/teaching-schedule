@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server"
-import bcrypt from "bcryptjs"
+import bcrypt from "bcrypt"
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
 import { changePasswordSchema } from "@/lib/schemas/auth"
 import { BCRYPT_COST } from "@/server/auth-credentials"

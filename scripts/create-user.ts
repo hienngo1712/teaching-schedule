@@ -3,7 +3,7 @@
 // Cách dùng:
 //   pnpm user:create --username giaovien2 --password "MatKhau@2026" [--fullname "Nguyễn Thị B"]
 import { PrismaClient } from "@prisma/client"
-import bcrypt from "bcryptjs"
+import bcrypt from "bcrypt"
 import { parseArgs } from "node:util"
 import { seedSubjectsForUser } from "./_seed-subjects"
 
