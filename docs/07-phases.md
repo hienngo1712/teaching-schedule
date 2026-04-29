@@ -211,11 +211,11 @@ Trình tự trong 1 phiên:
 > Đọc: `docs/03-api.md` (session router), `docs/04-frontend.md` (Calendar components, useCalendar), `docs/06-testing.md` (session + calendar tests)
 
 ### Sub 4.1 — Session Schemas + Service
-- [ ] Tạo `src/lib/schemas/subject.ts` (create, update schemas)
-- [ ] Tạo `src/lib/schemas/session.ts` (create dùng `subjectId`, filter, bulkCreate theo `docs/03-api.md`)
-- [ ] Tạo `src/server/services/session.service.ts` bao gồm **`checkOverlap()`** (raw query, xem `docs/02-database.md`)
-- [ ] Thêm helpers vào `src/lib/utils.ts`: `parseTimeToDate`, `formatTime`, `calcDurationMinutes`, `formatDuration`
-- [ ] **Test:** schema tests (6 cases) + time helper tests (9 cases) pass ✓
+- [x] Tạo `src/lib/schemas/subject.ts` (create, update schemas)
+- [x] Tạo `src/lib/schemas/session.ts` (create dùng `subjectId`, filter, bulkCreate theo `docs/03-api.md`)
+- [x] Tạo `src/server/services/session.service.ts` bao gồm **`checkOverlap()`** (raw query, xem `docs/02-database.md`)
+- [x] Thêm helpers vào `src/lib/utils.ts`: `parseTimeToDate`, `formatTime`, `calcDurationMinutes`, `formatDuration`
+- [x] **Test:** schema tests (6 cases) + time helper tests (11 cases) pass ✓ (41/41 unit tests)
 
 ### Sub 4.1b — Subject Router ← MỚI (sub-phase riêng)
 - [ ] Tạo `src/server/trpc/routers/subject.ts` (list, create, update, delete/soft)
