@@ -225,27 +225,27 @@ Trình tự trong 1 phiên:
 - [x] **Review 1:** list sort sortOrder ASC ✓; isDefault=true tự unset cái khác ✓; chặn xóa subject đang dùng + chặn xóa subject cuối cùng ✓
 
 ### Sub 4.2 — tRPC Session Router (CRUD cơ bản)
-- [ ] Tạo `src/server/trpc/routers/session.ts` (getMonth, create, update, delete)
-- [ ] **`create`**: gọi `checkOverlap()` trước khi insert → throw CONFLICT nếu trùng
-- [ ] **`update`**: gọi `checkOverlap(..., excludeId)` trước khi update
-- [ ] **`getMonth`**: include `subject`, format `startTime`/`endTime` → "HH:mm" trước khi trả
-- [ ] Thêm vào root.ts
-- [ ] Viết `tests/integration/session.test.ts` (CRUD + **8 overlap cases**)
-- [ ] **Test:** pass ✓
-- [ ] **Review 1:** Overlap cases: trùng hoàn toàn ✗, trùng 1 phần ✗, tiếp nối ✓, khác ngày ✓, tự update ✓
+- [x] Tạo `src/server/trpc/routers/session.ts` (getMonth, create, update, delete)
+- [x] **`create`**: gọi `checkOverlap()` trước khi insert → throw CONFLICT nếu trùng
+- [x] **`update`**: gọi `checkOverlap(..., excludeId)` trước khi update (chỉ khi đổi giờ/ngày)
+- [x] **`getMonth`**: include `subject` + sessionStudents, format `startTime`/`endTime` → "HH:mm", thêm `durationMins` + `studentCount`
+- [x] Thêm vào root.ts
+- [x] Viết `tests/integration/session.test.ts` (14 cases — CRUD + 8 overlap + ownership subject của user khác)
+- [x] **Test:** pass ✓ (99/99)
+- [x] **Review 1:** Overlap cases: trùng hoàn toàn ✗, trùng 1 phần ✗, tiếp nối ✓, khác ngày ✓, tự update ✓
 
 ### Sub 4.3 — useCalendar Hook
-- [ ] Tạo `src/hooks/useCalendar.ts`
-- [ ] **Test:** useCalendar.test.ts pass (7 cases grid logic) ✓
-- [ ] **Review 1:** Monday-first? Tháng 4/2026 bắt đầu T4 → 2 ô trống?
+- [x] Tạo `src/hooks/useCalendar.ts` (`buildCalendarGrid`, `buildMonthLabel`, `useCalendar` hook + prev/next/goToMonth)
+- [x] **Test:** useCalendar.test.ts pass (7 cases grid logic) ✓
+- [x] **Review 1:** Monday-first ✓; Tháng 4/2026 bắt đầu T4 → 2 ô trống ✓; Tháng 2/2026 bắt đầu CN → 6 ô trống ✓
 
 ### Sub 4.4 — Calendar UI + SessionCard
-- [ ] Tạo `src/components/calendar/MonthCalendar.tsx`
-- [ ] Tạo `src/components/calendar/CalendarDayCell.tsx`
-- [ ] Tạo `src/components/calendar/SessionCard.tsx` (badge màu theo cấp)
-- [ ] Cập nhật `src/app/calendar/page.tsx` (fetch getMonth, hiển thị calendar)
-- [ ] Navigate tháng ◄ ►, highlight hôm nay
-- [ ] **Test thủ công:** Tạo seed sessions → cards đúng vị trí ✓, mobile list view ✓
+- [x] Tạo `src/components/calendar/MonthCalendar.tsx` (header navigation + grid + DAY_NAMES header row)
+- [x] Tạo `src/components/calendar/CalendarDayCell.tsx` (today/outside variants, click ô trống)
+- [x] Tạo `src/components/calendar/SessionCard.tsx` (border màu theo cấp: tieu_hoc / thcs / mixed)
+- [x] Cập nhật `src/app/(app)/calendar/page.tsx` — render MonthCalendar
+- [x] Navigate tháng ◄ ►, highlight hôm nay (today flag trong grid cell)
+- [ ] **Test thủ công:** Tạo seed sessions → cards đúng vị trí (verify trên dev server)
 
 ### Sub 4.5 — SessionFormDialog
 - [ ] Tạo `src/components/sessions/SessionFormDialog.tsx`
