@@ -19,11 +19,27 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  subjects Subject[]
-  students Student[]
-  sessions TeachingSession[]
+  subjects      Subject[]
+  students      Student[]
+  sessions      TeachingSession[]
+  loginAttempts LoginAttempt[]
 
   @@map("users")
+}
+
+// ─── LOGIN ATTEMPT (rate limit + audit) ──────────────────────────
+model LoginAttempt {
+  id        Int      @id @default(autoincrement())
+  username  String   @db.VarChar(50)
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  success   Boolean
+  userId    Int?     @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([username, createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("login_attempts")
 }
 
 // ─── SUBJECT ─────────────────────────────────────────────────────

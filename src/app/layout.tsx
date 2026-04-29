@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import localFont from "next/font/local"
 import "./globals.css"
 import { TRPCProvider } from "@/components/providers/TRPCProvider"
+import { SessionProvider } from "@/components/providers/SessionProvider"
 import { Toaster } from "@/components/ui/sonner"
 
 const geistSans = localFont({
@@ -30,10 +31,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <TRPCProvider>
-          {children}
-          <Toaster richColors position="top-right" />
-        </TRPCProvider>
+        <SessionProvider>
+          <TRPCProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </TRPCProvider>
+        </SessionProvider>
       </body>
     </html>
   )

@@ -1,13 +1,8 @@
 import { initTRPC, TRPCError } from "@trpc/server"
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch"
 import { ZodError } from "zod"
+import type { Session } from "next-auth"
 import { db } from "@/server/db"
-
-// Placeholder Session type — replaced bằng next-auth Session ở Phase 2.
-type Session = {
-  user: { id: string; name?: string | null; email?: string | null }
-  expires: string
-}
 
 export type Context = {
   db: typeof db
@@ -19,11 +14,11 @@ export type Context = {
 export async function createTRPCContext(
   opts: FetchCreateContextFnOptions
 ): Promise<Context> {
-  // Phase 2 sẽ resolve session từ NextAuth. Hiện tại = null.
-  const session: Session | null = null
-  const userId = session ? Number((session as Session).user.id) : null
+  // Lazy-load NextAuth để tránh kéo `next-auth` (next/server) vào unit/integration test runtime.
+  const { auth } = await import("@/server/auth")
+  const session = await auth()
+  const userId = session?.user?.id ? Number(session.user.id) : null
 
-  // Lấy IP từ headers (Vercel: x-forwarded-for, fallback x-real-ip)
   const fwd = opts.req.headers.get("x-forwarded-for")
   const ip = fwd?.split(",")[0]?.trim() ?? opts.req.headers.get("x-real-ip")
 

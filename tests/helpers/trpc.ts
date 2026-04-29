@@ -1,5 +1,4 @@
 // Helper tạo tRPC caller cho integration tests.
-// publicCaller dùng được ngay (Sub 1.5+); getAuthedCaller cần NextAuth (Phase 2+).
 import { appRouter } from "@/server/trpc/root"
 import { createCallerFactory } from "@/server/trpc"
 import { db } from "@/server/db"
@@ -13,4 +12,21 @@ export const publicCaller = createCaller({
   ip: null,
 })
 
-// TODO Phase 2: thêm getAuthedCaller(username) sau khi có NextAuth Session type
+export async function getAuthedCaller(username = "teacher") {
+  const user = await db.user.findUniqueOrThrow({ where: { username } })
+  return createCaller({
+    db,
+    session: {
+      user: {
+        id: String(user.id),
+        username: user.username,
+        fullName: user.fullName,
+        name: user.fullName,
+        email: null,
+      },
+      expires: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+    },
+    userId: user.id,
+    ip: null,
+  })
+}

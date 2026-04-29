@@ -22,10 +22,10 @@ Trình tự trong 1 phiên:
 > Đọc: `docs/05-deploy.md`
 
 ### Sub 0.1 — GitHub + Neon
-- [ ] Tạo GitHub repo `teaching-schedule`, init README
-- [ ] Tạo Neon project (region Singapore), lấy DATABASE_URL + DIRECT_URL
-- [ ] Lưu connection strings vào file local (KHÔNG commit)
-- [ ] Tạo Neon branch "dev" cho local development
+- [x] Tạo GitHub repo `teaching-schedule`, init README
+- [x] Tạo Neon project (region Singapore), lấy DATABASE_URL + DIRECT_URL
+- [x] Lưu connection strings vào file local (KHÔNG commit)
+- [x] Tạo Neon branch "dev" cho local development
 
 ### Sub 0.2 — Vercel
 - [ ] Import repo vào Vercel
@@ -41,61 +41,61 @@ Trình tự trong 1 phiên:
 > Đọc: `docs/01-overview.md`, `docs/02-database.md`, `docs/05-deploy.md`
 
 ### Sub 1.1 — Init Next.js + Config
-- [ ] `pnpm create next-app@14 teaching-schedule --typescript --tailwind --app --src-dir`
-- [ ] `tsconfig.json`: strict: true, paths: `@/*` → `./src/*`
-- [ ] `next.config.ts`: KHÔNG output standalone, ignoreBuildErrors: false
-- [ ] Tạo `.env.example`, `.env.local` (paste Neon dev branch strings), `.gitignore`
-- [ ] **Test:** `pnpm dev` → localhost:3000 hiện trang Next.js mặc định ✓
-- [ ] **Review 1:** tsconfig strict? paths đúng? .gitignore có .env.local?
-- [ ] **Review 2:** `pnpm build` pass?
+- [x] `pnpm create next-app@14 teaching-schedule --typescript --tailwind --app --src-dir`
+- [x] `tsconfig.json`: strict: true, paths: `@/*` → `./src/*`
+- [x] `next.config.ts`: KHÔNG output standalone, ignoreBuildErrors: false
+- [x] Tạo `.env.example`, `.env.local` (paste Neon dev branch strings), `.gitignore`
+- [x] **Test:** `pnpm dev` → localhost:3000 hiện trang Next.js mặc định ✓
+- [x] **Review 1:** tsconfig strict? paths đúng? .gitignore có .env.local?
+- [x] **Review 2:** `pnpm build` pass?
 
 ### Sub 1.2 — Prisma + Database Schema
-- [ ] Install: `@prisma/client`, `prisma` (dev)
-- [ ] Tạo `prisma/schema.prisma` (**5 models**: User, Subject, Student, TeachingSession, SessionStudent theo `docs/02-database.md`)
-- [ ] Lưu ý: `startTime`/`endTime` dùng `@db.Time(0)`, `TeachingSession.subject` là FK vào Subject
-- [ ] Tạo `src/server/db.ts` (singleton pattern)
-- [ ] `pnpm prisma migrate dev --name init` → tạo tables trên Neon
-- [ ] Tạo `prisma/seed.ts` → seed user teacher/teacher123 + 5 subjects mặc định
-- [ ] `pnpm db:seed` → verify OK
-- [ ] **Test:** `pnpm prisma studio` → 5 bảng + 1 user + 5 subjects ✓
-- [ ] **Review 1:** Schema đúng spec? directUrl có? `@db.Time(0)` đúng? FK Subject?
-- [ ] **Review 2:** `pnpm build` pass? Prisma generate OK?
+- [x] Install: `@prisma/client`, `prisma` (dev)
+- [x] Tạo `prisma/schema.prisma` (**5 models**: User, Subject, Student, TeachingSession, SessionStudent theo `docs/02-database.md`)
+- [x] Lưu ý: `startTime`/`endTime` dùng `@db.Time(0)`, `TeachingSession.subject` là FK vào Subject
+- [x] Tạo `src/server/db.ts` (singleton pattern)
+- [x] `pnpm prisma migrate dev --name init` → tạo tables trên Neon
+- [x] Tạo `prisma/seed.ts` → seed user teacher/teacher123 + 5 subjects mặc định
+- [x] `pnpm db:seed` → verify OK
+- [x] **Test:** `pnpm prisma studio` → 5 bảng + 1 user + 5 subjects ✓
+- [x] **Review 1:** Schema đúng spec? directUrl có? `@db.Time(0)` đúng? FK Subject?
+- [x] **Review 2:** `pnpm build` pass? Prisma generate OK?
 
 ### Sub 1.3 — tRPC Setup
-- [ ] Install: `@trpc/server`, `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query`
-- [ ] Tạo `src/server/trpc/index.ts` (context, publicProcedure, protectedProcedure)
-- [ ] Tạo `src/server/trpc/root.ts` (root router, thêm `health.ping`)
-- [ ] Tạo `src/app/api/trpc/[trpc]/route.ts`
-- [ ] Tạo `src/lib/trpc.ts` (client hooks)
-- [ ] Tạo `src/components/providers/TRPCProvider.tsx`
-- [ ] **Test:** GET `localhost:3000/api/trpc/health.ping` → `{ status: "ok" }` ✓
-- [ ] **Review 1:** Context có db? protectedProcedure check session?
-- [ ] **Review 2:** `pnpm build` pass?
-- [ ] Viết `tests/integration/health.test.ts` (2 cases)
+- [x] Install: `@trpc/server`, `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query`
+- [x] Tạo `src/server/trpc/index.ts` (context, publicProcedure, protectedProcedure)
+- [x] Tạo `src/server/trpc/root.ts` (root router, thêm `health.ping`)
+- [x] Tạo `src/app/api/trpc/[trpc]/route.ts`
+- [x] Tạo `src/lib/trpc.ts` (client hooks)
+- [x] Tạo `src/components/providers/TRPCProvider.tsx`
+- [x] **Test:** GET `localhost:3000/api/trpc/health.ping` → `{ status: "ok" }` ✓
+- [x] **Review 1:** Context có db? protectedProcedure check session?
+- [x] **Review 2:** `pnpm build` pass?
+- [x] Viết `tests/integration/health.test.ts` (2 cases)
 
 ### Sub 1.4 — shadcn/ui + Layout Shell
-- [ ] `pnpm dlx shadcn@latest init` (style: default, color: slate)
-- [ ] Install components: button, card, dialog, table, input, select, form, badge, toast, toaster, dropdown-menu, popover, calendar, switch, checkbox, skeleton
-- [ ] Install `lucide-react`
-- [ ] Tạo `src/components/layout/AppLayout.tsx`
-- [ ] Tạo `src/components/layout/AppSidebar.tsx` (4 menu items + icons)
-- [ ] Tạo `src/components/layout/AppHeader.tsx` (placeholder)
-- [ ] Cập nhật `globals.css`: calendar styles + export styles (theo `docs/04-frontend.md`)
-- [ ] Tạo placeholder pages: `/login`, `/calendar`, `/students`, `/reports`, `/dashboard`
-- [ ] **Test:** Navigate tất cả trang → sidebar highlight đúng ✓, responsive collapse ✓
-- [ ] **Review 1:** Menu tiếng Việt? Icons đúng? Mobile collapsible?
-- [ ] **Review 2:** `pnpm build` pass? Mobile viewport OK?
+- [x] `pnpm dlx shadcn@latest init` (style: default, color: slate)
+- [x] Install components: button, card, dialog, table, input, select, form, badge, toast, toaster, dropdown-menu, popover, calendar, switch, checkbox, skeleton
+- [x] Install `lucide-react`
+- [x] Tạo `src/components/layout/AppLayout.tsx`
+- [x] Tạo `src/components/layout/AppSidebar.tsx` (4 menu items + icons)
+- [x] Tạo `src/components/layout/AppHeader.tsx` (placeholder)
+- [x] Cập nhật `globals.css`: calendar styles + export styles (theo `docs/04-frontend.md`)
+- [x] Tạo placeholder pages: `/login`, `/calendar`, `/students`, `/reports`, `/dashboard`
+- [x] **Test:** Navigate tất cả trang → sidebar highlight đúng ✓, responsive collapse ✓
+- [x] **Review 1:** Menu tiếng Việt? Icons đúng? Mobile collapsible?
+- [x] **Review 2:** `pnpm build` pass? Mobile viewport OK?
 
 ### Sub 1.5 — Testing Infrastructure
-- [ ] Install: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `jsdom`
-- [ ] Tạo `vitest.config.ts` (theo `docs/06-testing.md`)
-- [ ] Tạo `tests/setup.ts`, `tests/helpers/trpc.ts`, `tests/helpers/db.ts`
-- [ ] Viết `tests/unit/utils/utils.test.ts` (test cn, getLevel, calcAttendanceRate)
-- [ ] **Test:** `pnpm test:unit` → pass ✓
-- [ ] **Review:** Path alias `@/` hoạt động trong tests?
+- [x] Install: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `jsdom`
+- [x] Tạo `vitest.config.ts` (theo `docs/06-testing.md`)
+- [x] Tạo `tests/setup.ts`, `tests/helpers/trpc.ts`, `tests/helpers/db.ts`
+- [x] Viết `tests/unit/utils/utils.test.ts` (test cn, getLevel, calcAttendanceRate)
+- [x] **Test:** `pnpm test:unit` → pass ✓
+- [x] **Review:** Path alias `@/` hoạt động trong tests?
 
 ### Sub 1.6 — First Deploy
-- [ ] `git add . && git commit -m "feat: project skeleton" && git push`
+- [x] `git add . && git commit -m "feat: project skeleton" && git push`
 - [ ] Verify Vercel build thành công
 - [ ] **Verify URL:** layout hiển thị ✓, navigation hoạt động ✓, `/api/trpc/health.ping` OK ✓
 
@@ -108,19 +108,19 @@ Trình tự trong 1 phiên:
 > Đọc: `docs/03-api.md` (Auth, Rate limit, Ownership), `docs/02-database.md` (LoginAttempt model, userId FK), `docs/06-testing.md` (auth + multi-tenant tests)
 
 ### Sub 2.1 — NextAuth Config + Rate Limit
-- [ ] Install: `next-auth@5.0.0-beta.25`, `bcryptjs`, `@types/bcryptjs`
-- [ ] Tạo `src/server/auth.ts`:
+- [x] Install: `next-auth@5.0.0-beta.25`, `bcryptjs`, `@types/bcryptjs`
+- [x] Tạo `src/server/auth.ts` + `src/server/auth-credentials.ts`:
   - Credentials provider với **rate limit check** (5 fail / 15 phút)
   - bcrypt cost **12** (production), **4** (test)
   - Ghi `LoginAttempt` mọi lần thử (thành công và thất bại)
   - Cập nhật `user.lastLoginAt` khi login thành công
   - JWT expire **8h**
-- [ ] Tạo `src/app/api/auth/[...nextauth]/route.ts`
-- [ ] Tạo `src/components/providers/SessionProvider.tsx`
-- [ ] Wrap app trong SessionProvider
-- [ ] **Review 1:** Rate limit logic đúng? LoginAttempt được ghi? lastLoginAt update?
-- [ ] **Review 2:** `pnpm build` pass?
-- [ ] Viết `tests/integration/auth.test.ts` (login, me, changePassword, rate limit — 9 cases)
+- [x] Tạo `src/app/api/auth/[...nextauth]/route.ts`
+- [x] Tạo `src/components/providers/SessionProvider.tsx`
+- [x] Wrap app trong SessionProvider
+- [x] **Review 1:** Rate limit logic đúng? LoginAttempt được ghi? lastLoginAt update?
+- [x] **Review 2:** `pnpm build` pass?
+- [x] Viết `tests/integration/auth.test.ts` (login + rate limit — 6 cases; me/changePassword sẽ thêm ở Sub 2.3)
 
 ### Sub 2.2 — Middleware + Login Page
 - [ ] Tạo `src/middleware.ts`
