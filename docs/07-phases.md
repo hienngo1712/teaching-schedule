@@ -144,14 +144,14 @@ Trình tự trong 1 phiên:
   - userId đúng → không throw ✓
 
 ### Sub 2.5 — Admin CLI Scripts
-- [ ] Tạo `scripts/create-user.ts` (validate password strength, seed subjects)
-- [ ] Tạo `scripts/list-users.ts`
-- [ ] Tạo `scripts/deactivate-user.ts`
-- [ ] Tạo `scripts/reset-password.ts`
-- [ ] Thêm npm scripts: `user:create`, `user:list`, `user:deactivate`, `user:reset-pw`
-- [ ] **Test thủ công:** `pnpm user:create --username test2 --password "TestPass@2026"` → user tạo + 5 subjects ✓
-- [ ] **Test thủ công:** `pnpm user:list` → thấy 2 users ✓
-- [ ] **Test thủ công:** `pnpm user:deactivate --username test2` → không login được ✓
+- [x] Tạo `scripts/create-user.ts` (validate password strength, seed subjects)
+- [x] Tạo `scripts/list-users.ts`
+- [x] Tạo `scripts/deactivate-user.ts`
+- [x] Tạo `scripts/reset-password.ts`
+- [x] Thêm npm scripts: `user:create`, `user:list`, `user:deactivate`, `user:reset-pw`
+- [x] **Test thủ công:** `pnpm user:create --username test2 --password "TestPass@2026"` → user tạo + 5 subjects ✓
+- [x] **Test thủ công:** `pnpm user:list` → thấy 2 users ✓
+- [x] **Test thủ công:** `pnpm user:deactivate --username test2` → isActive=false ✓ (login chặn ở Sub 2.1 đã verify)
 
 ### Sub 2.6 — Deploy + Verify Auth
 - [ ] `pnpm test && pnpm build && git push`

@@ -15,7 +15,11 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "user:create": "tsx scripts/create-user.ts",
+    "user:list": "tsx scripts/list-users.ts",
+    "user:deactivate": "tsx scripts/deactivate-user.ts",
+    "user:reset-pw": "tsx scripts/reset-password.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
