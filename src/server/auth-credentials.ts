@@ -1,6 +1,6 @@
 // Logic verify credentials + rate limit + audit log.
 // Tách khỏi `auth.ts` để tests có thể import mà không cần next-auth runtime.
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import { db } from "@/server/db"
 
 // Cost 10: chuẩn OWASP, hash ~50ms với native bcrypt — đủ mạnh cho app nội bộ.

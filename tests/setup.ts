@@ -10,7 +10,7 @@ config()
   process.env.NODE_ENV ?? "test"
 
 import { db } from "@/server/db"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import { beforeAll, afterAll } from "vitest"
 
 beforeAll(async () => {
