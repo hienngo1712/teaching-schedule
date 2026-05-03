@@ -278,11 +278,11 @@ Trình tự trong 1 phiên:
 - [x] **Test thủ công:** Tạo ca + gán 3 HS → card hiện "3 HS" ✓
 
 ### Sub 5.3 — SessionDetailDialog + AttendancePanel
-- [ ] Tạo `src/components/sessions/SessionDetailDialog.tsx`
-- [ ] Tạo `src/components/sessions/AttendancePanel.tsx`
-- [ ] Click SessionCard → detail dialog ✓
-- [ ] Điểm danh → lưu → đóng → mở lại → đúng ✓
-- [ ] Quick-all "Có mặt" button ✓
+- [x] Tạo `src/components/sessions/SessionDetailDialog.tsx`
+- [x] Tạo `src/components/sessions/AttendancePanel.tsx`
+- [x] Click SessionCard → detail dialog ✓
+- [x] Điểm danh → lưu → đóng → mở lại → đúng ✓
+- [x] Quick-all "Có mặt" button ✓
 
 ### Sub 5.4 — Deploy + Full Test
 - [ ] `pnpm test && pnpm build && git push` → verify Vercel ✓
