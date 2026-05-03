@@ -2,6 +2,14 @@ import { config } from "dotenv"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 
+if (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") {
+  console.error("\n❌ ERROR: Cảnh báo bảo mật CHÍNH MẠNG!")
+  console.error("Bạn đang cố gắng chạy tests trên môi trường Production (Vercel).")
+  console.error("Hành động này sẽ XÓA SẠCH dữ liệu thật của ứng dụng.")
+  console.error("Hệ thống đã tự động chặn lại.\n")
+  process.exit(1)
+}
+
 // Load .env.test nếu có
 const testEnvPath = join(process.cwd(), ".env.test")
 if (existsSync(testEnvPath)) {
@@ -11,9 +19,9 @@ if (existsSync(testEnvPath)) {
   // (tránh trường hợp người dùng quên và làm mất dữ liệu production/dev)
   config() // Load .env mặc định
   
-  if (process.env.DATABASE_URL?.includes("neon.tech")) {
+  if (process.env.DATABASE_URL?.includes("neon.tech") || process.env.DATABASE_URL?.includes("vercel-storage.com")) {
     console.error("\n❌ ERROR: Cảnh báo bảo mật!")
-    console.error("Bạn đang chạy tests với DATABASE_URL trỏ tới Neon (.env) nhưng chưa có .env.test.")
+    console.error("Bạn đang chạy tests với DATABASE_URL trỏ tới Production DB nhưng chưa có .env.test.")
     console.error("Hành động này sẽ XÓA SẠCH dữ liệu trong database hiện tại.")
     console.error("Vui lòng tạo file .env.test và dùng một database/branch riêng cho testing.\n")
     process.exit(1)

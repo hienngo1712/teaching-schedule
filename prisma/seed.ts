@@ -6,11 +6,6 @@ const db = new PrismaClient()
 const BCRYPT_COST = process.env.NODE_ENV === "test" ? 4 : 12
 
 async function seedSubjectsForUser(userId: number) {
-  // Clear existing sessions and subjects to ensure only defaults exist
-  await db.sessionStudent.deleteMany({ where: { session: { userId } } })
-  await db.teachingSession.deleteMany({ where: { userId } })
-  await db.subject.deleteMany({ where: { userId } })
-
   const defaults = [
     { name: "Tiếng Anh", color: "#4F46E5", isDefault: true, sortOrder: 1 },
   ]
