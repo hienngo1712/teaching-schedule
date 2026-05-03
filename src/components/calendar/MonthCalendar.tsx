@@ -14,13 +14,16 @@ import type { SessionDTO } from "@/server/services/session.service"
 import { CalendarDayCell } from "./CalendarDayCell"
 import { SessionFormDialog } from "../sessions/SessionFormDialog"
 import { BulkCreateDialog } from "../sessions/BulkCreateDialog"
+import { SessionDetailDialog } from "../sessions/SessionDetailDialog"
 
 export function MonthCalendar() {
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | undefined>()
   const [editingSession, setEditingSession] = useState<SessionDTO | undefined>()
+  const [selectedSession, setSelectedSession] = useState<SessionDTO | undefined>()
 
   const query = trpc.session.getMonth.useQuery({ year, month })
 
@@ -50,8 +53,13 @@ export function MonthCalendar() {
   }
 
   const handleSessionClick = (session: SessionDTO) => {
+    setSelectedSession(session)
+    setIsDetailOpen(true)
+  }
+
+  const handleEditFromDetail = (session: SessionDTO) => {
+    setIsDetailOpen(false)
     setEditingSession(session)
-    setSelectedDate(undefined)
     setIsDialogOpen(true)
   }
 
@@ -121,6 +129,15 @@ export function MonthCalendar() {
         open={isBulkDialogOpen}
         onOpenChange={setIsBulkDialogOpen}
       />
+
+      {selectedSession && (
+        <SessionDetailDialog
+          open={isDetailOpen}
+          onOpenChange={setIsDetailOpen}
+          session={selectedSession}
+          onEdit={handleEditFromDetail}
+        />
+      )}
     </div>
   )
 }

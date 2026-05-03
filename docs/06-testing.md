@@ -58,39 +58,47 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: true,
   },
-})
-```
-
 ### `tests/setup.ts`
 ```typescript
 import { config } from "dotenv"
-import { db } from "@/server/db"
-import bcrypt from "bcryptjs"
+import { existsSync } from "node:fs"
 
-// Load .env.test (dùng Neon test branch hoặc local DB)
-config({ path: ".env.test" })
+// ⚠️ QUAN TRỌNG: Tách biệt database test và production
+// 1. Luôn dùng file .env.test cho testing
+// 2. Không bao giờ trỏ .env.test tới database production
+// 3. Nếu dùng Neon, hãy tạo một branch riêng (ví dụ: 'test')
 
-// Seed base data trước mỗi test file
-beforeAll(async () => {
-  await db.sessionStudent.deleteMany()
-  await db.teachingSession.deleteMany()
-  await db.student.deleteMany()
-  await db.user.deleteMany()
-
-  await db.user.create({
-    data: {
-      username: "teacher",
-      passwordHash: await bcrypt.hash("teacher123", 10),
-      fullName: "Giáo viên Test",
-    },
-  })
-})
-
-afterAll(async () => {
-  await db.$disconnect()
-})
+const testEnvPath = join(process.cwd(), ".env.test")
+if (existsSync(testEnvPath)) {
+  config({ path: ".env.test" })
+} else {
+  // Logic ngăn chặn xóa nhầm dữ liệu production
+}
 ```
 
+---
+
+## Tách biệt Database (Isolation)
+
+Để tránh việc chạy test làm mất dữ liệu thật (do lệnh `deleteMany()` trong `setup.ts`), bạn **bắt buộc** phải thực hiện các bước sau:
+
+### 1. Tạo Database cho Test
+- **Cách A (Khuyên dùng):** Nếu dùng Neon, truy cập Dashboard → Branches → New Branch → Đặt tên là `test`. Copy `DATABASE_URL` của branch này.
+- **Cách B (Local):** Dùng Docker hoặc cài đặt PostgreSQL local, tạo DB tên `teaching_schedule_test`.
+
+### 2. Tạo file `.env.test`
+Copy từ `.env.test.example` và dán URL database test vào:
+```bash
+DATABASE_URL="postgresql://...neon.tech/neondb_test?sslmode=require"
+DIRECT_URL="postgresql://...neon.tech/neondb_test?sslmode=require"
+```
+
+### 3. Quy trình chạy
+Khi bạn chạy `pnpm test`, Vitest sẽ tự động ưu tiên load biến môi trường từ `.env.test`. Nếu file này không tồn tại và bạn đang trỏ tới Neon trong `.env`, hệ thống sẽ chặn không cho chạy test để bảo vệ dữ liệu.
+
+---
+
+## Unit Tests
 ### `tests/helpers/trpc.ts`
 ```typescript
 import { appRouter } from "@/server/trpc/root"

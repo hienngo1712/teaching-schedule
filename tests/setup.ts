@@ -1,9 +1,24 @@
-// Vitest global setup — chạy trước mọi test file.
 import { config } from "dotenv"
+import { existsSync } from "node:fs"
+import { join } from "node:path"
 
-// Load .env.test nếu có, fallback .env (Prisma CLI dùng .env)
-config({ path: ".env.test" })
-config()
+// Load .env.test nếu có
+const testEnvPath = join(process.cwd(), ".env.test")
+if (existsSync(testEnvPath)) {
+  config({ path: ".env.test" })
+} else {
+  // Nếu không có .env.test, CẤM chạy integration tests nếu DATABASE_URL đang trỏ tới Neon
+  // (tránh trường hợp người dùng quên và làm mất dữ liệu production/dev)
+  config() // Load .env mặc định
+  
+  if (process.env.DATABASE_URL?.includes("neon.tech")) {
+    console.error("\n❌ ERROR: Cảnh báo bảo mật!")
+    console.error("Bạn đang chạy tests với DATABASE_URL trỏ tới Neon (.env) nhưng chưa có .env.test.")
+    console.error("Hành động này sẽ XÓA SẠCH dữ liệu trong database hiện tại.")
+    console.error("Vui lòng tạo file .env.test và dùng một database/branch riêng cho testing.\n")
+    process.exit(1)
+  }
+}
 
 // NODE_ENV=test → bcrypt cost = 4 (nhanh hơn cho test)
 ;(process.env as Record<string, string | undefined>).NODE_ENV =
@@ -14,6 +29,11 @@ import bcrypt from "bcryptjs"
 import { beforeAll, afterAll } from "vitest"
 
 beforeAll(async () => {
+  // Kiểm tra lần cuối trước khi xóa
+  if (process.env.DATABASE_URL?.includes("neon.tech") && !existsSync(testEnvPath)) {
+    throw new Error("Không được phép chạy tests trên Neon database nếu không có .env.test")
+  }
+
   // Reset DB theo thứ tự FK
   await db.sessionStudent.deleteMany()
   await db.teachingSession.deleteMany()
