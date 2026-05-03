@@ -138,7 +138,10 @@ export function SessionFormDialog({
 
   function onSubmit(values: SessionCreateInput) {
     if (isEdit) {
-      updateMutation.mutate({ id: editingSession.id, data: values })
+      updateMutation.mutate({
+        id: editingSession.id,
+        data: values,
+      })
     } else {
       createMutation.mutate(values)
     }

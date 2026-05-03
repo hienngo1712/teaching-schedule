@@ -35,6 +35,7 @@ export type SessionDTO = {
     fullName: string
     grade: number
     attendance: string
+    note: string | null
   }>
 }
 
@@ -120,6 +121,7 @@ function toDTO(s: SessionWithRelations): SessionDTO {
       fullName: ss.student.fullName,
       grade: ss.student.grade,
       attendance: ss.attendance,
+      note: ss.note,
     })),
   }
 }
@@ -129,7 +131,7 @@ export async function getMonthSessions(
   userId: number,
   filter: SessionFilterInput
 ): Promise<SessionDTO[]> {
-  const { year, month, grade, studentName } = filter
+  const { year, month, grade, studentName, studentId } = filter
   const start = new Date(Date.UTC(year, month - 1, 1))
   const end = new Date(Date.UTC(year, month, 1))
 
@@ -137,12 +139,13 @@ export async function getMonthSessions(
     where: {
       userId,
       sessionDate: { gte: start, lt: end },
-      ...(grade || studentName
+      ...(grade || studentName || studentId
         ? {
             sessionStudents: {
               some: {
                 student: {
                   ...(grade ? { grade } : {}),
+                  ...(studentId ? { id: studentId } : {}),
                   ...(studentName
                     ? {
                         fullName: {
@@ -232,6 +235,7 @@ export type SessionUpdateData = {
   subjectId?: number
   title?: string
   notes?: string
+  studentIds?: number[]
 }
 
 export async function updateSession(
@@ -240,11 +244,25 @@ export async function updateSession(
   id: number,
   data: SessionUpdateData
 ): Promise<SessionDTO> {
-  const existing = await db.teachingSession.findUnique({ where: { id } })
+  const existing = await db.teachingSession.findUnique({
+    where: { id },
+    include: { sessionStudents: true },
+  })
   assertOwnership(existing, userId)
 
   if (data.subjectId !== undefined) {
     await assertSubjectOwned(db, userId, data.subjectId)
+  }
+
+  // Verify studentIds thuộc userId
+  if (data.studentIds !== undefined && data.studentIds.length > 0) {
+    const owned = await db.student.findMany({
+      where: { id: { in: data.studentIds }, userId },
+      select: { id: true },
+    })
+    if (owned.length !== data.studentIds.length) {
+      throw new TRPCError({ code: "NOT_FOUND" })
+    }
   }
 
   const newSessionDate = data.sessionDate
@@ -272,25 +290,105 @@ export async function updateSession(
     })
   }
 
-  const updated = await db.teachingSession.update({
-    where: { id },
-    data: {
-      ...(data.sessionDate !== undefined && { sessionDate: newSessionDate }),
-      ...(data.startTime !== undefined && { startTime: newStart }),
-      ...(data.endTime !== undefined && { endTime: newEnd }),
-      ...(data.subjectId !== undefined && { subjectId: data.subjectId }),
-      ...(data.title !== undefined && { title: data.title }),
-      ...(data.notes !== undefined && { notes: data.notes }),
-    },
-    include: {
-      subject: true,
-      sessionStudents: { include: { student: true } },
-    },
+  // Cập nhật session và sync học sinh
+  const updated = await db.$transaction(async (tx) => {
+    // Nếu có truyền studentIds, xóa cũ tạo mới
+    if (data.studentIds !== undefined) {
+      await tx.sessionStudent.deleteMany({ where: { sessionId: id } })
+      if (data.studentIds.length > 0) {
+        await tx.sessionStudent.createMany({
+          data: data.studentIds.map((sid) => ({ sessionId: id, studentId: sid })),
+        })
+      }
+    }
+
+    return await tx.teachingSession.update({
+      where: { id },
+      data: {
+        ...(data.sessionDate !== undefined && { sessionDate: newSessionDate }),
+        ...(data.startTime !== undefined && { startTime: newStart }),
+        ...(data.endTime !== undefined && { endTime: newEnd }),
+        ...(data.subjectId !== undefined && { subjectId: data.subjectId }),
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+      },
+      include: {
+        subject: true,
+        sessionStudents: { include: { student: true } },
+      },
+    })
   })
+
   return toDTO(updated)
+}
+export async function addStudentsToRecurringSessions(
+  db: PrismaClient,
+  userId: number,
+  params: {
+    studentIds: number[]
+    startTime: string // "HH:mm"
+    endTime: string   // "HH:mm"
+    startDate: string // "YYYY-MM-DD"
+    endDate: string   // "YYYY-MM-DD"
+    weekdays: number[] // 0=T2...6=CN
+  }
+): Promise<{ updatedSessions: number }> {
+  const start = parseSessionDate(params.startDate)
+  const end = parseSessionDate(params.endDate)
+  const startTime = parseTimeToDate(params.startTime)
+  const endTime = parseTimeToDate(params.endTime)
+
+  // 1. Tìm tất cả các ca dạy khớp giờ + trong khoảng ngày
+  const sessions = await db.teachingSession.findMany({
+    where: {
+      userId,
+      sessionDate: { gte: start, lte: end },
+      startTime,
+      endTime,
+    },
+    select: { id: true, sessionDate: true },
+  })
+
+  // 2. Lọc theo weekdays
+  const matchingSessionIds = sessions
+    .filter((s) => {
+      const VN_dayIndex = (new Date(s.sessionDate).getDay() + 6) % 7
+      return params.weekdays.includes(VN_dayIndex)
+    })
+    .map((s) => s.id)
+
+  if (matchingSessionIds.length === 0) {
+    return { updatedSessions: 0 }
+  }
+
+  // 3. Verify students
+  const owned = await db.student.findMany({
+    where: { id: { in: params.studentIds }, userId },
+  })
+  if (owned.length !== params.studentIds.length) {
+    throw new TRPCError({ code: "NOT_FOUND" })
+  }
+
+  // 4. Upsert vào từng ca
+  let count = 0
+  await db.$transaction(async (tx) => {
+    for (const sessionId of matchingSessionIds) {
+      for (const studentId of params.studentIds) {
+        await tx.sessionStudent.upsert({
+          where: { sessionId_studentId: { sessionId, studentId } },
+          update: {},
+          create: { sessionId, studentId },
+        })
+      }
+      count++
+    }
+  })
+
+  return { updatedSessions: count }
 }
 
 export async function deleteSession(
+...
   db: PrismaClient,
   userId: number,
   id: number

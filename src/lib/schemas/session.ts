@@ -43,6 +43,7 @@ export const sessionFilterSchema = z.object({
   month: z.number().int().min(1).max(12),
   grade: z.number().int().min(1).max(9).optional(),
   studentName: z.string().trim().max(100).optional(),
+  studentId: z.number().int().positive().optional(),
 })
 
 export const sessionBulkCreateSchema = z

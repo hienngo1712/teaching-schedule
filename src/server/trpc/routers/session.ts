@@ -64,4 +64,19 @@ export const sessionRouter = createTRPCRouter({
     .mutation(({ ctx, input }) =>
       removeStudentFromSession(ctx.db, ctx.userId, input.sessionId, input.studentId)
     ),
+
+  addRecurringStudents: protectedProcedure
+    .input(
+      z.object({
+        studentIds: z.array(z.number().int().positive()),
+        startTime: z.string(),
+        endTime: z.string(),
+        startDate: z.string(),
+        endDate: z.string(),
+        weekdays: z.array(z.number().min(0).max(6)),
+      })
+    )
+    .mutation(({ ctx, input }) =>
+      addStudentsToRecurringSessions(ctx.db, ctx.userId, input)
+    ),
 })

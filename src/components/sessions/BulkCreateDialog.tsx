@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CalendarIcon, Loader2 } from "lucide-react"
@@ -53,6 +53,7 @@ type Props = {
 }
 
 export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
+  const [mode, setMode] = useState<"create" | "assign">("create")
   const utils = trpc.useUtils()
   const { data: subjects = [] } = trpc.subject.list.useQuery({ isActive: true })
 
@@ -89,23 +90,63 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
       onSuccess?.()
       form.reset()
     },
-    onError: () => {
-      toast.error("Đã có lỗi xảy ra khi tạo lịch lặp")
+    onError: (err) => {
+      toast.error(err.message || "Đã có lỗi xảy ra khi tạo lịch lặp")
+    },
+  })
+
+  const assignMutation = trpc.session.addRecurringStudents.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Đã thêm học sinh vào ${res.updatedSessions} ca dạy khớp lịch.`)
+      utils.session.getMonth.invalidate()
+      onOpenChange(false)
+      onSuccess?.()
+      form.reset()
+    },
+    onError: (err) => {
+      toast.error(err.message || "Đã có lỗi xảy ra khi gán học sinh")
     },
   })
 
   function onSubmit(values: SessionBulkCreateInput) {
-    bulkCreateMutation.mutate(values)
+    if (mode === "create") {
+      bulkCreateMutation.mutate(values)
+    } else {
+      assignMutation.mutate(values)
+    }
   }
 
-  const isLoading = bulkCreateMutation.isPending
+  const isLoading = bulkCreateMutation.isPending || assignMutation.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Tạo lịch dạy lặp lại</DialogTitle>
+          <DialogTitle>Lịch dạy định kỳ</DialogTitle>
         </DialogHeader>
+
+        <div className="flex bg-slate-100 p-1 rounded-md mb-2">
+          <button
+            type="button"
+            onClick={() => setMode("create")}
+            className={cn(
+              "flex-1 py-1.5 text-xs font-medium rounded-sm transition-all",
+              mode === "create" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            Tạo ca dạy mới
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("assign")}
+            className={cn(
+              "flex-1 py-1.5 text-xs font-medium rounded-sm transition-all",
+              mode === "assign" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            Gán HS vào lịch sẵn
+          </button>
+        </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -267,60 +308,66 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="subjectId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Môn học</FormLabel>
-                  <Select
-                    onValueChange={(val) => field.onChange(Number(val))}
-                    value={String(field.value)}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn môn" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {subjects.map((s) => (
-                        <SelectItem key={s.id} value={String(s.id)}>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="size-2 rounded-full"
-                              style={{ backgroundColor: s.color }}
-                            />
-                            {s.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {mode === "create" && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="subjectId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Môn học</FormLabel>
+                      <Select
+                        onValueChange={(val) => field.onChange(Number(val))}
+                        value={String(field.value)}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn môn" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {subjects.map((s) => (
+                            <SelectItem key={s.id} value={String(s.id)}>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="size-2 rounded-full"
+                                  style={{ backgroundColor: s.color }}
+                                />
+                                {s.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tiêu đề (không bắt buộc)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ví dụ: Lịch tối thứ 2..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tiêu đề (không bắt buộc)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ví dụ: Lịch tối thứ 2..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             <FormField
               control={form.control}
               name="studentIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Học sinh (gán cho tất cả các ca)</FormLabel>
+                  <FormLabel>
+                    {mode === "create" ? "Học sinh (gán cho tất cả các ca)" : "Học sinh cần gán"}
+                  </FormLabel>
                   <FormControl>
                     <StudentPicker
                       value={field.value || []}
@@ -343,7 +390,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Tạo lịch lặp
+                {mode === "create" ? "Tạo lịch lặp" : "Gán học sinh"}
               </Button>
             </DialogFooter>
           </form>

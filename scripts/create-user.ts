@@ -59,7 +59,7 @@ async function main() {
 
   await seedSubjectsForUser(db, user.id)
 
-  console.log(`✅ Tạo user "${user.username}" (id=${user.id}) + 5 subjects mặc định`)
+  console.log(`✅ Tạo user "${user.username}" (id=${user.id}) + 5 subjects (mặc định chỉ hiện Tiếng Anh)`)
 }
 
 main()

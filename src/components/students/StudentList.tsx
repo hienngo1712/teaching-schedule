@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { MoreHorizontal, Pencil, Trash2, UserPlus } from "lucide-react"
+import { CalendarDays, MoreHorizontal, Pencil, Trash2, UserPlus } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { trpc } from "@/lib/trpc"
 import { GRADES } from "@/lib/constants"
+import { useFilters } from "@/hooks/useFilters"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -57,13 +59,13 @@ const ALL_GRADES_VALUE = "all"
 
 export function StudentList() {
   const utils = trpc.useUtils()
-
-  const [grade, setGrade] = useState<number | null>(null)
-  const [search, setSearch] = useState("")
+  const router = useRouter()
+  const { selectedGrade, searchStudentName, setGrade, setSearch } = useFilters()
 
   const listQuery = trpc.student.list.useQuery({
-    grade: grade ?? undefined,
-    search: search.trim() || undefined,
+    grade: selectedGrade ?? undefined,
+    search: searchStudentName.trim() || undefined,
+    isActive: undefined, // Lấy cả đang học và đã nghỉ
   })
 
   const [formState, setFormState] = useState<
@@ -89,7 +91,7 @@ export function StudentList() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
         <Select
-          value={grade === null ? ALL_GRADES_VALUE : String(grade)}
+          value={selectedGrade === null ? ALL_GRADES_VALUE : String(selectedGrade)}
           onValueChange={(v) =>
             setGrade(v === ALL_GRADES_VALUE ? null : Number(v))
           }
@@ -109,7 +111,7 @@ export function StudentList() {
 
         <Input
           placeholder="Tìm tên học sinh..."
-          value={search}
+          value={searchStudentName}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full sm:w-64"
         />
@@ -125,7 +127,7 @@ export function StudentList() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -133,6 +135,7 @@ export function StudentList() {
               <TableHead>Họ và tên</TableHead>
               <TableHead className="w-16">Lớp</TableHead>
               <TableHead className="w-24">Cấp</TableHead>
+              <TableHead className="w-28">Trạng thái</TableHead>
               <TableHead className="hidden md:table-cell">SĐT PH</TableHead>
               <TableHead className="hidden lg:table-cell">Tên PH</TableHead>
               <TableHead className="w-12"></TableHead>
@@ -142,7 +145,7 @@ export function StudentList() {
             {listQuery.isPending ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={8}>
                     <Skeleton className="h-6 w-full" />
                   </TableCell>
                 </TableRow>
@@ -150,11 +153,11 @@ export function StudentList() {
             ) : students.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-center text-sm text-slate-500 py-12"
                 >
                   Chưa có học sinh nào.
-                  {grade === null && search === "" && (
+                  {selectedGrade === null && searchStudentName === "" && (
                     <>
                       {" "}
                       Nhấn{" "}
@@ -172,12 +175,23 @@ export function StudentList() {
                   <TableCell>{s.grade}</TableCell>
                   <TableCell>
                     {s.level === "tieu_hoc" ? (
-                      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                         Tiểu học
                       </Badge>
                     ) : (
-                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
                         THCS
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {s.isActive ? (
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+                        Đang học
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-red-50 text-red-600 hover:bg-red-50 border-red-100">
+                        Đã nghỉ
                       </Badge>
                     )}
                   </TableCell>
@@ -195,6 +209,12 @@ export function StudentList() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onSelect={() => router.push(`/calendar?studentId=${s.id}`)}
+                        >
+                          <CalendarDays className="size-4 mr-2" />
+                          Xem lịch
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() =>
                             setFormState({

@@ -1,8 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { ChevronLeft, ChevronRight, Plus, Repeat } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useMemo, useState, useRef } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DAY_NAMES } from "@/lib/constants"
 import { trpc } from "@/lib/trpc"
@@ -10,6 +8,9 @@ import {
   buildCalendarGrid,
   useCalendar,
 } from "@/hooks/useCalendar"
+import { useFilters } from "@/hooks/useFilters"
+import { FilterBar } from "../filters/FilterBar"
+import { StudentScheduleView } from "../students/StudentScheduleView"
 import type { SessionDTO } from "@/server/services/session.service"
 import { CalendarDayCell } from "./CalendarDayCell"
 import { SessionFormDialog } from "../sessions/SessionFormDialog"
@@ -17,7 +18,10 @@ import { BulkCreateDialog } from "../sessions/BulkCreateDialog"
 import { SessionDetailDialog } from "../sessions/SessionDetailDialog"
 
 export function MonthCalendar() {
-  const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
+  const { year, month } = useCalendar()
+  const { filterParams, selectedStudentId } = useFilters()
+  const exportRef = useRef<HTMLDivElement>(null)
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -25,7 +29,11 @@ export function MonthCalendar() {
   const [editingSession, setEditingSession] = useState<SessionDTO | undefined>()
   const [selectedSession, setSelectedSession] = useState<SessionDTO | undefined>()
 
-  const query = trpc.session.getMonth.useQuery({ year, month })
+  const query = trpc.session.getMonth.useQuery({ 
+    year, 
+    month,
+    ...filterParams
+  })
 
   // Convert sessionDate string từ tRPC → Date object cho buildCalendarGrid
   const sessions = useMemo<SessionDTO[]>(() => {
@@ -64,37 +72,13 @@ export function MonthCalendar() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold text-slate-900">{monthLabel}</h2>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" onClick={prevMonth}>
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={nextMonth}>
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setIsBulkDialogOpen(true)}
-            className="gap-2"
-          >
-            <Repeat className="size-4" />
-            Lịch lặp
-          </Button>
-          <Button onClick={handleCreateClick} className="gap-2">
-            <Plus className="size-4" />
-            Tạo ca dạy
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <FilterBar 
+        onCreateClick={handleCreateClick}
+        onBulkCreateClick={() => setIsBulkDialogOpen(true)}
+      />
 
-      <div className="border rounded-lg overflow-hidden bg-slate-200 grid grid-cols-7 gap-px md:grid-cols-7 grid-cols-1 md:gap-px gap-0">
+      <div className="border rounded-lg overflow-hidden bg-slate-200 grid grid-cols-7 gap-px md:grid-cols-7 grid-cols-1 md:gap-px gap-0 shadow-sm">
         {DAY_NAMES.map((name) => (
           <div
             key={name}
@@ -117,6 +101,14 @@ export function MonthCalendar() {
               />
             ))}
       </div>
+
+      {selectedStudentId && (
+        <StudentScheduleView 
+          studentId={selectedStudentId} 
+          sessions={sessions}
+          exportRef={exportRef}
+        />
+      )}
 
       <SessionFormDialog
         open={isDialogOpen}
