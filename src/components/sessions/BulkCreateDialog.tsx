@@ -112,7 +112,14 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
     if (mode === "create") {
       bulkCreateMutation.mutate(values)
     } else {
-      assignMutation.mutate(values)
+      if (!values.studentIds || values.studentIds.length === 0) {
+        toast.error("Vui lòng chọn ít nhất một học sinh")
+        return
+      }
+      assignMutation.mutate({
+        ...values,
+        studentIds: values.studentIds,
+      })
     }
   }
 

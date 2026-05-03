@@ -321,15 +321,16 @@ export async function updateSession(
 
   return toDTO(updated)
 }
+
 export async function addStudentsToRecurringSessions(
   db: PrismaClient,
   userId: number,
   params: {
     studentIds: number[]
     startTime: string // "HH:mm"
-    endTime: string   // "HH:mm"
+    endTime: string // "HH:mm"
     startDate: string // "YYYY-MM-DD"
-    endDate: string   // "YYYY-MM-DD"
+    endDate: string // "YYYY-MM-DD"
     weekdays: number[] // 0=T2...6=CN
   }
 ): Promise<{ updatedSessions: number }> {
@@ -388,7 +389,6 @@ export async function addStudentsToRecurringSessions(
 }
 
 export async function deleteSession(
-...
   db: PrismaClient,
   userId: number,
   id: number

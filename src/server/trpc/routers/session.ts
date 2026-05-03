@@ -8,6 +8,7 @@ import {
 } from "@/lib/schemas/session"
 import {
   addStudentsToSession,
+  addStudentsToRecurringSessions,
   bulkCreateSessions,
   createSession,
   deleteSession,
