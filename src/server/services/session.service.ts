@@ -304,6 +304,65 @@ export async function deleteSession(
   return { success: true }
 }
 
+export async function addStudentsToSession(
+  db: PrismaClient,
+  userId: number,
+  sessionId: number,
+  studentIds: number[]
+): Promise<SessionDTO> {
+  const session = await db.teachingSession.findUnique({ where: { id: sessionId } })
+  assertOwnership(session, userId)
+
+  // Verify all students belong to the user
+  const students = await db.student.findMany({
+    where: { id: { in: studentIds }, userId },
+  })
+  if (students.length !== studentIds.length) {
+    throw new TRPCError({ code: "NOT_FOUND" })
+  }
+
+  // Use upsert to avoid duplicates
+  for (const studentId of studentIds) {
+    await db.sessionStudent.upsert({
+      where: { sessionId_studentId: { sessionId, studentId } },
+      update: {},
+      create: { sessionId, studentId },
+    })
+  }
+
+  const updated = await db.teachingSession.findUnique({
+    where: { id: sessionId },
+    include: {
+      subject: true,
+      sessionStudents: { include: { student: true } },
+    },
+  })
+  return toDTO(updated!)
+}
+
+export async function removeStudentFromSession(
+  db: PrismaClient,
+  userId: number,
+  sessionId: number,
+  studentId: number
+): Promise<SessionDTO> {
+  const session = await db.teachingSession.findUnique({ where: { id: sessionId } })
+  assertOwnership(session, userId)
+
+  await db.sessionStudent.delete({
+    where: { sessionId_studentId: { sessionId, studentId } },
+  })
+
+  const updated = await db.teachingSession.findUnique({
+    where: { id: sessionId },
+    include: {
+      subject: true,
+      sessionStudents: { include: { student: true } },
+    },
+  })
+  return toDTO(updated!)
+}
+
 export async function bulkCreateSessions(
   db: PrismaClient,
   userId: number,

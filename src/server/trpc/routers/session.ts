@@ -7,10 +7,12 @@ import {
   sessionUpdateSchema,
 } from "@/lib/schemas/session"
 import {
+  addStudentsToSession,
   bulkCreateSessions,
   createSession,
   deleteSession,
   getMonthSessions,
+  removeStudentFromSession,
   updateSession,
 } from "@/server/services/session.service"
 
@@ -39,5 +41,27 @@ export const sessionRouter = createTRPCRouter({
     .input(sessionBulkCreateSchema)
     .mutation(({ ctx, input }) =>
       bulkCreateSessions(ctx.db, ctx.userId, input)
+    ),
+
+  addStudents: protectedProcedure
+    .input(
+      z.object({
+        sessionId: z.number().int().positive(),
+        studentIds: z.array(z.number().int().positive()),
+      })
+    )
+    .mutation(({ ctx, input }) =>
+      addStudentsToSession(ctx.db, ctx.userId, input.sessionId, input.studentIds)
+    ),
+
+  removeStudent: protectedProcedure
+    .input(
+      z.object({
+        sessionId: z.number().int().positive(),
+        studentId: z.number().int().positive(),
+      })
+    )
+    .mutation(({ ctx, input }) =>
+      removeStudentFromSession(ctx.db, ctx.userId, input.sessionId, input.studentId)
     ),
 })

@@ -245,16 +245,16 @@ Trình tự trong 1 phiên:
 - [x] Tạo `src/components/calendar/SessionCard.tsx` (border màu theo cấp: tieu_hoc / thcs / mixed)
 - [x] Cập nhật `src/app/(app)/calendar/page.tsx` — render MonthCalendar
 - [x] Navigate tháng ◄ ►, highlight hôm nay (today flag trong grid cell)
-- [ ] **Test thủ công:** Tạo seed sessions → cards đúng vị trí (verify trên dev server)
+- [x] **Test thủ công:** Tạo seed sessions → cards đúng vị trí (verify trên dev server)
 
 ### Sub 4.5 — SessionFormDialog
-- [ ] Tạo `src/components/sessions/SessionFormDialog.tsx`
-- [ ] Click ô trống → dialog pre-fill ngày ✓
-- [ ] Create + Edit mode, validate endTime > startTime
-- [ ] **Test thủ công:** Tạo ca → card xuất hiện ✓, sửa → cập nhật ✓
+- [x] Tạo `src/components/sessions/SessionFormDialog.tsx`
+- [x] Click ô trống → dialog pre-fill ngày ✓
+- [x] Create + Edit mode, validate endTime > startTime
+- [x] **Test thủ công:** Tạo ca → card xuất hiện ✓, sửa → cập nhật ✓
 
 ### Sub 4.6 — Deploy + Full Test
-- [ ] `pnpm test && pnpm build && git push` → verify Vercel ✓
+- [x] `pnpm test && pnpm build && git push` → verify Vercel ✓
 
 **✅ Phase 4 done khi:** Calendar + Session CRUD live.
 
@@ -265,17 +265,17 @@ Trình tự trong 1 phiên:
 > Đọc: `docs/03-api.md` (attendance), `docs/04-frontend.md` (StudentPicker, AttendancePanel, SessionDetailDialog)
 
 ### Sub 5.1 — tRPC: addStudents + Attendance
-- [ ] Thêm vào session router: `addStudents`, `removeStudent`
-- [ ] Tạo `src/lib/schemas/attendance.ts`
-- [ ] Tạo `src/server/trpc/routers/attendance.ts` (update, get)
-- [ ] Tạo `src/server/services/attendance.service.ts`
-- [ ] Viết `tests/integration/attendance.test.ts` (8 cases)
-- [ ] **Test:** pass ✓
+- [x] Thêm vào session router: `addStudents`, `removeStudent`
+- [x] Tạo `src/lib/schemas/attendance.ts`
+- [x] Tạo `src/server/trpc/routers/attendance.ts` (update, get)
+- [x] Tạo `src/server/services/attendance.service.ts`
+- [x] Viết `tests/integration/attendance.test.ts` (8 cases)
+- [x] **Test:** pass ✓
 
 ### Sub 5.2 — StudentPicker
-- [ ] Tạo `src/components/sessions/StudentPicker.tsx`
-- [ ] Tích hợp vào SessionFormDialog
-- [ ] **Test thủ công:** Tạo ca + gán 3 HS → card hiện "3 HS" ✓
+- [x] Tạo `src/components/sessions/StudentPicker.tsx`
+- [x] Tích hợp vào SessionFormDialog
+- [x] **Test thủ công:** Tạo ca + gán 3 HS → card hiện "3 HS" ✓
 
 ### Sub 5.3 — SessionDetailDialog + AttendancePanel
 - [ ] Tạo `src/components/sessions/SessionDetailDialog.tsx`
