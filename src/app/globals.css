@@ -59,9 +59,6 @@
 }
 
 /* === CALENDAR === */
-.calendar-grid {
-  @apply grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden;
-}
 .calendar-day-cell {
   @apply min-h-[120px] p-2 bg-white flex flex-col gap-1;
 }
@@ -80,8 +77,7 @@
 
 /* Mobile: list view */
 @media (max-width: 768px) {
-  .calendar-grid { @apply grid-cols-1 gap-0; }
-  .calendar-day-cell { @apply min-h-0 border-b border-gray-100; }
+  .calendar-day-cell { @apply min-h-0 border-b border-slate-100 p-3; }
   .calendar-day-cell--outside { @apply hidden; }
 }
 

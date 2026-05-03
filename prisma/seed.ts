@@ -6,12 +6,13 @@ const db = new PrismaClient()
 const BCRYPT_COST = process.env.NODE_ENV === "test" ? 4 : 12
 
 async function seedSubjectsForUser(userId: number) {
+  // Clear existing sessions and subjects to ensure only defaults exist
+  await db.sessionStudent.deleteMany({ where: { session: { userId } } })
+  await db.teachingSession.deleteMany({ where: { userId } })
+  await db.subject.deleteMany({ where: { userId } })
+
   const defaults = [
     { name: "Tiếng Anh", color: "#4F46E5", isDefault: true, sortOrder: 1 },
-    { name: "Toán", color: "#0891B2", isDefault: false, sortOrder: 2 },
-    { name: "Ngữ Văn", color: "#059669", isDefault: false, sortOrder: 3 },
-    { name: "Vật Lý", color: "#D97706", isDefault: false, sortOrder: 4 },
-    { name: "Hóa Học", color: "#DC2626", isDefault: false, sortOrder: 5 },
   ]
   for (const s of defaults) {
     await db.subject.upsert({
@@ -37,7 +38,7 @@ async function main() {
 
   await seedSubjectsForUser(user.id)
 
-  console.log(`✅ Seed OK: user "${user.username}" (id=${user.id}) + 5 subjects`)
+  console.log(`✅ Seed OK: user "${user.username}" (id=${user.id}) + 1 subject`)
 }
 
 main()

@@ -45,3 +45,4 @@ prisma/generated/
 # AI tools
 .claude/
 .stitch/
+.aider*

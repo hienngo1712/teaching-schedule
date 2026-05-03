@@ -6,9 +6,13 @@ import {
   parseTimeToDate,
 } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
-import type {
-  SessionCreateInput,
-  SessionFilterInput,
+import {
+  sessionBulkCreateSchema,
+  sessionCreateSchema,
+  sessionFilterSchema,
+  type SessionBulkCreateInput,
+  type SessionCreateInput,
+  type SessionFilterInput,
 } from "@/lib/schemas/session"
 
 export type SessionDTO = {
@@ -298,6 +302,82 @@ export async function deleteSession(
   assertOwnership(existing, userId)
   await db.teachingSession.delete({ where: { id } })
   return { success: true }
+}
+
+export async function bulkCreateSessions(
+  db: PrismaClient,
+  userId: number,
+  input: SessionBulkCreateInput
+): Promise<{ created: number; skipped: number }> {
+  await assertSubjectOwned(db, userId, input.subjectId)
+
+  // Verify studentIds thuộc userId
+  if (input.studentIds && input.studentIds.length > 0) {
+    const owned = await db.student.findMany({
+      where: { id: { in: input.studentIds }, userId },
+      select: { id: true },
+    })
+    if (owned.length !== input.studentIds.length) {
+      throw new TRPCError({ code: "NOT_FOUND" })
+    }
+  }
+
+  const start = parseSessionDate(input.startDate)
+  const end = parseSessionDate(input.endDate)
+  const startTime = parseTimeToDate(input.startTime)
+  const endTime = parseTimeToDate(input.endTime)
+
+  let createdCount = 0
+  let skippedCount = 0
+
+  const currentDate = new Date(start)
+  while (currentDate <= end) {
+    // JS getDay(): 0=Sun, 1=Mon, ..., 6=Sat
+    // Input weekdays: 0=T2, 1=T3, ..., 6=CN (Theo DAY_NAMES)
+    // Mapping: (currentDate.getDay() + 6) % 7
+    const VN_dayIndex = (currentDate.getDay() + 6) % 7
+
+    if (input.weekdays.includes(VN_dayIndex)) {
+      try {
+        await checkOverlap(db, {
+          userId,
+          sessionDate: currentDate,
+          startTime,
+          endTime,
+        })
+
+        await db.teachingSession.create({
+          data: {
+            userId,
+            sessionDate: currentDate,
+            startTime,
+            endTime,
+            subjectId: input.subjectId,
+            title: input.title ?? null,
+            notes: input.notes ?? null,
+            ...(input.studentIds && input.studentIds.length > 0
+              ? {
+                  sessionStudents: {
+                    create: input.studentIds.map((sid) => ({ studentId: sid })),
+                  },
+                }
+              : {}),
+          },
+        })
+        createdCount++
+      } catch (err) {
+        // Nếu trùng lịch thì skip ca này
+        if (err instanceof TRPCError && err.code === "CONFLICT") {
+          skippedCount++
+        } else {
+          throw err
+        }
+      }
+    }
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+
+  return { created: createdCount, skipped: skippedCount }
 }
 
 export { parseTimeToDate }

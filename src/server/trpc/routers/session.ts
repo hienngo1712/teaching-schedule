@@ -1,11 +1,13 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
 import {
+  sessionBulkCreateSchema,
   sessionCreateSchema,
   sessionFilterSchema,
   sessionUpdateSchema,
 } from "@/lib/schemas/session"
 import {
+  bulkCreateSessions,
   createSession,
   deleteSession,
   getMonthSessions,
@@ -31,5 +33,11 @@ export const sessionRouter = createTRPCRouter({
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(({ ctx, input }) =>
       deleteSession(ctx.db, ctx.userId, input.id)
+    ),
+
+  bulkCreate: protectedProcedure
+    .input(sessionBulkCreateSchema)
+    .mutation(({ ctx, input }) =>
+      bulkCreateSessions(ctx.db, ctx.userId, input)
     ),
 })
