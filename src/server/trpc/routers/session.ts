@@ -12,6 +12,7 @@ import {
   bulkCreateSessions,
   createSession,
   deleteSession,
+  duplicateSession,
   getMonthSessions,
   removeStudentFromSession,
   updateSession,
@@ -36,6 +37,12 @@ export const sessionRouter = createTRPCRouter({
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(({ ctx, input }) =>
       deleteSession(ctx.db, ctx.userId, input.id)
+    ),
+
+  duplicate: protectedProcedure
+    .input(z.object({ id: z.number().int().positive(), targetDate: z.string() }))
+    .mutation(({ ctx, input }) =>
+      duplicateSession(ctx.db, ctx.userId, input.id, input.targetDate)
     ),
 
   bulkCreate: protectedProcedure

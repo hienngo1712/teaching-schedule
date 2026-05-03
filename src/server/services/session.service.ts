@@ -179,6 +179,21 @@ async function assertSubjectOwned(
   assertOwnership(subject, userId)
 }
 
+async function assertStudentsOwned(
+  db: PrismaClient,
+  userId: number,
+  studentIds: number[]
+): Promise<void> {
+  if (!studentIds.length) return
+  const owned = await db.student.findMany({
+    where: { id: { in: studentIds }, userId },
+    select: { id: true },
+  })
+  if (owned.length !== studentIds.length) {
+    throw new TRPCError({ code: "NOT_FOUND" })
+  }
+}
+
 export async function createSession(
   db: PrismaClient,
   userId: number,
@@ -192,15 +207,8 @@ export async function createSession(
 
   await checkOverlap(db, { userId, sessionDate, startTime, endTime })
 
-  // Verify studentIds thuộc userId
-  if (input.studentIds && input.studentIds.length > 0) {
-    const owned = await db.student.findMany({
-      where: { id: { in: input.studentIds }, userId },
-      select: { id: true },
-    })
-    if (owned.length !== input.studentIds.length) {
-      throw new TRPCError({ code: "NOT_FOUND" })
-    }
+  if (input.studentIds) {
+    await assertStudentsOwned(db, userId, input.studentIds)
   }
 
   const created = await db.teachingSession.create({
@@ -274,6 +282,13 @@ export async function updateSession(
   const newEnd = data.endTime
     ? parseTimeToDate(data.endTime)
     : existing.endTime
+
+  if (newEnd <= newStart) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Giờ kết thúc phải sau giờ bắt đầu",
+    })
+  }
 
   // Chỉ check overlap khi giờ/ngày thay đổi
   if (
@@ -465,15 +480,8 @@ export async function bulkCreateSessions(
 ): Promise<{ created: number; skipped: number }> {
   await assertSubjectOwned(db, userId, input.subjectId)
 
-  // Verify studentIds thuộc userId
-  if (input.studentIds && input.studentIds.length > 0) {
-    const owned = await db.student.findMany({
-      where: { id: { in: input.studentIds }, userId },
-      select: { id: true },
-    })
-    if (owned.length !== input.studentIds.length) {
-      throw new TRPCError({ code: "NOT_FOUND" })
-    }
+  if (input.studentIds) {
+    await assertStudentsOwned(db, userId, input.studentIds)
   }
 
   const start = parseSessionDate(input.startDate)
@@ -532,6 +540,55 @@ export async function bulkCreateSessions(
   }
 
   return { created: createdCount, skipped: skippedCount }
+}
+
+export async function duplicateSession(
+  db: PrismaClient,
+  userId: number,
+  id: number,
+  targetDate: string
+): Promise<SessionDTO> {
+  const existing = await db.teachingSession.findUnique({
+    where: { id },
+    include: { sessionStudents: true },
+  })
+  assertOwnership(existing, userId)
+
+  const newSessionDate = parseSessionDate(targetDate)
+
+  await checkOverlap(db, {
+    userId,
+    sessionDate: newSessionDate,
+    startTime: existing.startTime,
+    endTime: existing.endTime,
+  })
+
+  const duplicated = await db.teachingSession.create({
+    data: {
+      userId,
+      sessionDate: newSessionDate,
+      startTime: existing.startTime,
+      endTime: existing.endTime,
+      subjectId: existing.subjectId,
+      title: existing.title,
+      notes: existing.notes,
+      ...(existing.sessionStudents.length > 0
+        ? {
+            sessionStudents: {
+              create: existing.sessionStudents.map((ss) => ({
+                studentId: ss.studentId,
+              })),
+            },
+          }
+        : {}),
+    },
+    include: {
+      subject: true,
+      sessionStudents: { include: { student: true } },
+    },
+  })
+
+  return toDTO(duplicated)
 }
 
 export { parseTimeToDate }

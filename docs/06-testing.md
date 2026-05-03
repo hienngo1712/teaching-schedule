@@ -96,6 +96,11 @@ DIRECT_URL="postgresql://...neon.tech/neondb_test?sslmode=require"
 ### 3. Quy trình chạy
 Khi bạn chạy `pnpm test`, Vitest sẽ tự động ưu tiên load biến môi trường từ `.env.test`. Nếu file này không tồn tại và bạn đang trỏ tới Neon trong `.env`, hệ thống sẽ chặn không cho chạy test để bảo vệ dữ liệu.
 
+**TUYỆT ĐỐI KHÔNG:**
+- Không trỏ `.env.test` vào database branch `main`.
+- Không chạy `prisma db push` hoặc `migrate reset` khi đang load `.env` (Production) nếu không có mục đích quản trị cụ thể.
+- Luôn kiểm tra danh sách user bằng `scripts/list-users.ts` để biết mình đang ở database nào.
+
 ---
 
 ## Unit Tests

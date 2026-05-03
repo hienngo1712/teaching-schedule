@@ -402,6 +402,23 @@ export function formatDuration(minutes: number): string {
 }
 ```
 
+## Phân biệt môi trường Database
+
+Để đảm bảo an toàn dữ liệu, cần phân biệt rõ khi nào thao tác với dữ liệu Test và khi nào thao tác với dữ liệu Thật (Production):
+
+1. **Dữ liệu Test (Development/Testing):**
+   - Chỉ dùng database thuộc branch `test` của Neon.
+   - Cấu hình trong file: `.env.test` hoặc `.env.local`.
+   - Dùng khi: Chạy app ở local (`pnpm dev`), chạy tests (`pnpm test`), hoặc thử nghiệm tính năng mới.
+
+2. **Dữ liệu Thật (Production):**
+   - Chỉ dùng database branch `main` của Neon.
+   - Cấu hình trong file: `.env`.
+   - Dùng khi: App đã deploy lên Vercel, hoặc khi cần tạo tài khoản/dữ liệu chính thức cho người dùng.
+
+**Lưu ý khi chạy script Admin:** 
+Khi chạy các script trong `scripts/` (như `create-user.ts`), Prisma sẽ mặc định load `.env`. Nếu bạn muốn chắc chắn đang tác động vào đúng database, hãy kiểm tra biến `DATABASE_URL` trong file tương ứng trước khi chạy.
+
 ---
 
 ## DB Conventions

@@ -13,6 +13,11 @@ Trình tự trong 1 phiên:
   → Review 2 lần (xem docs/08-review.md)
   → Commit nếu pass
   → DỪNG, sang phiên mới
+
+PHÂN BIỆT DATABASE:
+  - Dữ liệu Test: Chỉ dùng branch 'test' của Neon (.env.test / .env.local).
+  - Dữ liệu Thật (Production): Chỉ dùng branch 'main' của Neon (.env).
+  - TUYỆT ĐỐI không chạy test hay migrate reset trên database Production.
 ```
 
 ---
