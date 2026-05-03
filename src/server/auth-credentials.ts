@@ -17,9 +17,6 @@ export class RateLimitedError extends Error {
 }
 
 export async function isRateLimited(username: string): Promise<boolean> {
-  // Tạm thời vô hiệu hóa rate limit theo yêu cầu
-  return false
-  /*
   const recentFails = await db.loginAttempt.count({
     where: {
       username,
@@ -28,7 +25,6 @@ export async function isRateLimited(username: string): Promise<boolean> {
     },
   })
   return recentFails >= RATE_LIMIT_MAX_FAILS
-  */
 }
 
 export type AuthorizedUser = {
