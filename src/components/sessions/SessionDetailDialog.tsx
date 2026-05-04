@@ -30,6 +30,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Calendar } from "@/components/ui/calendar"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { trpc } from "@/lib/trpc"
 import type { SessionDTO } from "@/server/services/session.service"
 import { AttendancePanel } from "./AttendancePanel"
@@ -51,6 +54,10 @@ export function SessionDetailDialog({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false)
   const [isAddStudentsOpen, setIsAddStudentsOpen] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurEndDate, setRecurEndDate] = useState<string>(
+    dayjs(session.sessionDate).add(2, "month").format("YYYY-MM-DD")
+  )
   const [targetDate, setTargetDate] = useState<Date | undefined>(
     dayjs(session.sessionDate).add(7, "day").toDate()
   )
@@ -91,6 +98,18 @@ export function SessionDetailDialog({
     },
   })
 
+  const addRecurringMutation = trpc.session.addRecurringStudents.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Đã thêm học sinh vào ${res.updatedSessions} ca dạy khớp lịch.`)
+      utils.session.getMonth.invalidate()
+      utils.attendance.get.invalidate({ sessionId: session.id })
+      setIsAddStudentsOpen(false)
+    },
+    onError: (err) => {
+      toast.error(err.message || "Đã có lỗi xảy ra")
+    },
+  })
+
   const handleDelete = () => {
     deleteMutation.mutate({ id: session.id })
   }
@@ -105,15 +124,35 @@ export function SessionDetailDialog({
 
   const handleOpenAddStudents = () => {
     setSelectedStudentIds(session.students.map((s) => s.studentId))
+    setIsRecurring(false)
     setIsAddStudentsOpen(true)
   }
 
   const handleSaveStudents = () => {
-    addStudentsMutation.mutate({
-      sessionId: session.id,
-      studentIds: selectedStudentIds,
-    })
+    if (isRecurring) {
+      if (selectedStudentIds.length === 0) {
+        toast.error("Vui lòng chọn ít nhất một học sinh")
+        return
+      }
+      
+      const vnDayIndex = (dayjs(session.sessionDate).day() + 6) % 7
+      addRecurringMutation.mutate({
+        studentIds: selectedStudentIds,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        startDate: dayjs(session.sessionDate).format("YYYY-MM-DD"),
+        endDate: recurEndDate,
+        weekdays: [vnDayIndex],
+      })
+    } else {
+      addStudentsMutation.mutate({
+        sessionId: session.id,
+        studentIds: selectedStudentIds,
+      })
+    }
   }
+
+  const isSaving = addStudentsMutation.isPending || addRecurringMutation.isPending
 
   return (
     <>
@@ -195,28 +234,58 @@ export function SessionDetailDialog({
           <DialogHeader>
             <DialogTitle>Quản lý học sinh trong ca</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 space-y-4">
             <StudentPicker
               value={selectedStudentIds}
               onChange={setSelectedStudentIds}
             />
+
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="recur" 
+                  checked={isRecurring} 
+                  onCheckedChange={(val) => setIsRecurring(!!val)} 
+                />
+                <Label htmlFor="recur" className="text-sm font-medium cursor-pointer">
+                  Áp dụng cho tất cả các buổi cùng khung giờ & thứ này
+                </Label>
+              </div>
+
+              {isRecurring && (
+                <div className="pl-6 animate-in slide-in-from-top-1 duration-200">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-slate-500 whitespace-nowrap">Đến ngày:</Label>
+                    <Input 
+                      type="date" 
+                      value={recurEndDate} 
+                      onChange={(e) => setRecurEndDate(e.target.value)}
+                      className="h-8 text-sm w-full"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Hệ thống sẽ tìm các ca dạy khớp giờ vào các ngày cùng thứ trong khoảng từ {dayjs(session.sessionDate).format("DD/MM")} đến {dayjs(recurEndDate).format("DD/MM/YYYY")}.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button
               variant="ghost"
               onClick={() => setIsAddStudentsOpen(false)}
-              disabled={addStudentsMutation.isPending}
+              disabled={isSaving}
             >
               Hủy
             </Button>
             <Button
               onClick={handleSaveStudents}
-              disabled={addStudentsMutation.isPending}
+              disabled={isSaving}
             >
-              {addStudentsMutation.isPending && (
+              {isSaving && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Lưu thay đổi
+              {isRecurring ? "Gán vào chuỗi" : "Lưu thay đổi"}
             </Button>
           </DialogFooter>
         </DialogContent>
