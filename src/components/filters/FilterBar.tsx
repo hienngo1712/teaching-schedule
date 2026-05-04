@@ -15,15 +15,22 @@ import { useFilters } from "@/hooks/useFilters"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useEffect, useState } from "react"
 import { useDebounce } from "@/hooks/useDebounce"
+import { ExportExcelButton } from "../reports/ExportExcelButton"
+import type { SessionDTO } from "@/server/services/session.service"
+import type { StudentDTO } from "@/lib/schemas/student.dto"
 
 interface FilterBarProps {
   onCreateClick: () => void
   onBulkCreateClick: () => void
+  sessions: SessionDTO[]
+  students?: StudentDTO[]
 }
 
 export function FilterBar({
   onCreateClick,
   onBulkCreateClick,
+  sessions,
+  students = []
 }: FilterBarProps) {
   const { 
     selectedGrade, 
@@ -117,6 +124,8 @@ export function FilterBar({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
+          <ExportExcelButton sessions={sessions} students={students} />
+          
           <Button
             variant="outline"
             onClick={onBulkCreateClick}

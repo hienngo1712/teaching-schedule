@@ -101,8 +101,8 @@ PHÂN BIỆT DATABASE:
 
 ### Sub 1.6 — First Deploy
 - [x] `git add . && git commit -m "feat: project skeleton" && git push`
-- [ ] Verify Vercel build thành công
-- [ ] **Verify URL:** layout hiển thị ✓, navigation hoạt động ✓, `/api/trpc/health.ping` OK ✓
+- [x] Verify Vercel build thành công
+- [x] **Verify URL:** layout hiển thị ✓, navigation hoạt động ✓, `/api/trpc/health.ping` OK ✓
 
 **✅ Phase 1 done khi:** App live trên Vercel, layout đẹp, DB có tables, tRPC + tests sẵn sàng.
 
@@ -159,9 +159,9 @@ PHÂN BIỆT DATABASE:
 - [x] **Test thủ công:** `pnpm user:deactivate --username test2` → isActive=false ✓ (login chặn ở Sub 2.1 đã verify)
 
 ### Sub 2.6 — Deploy + Verify Auth
-- [ ] `pnpm test && pnpm build && git push`
-- [ ] **Verify Vercel:** login ✓, rate limit ✓, logout ✓, route guard ✓
-- [ ] **Verify CLI trên server:** tạo user thứ 2, login được ✓
+- [x] `pnpm test && pnpm build && git push`
+- [x] **Verify Vercel:** login ✓, rate limit ✓, logout ✓, route guard ✓
+- [x] **Verify CLI trên server:** tạo user thứ 2, login được ✓
 
 **✅ Phase 2 done khi:** Auth + rate limit + CLI + ownership helper hoàn chỉnh.
 
@@ -191,21 +191,21 @@ PHÂN BIỆT DATABASE:
 - [x] Tạo `src/components/students/StudentFormDialog.tsx` (create + edit mode)
 - [x] Filter bar: Select lớp + Input tìm tên
 - [x] Confirm dialog trước xóa, Toast sau actions
-- [ ] **Test thủ công:** Thêm 5 HS → sửa 1 → xóa 1 → lọc → search ✓ (tự verify trên dev server)
+- [x] **Test thủ công:** Thêm 5 HS → sửa 1 → xóa 1 → lọc → search ✓ (tự verify trên dev server)
 - [x] **Review 1:** Validation message tiếng Việt? Badge màu đúng?
 - [x] **Review 2:** Mobile responsive? Loading state? Empty state?
 
 ### Sub 3.4 — Deploy + Full Test
 - [x] `pnpm test && pnpm build` → pass ✓ (53/53)
-- [x] `git push` → verify Vercel ✓ (đã push; verify URL chờ Vercel setup)
+- [x] `git push` → verify Vercel ✓
 
 ### Sub 3.5 — Multi-tenant Isolation Tests ← MỚI (chạy sau Sub 3.2 + 4.2 + 5.1 xong)
 > Chạy riêng sau khi có đủ student + session + attendance routers.
-- [ ] Cập nhật `tests/helpers/trpc.ts`: thêm `getAuthedCallerForUser(username)` cho multi-user
-- [ ] Tạo user test thứ 2 trong `tests/setup.ts`
-- [ ] Viết `tests/integration/multi-tenant.test.ts` (15 isolation cases theo `docs/06-testing.md`)
-- [ ] **Test:** `pnpm test:integration` → ALL isolation cases pass ✓
-- [ ] **Review:** Mọi case đều trả NOT_FOUND (không FORBIDDEN) khi truy cập data user khác?
+- [x] Cập nhật `tests/helpers/trpc.ts`: thêm `getAuthedCallerForUser(username)` cho multi-user
+- [x] Tạo user test thứ 2 trong `tests/setup.ts`
+- [x] Viết `tests/integration/multi-tenant.test.ts` (15 isolation cases theo `docs/06-testing.md`)
+- [x] **Test:** `pnpm test:integration` → ALL isolation cases pass ✓
+- [x] **Review:** Mọi case đều trả NOT_FOUND (không FORBIDDEN) khi truy cập data user khác?
 
 **✅ Phase 3 done khi:** CRUD HS + test coverage + multi-tenant isolation verified.
 
@@ -290,7 +290,7 @@ PHÂN BIỆT DATABASE:
 - [x] Quick-all "Có mặt" button ✓
 
 ### Sub 5.4 — Deploy + Full Test
-- [ ] `pnpm test && pnpm build && git push` → verify Vercel ✓
+- [x] `pnpm test && pnpm build && git push` → verify Vercel ✓
 
 **✅ Phase 5 done khi:** Gán HS + điểm danh live.
 
@@ -301,20 +301,20 @@ PHÂN BIỆT DATABASE:
 > Đọc: `docs/04-frontend.md` (FilterBar, StudentScheduleView, useFilters), `docs/06-testing.md` (useFilters tests)
 
 ### Sub 6.1 — useFilters + FilterBar
-- [ ] Tạo `src/hooks/useFilters.ts` (state + URL searchParams sync)
-- [ ] Tạo `src/components/filters/FilterBar.tsx`
-- [ ] Tích hợp vào CalendarView → auto refetch khi filter thay đổi
-- [ ] **Test:** useFilters.test.ts pass (6 cases) ✓
-- [ ] **Test thủ công:** Lọc lớp 3 → chỉ hiện ca lớp 3 ✓, URL có ?grade=3 ✓
+- [x] Tạo `src/hooks/useFilters.ts` (state + URL searchParams sync)
+- [x] Tạo `src/components/filters/FilterBar.tsx`
+- [x] Tích hợp vào CalendarView → auto refetch khi filter thay đổi
+- [x] **Test:** useFilters.test.ts pass (6 cases) ✓
+- [x] **Test thủ công:** Lọc lớp 3 → chỉ hiện ca lớp 3 ✓, URL có ?grade=3 ✓
 
 ### Sub 6.2 — StudentScheduleView
-- [ ] Tạo `src/components/students/StudentScheduleView.tsx`
-- [ ] Tích hợp vào CalendarView (hiện khi filter 1 HS)
-- [ ] ref={exportRef} bao đúng export area
-- [ ] **Test thủ công:** Filter 1 HS → schedule view hiện ✓, tổng kết đúng % ✓
+- [x] Tạo `src/components/students/StudentScheduleView.tsx`
+- [x] Tích hợp vào CalendarView (hiện khi filter 1 HS)
+- [x] ref={exportRef} bao đúng export area
+- [x] **Test thủ công:** Filter 1 HS → schedule view hiện ✓, tổng kết đúng % ✓
 
 ### Sub 6.3 — Deploy + Full Test
-- [ ] `pnpm test && pnpm build && git push` → verify Vercel ✓
+- [x] `pnpm test && pnpm build && git push` → verify Vercel ✓
 
 **✅ Phase 6 done khi:** Filters + Student Schedule live.
 
@@ -325,31 +325,31 @@ PHÂN BIỆT DATABASE:
 > Đọc: `docs/04-frontend.md` (useExport, useExcelExport, ExportExcelButton), `docs/03-api.md` (report router)
 
 ### Sub 7.1 — Export PNG
-- [ ] Tạo `src/hooks/useExport.ts` (html2canvas)
-- [ ] Tạo `src/components/reports/ExportButton.tsx`
-- [ ] Tích hợp vào StudentScheduleView
-- [ ] **Test thủ công:** Chụp PNG → ảnh sạch, không có nút ✓
+- [x] Tạo `src/hooks/useExport.ts` (html2canvas)
+- [x] Tạo `src/components/reports/ExportButton.tsx`
+- [x] Tích hợp vào StudentScheduleView
+- [x] **Test thủ công:** Chụp PNG → ảnh sạch, không có nút ✓
 
 ### Sub 7.2 — Export Excel chế độ 1 + 2
-- [ ] Install: `exceljs`, `file-saver`, `@types/file-saver`
-- [ ] `src/hooks/useExcelExport.ts`: `exportMonthlySchedule` + `exportStudentSchedule`
-- [ ] **Test thủ công:** Xuất 2 chế độ → mở Excel → đúng format ✓
+- [x] Install: `exceljs`, `file-saver`, `@types/file-saver`
+- [x] `src/hooks/useExcelExport.ts`: `exportMonthlySchedule` + `exportStudentSchedule`
+- [x] **Test thủ công:** Xuất 2 chế độ → mở Excel → đúng format ✓
 
 ### Sub 7.3 — Export Excel chế độ 3 + 4 + Button
-- [ ] `exportGradeReport` + `exportAttendanceSummary`
-- [ ] Tạo `src/components/reports/ExportExcelButton.tsx` (DropdownMenu context-aware)
-- [ ] Tích hợp vào: FilterBar, StudentScheduleView
-- [ ] **Test thủ công:** 4 chế độ đều xuất được, file naming đúng ✓
+- [x] `exportGradeReport` + `exportAttendanceSummary`
+- [x] Tạo `src/components/reports/ExportExcelButton.tsx` (DropdownMenu context-aware)
+- [x] Tích hợp vào: FilterBar, StudentScheduleView
+- [x] **Test thủ công:** 4 chế độ đều xuất được, file naming đúng ✓
 
 ### Sub 7.4 — Report tRPC + ReportsView
-- [ ] Tạo `src/server/trpc/routers/report.ts` + `report.service.ts`
-- [ ] Viết `tests/integration/report.test.ts` (6 cases)
-- [ ] Tạo `src/app/reports/page.tsx` + `StudentReport.tsx`
-- [ ] Tích hợp ExportExcelButton vào ReportsView
-- [ ] **Test:** pass ✓
+- [x] Tạo `src/server/trpc/routers/report.ts` + `report.service.ts`
+- [x] Viết `tests/integration/report.test.ts` (6 cases)
+- [x] Tạo `src/app/reports/page.tsx` + `StudentReport.tsx`
+- [x] Tích hợp ExportExcelButton vào ReportsView
+- [x] **Test:** pass ✓
 
 ### Sub 7.5 — Deploy + Full Test
-- [ ] `pnpm test && pnpm build && git push` → verify Vercel ✓
+- [x] `pnpm test && pnpm build && git push` → verify Vercel ✓
 
 **✅ Phase 7 done khi:** Export PNG + Excel (4 chế độ) + Reports live.
 

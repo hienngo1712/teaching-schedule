@@ -35,6 +35,8 @@ export function MonthCalendar() {
     ...filterParams
   })
 
+  const { data: students = [] } = trpc.student.list.useQuery({})
+
   // Convert sessionDate string từ tRPC → Date object cho buildCalendarGrid
   const sessions = useMemo<SessionDTO[]>(() => {
     return (query.data ?? []).map((s) => ({
@@ -76,6 +78,8 @@ export function MonthCalendar() {
       <FilterBar 
         onCreateClick={handleCreateClick}
         onBulkCreateClick={() => setIsBulkDialogOpen(true)}
+        sessions={sessions}
+        students={students}
       />
 
       <div className="border rounded-lg overflow-hidden bg-slate-200 grid grid-cols-7 gap-px md:grid-cols-7 grid-cols-1 md:gap-px gap-0 shadow-sm">

@@ -50,7 +50,7 @@ beforeAll(async () => {
   await db.loginAttempt.deleteMany()
   await db.user.deleteMany()
 
-  await db.user.create({
+  const user1 = await db.user.create({
     data: {
       username: "teacher",
       passwordHash: await bcrypt.hash("teacher123", 4),
@@ -58,11 +58,30 @@ beforeAll(async () => {
     },
   })
 
-  await db.user.create({
+  const user2 = await db.user.create({
     data: {
       username: "teacher2",
       passwordHash: await bcrypt.hash("teacher123", 4),
       fullName: "Giáo viên Test 2",
+    },
+  })
+
+  // Seed subjects cho 2 users để tests không bị fail do thiếu subject
+  await db.subject.create({
+    data: {
+      name: "Tiếng Anh",
+      color: "#4F46E5",
+      isDefault: true,
+      userId: user1.id,
+    },
+  })
+
+  await db.subject.create({
+    data: {
+      name: "Tiếng Anh",
+      color: "#4F46E5",
+      isDefault: true,
+      userId: user2.id,
     },
   })
 })
