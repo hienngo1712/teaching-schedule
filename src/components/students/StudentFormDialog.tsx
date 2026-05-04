@@ -71,7 +71,8 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   const createMut = trpc.student.create.useMutation({
     onSuccess: () => {
-      utils.student.list.invalidate()
+      // Invalidate toàn bộ query liên quan đến student.list mà không quan tâm đến input
+      utils.student.list.invalidate(undefined, { queryKey: { type: 'all' } })
       toast.success("Đã thêm học sinh")
       onOpenChange(false)
     },
@@ -80,7 +81,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   const updateMut = trpc.student.update.useMutation({
     onSuccess: () => {
-      utils.student.list.invalidate()
+      utils.student.list.invalidate(undefined, { queryKey: { type: 'all' } })
       toast.success("Đã cập nhật học sinh")
       onOpenChange(false)
     },
