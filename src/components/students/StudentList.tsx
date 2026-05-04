@@ -90,7 +90,7 @@ export function StudentList() {
 
   const deleteMut = trpc.student.delete.useMutation({
     onSuccess: () => {
-      utils.student.list.invalidate(undefined, { queryKey: { type: 'all' } })
+      utils.student.list.invalidate()
       toast.success("Đã xóa học sinh")
       setDeleteTarget(null)
     },
