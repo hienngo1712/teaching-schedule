@@ -2,6 +2,8 @@ import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
 import {
   sessionBulkCreateSchema,
+  sessionBulkDeleteFutureSchema,
+  sessionBulkUpdateFutureSchema,
   sessionCreateSchema,
   sessionFilterSchema,
   sessionUpdateSchema,
@@ -10,6 +12,8 @@ import {
   addStudentsToSession,
   addStudentsToRecurringSessions,
   bulkCreateSessions,
+  bulkDeleteFutureSessions,
+  bulkUpdateFutureSessions,
   createSession,
   deleteSession,
   duplicateSession,
@@ -37,6 +41,18 @@ export const sessionRouter = createTRPCRouter({
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(({ ctx, input }) =>
       deleteSession(ctx.db, ctx.userId, input.id)
+    ),
+
+  deleteFuture: protectedProcedure
+    .input(sessionBulkDeleteFutureSchema)
+    .mutation(({ ctx, input }) =>
+      bulkDeleteFutureSessions(ctx.db, ctx.userId, input.id)
+    ),
+
+  updateFuture: protectedProcedure
+    .input(sessionBulkUpdateFutureSchema)
+    .mutation(({ ctx, input }) =>
+      bulkUpdateFutureSessions(ctx.db, ctx.userId, input.id, input.data)
     ),
 
   duplicate: protectedProcedure

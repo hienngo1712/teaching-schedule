@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { TimeInput } from "@/components/ui/time-input"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DAY_NAMES } from "@/lib/constants"
@@ -292,9 +293,9 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                 name="startTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Giờ bắt đầu</FormLabel>
+                    <FormLabel>Giờ bắt đầu (HH:mm)</FormLabel>
                     <FormControl>
-                      <Input type="time" {...field} />
+                      <TimeInput {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -305,9 +306,9 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                 name="endTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Giờ kết thúc</FormLabel>
+                    <FormLabel>Giờ kết thúc (HH:mm)</FormLabel>
                     <FormControl>
-                      <Input type="time" {...field} />
+                      <TimeInput {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

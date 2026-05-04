@@ -14,6 +14,7 @@ export const studentCreateSchema = z.object({
     .transform((v) => (v === "" ? undefined : v)),
   parentName: z.string().trim().max(100).optional(),
   notes: z.string().max(1000).optional(),
+  isActive: z.boolean().default(true),
 })
 
 export const studentUpdateSchema = z.object({

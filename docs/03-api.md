@@ -140,6 +140,34 @@ export const sessionCreateSchema = z.object({
 }).refine(d => d.endTime > d.startTime, {
   message: "Giờ kết thúc phải sau giờ bắt đầu", path: ["endTime"],
 })
+
+export const sessionBulkCreateSchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  weekdays:  z.array(z.number().int().min(0).max(6)).min(1),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/),
+  endTime:   z.string().regex(/^\d{2}:\d{2}$/),
+  subjectId: z.number().int().positive(),
+  title:     z.string().max(200).optional(),
+  notes:     z.string().optional(),
+  studentIds: z.array(z.number().int().positive()).optional(),
+})
+
+export const sessionBulkDeleteFutureSchema = z.object({
+  id: z.number().int().positive(),
+})
+
+export const sessionBulkUpdateFutureSchema = z.object({
+  id: z.number().int().positive(),
+  data: z.object({
+    startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    endTime:   z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    subjectId: z.number().int().positive().optional(),
+    title:     z.string().max(200).optional(),
+    notes:     z.string().optional(),
+    studentIds: z.array(z.number().int().positive()).optional(),
+  })
+})
 ```
 
 ### attendance.ts
@@ -276,6 +304,14 @@ session.delete → protectedProcedure
   Input:  { id }
   Logic:  assertOwnership(...) → hard delete
 
+session.deleteFuture → protectedProcedure
+  Input:  sessionBulkDeleteFutureSchema
+  Logic:  assertOwnership session → xóa các ca cùng thứ, giờ, môn trong tương lai
+
+session.updateFuture → protectedProcedure
+  Input:  sessionBulkUpdateFutureSchema
+  Logic:  assertOwnership session → cập nhật các ca cùng thứ, giờ, môn trong tương lai
+
 session.addStudents → protectedProcedure
   Input:  { sessionId, studentIds }
   Logic:
@@ -284,6 +320,10 @@ session.addStudents → protectedProcedure
        const students = await db.student.findMany({ where: { id: { in: studentIds }, userId: ctx.userId } })
        if (students.length !== studentIds.length) throw NOT_FOUND
     3. upsert sessionStudents
+
+session.addRecurringStudents → protectedProcedure
+  Input:  { studentIds, startTime, endTime, startDate, endDate, weekdays }
+  Logic:  Tìm các ca khớp lịch trong khoảng và gán HS hàng loạt
 
 session.removeStudent → protectedProcedure
   Input:  { sessionId, studentId }
@@ -323,19 +363,20 @@ attendance.update → protectedProcedure
 
 ```
 report.student → protectedProcedure
-  Input:  { studentId, period, year, month?, weekStart? }
+  Input:  { studentId, year, month }
   Logic:  assertOwnership student
   Output: { student, sessions[], summary: { ..., totalHours } }
-
-report.grade → protectedProcedure
-  Input:  { grade, year, month }
-  Query:  WHERE userId = ctx.userId AND grade = input.grade
 
 report.monthlySummary → protectedProcedure
   Input:  { year, month }
   Query:  WHERE userId = ctx.userId
   Output: { totalSessions, totalStudents, byGrade, bySubject, overallAttendanceRate }
+
+report.dashboard → protectedProcedure
+  Input:  (none)
+  Output: { totalStudents, sessionsToday, totalSessionsMonth, attendanceRate }
 ```
+
 
 ---
 

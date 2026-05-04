@@ -96,6 +96,37 @@ describe("Session CRUD + overlap", () => {
     expect(updated.notes).toBe("Mang vở bài tập")
   })
 
+  it("✓ update studentIds → thay thế danh sách HS", async () => {
+    const caller = await getAuthedCaller()
+    const st1 = await caller.student.create({ fullName: "Student 1", grade: 5 })
+    const st2 = await caller.student.create({ fullName: "Student 2", grade: 5 })
+    
+    // Tạo ca với st1
+    const s = await caller.session.create({
+      sessionDate: "2026-04-14",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId,
+      studentIds: [st1.id],
+    })
+    expect(s.studentCount).toBe(1)
+
+    // Cập nhật thành st2
+    const updated = await caller.session.update({
+      id: s.id,
+      data: { studentIds: [st2.id] }
+    })
+    expect(updated.studentCount).toBe(1)
+    expect(updated.students[0].studentId).toBe(st2.id)
+
+    // Cập nhật thành rỗng
+    const empty = await caller.session.update({
+      id: s.id,
+      data: { studentIds: [] }
+    })
+    expect(empty.studentCount).toBe(0)
+  })
+
   // ── Delete ───────────────────────────────────────────────────
   it("✓ delete → xóa ca + cascade session_students", async () => {
     const caller = await getAuthedCaller()

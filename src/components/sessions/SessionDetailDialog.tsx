@@ -33,6 +33,12 @@ import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
 import type { SessionDTO } from "@/server/services/session.service"
 import { AttendancePanel } from "./AttendancePanel"
@@ -62,6 +68,7 @@ export function SessionDetailDialog({
     dayjs(session.sessionDate).add(7, "day").toDate()
   )
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([])
+  const [isDeleteFuture, setIsDeleteFuture] = useState(false)
   const utils = trpc.useUtils()
 
   const deleteMutation = trpc.session.delete.useMutation({
@@ -74,6 +81,18 @@ export function SessionDetailDialog({
       toast.error("Đã có lỗi xảy ra khi xóa ca dạy")
     },
   })
+
+  const deleteFutureMutation = trpc.session.deleteFuture.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Đã xóa ${res.deleted} ca dạy lặp`)
+      utils.session.getMonth.invalidate()
+      onOpenChange(false)
+    },
+    onError: (err) => {
+      toast.error(err.message || "Đã có lỗi xảy ra khi xóa chuỗi ca dạy")
+    },
+  })
+
 
   const duplicateMutation = trpc.session.duplicate.useMutation({
     onSuccess: () => {
@@ -111,7 +130,11 @@ export function SessionDetailDialog({
   })
 
   const handleDelete = () => {
-    deleteMutation.mutate({ id: session.id })
+    if (isDeleteFuture) {
+      deleteFutureMutation.mutate({ id: session.id })
+    } else {
+      deleteMutation.mutate({ id: session.id })
+    }
   }
 
   const handleDuplicate = () => {
@@ -254,14 +277,37 @@ export function SessionDetailDialog({
 
               {isRecurring && (
                 <div className="pl-6 animate-in slide-in-from-top-1 duration-200">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-slate-500 whitespace-nowrap">Đến ngày:</Label>
-                    <Input 
-                      type="date" 
-                      value={recurEndDate} 
-                      onChange={(e) => setRecurEndDate(e.target.value)}
-                      className="h-8 text-sm w-full"
-                    />
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-xs text-slate-500">Đến ngày:</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "w-full h-8 text-sm justify-start font-normal",
+                            !recurEndDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarDays className="mr-2 h-3.5 w-3.5" />
+                          {recurEndDate ? (
+                            dayjs(recurEndDate).format("DD/MM/YYYY")
+                          ) : (
+                            <span>Chọn ngày</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={new Date(recurEndDate)}
+                          onSelect={(date) =>
+                            setRecurEndDate(dayjs(date).format("YYYY-MM-DD"))
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1">
                     Hệ thống sẽ tìm các ca dạy khớp giờ vào các ngày cùng thứ trong khoảng từ {dayjs(session.sessionDate).format("DD/MM")} đến {dayjs(recurEndDate).format("DD/MM/YYYY")}.
@@ -337,12 +383,30 @@ export function SessionDetailDialog({
               Hành động này không thể hoàn tác. Ca dạy này và toàn bộ dữ liệu điểm danh liên quan sẽ bị xóa vĩnh viễn.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          <div className="flex items-center space-x-2 py-2">
+            <Checkbox
+              id="delete-future"
+              checked={isDeleteFuture}
+              onCheckedChange={(val) => setIsDeleteFuture(!!val)}
+            />
+            <Label htmlFor="delete-future" className="text-sm font-medium cursor-pointer">
+              Xóa cả các ca dạy lặp trong tương lai (cùng thứ, giờ, môn)
+            </Label>
+          </div>
+
           <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending || deleteFutureMutation.isPending}>
+              Hủy
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={deleteMutation.isPending || deleteFutureMutation.isPending}
               className="bg-red-600 hover:bg-red-700"
             >
+              {(deleteMutation.isPending || deleteFutureMutation.isPending) && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Xóa ca dạy
             </AlertDialogAction>
           </AlertDialogFooter>

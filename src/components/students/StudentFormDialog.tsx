@@ -33,6 +33,7 @@ type StudentRecord = {
   parentPhone: string | null
   parentName: string | null
   notes: string | null
+  isActive: boolean
 }
 
 type Props = {
@@ -53,6 +54,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
       parentPhone: undefined,
       parentName: undefined,
       notes: undefined,
+      isActive: true,
     },
   })
 
@@ -65,6 +67,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
         parentPhone: student?.parentPhone ?? undefined,
         parentName: student?.parentName ?? undefined,
         notes: student?.notes ?? undefined,
+        isActive: student?.isActive ?? true,
       })
     }
   }, [open, student, form])
@@ -137,6 +140,22 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
                     Lớp {g}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="isActive">Trạng thái</Label>
+            <Select
+              value={form.watch("isActive") ? "true" : "false"}
+              onValueChange={(v) => form.setValue("isActive", v === "true")}
+            >
+              <SelectTrigger id="isActive">
+                <SelectValue placeholder="Chọn trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Đang học</SelectItem>
+                <SelectItem value="false">Đã nghỉ</SelectItem>
               </SelectContent>
             </Select>
           </div>

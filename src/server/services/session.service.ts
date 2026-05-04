@@ -437,20 +437,27 @@ export async function addStudentsToSession(
   assertOwnership(session, userId)
 
   // Verify all students belong to the user
-  const students = await db.student.findMany({
-    where: { id: { in: studentIds }, userId },
-  })
-  if (students.length !== studentIds.length) {
-    throw new TRPCError({ code: "NOT_FOUND" })
+  if (studentIds.length > 0) {
+    const students = await db.student.findMany({
+      where: { id: { in: studentIds }, userId },
+    })
+    if (students.length !== studentIds.length) {
+      throw new TRPCError({ code: "NOT_FOUND" })
+    }
   }
 
-  // Use createMany with skipDuplicates to avoid duplicates and reduce queries
-  if (studentIds.length > 0) {
-    await db.sessionStudent.createMany({
-      data: studentIds.map((studentId) => ({ sessionId, studentId })),
-      skipDuplicates: true,
+  // Sync: Xóa hết cũ, tạo mới
+  await db.$transaction(async (tx) => {
+    await tx.sessionStudent.deleteMany({
+      where: { sessionId },
     })
-  }
+    
+    if (studentIds.length > 0) {
+      await tx.sessionStudent.createMany({
+        data: studentIds.map((studentId) => ({ sessionId, studentId })),
+      })
+    }
+  })
 
   const updated = await db.teachingSession.findUnique({
     where: { id: sessionId },
@@ -583,6 +590,116 @@ export async function bulkCreateSessions(
   }
 
   return { created: createdCount, skipped: skippedCount }
+}
+
+export async function bulkDeleteFutureSessions(
+  db: PrismaClient,
+  userId: number,
+  referenceSessionId: number
+): Promise<{ deleted: number }> {
+  const ref = await db.teachingSession.findUnique({
+    where: { id: referenceSessionId },
+  })
+  assertOwnership(ref, userId)
+
+  // Dùng raw SQL để xử lý DOW (Day of Week) chính xác và nhanh
+  // Lưu ý: PostgreSQL DOW: 0=Sunday, 1=Monday...
+  // Chúng ta cần lấy DOW của reference date
+  const result = await db.$executeRaw`
+    DELETE FROM teaching_sessions
+    WHERE user_id = ${userId}
+      AND subject_id = ${ref.subjectId}
+      AND start_time = ${ref.startTime}::time
+      AND end_time = ${ref.endTime}::time
+      AND session_date >= ${ref.sessionDate}::date
+      AND EXTRACT(DOW FROM session_date) = EXTRACT(DOW FROM ${ref.sessionDate}::date)
+  `
+
+  return { deleted: Number(result) }
+}
+
+export async function bulkUpdateFutureSessions(
+  db: PrismaClient,
+  userId: number,
+  referenceSessionId: number,
+  data: SessionUpdateData
+): Promise<{ updated: number }> {
+  const ref = await db.teachingSession.findUnique({
+    where: { id: referenceSessionId },
+  })
+  assertOwnership(ref, userId)
+
+  const newStart = data.startTime ? parseTimeToDate(data.startTime) : ref.startTime
+  const newEnd = data.endTime ? parseTimeToDate(data.endTime) : ref.endTime
+
+  if (newEnd <= newStart) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Giờ kết thúc phải sau giờ bắt đầu",
+    })
+  }
+
+  // 1. Tìm các ca dạy khớp pattern
+  // Dùng raw query để lấy IDs trước
+  const sessions = await db.$queryRaw<Array<{ id: number; session_date: Date }>>`
+    SELECT id, session_date FROM teaching_sessions
+    WHERE user_id = ${userId}
+      AND subject_id = ${ref.subjectId}
+      AND start_time = ${ref.startTime}::time
+      AND end_time = ${ref.endTime}::time
+      AND session_date >= ${ref.sessionDate}::date
+      AND EXTRACT(DOW FROM session_date) = EXTRACT(DOW FROM ${ref.sessionDate}::date)
+  `
+
+  if (sessions.length === 0) return { updated: 0 }
+
+  const sessionIds = sessions.map((s) => s.id)
+
+  // 2. Nếu thay đổi thời gian, cần check overlap cho TỪNG ca
+  if (data.startTime || data.endTime) {
+    for (const s of sessions) {
+      await checkOverlap(db, {
+        userId,
+        sessionDate: s.session_date,
+        startTime: newStart,
+        endTime: newEnd,
+        excludeId: s.id,
+      })
+    }
+  }
+
+  // 3. Thực hiện update trong transaction
+  await db.$transaction(async (tx) => {
+    // Nếu có đổi studentIds, cần update cho tất cả các ca
+    if (data.studentIds !== undefined) {
+      await tx.sessionStudent.deleteMany({
+        where: { sessionId: { in: sessionIds } },
+      })
+      
+      if (data.studentIds.length > 0) {
+        const toCreate: Array<{ sessionId: number; studentId: number }> = []
+        for (const sid of sessionIds) {
+          for (const stid of data.studentIds) {
+            toCreate.push({ sessionId: sid, studentId: stid })
+          }
+        }
+        await tx.sessionStudent.createMany({ data: toCreate })
+      }
+    }
+
+    await tx.teachingSession.updateMany({
+      where: { id: { in: sessionIds } },
+      data: {
+        ...(data.startTime && { startTime: newStart }),
+        ...(data.endTime && { endTime: newEnd }),
+        ...(data.subjectId && { subjectId: data.subjectId }),
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+      },
+    })
+  })
+
+  return { updated: sessionIds.length }
 }
 
 export async function duplicateSession(

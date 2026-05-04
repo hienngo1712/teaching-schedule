@@ -74,9 +74,10 @@ describe("Attendance Router", () => {
     const caller = await getAuthedCaller()
     const newStudent = await caller.student.create({ fullName: "Cường", grade: 5 })
     
+    // addStudents nay là sync (replace), nên cần truyền cả list nếu muốn giữ HS cũ
     await caller.session.addStudents({
       sessionId,
-      studentIds: [newStudent.id],
+      studentIds: [studentId, newStudent.id],
     })
 
     const list = await caller.attendance.get({ sessionId })

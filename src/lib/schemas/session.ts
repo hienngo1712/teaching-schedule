@@ -28,6 +28,7 @@ export const sessionUpdateSchema = z.object({
       subjectId: z.number().int().positive().optional(),
       title: z.string().max(200).optional(),
       notes: z.string().max(1000).optional(),
+      studentIds: z.array(z.number().int().positive()).optional(),
     })
     .refine(
       (d) =>
@@ -67,7 +68,33 @@ export const sessionBulkCreateSchema = z
     path: ["endDate"],
   })
 
+export const sessionBulkDeleteFutureSchema = z.object({
+  id: z.number().int().positive(),
+})
+
+export const sessionBulkUpdateFutureSchema = z.object({
+  id: z.number().int().positive(),
+  data: z
+    .object({
+      startTime: z.string().regex(timeRegex).optional(),
+      endTime: z.string().regex(timeRegex).optional(),
+      subjectId: z.number().int().positive().optional(),
+      title: z.string().max(200).optional(),
+      notes: z.string().max(1000).optional(),
+      studentIds: z.array(z.number().int().positive()).optional(),
+    })
+    .refine(
+      (d) =>
+        d.startTime === undefined ||
+        d.endTime === undefined ||
+        d.endTime > d.startTime,
+      { message: "Giờ kết thúc phải sau giờ bắt đầu", path: ["endTime"] }
+    ),
+})
+
 export type SessionCreateInput = z.infer<typeof sessionCreateSchema>
 export type SessionUpdateInput = z.infer<typeof sessionUpdateSchema>
 export type SessionFilterInput = z.infer<typeof sessionFilterSchema>
 export type SessionBulkCreateInput = z.infer<typeof sessionBulkCreateSchema>
+export type SessionBulkDeleteFutureInput = z.infer<typeof sessionBulkDeleteFutureSchema>
+export type SessionBulkUpdateFutureInput = z.infer<typeof sessionBulkUpdateFutureSchema>

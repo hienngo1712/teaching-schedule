@@ -104,8 +104,11 @@ Phần dưới: StudentPicker (chọn HS gán vào ca)
 Submit:
   - Create: session.create.mutate() → invalidate getMonth → dialog đóng
   - Edit: session.update.mutate() → invalidate getMonth → dialog đóng
+  - Edit (Future): session.updateFuture.mutate() → cập nhật chuỗi ca dạy lặp
   - Error CONFLICT: Toast đỏ "Trùng giờ với [ca khác]" — KHÔNG đóng dialog
   - Toast thành công: "Tạo ca dạy thành công" / "Cập nhật thành công"
+
+Checkbox "Áp dụng cho các ca dạy lặp trong tương lai" khi ở chế độ Edit.
 ```
 
 ### SessionDetailDialog.tsx
@@ -116,12 +119,17 @@ Bảng HS (shadcn Table):
   STT | Tên | Lớp | Điểm danh (Select) | Ghi chú (Input)
   Select options: Có mặt / Vắng / Muộn / Chưa điểm danh
 
-Actions row:
+Actions row (DropdownMenu):
   [Sửa ca] [Thêm HS] [Nhân bản] [Xóa ca (confirm)]
 
 Footer:
   [Điểm danh tất cả: Có mặt] (quick button)
   [Lưu điểm danh] → attendance.update.mutate()
+
+Tính năng mới:
+  - Xóa chuỗi ca dạy: Alert dialog có checkbox "Xóa cả các ca dạy lặp trong tương lai".
+  - Nhân bản: Chọn ngày cụ thể để copy thông tin ca dạy.
+  - Thêm HS định kỳ: Thêm học sinh vào tất cả các ca cùng khung giờ & thứ này trong tương lai.
 ```
 
 ### StudentPicker.tsx

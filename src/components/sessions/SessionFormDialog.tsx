@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CalendarIcon, Loader2 } from "lucide-react"
@@ -35,8 +35,11 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { TimeInput } from "@/components/ui/time-input"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import {
   sessionCreateSchema,
@@ -62,6 +65,7 @@ export function SessionFormDialog({
   onSuccess,
 }: Props) {
   const isEdit = !!editingSession
+  const [isUpdateFuture, setIsUpdateFuture] = useState(false)
   const utils = trpc.useUtils()
 
   const { data: subjects = [] } = trpc.subject.list.useQuery({ isActive: true })
@@ -99,8 +103,10 @@ export function SessionFormDialog({
         notes: editingSession.notes || "",
         studentIds: editingSession.students.map((s) => s.studentId),
       })
+      setIsUpdateFuture(false)
     } else if (initialDate) {
       form.setValue("sessionDate", initialDate)
+      setIsUpdateFuture(false)
     }
   }, [editingSession, initialDate, form])
 
@@ -136,18 +142,41 @@ export function SessionFormDialog({
     },
   })
 
+  const updateFutureMutation = trpc.session.updateFuture.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Đã cập nhật ${res.updated} ca dạy lặp`)
+      utils.session.getMonth.invalidate()
+      onOpenChange(false)
+      onSuccess?.()
+    },
+    onError: (err) => {
+      if (err.data?.code === "CONFLICT") {
+        toast.error(err.message)
+      } else {
+        toast.error(err.message || "Đã có lỗi xảy ra khi cập nhật chuỗi ca dạy")
+      }
+    },
+  })
+
   function onSubmit(values: SessionCreateInput) {
     if (isEdit) {
-      updateMutation.mutate({
-        id: editingSession.id,
-        data: values,
-      })
+      if (isUpdateFuture) {
+        updateFutureMutation.mutate({
+          id: editingSession!.id,
+          data: values,
+        })
+      } else {
+        updateMutation.mutate({
+          id: editingSession!.id,
+          data: values,
+        })
+      }
     } else {
       createMutation.mutate(values)
     }
   }
 
-  const isLoading = createMutation.isPending || updateMutation.isPending
+  const isLoading = createMutation.isPending || updateMutation.isPending || updateFutureMutation.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -244,9 +273,9 @@ export function SessionFormDialog({
                 name="startTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bắt đầu</FormLabel>
+                    <FormLabel>Bắt đầu (HH:mm)</FormLabel>
                     <FormControl>
-                      <Input type="time" {...field} />
+                      <TimeInput {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -257,9 +286,9 @@ export function SessionFormDialog({
                 name="endTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kết thúc</FormLabel>
+                    <FormLabel>Kết thúc (HH:mm)</FormLabel>
                     <FormControl>
-                      <Input type="time" {...field} />
+                      <TimeInput {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -315,6 +344,19 @@ export function SessionFormDialog({
                 </FormItem>
               )}
             />
+
+            {isEdit && (
+              <div className="flex items-center space-x-2 pt-2 border-t">
+                <Checkbox
+                  id="update-future"
+                  checked={isUpdateFuture}
+                  onCheckedChange={(val) => setIsUpdateFuture(!!val)}
+                />
+                <Label htmlFor="update-future" className="text-sm font-medium cursor-pointer">
+                  Áp dụng cho các ca dạy lặp trong tương lai (cùng thứ, giờ, môn)
+                </Label>
+              </div>
+            )}
 
             <DialogFooter>
               <Button

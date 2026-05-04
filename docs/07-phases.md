@@ -360,43 +360,43 @@ PHÂN BIỆT DATABASE:
 > Đọc: `docs/06-testing.md` (E2E), `docs/08-review.md` (Final Acceptance Checklist)
 
 ### Sub 8.1 — Bulk Create + Duplicate
-- [ ] Thêm `session.bulkCreate` + `session.duplicate` vào session router
-- [ ] Tạo `src/components/sessions/BulkCreateDialog.tsx`
-- [ ] Thêm nút Duplicate vào SessionDetailDialog
-- [ ] Viết integration tests (5 cases bulkCreate + duplicate)
-- [ ] **Test:** pass ✓
+- [x] Thêm `session.bulkCreate` + `session.duplicate` vào session router
+- [x] Tạo `src/components/sessions/BulkCreateDialog.tsx`
+- [x] Thêm nút Duplicate vào SessionDetailDialog
+- [x] Viết integration tests (5 cases bulkCreate + duplicate)
+- [x] **Test:** pass ✓
 
 ### Sub 8.2 — Dashboard
-- [ ] Tạo `src/app/dashboard/page.tsx` (4 stat cards)
-- [ ] **Test thủ công:** Số liệu đúng ✓
+- [x] Tạo `src/app/dashboard/page.tsx` (4 stat cards)
+- [x] **Test thủ công:** Số liệu đúng ✓
 
 ### Sub 8.3 — Responsive Mobile
-- [ ] Calendar: grid → list view < 768px
-- [ ] Sidebar: hamburger menu
-- [ ] Dialog: full-screen mobile
-- [ ] Table: horizontal scroll
-- [ ] **Test:** Chrome DevTools → iPhone SE ✓, Galaxy S8 ✓
+- [x] Calendar: grid → list view < 768px
+- [x] Sidebar: hamburger menu
+- [x] Dialog: full-screen mobile
+- [x] Table: horizontal scroll
+- [x] **Test:** Chrome DevTools → iPhone SE ✓, Galaxy S8 ✓
 
 ### Sub 8.4 — UI Polish
-- [ ] Skeleton loading cho table + calendar
-- [ ] Empty states cho tất cả list
-- [ ] Confirm dialog trước xóa (đồng nhất)
-- [ ] Toast cho tất cả actions
-- [ ] Error states khi API fail
-- [ ] Favicon + `<title>Quản lý lịch dạy</title>`
-- [ ] **Review 1:** Mọi action có loading/success/error feedback?
-- [ ] **Review 2:** UI consistent? Console sạch?
+- [x] Skeleton loading cho table + calendar
+- [x] Empty states cho tất cả list
+- [x] Confirm dialog trước xóa (đồng nhất)
+- [x] Toast cho tất cả actions
+- [x] Error states khi API fail
+- [x] Favicon + `<title>Quản lý lịch dạy</title>`
+- [x] **Review 1:** Mọi action có loading/success/error feedback?
+- [x] **Review 2:** UI consistent? Console sạch?
 
 ### Sub 8.5 — E2E Tests
-- [ ] Install: `@playwright/test`, chạy `pnpm playwright install`
-- [ ] Tạo `playwright.config.ts`
-- [ ] Viết 5 spec files (auth, students, calendar, attendance, export)
-- [ ] **Test:** `pnpm test:e2e` → pass ✓
+- [x] Install: `@playwright/test`, chạy `pnpm playwright install`
+- [x] Tạo `playwright.config.ts`
+- [x] Viết 5 spec files (auth, students, calendar, attendance, export)
+- [x] **Test:** `pnpm test:e2e` → pass ✓
 
 ### Sub 8.6 — Final Deploy + Acceptance
-- [ ] `pnpm test:all` → ALL pass ✓
-- [ ] `pnpm build` → no errors, no warnings ✓
-- [ ] `git push` → Vercel deploy ✓
-- [ ] Chạy **Final Acceptance Checklist** (xem `docs/08-review.md`) ✓
+- [x] `pnpm test:all` → ALL pass ✓
+- [x] `pnpm build` → no errors, no warnings ✓
+- [x] `git push` → Vercel deploy ✓
+- [x] Chạy **Final Acceptance Checklist** (xem `docs/08-review.md`) ✓
 
 **✅ Phase 8 done khi:** SẢN PHẨM HOÀN CHỈNH.**

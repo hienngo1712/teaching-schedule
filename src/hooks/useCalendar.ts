@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import type { SessionDTO } from "@/server/services/session.service"
 
 export type CalendarCell = {
@@ -118,35 +119,62 @@ export function buildCalendarGrid(
   return { grid }
 }
 
-export function useCalendar(initial?: { year?: number; month?: number }) {
-  const now = new Date()
-  const [year, setYear] = useState(initial?.year ?? now.getFullYear())
-  const [month, setMonth] = useState(initial?.month ?? now.getMonth() + 1)
+export function useCalendar() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const now = useMemo(() => new Date(), [])
+  
+  const year = useMemo(() => {
+    const y = searchParams.get("year")
+    return y ? parseInt(y, 10) : now.getFullYear()
+  }, [searchParams, now])
+
+  const month = useMemo(() => {
+    const m = searchParams.get("month")
+    return m ? parseInt(m, 10) : now.getMonth() + 1
+  }, [searchParams, now])
 
   const monthLabel = useMemo(() => buildMonthLabel(year, month), [year, month])
 
+  const createQueryString = useCallback(
+    (params: Record<string, string | number | null>) => {
+      const newSearchParams = new URLSearchParams(searchParams.toString())
+
+      for (const [key, value] of Object.entries(params)) {
+        if (value === null || value === "") {
+          newSearchParams.delete(key)
+        } else {
+          newSearchParams.set(key, String(value))
+        }
+      }
+
+      return newSearchParams.toString()
+    },
+    [searchParams]
+  )
+
+  const goToMonth = useCallback((y: number, m: number) => {
+    const queryString = createQueryString({ year: y, month: m })
+    router.push(`${pathname}?${queryString}`)
+  }, [router, pathname, createQueryString])
+
   const prevMonth = useCallback(() => {
     if (month === 1) {
-      setYear((y) => y - 1)
-      setMonth(12)
+      goToMonth(year - 1, 12)
     } else {
-      setMonth((m) => m - 1)
+      goToMonth(year, month - 1)
     }
-  }, [month])
+  }, [month, year, goToMonth])
 
   const nextMonth = useCallback(() => {
     if (month === 12) {
-      setYear((y) => y + 1)
-      setMonth(1)
+      goToMonth(year + 1, 1)
     } else {
-      setMonth((m) => m + 1)
+      goToMonth(year, month + 1)
     }
-  }, [month])
-
-  const goToMonth = useCallback((y: number, m: number) => {
-    setYear(y)
-    setMonth(m)
-  }, [])
+  }, [month, year, goToMonth])
 
   return { year, month, monthLabel, prevMonth, nextMonth, goToMonth }
 }
