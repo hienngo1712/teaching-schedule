@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/ui/password-input"
 import { loginAction, type LoginResult } from "./actions"
 
 const ERROR_MESSAGES: Record<
@@ -54,10 +56,9 @@ export function LoginForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Mật khẩu</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           disabled={isPending}
@@ -76,6 +77,13 @@ export function LoginForm() {
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? "Đang đăng nhập..." : "Đăng nhập"}
       </Button>
+
+      <div className="text-center text-sm">
+        <span className="text-slate-500">Chưa có tài khoản? </span>
+        <Link href="/register" className="text-indigo-600 hover:underline font-medium">
+          Đăng ký ngay
+        </Link>
+      </div>
     </form>
   )
 }

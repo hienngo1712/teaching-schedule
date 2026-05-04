@@ -6,6 +6,6 @@ export const { auth: middleware } = NextAuth(authConfig)
 
 export const config = {
   matcher: [
-    "/((?!login|api/auth|api/trpc|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|register|api/auth|api/trpc|_next/static|_next/image|favicon.ico).*)",
   ],
 }

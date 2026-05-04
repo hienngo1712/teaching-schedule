@@ -13,8 +13,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/ui/password-input"
 
 export function ChangePasswordDialog({
   trigger,
@@ -68,9 +68,8 @@ export function ChangePasswordDialog({
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="current-pw">Mật khẩu hiện tại</Label>
-            <Input
+            <PasswordInput
               id="current-pw"
-              type="password"
               autoComplete="current-password"
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
@@ -79,9 +78,8 @@ export function ChangePasswordDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-pw">Mật khẩu mới</Label>
-            <Input
+            <PasswordInput
               id="new-pw"
-              type="password"
               autoComplete="new-password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
@@ -91,9 +89,8 @@ export function ChangePasswordDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm-pw">Xác nhận mật khẩu mới</Label>
-            <Input
+            <PasswordInput
               id="confirm-pw"
-              type="password"
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}

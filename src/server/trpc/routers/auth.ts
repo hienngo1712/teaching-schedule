@@ -1,8 +1,9 @@
 import { TRPCError } from "@trpc/server"
 import bcrypt from "bcryptjs"
-import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
-import { changePasswordSchema } from "@/lib/schemas/auth"
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/trpc"
+import { changePasswordSchema, registerSchema } from "@/lib/schemas/auth"
 import { BCRYPT_COST } from "@/server/auth-credentials"
+import { registerUser } from "@/server/services/user.service"
 
 export const authRouter = createTRPCRouter({
   me: protectedProcedure.query(async ({ ctx }) => {
@@ -12,6 +13,12 @@ export const authRouter = createTRPCRouter({
     })
     return user
   }),
+
+  register: publicProcedure
+    .input(registerSchema)
+    .mutation(async ({ ctx, input }) => {
+      return registerUser(ctx.db, input)
+    }),
 
   changePassword: protectedProcedure
     .input(changePasswordSchema)
