@@ -26,7 +26,7 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
   const { data: session } = useSession()
   const { isExporting, exportMonthlySchedule, exportStudentSchedule, exportGradeReport, exportAttendanceSummary } = useExcelExport()
   const { year, month } = useCalendar()
-  const { selectedGrade, selectedStudentId, searchStudentName } = useFilters()
+  const { selectedGrade, selectedStudentId } = useFilters()
 
   const teacherName = session?.user?.fullName || "Giáo viên"
 
