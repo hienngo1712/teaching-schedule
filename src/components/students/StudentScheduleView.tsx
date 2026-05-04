@@ -59,26 +59,29 @@ export function StudentScheduleView({
 
   const summary = useMemo(() => {
     const total = studentSessions.length
-    const present = studentSessions.filter(s => {
+    let present = 0
+    let absent = 0
+    let late = 0
+    let pending = 0
+    let totalFee = 0
+
+    studentSessions.forEach(s => {
       const st = s.students.find(ss => ss.studentId === studentId)
-      return st?.attendance === ATTENDANCE_STATUS.PRESENT
-    }).length
-    const absent = studentSessions.filter(s => {
-      const st = s.students.find(ss => ss.studentId === studentId)
-      return st?.attendance === ATTENDANCE_STATUS.ABSENT
-    }).length
-    const late = studentSessions.filter(s => {
-      const st = s.students.find(ss => ss.studentId === studentId)
-      return st?.attendance === ATTENDANCE_STATUS.LATE
-    }).length
-    const pending = studentSessions.filter(s => {
-      const st = s.students.find(ss => ss.studentId === studentId)
-      return st?.attendance === ATTENDANCE_STATUS.PENDING
-    }).length
+      if (!st) return
+
+      if (st.attendance === ATTENDANCE_STATUS.PRESENT) present++
+      else if (st.attendance === ATTENDANCE_STATUS.ABSENT) absent++
+      else if (st.attendance === ATTENDANCE_STATUS.LATE) late++
+      else pending++
+
+      if (st.attendance === ATTENDANCE_STATUS.PRESENT || st.attendance === ATTENDANCE_STATUS.LATE) {
+        totalFee += st.fee ?? 0
+      }
+    })
 
     const rate = calcAttendanceRate(present + late, total - pending)
 
-    return { total, present, absent, late, pending, rate }
+    return { total, present, absent, late, pending, rate, totalFee }
 
   }, [studentSessions, studentId])
 
@@ -125,6 +128,7 @@ export function StudentScheduleView({
                   <TableHead className="font-bold">Ngày học</TableHead>
                   <TableHead className="font-bold">Thứ</TableHead>
                   <TableHead className="font-bold">Giờ học</TableHead>
+                  <TableHead className="font-bold text-right">Học phí</TableHead>
                   <TableHead className="font-bold">Điểm danh</TableHead>
                   <TableHead className="font-bold">Ghi chú</TableHead>
                 </TableRow>
@@ -138,6 +142,9 @@ export function StudentScheduleView({
                       <TableCell className="font-medium text-slate-700">{formatDate(session.sessionDate)}</TableCell>
                       <TableCell className="text-slate-600">{formatDayOfWeek(session.sessionDate)}</TableCell>
                       <TableCell className="text-slate-600">{session.startTime} – {session.endTime}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {(studentData?.fee ?? 0).toLocaleString('vi-VN')} đ
+                      </TableCell>
                       <TableCell>
                         <Badge 
                           variant="secondary"
@@ -159,7 +166,7 @@ export function StudentScheduleView({
                 })}
                 {studentSessions.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-slate-400 italic">
+                    <TableCell colSpan={7} className="text-center py-12 text-slate-400 italic">
                       Không có ca dạy nào cho học sinh này trong tháng.
                     </TableCell>
                   </TableRow>
@@ -173,6 +180,7 @@ export function StudentScheduleView({
               <span>Có mặt: <span className="text-green-600 font-bold">{summary.present}</span></span>
               <span>Vắng: <span className="text-red-600 font-bold">{summary.absent}</span></span>
               <span>Muộn: <span className="text-amber-600 font-bold">{summary.late}</span></span>
+              <span>Học phí: <span className="text-indigo-600 font-bold">{summary.totalFee.toLocaleString('vi-VN')} đ</span></span>
             </div>
             <div className="text-slate-400 italic">
               Ngày xuất: {formatDate(new Date())}

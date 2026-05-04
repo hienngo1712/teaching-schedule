@@ -116,7 +116,7 @@ Checkbox "Áp dụng cho các ca dạy lặp trong tương lai" khi ở chế đ
 Header: [Ngày] [Giờ] [Tiêu đề] [Trạng thái Badge]
 
 Bảng HS (shadcn Table):
-  STT | Tên | Lớp | Điểm danh (Select) | Ghi chú (Input)
+  STT | Tên | Lớp | Điểm danh (Select) | Học phí (Input) | Ghi chú (Input)
   Select options: Có mặt / Vắng / Muộn / Chưa điểm danh
 
 Actions row (DropdownMenu):
@@ -153,7 +153,7 @@ Behavior:
 Props: sessionId, students: SessionStudent[]
 
 UI:
-  Mỗi HS 1 row: Avatar | Tên | Lớp | Select attendance | Input note
+  Mỗi HS 1 row: Avatar | Tên | Lớp | Select attendance | Input fee | Input note
   Select: "Có mặt" (green) / "Vắng" (red) / "Muộn" (amber) / "Chưa" (gray)
 
 Actions:
@@ -191,11 +191,11 @@ Header section (trong export area):
   Học sinh: [Tên] | Lớp: [N] | Tháng: [M/YYYY]
 
 Table:
-  STT | Ngày | Thứ | Giờ | Điểm danh | Ghi chú
+  STT | Ngày | Thứ | Giờ | Điểm danh | Học phí | Ghi chú
   Điểm danh colored: ✅ Có mặt / ❌ Vắng / ⏰ Muộn / ⏳ Sắp tới
 
 Footer (trong export area):
-  Tổng kết: X/Y buổi đã học (Z%)
+  Tổng kết: X/Y buổi đã học (Z%) | Tổng tiền: [VNĐ]
   GV: [fullName] | Ngày xuất: [date]
 
 Buttons (NGOÀI export area):
@@ -230,6 +230,7 @@ Props: mode ("create" | "edit"), student? (khi edit)
 Fields (React Hook Form + Zod studentCreateSchema):
   fullName (required)
   grade (Select 1–9)
+  tuitionFee (Number - Học phí mỗi buổi)
   parentPhone (optional, validate SĐT Việt Nam)
   parentName (optional)
   notes (Textarea optional)

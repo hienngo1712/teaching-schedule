@@ -11,6 +11,7 @@ export type AttendanceDTO = {
   level: "tieu_hoc" | "thcs"
   attendance: string
   note: string | null
+  fee: number
 }
 
 export async function getAttendance(
@@ -38,6 +39,7 @@ export async function getAttendance(
     level: getLevel(ss.student.grade),
     attendance: ss.attendance,
     note: ss.note,
+    fee: ss.fee,
   }))
 }
 
@@ -80,6 +82,7 @@ export async function updateAttendance(
         data: {
           attendance: att.attendance,
           note: att.note ?? null,
+          ...(att.fee !== undefined && { fee: att.fee }),
         },
       })
     )

@@ -1,5 +1,6 @@
 "use client"
 
+import type { z } from "zod"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -46,7 +47,7 @@ type Props = {
 export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) {
   const utils = trpc.useUtils()
 
-  const form = useForm<StudentCreateInput>({
+  const form = useForm<z.input<typeof studentCreateSchema>>({
     resolver: zodResolver(studentCreateSchema),
     defaultValues: {
       fullName: "",
@@ -55,6 +56,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
       parentName: undefined,
       notes: undefined,
       isActive: true,
+      tuitionFee: 0,
     },
   })
 
@@ -68,6 +70,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
         parentName: student?.parentName ?? undefined,
         notes: student?.notes ?? undefined,
         isActive: student?.isActive ?? true,
+        tuitionFee: student && "tuitionFee" in student ? Number((student as Record<string, unknown>).tuitionFee) : 0,
       })
     }
   }, [open, student, form])
@@ -93,11 +96,12 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   const isPending = createMut.isPending || updateMut.isPending
 
-  function onSubmit(values: StudentCreateInput) {
+  function onSubmit(values: z.input<typeof studentCreateSchema>) {
+    const data = values as StudentCreateInput;
     if (mode === "create") {
-      createMut.mutate(values)
+      createMut.mutate(data)
     } else if (student) {
-      updateMut.mutate({ id: student.id, data: values })
+      updateMut.mutate({ id: student.id, data })
     }
   }
 
@@ -142,6 +146,24 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tuitionFee">
+              Học phí / Buổi (VNĐ) <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="tuitionFee"
+              type="number"
+              min="0"
+              step="1000"
+              {...form.register("tuitionFee", { valueAsNumber: true })}
+            />
+            {form.formState.errors.tuitionFee && (
+              <p className="text-xs text-red-600">
+                {form.formState.errors.tuitionFee.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

@@ -15,6 +15,7 @@ export const studentCreateSchema = z.object({
   parentName: z.string().trim().max(100).optional(),
   notes: z.string().max(1000).optional(),
   isActive: z.boolean().default(true),
+  tuitionFee: z.number().int().min(0).default(0),
 })
 
 export const studentUpdateSchema = z.object({

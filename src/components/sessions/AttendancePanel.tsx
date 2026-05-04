@@ -25,6 +25,7 @@ type AttendanceState = {
   studentId: number
   attendance: AttendanceStatus
   note: string
+  fee: number
 }
 
 export function AttendancePanel({ sessionId }: Props) {
@@ -45,6 +46,7 @@ export function AttendancePanel({ sessionId }: Props) {
           studentId: item.studentId,
           attendance: item.attendance as AttendanceStatus,
           note: item.note || "",
+          fee: item.fee ?? 0,
         }
       })
       setAttendances(initialState)
@@ -75,6 +77,13 @@ export function AttendancePanel({ sessionId }: Props) {
     }))
   }
 
+  const handleUpdateFee = (studentId: number, fee: number) => {
+    setAttendances((prev) => ({
+      ...prev,
+      [studentId]: { ...prev[studentId], fee },
+    }))
+  }
+
   const handleMarkAllPresent = () => {
     const newState = { ...attendances }
     Object.keys(newState).forEach((key) => {
@@ -88,6 +97,7 @@ export function AttendancePanel({ sessionId }: Props) {
       studentId: a.studentId,
       attendance: a.attendance,
       note: a.note.trim() === "" ? undefined : a.note,
+      fee: a.fee,
     }))
     updateMutation.mutate({ sessionId, attendances: payload })
   }
@@ -102,66 +112,77 @@ export function AttendancePanel({ sessionId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-md divide-y">
-        {attendanceData.map((student) => {
-          const state = attendances[student.studentId]
-          if (!state) return null
+      <div className="border rounded-md divide-y overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-slate-50 text-slate-500 text-xs">
+            <tr>
+              <th className="px-3 py-2 font-medium">Học sinh</th>
+              <th className="px-3 py-2 font-medium w-[160px]">Điểm danh</th>
+              <th className="px-3 py-2 font-medium w-[120px]">Học phí</th>
+              <th className="px-3 py-2 font-medium">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {attendanceData.map((student) => {
+              const state = attendances[student.studentId]
+              if (!state) return null
 
-          return (
-            <div
-              key={student.studentId}
-              className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-white hover:bg-slate-50"
-            >
-              <div className="flex-1 flex items-center justify-between sm:justify-start gap-4">
-                <div>
-                  <div className="font-medium text-sm text-slate-900">
-                    {student.fullName}
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    Lớp {student.grade}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Select
-                  value={state.attendance}
-                  onValueChange={(val) =>
-                    handleUpdateStatus(student.studentId, val as AttendanceStatus)
-                  }
-                >
-                  <SelectTrigger
-                    className={cn(
-                      "w-[140px] h-8 text-xs font-medium",
-                      state.attendance === "present" && "bg-green-50 text-green-700 border-green-200",
-                      state.attendance === "absent" && "bg-red-50 text-red-700 border-red-200",
-                      state.attendance === "late" && "bg-amber-50 text-amber-700 border-amber-200",
-                      state.attendance === "pending" && "bg-slate-50 text-slate-600 border-slate-200"
-                    )}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ATTENDANCE_STATUS).map(([, value]) => (
-                      <SelectItem key={value} value={value}>
-                        {ATTENDANCE_LABEL[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Input
-                  placeholder="Ghi chú..."
-                  value={state.note}
-                  onChange={(e) =>
-                    handleUpdateNote(student.studentId, e.target.value)
-                  }
-                  className="flex-1 sm:w-[150px] h-8 text-xs"
-                />
-              </div>
-            </div>
-          )
-        })}
+              return (
+                <tr key={student.studentId} className="bg-white hover:bg-slate-50">
+                  <td className="px-3 py-2">
+                    <div className="font-medium text-slate-900">{student.fullName}</div>
+                    <div className="text-xs text-slate-500">Lớp {student.grade}</div>
+                  </td>
+                  <td className="px-3 py-2">
+                    <Select
+                      value={state.attendance}
+                      onValueChange={(val) =>
+                        handleUpdateStatus(student.studentId, val as AttendanceStatus)
+                      }
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          "w-full h-8 text-xs font-medium",
+                          state.attendance === "present" && "bg-green-50 text-green-700 border-green-200",
+                          state.attendance === "absent" && "bg-red-50 text-red-700 border-red-200",
+                          state.attendance === "late" && "bg-amber-50 text-amber-700 border-amber-200",
+                          state.attendance === "pending" && "bg-slate-50 text-slate-600 border-slate-200"
+                        )}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(ATTENDANCE_STATUS).map(([, value]) => (
+                          <SelectItem key={value} value={value}>
+                            {ATTENDANCE_LABEL[value]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={state.fee}
+                      onChange={(e) => handleUpdateFee(student.studentId, Number(e.target.value) || 0)}
+                      className="w-full h-8 text-xs"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <Input
+                      placeholder="Ghi chú..."
+                      value={state.note}
+                      onChange={(e) => handleUpdateNote(student.studentId, e.target.value)}
+                      className="w-full h-8 text-xs"
+                    />
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
 
       <div className="flex items-center justify-between pt-2">

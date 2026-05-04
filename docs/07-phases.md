@@ -399,4 +399,33 @@ PHÂN BIỆT DATABASE:
 - [x] `git push` → Vercel deploy ✓
 - [x] Chạy **Final Acceptance Checklist** (xem `docs/08-review.md`) ✓
 
-**✅ Phase 8 done khi:** SẢN PHẨM HOÀN CHỈNH.**
+**✅ Phase 8 done khi:** SẢN PHẨM HOÀN CHỈNH.
+
+---
+
+## Phase 9: Tuition Fee Management
+
+> Đọc: `docs/01-overview.md` (Core business), `docs/02-database.md` (tuitionFee fields), `docs/03-api.md` (schemas + report router)
+
+### Sub 9.1 — Migration & DB Update
+- [x] Chạy `prisma migrate dev --name add_tuition_fee` để cập nhật database
+- [x] Cập nhật `student.service.ts` để handle `tuitionFee` khi create/update
+- [x] Cập nhật `session.service.ts` để mặc định copy `student.tuitionFee` sang `sessionStudent.fee` khi gán HS vào ca
+
+### Sub 9.2 — API & Schemas
+- [x] Cập nhật `studentCreateSchema` trong `src/lib/schemas/student.ts`
+- [x] Cập nhật `attendanceUpdateSchema` trong `src/lib/schemas/attendance.ts`
+- [x] Cập nhật `attendance.update` tRPC route để lưu `fee` thực tế
+- [x] Cập nhật `report.service.ts` để tính toán doanh thu (`totalRevenue`)
+
+### Sub 9.3 — Frontend UI Updates
+- [x] Cập nhật `StudentFormDialog` thêm input cho `tuitionFee`
+- [x] Cập nhật `AttendancePanel` và `SessionDetailDialog` hiển thị/sửa `fee`
+- [x] Cập nhật `StudentScheduleView` hiển thị `fee` mỗi buổi và tổng tiền học
+- [x] Cập nhật `Dashboard` và `ReportsView` hiển thị doanh thu
+
+### Sub 9.4 — Deploy & Verify
+- [x] `pnpm test && pnpm build && git push`
+- [x] Kiểm tra tính đúng đắn của việc tính tiền dựa trên điểm danh (Vắng = 0đ, Có mặt/Muộn = tính tiền)
+
+**✅ Phase 9 done khi:** Hệ thống quản lý học phí hoạt động chính xác.

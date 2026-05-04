@@ -6,6 +6,7 @@ import {
   CalendarCheck,
   BarChart3,
   ArrowRight,
+  Banknote,
 } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,7 +22,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">Tổng quan</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
           title="Tổng học sinh"
           value={stats?.totalStudents}
@@ -49,6 +50,13 @@ export default function DashboardPage() {
           icon={<BarChart3 className="size-4 text-muted-foreground" />}
           loading={isLoading}
           description="Trung bình tháng này"
+        />
+        <StatCard
+          title="Doanh thu tháng này"
+          value={stats ? `${stats.totalRevenueMonth.toLocaleString('vi-VN')} đ` : undefined}
+          icon={<Banknote className="size-4 text-muted-foreground" />}
+          loading={isLoading}
+          description="Học phí thu được tháng này"
         />
       </div>
 

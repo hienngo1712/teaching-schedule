@@ -20,7 +20,7 @@ export async function listStudents(
   const students = await db.student.findMany({
     where: {
       userId,
-      ...(filter.isActive !== undefined ? { isActive: filter.isActive } : {}),
+      ...(filter.isActive !== undefined ? { isActive: filter.isActive } : { isActive: true }),
       ...(filter.grade ? { grade: filter.grade } : {}),
       ...(filter.search
         ? { fullName: { contains: filter.search, mode: "insensitive" } }
@@ -45,6 +45,7 @@ export async function createStudent(
       parentName: input.parentName ?? null,
       notes: input.notes ?? null,
       isActive: input.isActive,
+      tuitionFee: input.tuitionFee,
     },
   })
   return withLevel(student)
@@ -72,6 +73,7 @@ export async function updateStudent(
       }),
       ...(data.notes !== undefined && { notes: data.notes ?? null }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
+      ...(data.tuitionFee !== undefined && { tuitionFee: data.tuitionFee }),
     },
   })
   return withLevel(student)

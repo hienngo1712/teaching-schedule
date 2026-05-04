@@ -9,6 +9,7 @@ export const attendanceUpdateSchema = z.object({
       studentId: z.number().int().positive(),
       attendance: attendanceStatusSchema,
       note: z.string().trim().max(500).optional(),
+      fee: z.number().int().min(0).optional(),
     })
   ),
 })

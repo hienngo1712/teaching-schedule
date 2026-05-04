@@ -119,6 +119,7 @@ model Student {
   parentName  String?  @map("parent_name") @db.VarChar(100)
   notes       String?  @db.Text
   isActive    Boolean  @default(true) @map("is_active")
+  tuitionFee  Int      @default(0) @map("tuition_fee") // VND per session
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -163,6 +164,7 @@ model SessionStudent {
   studentId  Int     @map("student_id")
   attendance String  @default("pending") @db.VarChar(10)
   note       String? @db.Text
+  fee        Int     @default(0)                      // Học phí thực tế buổi này
 
   session TeachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   student Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)

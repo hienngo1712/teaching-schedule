@@ -2,13 +2,15 @@
 
 ## Nghiệp vụ cốt lõi
 
-1. Quản lý danh sách học sinh (tên, lớp, SĐT phụ huynh)
+1. Quản lý danh sách học sinh (tên, lớp, SĐT phụ huynh, **mức học phí/buổi**)
 2. Tạo lịch dạy theo tháng → tạo các **ca dạy** (ngày + giờ bắt đầu/kết thúc)
 3. **Ghép học sinh** vào từng ca dạy
 4. **Điểm danh** học sinh mỗi buổi (có mặt / vắng / muộn)
 5. **Bộ lọc**: lọc theo lớp (1–9), theo tên HS → xem lịch riêng 1 học sinh
 6. **Xuất lịch** thành ảnh PNG gửi phụ huynh + Excel (4 chế độ)
 7. Xem tổng kết: số buổi học/vắng theo tuần/tháng
+8. **Quản lý học phí**: tính toán doanh thu, số tiền học dựa trên điểm danh thực tế (Có mặt/Muộn = tính tiền, Vắng = không tính)
+9. **Báo cáo tài chính**: xem tổng số tiền học theo từng học sinh, theo lớp hoặc theo tháng.
 
 ---
 

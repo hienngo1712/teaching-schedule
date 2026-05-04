@@ -113,6 +113,7 @@ export const studentCreateSchema = z.object({
   parentPhone: z.string().regex(/^(0|\+84)[0-9]{8,9}$/).optional().or(z.literal("")),
   parentName:  z.string().max(100).optional(),
   notes:       z.string().optional(),
+  tuitionFee:  z.number().int().min(0).default(0), // Học phí mặc định mỗi buổi
 })
 // userId KHÔNG có trong schema — được inject từ ctx.userId tại service
 ```
@@ -179,6 +180,7 @@ export const attendanceUpdateSchema = z.object({
     studentId:  z.number().int().positive(),
     attendance: attendanceStatusSchema,
     note:       z.string().optional(),
+    fee:        z.number().int().min(0).optional(), // Học phí thực tế buổi này
   })),
 })
 ```
@@ -365,16 +367,16 @@ attendance.update → protectedProcedure
 report.student → protectedProcedure
   Input:  { studentId, year, month }
   Logic:  assertOwnership student
-  Output: { student, sessions[], summary: { ..., totalHours } }
+  Output: { student, sessions[], summary: { ..., totalHours, totalRevenue } }
 
 report.monthlySummary → protectedProcedure
   Input:  { year, month }
   Query:  WHERE userId = ctx.userId
-  Output: { totalSessions, totalStudents, byGrade, bySubject, overallAttendanceRate }
+  Output: { totalSessions, totalStudents, totalRevenue, byGrade, bySubject, overallAttendanceRate }
 
 report.dashboard → protectedProcedure
   Input:  (none)
-  Output: { totalStudents, sessionsToday, totalSessionsMonth, attendanceRate }
+  Output: { totalStudents, sessionsToday, totalSessionsMonth, attendanceRate, totalRevenueMonth }
 ```
 
 

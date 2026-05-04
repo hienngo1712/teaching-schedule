@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
 
 export interface TimeInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   onValueChange?: (value: string) => void
@@ -22,7 +21,6 @@ const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
       
       // Tạo một event giả lập để react-hook-form có thể nhận được
       const target = e.target
-      const originalValue = target.value
       target.value = formatted
       
       if (onChange) {

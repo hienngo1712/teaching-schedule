@@ -31,6 +31,11 @@ export default function ReportsPage() {
     month,
   })
 
+  const { data: monthlySummary } = trpc.report.monthlySummary.useQuery({
+    year,
+    month,
+  })
+
   const students = studentList as unknown as StudentDTO[]
   const sessions = (monthSessions ?? []).map(s => ({
     ...s,
@@ -88,6 +93,26 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{students.length}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500 uppercase">Doanh thu tháng này</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-indigo-600">
+                {monthlySummary ? `${monthlySummary.totalRevenue.toLocaleString('vi-VN')} đ` : "0 đ"}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500 uppercase">Tỉ lệ chuyên cần</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {monthlySummary ? `${monthlySummary.overallAttendanceRate}%` : "0%"}
+              </div>
             </CardContent>
           </Card>
         </div>

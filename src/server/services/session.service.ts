@@ -36,6 +36,7 @@ export type SessionDTO = {
     grade: number
     attendance: string
     note: string | null
+    fee: number
   }>
 }
 
@@ -122,6 +123,7 @@ function toDTO(s: SessionWithRelations): SessionDTO {
       grade: ss.student.grade,
       attendance: ss.attendance,
       note: ss.note,
+      fee: ss.fee,
     })),
   }
 }
@@ -183,15 +185,16 @@ async function assertStudentsOwned(
   db: PrismaClient,
   userId: number,
   studentIds: number[]
-): Promise<void> {
-  if (!studentIds.length) return
+): Promise<Array<{ id: number; tuitionFee: number }>> {
+  if (!studentIds.length) return []
   const owned = await db.student.findMany({
     where: { id: { in: studentIds }, userId },
-    select: { id: true },
+    select: { id: true, tuitionFee: true },
   })
   if (owned.length !== studentIds.length) {
     throw new TRPCError({ code: "NOT_FOUND" })
   }
+  return owned
 }
 
 export async function createSession(
@@ -207,8 +210,9 @@ export async function createSession(
 
   await checkOverlap(db, { userId, sessionDate, startTime, endTime })
 
+  let studentFees: Array<{ id: number; tuitionFee: number }> = []
   if (input.studentIds) {
-    await assertStudentsOwned(db, userId, input.studentIds)
+    studentFees = await assertStudentsOwned(db, userId, input.studentIds)
   }
 
   const created = await db.teachingSession.create({
@@ -220,10 +224,13 @@ export async function createSession(
       subjectId: input.subjectId,
       title: input.title ?? null,
       notes: input.notes ?? null,
-      ...(input.studentIds && input.studentIds.length > 0
+      ...(studentFees.length > 0
         ? {
             sessionStudents: {
-              create: input.studentIds.map((sid) => ({ studentId: sid })),
+              create: studentFees.map((s) => ({
+                studentId: s.id,
+                fee: s.tuitionFee,
+              })),
             },
           }
         : {}),
@@ -262,15 +269,10 @@ export async function updateSession(
     await assertSubjectOwned(db, userId, data.subjectId)
   }
 
-  // Verify studentIds thuộc userId
+  // Verify studentIds thuộc userId và lấy học phí
+  let studentFees: Array<{ id: number; tuitionFee: number }> = []
   if (data.studentIds !== undefined && data.studentIds.length > 0) {
-    const owned = await db.student.findMany({
-      where: { id: { in: data.studentIds }, userId },
-      select: { id: true },
-    })
-    if (owned.length !== data.studentIds.length) {
-      throw new TRPCError({ code: "NOT_FOUND" })
-    }
+    studentFees = await assertStudentsOwned(db, userId, data.studentIds)
   }
 
   const newSessionDate = data.sessionDate
@@ -310,9 +312,13 @@ export async function updateSession(
     // Nếu có truyền studentIds, xóa cũ tạo mới
     if (data.studentIds !== undefined) {
       await tx.sessionStudent.deleteMany({ where: { sessionId: id } })
-      if (data.studentIds.length > 0) {
+      if (studentFees.length > 0) {
         await tx.sessionStudent.createMany({
-          data: data.studentIds.map((sid) => ({ sessionId: id, studentId: sid })),
+          data: studentFees.map((s) => ({
+            sessionId: id,
+            studentId: s.id,
+            fee: s.tuitionFee,
+          })),
         })
       }
     }
@@ -377,13 +383,8 @@ export async function addStudentsToRecurringSessions(
     return { updatedSessions: 0 }
   }
 
-  // 3. Verify students
-  const owned = await db.student.findMany({
-    where: { id: { in: params.studentIds }, userId },
-  })
-  if (owned.length !== params.studentIds.length) {
-    throw new TRPCError({ code: "NOT_FOUND" })
-  }
+  // 3. Verify students and get fees
+  const owned = await assertStudentsOwned(db, userId, params.studentIds)
 
   // 4. Batch find existing records to skip
   const existing = await db.sessionStudent.findMany({
@@ -396,11 +397,11 @@ export async function addStudentsToRecurringSessions(
 
   const existingMap = new Set(existing.map((e) => `${e.sessionId}-${e.studentId}`))
 
-  const toCreate: Array<{ sessionId: number; studentId: number }> = []
+  const toCreate: Array<{ sessionId: number; studentId: number; fee: number }> = []
   for (const sessionId of matchingSessionIds) {
-    for (const studentId of params.studentIds) {
-      if (!existingMap.has(`${sessionId}-${studentId}`)) {
-        toCreate.push({ sessionId, studentId })
+    for (const s of owned) {
+      if (!existingMap.has(`${sessionId}-${s.id}`)) {
+        toCreate.push({ sessionId, studentId: s.id, fee: s.tuitionFee })
       }
     }
   }
@@ -436,15 +437,8 @@ export async function addStudentsToSession(
   const session = await db.teachingSession.findUnique({ where: { id: sessionId } })
   assertOwnership(session, userId)
 
-  // Verify all students belong to the user
-  if (studentIds.length > 0) {
-    const students = await db.student.findMany({
-      where: { id: { in: studentIds }, userId },
-    })
-    if (students.length !== studentIds.length) {
-      throw new TRPCError({ code: "NOT_FOUND" })
-    }
-  }
+  // Verify all students belong to the user and get fees
+  const studentFees = await assertStudentsOwned(db, userId, studentIds)
 
   // Sync: Xóa hết cũ, tạo mới
   await db.$transaction(async (tx) => {
@@ -452,9 +446,13 @@ export async function addStudentsToSession(
       where: { sessionId },
     })
     
-    if (studentIds.length > 0) {
+    if (studentFees.length > 0) {
       await tx.sessionStudent.createMany({
-        data: studentIds.map((studentId) => ({ sessionId, studentId })),
+        data: studentFees.map((s) => ({
+          sessionId,
+          studentId: s.id,
+          fee: s.tuitionFee,
+        })),
       })
     }
   })
@@ -499,8 +497,9 @@ export async function bulkCreateSessions(
 ): Promise<{ created: number; skipped: number }> {
   await assertSubjectOwned(db, userId, input.subjectId)
 
+  let studentFees: Array<{ id: number; tuitionFee: number }> = []
   if (input.studentIds) {
-    await assertStudentsOwned(db, userId, input.studentIds)
+    studentFees = await assertStudentsOwned(db, userId, input.studentIds)
   }
 
   const start = parseSessionDate(input.startDate)
@@ -575,10 +574,13 @@ export async function bulkCreateSessions(
           data: {
             ...data,
             userId,
-            ...(input.studentIds && input.studentIds.length > 0
+            ...(studentFees.length > 0
               ? {
                   sessionStudents: {
-                    create: input.studentIds.map((sid) => ({ studentId: sid })),
+                    create: studentFees.map((s) => ({
+                      studentId: s.id,
+                      fee: s.tuitionFee,
+                    })),
                   },
                 }
               : {}),
@@ -677,10 +679,16 @@ export async function bulkUpdateFutureSessions(
       })
       
       if (data.studentIds.length > 0) {
-        const toCreate: Array<{ sessionId: number; studentId: number }> = []
+        // Cần fetch phí của các học sinh mới
+        const studentFees = await tx.student.findMany({
+          where: { id: { in: data.studentIds }, userId },
+          select: { id: true, tuitionFee: true },
+        })
+
+        const toCreate: Array<{ sessionId: number; studentId: number; fee: number }> = []
         for (const sid of sessionIds) {
-          for (const stid of data.studentIds) {
-            toCreate.push({ sessionId: sid, studentId: stid })
+          for (const s of studentFees) {
+            toCreate.push({ sessionId: sid, studentId: s.id, fee: s.tuitionFee })
           }
         }
         await tx.sessionStudent.createMany({ data: toCreate })
@@ -723,6 +731,9 @@ export async function duplicateSession(
     endTime: existing.endTime,
   })
 
+  const studentIds = existing.sessionStudents.map((ss) => ss.studentId)
+  const studentFees = await assertStudentsOwned(db, userId, studentIds)
+
   const duplicated = await db.teachingSession.create({
     data: {
       userId,
@@ -732,11 +743,12 @@ export async function duplicateSession(
       subjectId: existing.subjectId,
       title: existing.title,
       notes: existing.notes,
-      ...(existing.sessionStudents.length > 0
+      ...(studentFees.length > 0
         ? {
             sessionStudents: {
-              create: existing.sessionStudents.map((ss) => ({
-                studentId: ss.studentId,
+              create: studentFees.map((s) => ({
+                studentId: s.id,
+                fee: s.tuitionFee,
               })),
             },
           }
