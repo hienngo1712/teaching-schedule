@@ -67,21 +67,23 @@ export async function updateAttendance(
     }
   }
 
-  // Update attendance records
-  for (const att of input.attendances) {
-    await db.sessionStudent.update({
-      where: {
-        sessionId_studentId: {
-          sessionId: input.sessionId,
-          studentId: att.studentId,
+  // Update attendance records in a transaction
+  await db.$transaction(
+    input.attendances.map((att) =>
+      db.sessionStudent.update({
+        where: {
+          sessionId_studentId: {
+            sessionId: input.sessionId,
+            studentId: att.studentId,
+          },
         },
-      },
-      data: {
-        attendance: att.attendance,
-        note: att.note ?? null,
-      },
-    })
-  }
+        data: {
+          attendance: att.attendance,
+          note: att.note ?? null,
+        },
+      })
+    )
+  )
 
   return { success: true }
 }

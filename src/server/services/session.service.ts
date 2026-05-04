@@ -385,22 +385,35 @@ export async function addStudentsToRecurringSessions(
     throw new TRPCError({ code: "NOT_FOUND" })
   }
 
-  // 4. Upsert vào từng ca
-  let count = 0
-  await db.$transaction(async (tx) => {
-    for (const sessionId of matchingSessionIds) {
-      for (const studentId of params.studentIds) {
-        await tx.sessionStudent.upsert({
-          where: { sessionId_studentId: { sessionId, studentId } },
-          update: {},
-          create: { sessionId, studentId },
-        })
-      }
-      count++
-    }
+  // 4. Batch find existing records to skip
+  const existing = await db.sessionStudent.findMany({
+    where: {
+      sessionId: { in: matchingSessionIds },
+      studentId: { in: params.studentIds },
+    },
+    select: { sessionId: true, studentId: true },
   })
 
-  return { updatedSessions: count }
+  const existingMap = new Set(existing.map((e) => `${e.sessionId}-${e.studentId}`))
+
+  const toCreate: Array<{ sessionId: number; studentId: number }> = []
+  for (const sessionId of matchingSessionIds) {
+    for (const studentId of params.studentIds) {
+      if (!existingMap.has(`${sessionId}-${studentId}`)) {
+        toCreate.push({ sessionId, studentId })
+      }
+    }
+  }
+
+  // 5. Create missing records
+  if (toCreate.length > 0) {
+    await db.sessionStudent.createMany({
+      data: toCreate,
+      skipDuplicates: true,
+    })
+  }
+
+  return { updatedSessions: matchingSessionIds.length }
 }
 
 export async function deleteSession(
@@ -431,12 +444,11 @@ export async function addStudentsToSession(
     throw new TRPCError({ code: "NOT_FOUND" })
   }
 
-  // Use upsert to avoid duplicates
-  for (const studentId of studentIds) {
-    await db.sessionStudent.upsert({
-      where: { sessionId_studentId: { sessionId, studentId } },
-      update: {},
-      create: { sessionId, studentId },
+  // Use createMany with skipDuplicates to avoid duplicates and reduce queries
+  if (studentIds.length > 0) {
+    await db.sessionStudent.createMany({
+      data: studentIds.map((studentId) => ({ sessionId, studentId })),
+      skipDuplicates: true,
     })
   }
 
@@ -489,34 +501,73 @@ export async function bulkCreateSessions(
   const startTime = parseTimeToDate(input.startTime)
   const endTime = parseTimeToDate(input.endTime)
 
+  // Fetch all potentially conflicting sessions at once
+  const existingSessions = await db.teachingSession.findMany({
+    where: {
+      userId,
+      sessionDate: { gte: start, lte: end },
+    },
+    select: {
+      id: true,
+      title: true,
+      sessionDate: true,
+      startTime: true,
+      endTime: true,
+    },
+  })
+
   let createdCount = 0
   let skippedCount = 0
 
+  const toCreate: Array<{
+    sessionDate: Date
+    startTime: Date
+    endTime: Date
+    subjectId: number
+    title: string | null
+    notes: string | null
+  }> = []
+
   const currentDate = new Date(start)
   while (currentDate <= end) {
-    // JS getDay(): 0=Sun, 1=Mon, ..., 6=Sat
-    // Input weekdays: 0=T2, 1=T3, ..., 6=CN (Theo DAY_NAMES)
-    // Mapping: (currentDate.getDay() + 6) % 7
     const VN_dayIndex = (currentDate.getDay() + 6) % 7
 
     if (input.weekdays.includes(VN_dayIndex)) {
-      try {
-        await checkOverlap(db, {
-          userId,
-          sessionDate: currentDate,
+      // Check overlap in-memory
+      const overlap = existingSessions.find((s) => {
+        const sameDay = s.sessionDate.getTime() === currentDate.getTime()
+        if (!sameDay) return false
+
+        // start_a < end_b AND end_a > start_b
+        return (
+          s.startTime.getTime() < endTime.getTime() &&
+          s.endTime.getTime() > startTime.getTime()
+        )
+      })
+
+      if (overlap) {
+        skippedCount++
+      } else {
+        toCreate.push({
+          sessionDate: new Date(currentDate),
           startTime,
           endTime,
+          subjectId: input.subjectId,
+          title: input.title ?? null,
+          notes: input.notes ?? null,
         })
+      }
+    }
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
 
-        await db.teachingSession.create({
+  if (toCreate.length > 0) {
+    await db.$transaction(async (tx) => {
+      for (const data of toCreate) {
+        await tx.teachingSession.create({
           data: {
+            ...data,
             userId,
-            sessionDate: currentDate,
-            startTime,
-            endTime,
-            subjectId: input.subjectId,
-            title: input.title ?? null,
-            notes: input.notes ?? null,
             ...(input.studentIds && input.studentIds.length > 0
               ? {
                   sessionStudents: {
@@ -527,16 +578,8 @@ export async function bulkCreateSessions(
           },
         })
         createdCount++
-      } catch (err) {
-        // Nếu trùng lịch thì skip ca này
-        if (err instanceof TRPCError && err.code === "CONFLICT") {
-          skippedCount++
-        } else {
-          throw err
-        }
       }
-    }
-    currentDate.setDate(currentDate.getDate() + 1)
+    })
   }
 
   return { created: createdCount, skipped: skippedCount }

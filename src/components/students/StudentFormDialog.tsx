@@ -99,7 +99,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-full h-full max-w-none sm:h-auto sm:max-w-md sm:max-h-[90vh] overflow-y-auto sm:rounded-lg top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "Thêm học sinh" : "Sửa học sinh"}

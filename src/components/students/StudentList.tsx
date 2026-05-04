@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { CalendarDays, MoreHorizontal, Pencil, Trash2, UserPlus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { trpc } from "@/lib/trpc"
 import { GRADES } from "@/lib/constants"
 import { useFilters } from "@/hooks/useFilters"
+import { useDebounce } from "@/hooks/useDebounce"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,6 +63,17 @@ export function StudentList() {
   const router = useRouter()
   const { selectedGrade, searchStudentName, setGrade, setSearch } = useFilters()
 
+  const [localSearch, setLocalSearch] = useState(searchStudentName)
+  const debouncedSearch = useDebounce(localSearch, 400)
+
+  useEffect(() => {
+    setSearch(debouncedSearch)
+  }, [debouncedSearch, setSearch])
+
+  useEffect(() => {
+    setLocalSearch(searchStudentName)
+  }, [searchStudentName])
+
   const listQuery = trpc.student.list.useQuery({
     grade: selectedGrade ?? undefined,
     search: searchStudentName.trim() || undefined,
@@ -111,8 +123,8 @@ export function StudentList() {
 
         <Input
           placeholder="Tìm tên học sinh..."
-          value={searchStudentName}
-          onChange={(e) => setSearch(e.target.value)}
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
           className="w-full sm:w-64"
         />
 
@@ -127,121 +139,123 @@ export function StudentList() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">STT</TableHead>
-              <TableHead>Họ và tên</TableHead>
-              <TableHead className="w-16">Lớp</TableHead>
-              <TableHead className="w-24">Cấp</TableHead>
-              <TableHead className="w-28">Trạng thái</TableHead>
-              <TableHead className="hidden md:table-cell">SĐT PH</TableHead>
-              <TableHead className="hidden lg:table-cell">Tên PH</TableHead>
-              <TableHead className="w-12"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {listQuery.isPending ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={8}>
-                    <Skeleton className="h-6 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : students.length === 0 ? (
+      <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="text-center text-sm text-slate-500 py-12"
-                >
-                  Chưa có học sinh nào.
-                  {selectedGrade === null && searchStudentName === "" && (
-                    <>
-                      {" "}
-                      Nhấn{" "}
-                      <span className="font-medium">+ Thêm học sinh</span> để
-                      bắt đầu.
-                    </>
-                  )}
-                </TableCell>
+                <TableHead className="w-12">STT</TableHead>
+                <TableHead>Họ và tên</TableHead>
+                <TableHead className="w-16">Lớp</TableHead>
+                <TableHead className="w-24">Cấp</TableHead>
+                <TableHead className="w-28">Trạng thái</TableHead>
+                <TableHead className="hidden md:table-cell">SĐT PH</TableHead>
+                <TableHead className="hidden lg:table-cell">Tên PH</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
-            ) : (
-              students.map((s, idx) => (
-                <TableRow key={s.id}>
-                  <TableCell>{idx + 1}</TableCell>
-                  <TableCell className="font-medium">{s.fullName}</TableCell>
-                  <TableCell>{s.grade}</TableCell>
-                  <TableCell>
-                    {s.level === "tieu_hoc" ? (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        Tiểu học
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                        THCS
-                      </Badge>
+            </TableHeader>
+            <TableBody>
+              {listQuery.isPending ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={8}>
+                      <Skeleton className="h-6 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : students.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    className="text-center text-sm text-slate-500 py-12"
+                  >
+                    Chưa có học sinh nào.
+                    {selectedGrade === null && searchStudentName === "" && (
+                      <>
+                        {" "}
+                        Nhấn{" "}
+                        <span className="font-medium">+ Thêm học sinh</span> để
+                        bắt đầu.
+                      </>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    {s.isActive ? (
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
-                        Đang học
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-red-50 text-red-600 hover:bg-red-50 border-red-100">
-                        Đã nghỉ
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-slate-600">
-                    {s.parentPhone || "-"}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-slate-600">
-                    {s.parentName || "-"}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onSelect={() => router.push(`/calendar?studentId=${s.id}`)}
-                        >
-                          <CalendarDays className="size-4 mr-2" />
-                          Xem lịch
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() =>
-                            setFormState({
-                              open: true,
-                              mode: "edit",
-                              student: s,
-                            })
-                          }
-                        >
-                          <Pencil className="size-4 mr-2" />
-                          Sửa
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-600 focus:text-red-700"
-                          onSelect={() => setDeleteTarget(s)}
-                        >
-                          <Trash2 className="size-4 mr-2" />
-                          Xóa
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                students.map((s, idx) => (
+                  <TableRow key={s.id}>
+                    <TableCell>{idx + 1}</TableCell>
+                    <TableCell className="font-medium">{s.fullName}</TableCell>
+                    <TableCell>{s.grade}</TableCell>
+                    <TableCell>
+                      {s.level === "tieu_hoc" ? (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          Tiểu học
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          THCS
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {s.isActive ? (
+                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+                          Đang học
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-red-50 text-red-600 hover:bg-red-50 border-red-100">
+                          Đã nghỉ
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-slate-600">
+                      {s.parentPhone || "-"}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-slate-600">
+                      {s.parentName || "-"}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onSelect={() => router.push(`/calendar?studentId=${s.id}`)}
+                          >
+                            <CalendarDays className="size-4 mr-2" />
+                            Xem lịch
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              setFormState({
+                                open: true,
+                                mode: "edit",
+                                student: s,
+                              })
+                            }
+                          >
+                            <Pencil className="size-4 mr-2" />
+                            Sửa
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-700"
+                            onSelect={() => setDeleteTarget(s)}
+                          >
+                            <Trash2 className="size-4 mr-2" />
+                            Xóa
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <StudentFormDialog

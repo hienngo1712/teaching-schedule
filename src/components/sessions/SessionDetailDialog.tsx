@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { CalendarDays, Clock, Edit2, MoreVertical, Trash2 } from "lucide-react"
+import { CalendarDays, Clock, Copy, Edit2, Loader2, MoreVertical, Trash2, UserPlus } from "lucide-react"
 import dayjs from "dayjs"
 import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -28,9 +29,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Calendar } from "@/components/ui/calendar"
 import { trpc } from "@/lib/trpc"
 import type { SessionDTO } from "@/server/services/session.service"
 import { AttendancePanel } from "./AttendancePanel"
+import { StudentPicker } from "./StudentPicker"
 
 type Props = {
   open: boolean
@@ -46,6 +49,12 @@ export function SessionDetailDialog({
   onEdit,
 }: Props) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false)
+  const [isAddStudentsOpen, setIsAddStudentsOpen] = useState(false)
+  const [targetDate, setTargetDate] = useState<Date | undefined>(
+    dayjs(session.sessionDate).add(7, "day").toDate()
+  )
+  const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([])
   const utils = trpc.useUtils()
 
   const deleteMutation = trpc.session.delete.useMutation({
@@ -59,14 +68,57 @@ export function SessionDetailDialog({
     },
   })
 
+  const duplicateMutation = trpc.session.duplicate.useMutation({
+    onSuccess: () => {
+      toast.success("Đã nhân bản ca dạy thành công")
+      utils.session.getMonth.invalidate()
+      setIsDuplicateDialogOpen(false)
+    },
+    onError: (err) => {
+      toast.error(err.message || "Đã có lỗi xảy ra khi nhân bản")
+    },
+  })
+
+  const addStudentsMutation = trpc.session.addStudents.useMutation({
+    onSuccess: () => {
+      toast.success("Đã cập nhật danh sách học sinh")
+      utils.session.getMonth.invalidate()
+      utils.attendance.get.invalidate({ sessionId: session.id })
+      setIsAddStudentsOpen(false)
+    },
+    onError: (err) => {
+      toast.error(err.message || "Đã có lỗi xảy ra")
+    },
+  })
+
   const handleDelete = () => {
     deleteMutation.mutate({ id: session.id })
+  }
+
+  const handleDuplicate = () => {
+    if (!targetDate) return
+    duplicateMutation.mutate({
+      id: session.id,
+      targetDate: dayjs(targetDate).format("YYYY-MM-DD"),
+    })
+  }
+
+  const handleOpenAddStudents = () => {
+    setSelectedStudentIds(session.students.map((s) => s.studentId))
+    setIsAddStudentsOpen(true)
+  }
+
+  const handleSaveStudents = () => {
+    addStudentsMutation.mutate({
+      sessionId: session.id,
+      studentIds: selectedStudentIds,
+    })
   }
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full h-full max-w-none sm:h-auto sm:max-w-[600px] sm:max-h-[90vh] overflow-y-auto sm:rounded-lg top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
           <DialogHeader className="flex flex-row items-start justify-between space-y-0">
             <div className="space-y-1">
               <DialogTitle className="text-xl flex items-center gap-2">
@@ -92,7 +144,7 @@ export function SessionDetailDialog({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label="Menu hành động">
                   <MoreVertical className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -100,6 +152,14 @@ export function SessionDetailDialog({
                 <DropdownMenuItem onClick={() => onEdit(session)}>
                   <Edit2 className="mr-2 size-4" />
                   Sửa ca dạy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleOpenAddStudents}>
+                  <UserPlus className="mr-2 size-4" />
+                  Thêm học sinh
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsDuplicateDialogOpen(true)}>
+                  <Copy className="mr-2 size-4" />
+                  Nhân bản ca dạy
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-red-600 focus:text-red-600"
@@ -127,6 +187,76 @@ export function SessionDetailDialog({
             
             <AttendancePanel sessionId={session.id} />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddStudentsOpen} onOpenChange={setIsAddStudentsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Quản lý học sinh trong ca</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <StudentPicker
+              value={selectedStudentIds}
+              onChange={setSelectedStudentIds}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsAddStudentsOpen(false)}
+              disabled={addStudentsMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleSaveStudents}
+              disabled={addStudentsMutation.isPending}
+            >
+              {addStudentsMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Lưu thay đổi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Nhân bản ca dạy</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 flex flex-col items-center">
+            <p className="text-sm text-slate-500 mb-4 text-center">
+              Chọn ngày để nhân bản ca dạy này. Giờ dạy và danh sách học sinh sẽ được giữ nguyên.
+            </p>
+            <Calendar
+              mode="single"
+              selected={targetDate}
+              onSelect={setTargetDate}
+              className="rounded-md border shadow"
+              initialFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsDuplicateDialogOpen(false)}
+              disabled={duplicateMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleDuplicate}
+              disabled={duplicateMutation.isPending || !targetDate}
+            >
+              {duplicateMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Nhân bản
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

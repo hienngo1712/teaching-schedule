@@ -74,3 +74,51 @@ export async function getMonthlySummary(
     overallAttendanceRate: 0 // Placeholder
   }
 }
+
+export async function getDashboardStats(db: PrismaClient, userId: number) {
+  const now = new Date()
+  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
+
+  // 1. Total active students
+  const totalStudents = await db.student.count({ where: { userId, isActive: true } })
+
+  // 2. Sessions today
+  const sessionsToday = await db.teachingSession.count({
+    where: { userId, sessionDate: today }
+  })
+
+  // 3. This month's sessions
+  const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1))
+  const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1))
+
+  const sessionsThisMonth = await db.teachingSession.findMany({
+    where: { userId, sessionDate: { gte: startOfMonth, lt: endOfMonth } },
+    include: { sessionStudents: true }
+  })
+
+  const totalSessionsMonth = sessionsThisMonth.length
+
+  // 4. Attendance rate this month
+  let totalRecords = 0
+  let presentRecords = 0
+
+  sessionsThisMonth.forEach(s => {
+    s.sessionStudents.forEach(ss => {
+      if (ss.attendance !== ATTENDANCE_STATUS.PENDING) {
+        totalRecords++
+        if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {
+          presentRecords++
+        }
+      }
+    })
+  })
+
+  const attendanceRate = totalRecords > 0 ? (presentRecords / totalRecords) * 100 : 0
+
+  return {
+    totalStudents,
+    sessionsToday,
+    totalSessionsMonth,
+    attendanceRate: Math.round(attendanceRate * 10) / 10
+  }
+}

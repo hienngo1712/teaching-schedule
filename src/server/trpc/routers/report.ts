@@ -1,6 +1,10 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
-import { getMonthlySummary, getStudentReport } from "@/server/services/report.service"
+import {
+  getDashboardStats,
+  getMonthlySummary,
+  getStudentReport,
+} from "@/server/services/report.service"
 
 export const reportRouter = createTRPCRouter({
   student: protectedProcedure
@@ -17,4 +21,7 @@ export const reportRouter = createTRPCRouter({
       month: z.number().int().min(1).max(12),
     }))
     .query(({ ctx, input }) => getMonthlySummary(ctx.db, ctx.userId, input)),
+
+  dashboard: protectedProcedure
+    .query(({ ctx }) => getDashboardStats(ctx.db, ctx.userId)),
 })

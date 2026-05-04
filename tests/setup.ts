@@ -13,11 +13,11 @@ if (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") {
 // Load .env.test nếu có
 const testEnvPath = join(process.cwd(), ".env.test")
 if (existsSync(testEnvPath)) {
-  config({ path: ".env.test" })
+  config({ path: ".env.test", override: true })
 } else {
   // Nếu không có .env.test, CẤM chạy integration tests nếu DATABASE_URL đang trỏ tới Neon
   // (tránh trường hợp người dùng quên và làm mất dữ liệu production/dev)
-  config() // Load .env mặc định
+  config({ override: true }) // Load .env mặc định
   
   if (process.env.DATABASE_URL?.includes("neon.tech") || process.env.DATABASE_URL?.includes("vercel-storage.com")) {
     console.error("\n❌ ERROR: Cảnh báo bảo mật!")
