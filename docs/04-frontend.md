@@ -4,9 +4,9 @@
 
 ```
 /login          → public
-/               → redirect /calendar
-/dashboard      → auth required — thống kê nhanh
-/calendar       → auth required — TRANG CHÍNH
+/               → redirect /dashboard
+/dashboard      → auth required — TRANG CHÍNH
+/calendar       → auth required — quản lý lịch dạy
 /students       → auth required — quản lý HS
 /reports        → auth required — báo cáo + export
 ```

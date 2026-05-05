@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StudentReport } from "./StudentReport"
 import { GRADES } from "@/lib/constants"
+import { formatCurrency } from "@/lib/utils"
 import { ExportExcelButton } from "@/components/reports/ExportExcelButton"
 import type { SessionDTO } from "@/server/services/session.service"
 import type { StudentDTO } from "@/lib/schemas/student.dto"
@@ -101,7 +102,7 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-indigo-600">
-                {monthlySummary ? `${monthlySummary.totalRevenue.toLocaleString('vi-VN')} đ` : "0 đ"}
+                {monthlySummary ? formatCurrency(monthlySummary.totalRevenue) : "0 đ"}
               </div>
             </CardContent>
           </Card>

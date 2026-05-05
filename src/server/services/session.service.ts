@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server"
 import { Prisma, type PrismaClient } from "@prisma/client"
+import dayjs from "dayjs"
 import {
   calcDurationMinutes,
   formatTime,
@@ -445,7 +446,7 @@ export async function addStudentsToSession(
     await tx.sessionStudent.deleteMany({
       where: { sessionId },
     })
-    
+
     if (studentFees.length > 0) {
       await tx.sessionStudent.createMany({
         data: studentFees.map((s) => ({
@@ -488,6 +489,62 @@ export async function removeStudentFromSession(
     },
   })
   return toDTO(updated!)
+}
+
+export async function checkBulkCreateConflicts(
+  db: PrismaClient,
+  userId: number,
+  input: SessionBulkCreateInput
+): Promise<Array<{ date: string; conflict: string }>> {
+  const start = parseSessionDate(input.startDate)
+  const end = parseSessionDate(input.endDate)
+  const startTime = parseTimeToDate(input.startTime)
+  const endTime = parseTimeToDate(input.endTime)
+
+  const existingSessions = await db.teachingSession.findMany({
+    where: {
+      userId,
+      sessionDate: { gte: start, lte: end },
+    },
+    select: {
+      title: true,
+      sessionDate: true,
+      startTime: true,
+      endTime: true,
+      subject: { select: { name: true } },
+    },
+  })
+
+  const conflicts: Array<{ date: string; conflict: string }> = []
+  const currentDate = new Date(start)
+  while (currentDate <= end) {
+    const VN_dayIndex = (currentDate.getDay() + 6) % 7
+
+    if (input.weekdays.includes(VN_dayIndex)) {
+      const overlap = existingSessions.find((s) => {
+        const sameDay = s.sessionDate.getTime() === currentDate.getTime()
+        if (!sameDay) return false
+        return (
+          s.startTime.getTime() < endTime.getTime() &&
+          s.endTime.getTime() > startTime.getTime()
+        )
+      })
+
+      if (overlap) {
+        const label = overlap.title 
+          ? `"${overlap.title}" (${overlap.subject.name})`
+          : `Lớp ${overlap.subject.name} (${formatTime(overlap.startTime)}–${formatTime(overlap.endTime)})`
+        
+        conflicts.push({
+          date: dayjs(currentDate).format("DD/MM/YYYY"),
+          conflict: label,
+        })
+      }
+    }
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+
+  return conflicts
 }
 
 export async function bulkCreateSessions(
@@ -569,25 +626,28 @@ export async function bulkCreateSessions(
 
   if (toCreate.length > 0) {
     await db.$transaction(async (tx) => {
-      for (const data of toCreate) {
-        await tx.teachingSession.create({
-          data: {
-            ...data,
-            userId,
-            ...(studentFees.length > 0
-              ? {
-                  sessionStudents: {
-                    create: studentFees.map((s) => ({
-                      studentId: s.id,
-                      fee: s.tuitionFee,
-                    })),
-                  },
-                }
-              : {}),
-          },
+      const sessions = await tx.teachingSession.createManyAndReturn({
+        data: toCreate.map((data) => ({
+          ...data,
+          userId,
+        })),
+      })
+
+      if (studentFees.length > 0) {
+        const sessionStudentsData = sessions.flatMap((session) =>
+          studentFees.map((sf) => ({
+            sessionId: session.id,
+            studentId: sf.id,
+            fee: sf.tuitionFee,
+          }))
+        )
+        await tx.sessionStudent.createMany({
+          data: sessionStudentsData,
         })
-        createdCount++
       }
+      createdCount = sessions.length
+    }, {
+      timeout: 5000,
     })
   }
 
@@ -677,7 +737,7 @@ export async function bulkUpdateFutureSessions(
       await tx.sessionStudent.deleteMany({
         where: { sessionId: { in: sessionIds } },
       })
-      
+
       if (data.studentIds.length > 0) {
         // Cần fetch phí của các học sinh mới
         const studentFees = await tx.student.findMany({

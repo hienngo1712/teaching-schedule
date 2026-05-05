@@ -74,6 +74,7 @@ export function SessionDetailDialog({
     onSuccess: () => {
       toast.success("Đã xóa ca dạy")
       utils.session.getMonth.invalidate()
+      utils.report.invalidate()
       onOpenChange(false)
     },
     onError: () => {
@@ -85,6 +86,7 @@ export function SessionDetailDialog({
     onSuccess: (res) => {
       toast.success(`Đã xóa ${res.deleted} ca dạy lặp`)
       utils.session.getMonth.invalidate()
+      utils.report.invalidate()
       onOpenChange(false)
     },
     onError: (err) => {
@@ -108,6 +110,7 @@ export function SessionDetailDialog({
     onSuccess: () => {
       toast.success("Đã cập nhật danh sách học sinh")
       utils.session.getMonth.invalidate()
+      utils.report.invalidate()
       utils.attendance.get.invalidate({ sessionId: session.id })
       setIsAddStudentsOpen(false)
     },
@@ -120,6 +123,7 @@ export function SessionDetailDialog({
     onSuccess: (res) => {
       toast.success(`Đã thêm học sinh vào ${res.updatedSessions} ca dạy khớp lịch.`)
       utils.session.getMonth.invalidate()
+      utils.report.invalidate()
       utils.attendance.get.invalidate({ sessionId: session.id })
       setIsAddStudentsOpen(false)
     },

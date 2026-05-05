@@ -349,6 +349,31 @@ describe("Session CRUD + overlap", () => {
       expect(res.created).toBe(0)
       expect(res.skipped).toBe(1)
     })
+
+    it("✓ checkBulkConflicts trả danh sách ca bị trùng", async () => {
+      const caller = await getAuthedCaller()
+      // Tạo sẵn 1 ca vào T4 ngày 01/04
+      await caller.session.create({
+        sessionDate: "2026-04-01",
+        startTime: "08:00",
+        endTime: "09:30",
+        subjectId,
+        title: "Lớp Toán A",
+      })
+
+      const conflicts = await caller.session.checkBulkConflicts({
+        startDate: "2026-04-01",
+        endDate: "2026-04-05",
+        weekdays: [2, 4], // T4, T6
+        startTime: "08:30",
+        endTime: "10:00",
+        subjectId,
+      })
+
+      expect(conflicts.length).toBe(1)
+      expect(conflicts[0].date).toBe("01/04/2026")
+      expect(conflicts[0].conflict).toContain("Lớp Toán A")
+    })
   })
 
   // ── Duplicate ────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import { Check, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Select,
   SelectContent,
@@ -57,6 +58,8 @@ export function AttendancePanel({ sessionId }: Props) {
     onSuccess: () => {
       toast.success("Đã lưu điểm danh")
       utils.attendance.get.invalidate({ sessionId })
+      utils.report.invalidate()
+      utils.session.getMonth.invalidate()
     },
     onError: () => {
       toast.error("Đã có lỗi xảy ra khi lưu điểm danh")
@@ -161,12 +164,9 @@ export function AttendancePanel({ sessionId }: Props) {
                     </Select>
                   </td>
                   <td className="px-3 py-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1000"
+                    <CurrencyInput
                       value={state.fee}
-                      onChange={(e) => handleUpdateFee(student.studentId, Number(e.target.value) || 0)}
+                      onChange={(val) => handleUpdateFee(student.studentId, val || 0)}
                       className="w-full h-8 text-xs"
                     />
                   </td>

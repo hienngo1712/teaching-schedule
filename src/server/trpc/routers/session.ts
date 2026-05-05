@@ -12,6 +12,7 @@ import {
   addStudentsToSession,
   addStudentsToRecurringSessions,
   bulkCreateSessions,
+  checkBulkCreateConflicts,
   bulkDeleteFutureSessions,
   bulkUpdateFutureSessions,
   createSession,
@@ -65,6 +66,12 @@ export const sessionRouter = createTRPCRouter({
     .input(sessionBulkCreateSchema)
     .mutation(({ ctx, input }) =>
       bulkCreateSessions(ctx.db, ctx.userId, input)
+    ),
+
+  checkBulkConflicts: protectedProcedure
+    .input(sessionBulkCreateSchema)
+    .mutation(({ ctx, input }) =>
+      checkBulkCreateConflicts(ctx.db, ctx.userId, input)
     ),
 
   addStudents: protectedProcedure

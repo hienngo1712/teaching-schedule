@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ATTENDANCE_LABEL, ATTENDANCE_STATUS } from "@/lib/constants"
-import { formatDate, formatDayOfWeek, calcAttendanceRate, removeVietnameseTones } from "@/lib/utils"
+import { formatDate, formatDayOfWeek, calcAttendanceRate, removeVietnameseTones, formatCurrency } from "@/lib/utils"
 import type { SessionDTO } from "@/server/services/session.service"
 import { trpc } from "@/lib/trpc"
 import { ExportButton } from "../reports/ExportButton"
@@ -142,8 +142,8 @@ export function StudentScheduleView({
                       <TableCell className="font-medium text-slate-700">{formatDate(session.sessionDate)}</TableCell>
                       <TableCell className="text-slate-600">{formatDayOfWeek(session.sessionDate)}</TableCell>
                       <TableCell className="text-slate-600">{session.startTime} – {session.endTime}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {(studentData?.fee ?? 0).toLocaleString('vi-VN')} đ
+                      <TableCell className="text-right font-medium text-slate-700">
+                        {formatCurrency(studentData?.fee)}
                       </TableCell>
                       <TableCell>
                         <Badge 
@@ -180,7 +180,7 @@ export function StudentScheduleView({
               <span>Có mặt: <span className="text-green-600 font-bold">{summary.present}</span></span>
               <span>Vắng: <span className="text-red-600 font-bold">{summary.absent}</span></span>
               <span>Muộn: <span className="text-amber-600 font-bold">{summary.late}</span></span>
-              <span>Học phí: <span className="text-indigo-600 font-bold">{summary.totalFee.toLocaleString('vi-VN')} đ</span></span>
+              <span>Học phí: <span className="text-indigo-600 font-bold">{formatCurrency(summary.totalFee)}</span></span>
             </div>
             <div className="text-slate-400 italic">
               Ngày xuất: {formatDate(new Date())}

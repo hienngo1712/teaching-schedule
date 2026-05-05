@@ -12,6 +12,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { trpc } from "@/lib/trpc"
 import { Skeleton } from "@/components/ui/skeleton"
+import { formatCurrency } from "@/lib/utils"
 
 export default function DashboardPage() {
   const { data: stats, isLoading } = trpc.report.dashboard.useQuery()
@@ -53,7 +54,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Doanh thu tháng này"
-          value={stats ? `${stats.totalRevenueMonth.toLocaleString('vi-VN')} đ` : undefined}
+          value={stats ? formatCurrency(stats.totalRevenueMonth) : undefined}
           icon={<Banknote className="size-4 text-muted-foreground" />}
           loading={isLoading}
           description="Học phí thu được tháng này"

@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test('redirect to /login when not authenticated', async ({ page }) => {
-  await page.goto('/calendar');
+  await page.goto('/dashboard');
   await expect(page).toHaveURL(/.*login/);
 });
 
-test('login successfully and redirect to /calendar', async ({ page }) => {
+test('login successfully and redirect to /dashboard', async ({ page }) => {
   await page.goto('/login');
   
   // Wait for the form to be ready
@@ -16,8 +16,8 @@ test('login successfully and redirect to /calendar', async ({ page }) => {
   await page.click('button[type="submit"]');
   
   // Wait for navigation
-  await expect(page).toHaveURL(/.*calendar/);
-  await expect(page.getByRole('heading', { name: 'Lịch dạy', exact: false })).toBeVisible();
+  await expect(page).toHaveURL(/.*dashboard/);
+  await expect(page.getByRole('heading', { name: 'Tổng quan', exact: false })).toBeVisible();
 });
 
 test('logout successfully', async ({ page }) => {
@@ -26,7 +26,7 @@ test('logout successfully', async ({ page }) => {
   await page.fill('input[name="username"]', 'teacher');
   await page.fill('input[name="password"]', 'teacher123');
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/.*calendar/);
+  await expect(page).toHaveURL(/.*dashboard/);
   
   // Click logout (it's in a dropdown)
   await page.click('button[aria-label="Mở menu tài khoản"]');

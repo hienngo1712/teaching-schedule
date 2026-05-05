@@ -8,101 +8,89 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ─── USER ────────────────────────────────────────────────────────
 model User {
-  id           Int       @id @default(autoincrement())
-  username     String    @unique @db.VarChar(50)
-  passwordHash String    @map("password_hash") @db.VarChar(255)
-  fullName     String?   @map("full_name") @db.VarChar(100)
-  isActive     Boolean   @default(true) @map("is_active")
-  lastLoginAt  DateTime? @map("last_login_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-
-  subjects      Subject[]
-  students      Student[]
-  sessions      TeachingSession[]
+  id            Int               @id @default(autoincrement())
+  username      String            @unique @db.VarChar(50)
+  passwordHash  String            @map("password_hash") @db.VarChar(255)
+  fullName      String?           @map("full_name") @db.VarChar(100)
+  isActive      Boolean           @default(true) @map("is_active")
+  lastLoginAt   DateTime?         @map("last_login_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
   loginAttempts LoginAttempt[]
+  students      Student[]
+  subjects      Subject[]
+  sessions      TeachingSession[]
 
   @@map("users")
 }
 
-// ─── LOGIN ATTEMPT (rate limit + audit) ──────────────────────────
 model LoginAttempt {
   id        Int      @id @default(autoincrement())
   username  String   @db.VarChar(50)
   ipAddress String?  @map("ip_address") @db.VarChar(45)
   success   Boolean
   userId    Int?     @map("user_id")
-  user      User?    @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now()) @map("created_at")
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@index([username, createdAt])
   @@index([ipAddress, createdAt])
   @@map("login_attempts")
 }
 
-// ─── SUBJECT ─────────────────────────────────────────────────────
 model Subject {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  user      User     @relation(fields: [userId], references: [id])
-  name      String   @db.VarChar(100)
-  color     String   @default("#4F46E5") @db.VarChar(7)
-  isDefault Boolean  @default(false) @map("is_default")
-  isActive  Boolean  @default(true) @map("is_active")
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  sessions TeachingSession[]
+  id        Int               @id @default(autoincrement())
+  userId    Int               @map("user_id")
+  name      String            @db.VarChar(100)
+  color     String            @default("#4F46E5") @db.VarChar(7)
+  isDefault Boolean           @default(false) @map("is_default")
+  isActive  Boolean           @default(true) @map("is_active")
+  sortOrder Int               @default(0) @map("sort_order")
+  createdAt DateTime          @default(now()) @map("created_at")
+  user      User              @relation(fields: [userId], references: [id])
+  sessions  TeachingSession[]
 
   @@unique([userId, name])
   @@index([userId, isActive, sortOrder])
   @@map("subjects")
 }
 
-// ─── STUDENT ─────────────────────────────────────────────────────
 model Student {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("user_id")
-  user        User     @relation(fields: [userId], references: [id])
-  fullName    String   @map("full_name") @db.VarChar(100)
-  grade       Int      @db.SmallInt
-  parentPhone String?  @map("parent_phone") @db.VarChar(15)
-  parentName  String?  @map("parent_name") @db.VarChar(100)
-  notes       String?  @db.Text
-  isActive    Boolean  @default(true) @map("is_active")
-  tuitionFee  Int      @default(0) @map("tuition_fee") // VND per session
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
+  id              Int              @id @default(autoincrement())
+  userId          Int              @map("user_id")
+  fullName        String           @map("full_name") @db.VarChar(100)
+  grade           Int              @db.SmallInt
+  parentPhone     String?          @map("parent_phone") @db.VarChar(15)
+  parentName      String?          @map("parent_name") @db.VarChar(100)
+  notes           String?
+  isActive        Boolean          @default(true) @map("is_active")
+  tuitionFee      Int              @default(0) @map("tuition_fee")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
   sessionStudents SessionStudent[]
+  user            User             @relation(fields: [userId], references: [id])
 
   @@index([userId, grade])
   @@index([userId, isActive])
   @@map("students")
 }
 
-// ─── TEACHING SESSION ────────────────────────────────────────────
 model TeachingSession {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("user_id")
-  user        User     @relation(fields: [userId], references: [id])
-  sessionDate DateTime @map("session_date") @db.Date
-  startTime   DateTime @map("start_time") @db.Time(0)
-  endTime     DateTime @map("end_time") @db.Time(0)
-
-  subjectId Int     @map("subject_id")
-  subject   Subject @relation(fields: [subjectId], references: [id])
-
-  title  String? @db.VarChar(200)
-  notes  String? @db.Text
-  status String  @default("scheduled") @db.VarChar(20)
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
+  id              Int              @id @default(autoincrement())
+  userId          Int              @map("user_id")
+  sessionDate     DateTime         @map("session_date") @db.Date
+  startTime       DateTime         @map("start_time") @db.Time(0)
+  endTime         DateTime         @map("end_time") @db.Time(0)
+  subjectId       Int              @map("subject_id")
+  title           String?          @db.VarChar(200)
+  notes           String?
+  status          String           @default("scheduled") @db.VarChar(20)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
   sessionStudents SessionStudent[]
+  subject         Subject          @relation(fields: [subjectId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
 
   @@index([userId, sessionDate])
   @@index([userId, sessionDate, startTime])
@@ -110,17 +98,15 @@ model TeachingSession {
   @@map("teaching_sessions")
 }
 
-// ─── SESSION STUDENT ─────────────────────────────────────────────
 model SessionStudent {
-  id         Int     @id @default(autoincrement())
-  sessionId  Int     @map("session_id")
-  studentId  Int     @map("student_id")
-  attendance String  @default("pending") @db.VarChar(10)
-  note       String? @db.Text
-  fee        Int     @default(0) // Actual fee for this session
-
-  session TeachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  student Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id         Int             @id @default(autoincrement())
+  sessionId  Int             @map("session_id")
+  studentId  Int             @map("student_id")
+  attendance String          @default("pending") @db.VarChar(10)
+  note       String?
+  fee        Int             @default(0)
+  session    TeachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student    Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, studentId])
   @@index([studentId])

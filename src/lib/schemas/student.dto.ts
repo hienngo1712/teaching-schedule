@@ -7,6 +7,7 @@ export interface StudentDTO {
   parentName: string | null
   notes: string | null
   isActive: boolean
+  tuitionFee: number
   createdAt: string | Date
   updatedAt: string | Date
 }

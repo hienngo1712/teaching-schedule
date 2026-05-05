@@ -45,32 +45,32 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>Tùy chọn xuất file</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        
+
         <DropdownMenuItem onClick={() => exportMonthlySchedule(sessions, year, month, teacherName)}>
           📅 Xuất lịch tháng
         </DropdownMenuItem>
 
         {selectedStudentId && sessions.length > 0 && (
           <DropdownMenuItem onClick={() => {
-            const studentSessions = sessions.filter(s => 
+            const studentSessions = sessions.filter(s =>
               s.students.some(st => st.studentId === selectedStudentId)
             )
             const fullName = studentSessions[0]?.students.find(st => st.studentId === selectedStudentId)?.fullName || "Học sinh"
             const grade = studentSessions[0]?.students.find(st => st.studentId === selectedStudentId)?.grade || 0
-            
-            const present = studentSessions.filter(s => 
+
+            const present = studentSessions.filter(s =>
               s.students.some(st => st.studentId === selectedStudentId && (st.attendance === "present" || st.attendance === "late"))
             ).length
-            const absent = studentSessions.filter(s => 
+            const absent = studentSessions.filter(s =>
               s.students.some(st => st.studentId === selectedStudentId && st.attendance === "absent")
             ).length
             const total = studentSessions.length
             const rate = total > 0 ? (present / total) * 100 : 0
 
             exportStudentSchedule(
-              { fullName, grade }, 
-              studentSessions, 
-              { total, present, absent, late: 0, rate }, 
+              { fullName, grade },
+              studentSessions,
+              { total, present, absent, late: 0, rate },
               `Tháng ${month}/${year}`
             )
           }}>
@@ -85,7 +85,7 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
         )}
 
         <DropdownMenuItem onClick={() => exportAttendanceSummary(students, sessions, year, month)}>
-          📊 Xuất tổng hợp
+          📊 Xuất điểm danh
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

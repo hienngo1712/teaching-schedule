@@ -39,33 +39,27 @@ export function useExcelExport() {
       }
 
       // Title
-      sheet.mergeCells("A1:G1")
+      sheet.mergeCells("A1:H1")
       const titleCell = sheet.getCell("A1")
       titleCell.value = `LỊCH DẠY HỌC - THÁNG ${month}/${year}`
       titleCell.style = titleStyle
 
-      sheet.mergeCells("A2:G2")
+      sheet.mergeCells("A2:H2")
       const infoCell = sheet.getCell("A2")
       infoCell.value = `Giáo viên: ${teacherName} | Ngày xuất: ${formatDate(new Date())}`
       infoCell.alignment = { horizontal: "center" }
 
-      // Header T2-CN
-      const days = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
-      days.forEach((day, index) => {
-        const cell = sheet.getCell(4, index + 1)
-        cell.value = day
-        cell.style = headerStyle
-      })
-
       // Grid logic - simplified for Excel
-      sheet.getRow(5).values = ["Ngày", "Thứ", "Giờ", "Môn", "Tiêu đề", "Học sinh", "Ghi chú"]
-      sheet.getRow(5).font = { bold: true }
+      sheet.getRow(4).values = ["Thứ", "Ngày", "Lớp", "Giờ", "Môn", "Tiêu đề", "Học sinh", "Ghi chú"]
+      sheet.getRow(4).font = { bold: true }
       
       sessions.forEach((s, i) => {
         const studentNames = s.students.map(st => st.fullName).join(", ")
-        sheet.getRow(6 + i).values = [
-          formatDate(s.sessionDate),
+        const grades = Array.from(new Set(s.students.map(st => st.grade))).join(", ")
+        sheet.getRow(5 + i).values = [
           formatDayOfWeek(s.sessionDate),
+          formatDate(s.sessionDate),
+          grades,
           `${s.startTime}-${s.endTime}`,
           s.subject.name,
           s.title || "",

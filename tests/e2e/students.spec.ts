@@ -6,7 +6,8 @@ test.describe('Student management', () => {
     await page.fill('input[name="username"]', 'teacher');
     await page.fill('input[name="password"]', 'teacher123');
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/.*calendar/);
+    await expect(page).toHaveURL(/.*dashboard/);
+    await page.goto('/students');
   });
 
   test('add and then delete a student', async ({ page }) => {

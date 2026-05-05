@@ -2,7 +2,7 @@
 
 import type { z } from "zod"
 import { useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc"
@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -35,6 +36,7 @@ type StudentRecord = {
   parentName: string | null
   notes: string | null
   isActive: boolean
+  tuitionFee: number
 }
 
 type Props = {
@@ -56,7 +58,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
       parentName: undefined,
       notes: undefined,
       isActive: true,
-      tuitionFee: 0,
+      tuitionFee: undefined,
     },
   })
 
@@ -70,7 +72,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
         parentName: student?.parentName ?? undefined,
         notes: student?.notes ?? undefined,
         isActive: student?.isActive ?? true,
-        tuitionFee: student && "tuitionFee" in student ? Number((student as Record<string, unknown>).tuitionFee) : 0,
+        tuitionFee: student?.tuitionFee ?? undefined,
       })
     }
   }, [open, student, form])
@@ -79,6 +81,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
     onSuccess: () => {
       // Invalidate toàn bộ query liên quan đến student.list
       utils.student.list.invalidate()
+      utils.report.invalidate()
       toast.success("Đã thêm học sinh")
       onOpenChange(false)
     },
@@ -88,6 +91,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
   const updateMut = trpc.student.update.useMutation({
     onSuccess: () => {
       utils.student.list.invalidate()
+      utils.report.invalidate()
       toast.success("Đã cập nhật học sinh")
       onOpenChange(false)
     },
@@ -119,7 +123,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
             <Label htmlFor="fullName">
               Họ và tên <span className="text-red-500">*</span>
             </Label>
-            <Input id="fullName" {...form.register("fullName")} />
+            <Input id="fullName" placeholder="Nhập họ tên" {...form.register("fullName")} />
             {form.formState.errors.fullName && (
               <p className="text-xs text-red-600">
                 {form.formState.errors.fullName.message}
@@ -152,12 +156,17 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
             <Label htmlFor="tuitionFee">
               Học phí / Buổi (VNĐ) <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="tuitionFee"
-              type="number"
-              min="0"
-              step="1000"
-              {...form.register("tuitionFee", { valueAsNumber: true })}
+            <Controller
+              control={form.control}
+              name="tuitionFee"
+              render={({ field }) => (
+                <CurrencyInput
+                  id="tuitionFee"
+                  placeholder="0"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
             />
             {form.formState.errors.tuitionFee && (
               <p className="text-xs text-red-600">
@@ -198,7 +207,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
           <div className="space-y-2">
             <Label htmlFor="parentName">Tên phụ huynh</Label>
-            <Input id="parentName" {...form.register("parentName")} />
+            <Input id="parentName" placeholder="Nhập họ tên" {...form.register("parentName")} />
           </div>
 
           <div className="space-y-2">

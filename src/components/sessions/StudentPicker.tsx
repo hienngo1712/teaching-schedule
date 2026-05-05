@@ -46,6 +46,22 @@ export function StudentPicker({ value, onChange }: Props) {
     }
   }
 
+  const isAllSelected =
+    filteredStudents.length > 0 &&
+    filteredStudents.every((s) => value.includes(s.id))
+
+  const toggleAll = (checked: boolean) => {
+    if (checked) {
+      const newIds = filteredStudents
+        .map((s) => s.id)
+        .filter((id) => !value.includes(id))
+      onChange([...value, ...newIds])
+    } else {
+      const filteredIds = filteredStudents.map((s) => s.id)
+      onChange(value.filter((id) => !filteredIds.includes(id)))
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
@@ -74,6 +90,21 @@ export function StudentPicker({ value, onChange }: Props) {
       </div>
 
       <div className="border rounded-md p-2">
+        {filteredStudents.length > 0 && (
+          <div className="flex items-center space-x-2 border-b pb-2 mb-2 px-1">
+            <Checkbox
+              id="select-all"
+              checked={isAllSelected}
+              onCheckedChange={(checked) => toggleAll(!!checked)}
+            />
+            <Label
+              htmlFor="select-all"
+              className="flex-1 cursor-pointer text-sm font-semibold"
+            >
+              Chọn tất cả ({filteredStudents.length})
+            </Label>
+          </div>
+        )}
         <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
           {isLoading ? (
             <div className="text-center py-4 text-sm text-slate-500">

@@ -107,10 +107,10 @@ import { LEVEL, COLORS, DAY_NAMES } from "@/lib/constants"
 Chạy checklist này trên **Vercel production URL** sau Phase 8 Sub 8.6.
 
 ### AUTH
-- [ ] Truy cập /calendar chưa login → redirect /login
-- [ ] Login teacher/teacher123 → vào /calendar
+- [ ] Truy cập /dashboard chưa login → redirect /login
+- [ ] Login teacher/teacher123 → vào /dashboard
 - [ ] Refresh trang → vẫn logged in
-- [ ] Logout → về /login, không access được /calendar
+- [ ] Logout → về /login, không access được /dashboard
 
 ### STUDENTS
 - [ ] Thêm HS "Nguyễn Văn An" lớp 3 → badge "Tiểu học" xanh dương

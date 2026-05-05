@@ -25,6 +25,12 @@ File này quy định các tiêu chuẩn code cho dự án **Teaching Schedule M
 - **"use client":** Chỉ đặt ở đầu file khi component sử dụng Hook (useState, useEffect) hoặc Browser API.
 - **Components:** Chia nhỏ components vào `src/components/ui/` (nguyên tử) và `src/components/[feature]/` (nghiệp vụ).
 - **Responsive:** Ưu tiên Mobile-first. Sử dụng các class `sm:`, `md:`, `lg:` của Tailwind.
+- **Định dạng dữ liệu:** 
+    - Tiền tệ: Luôn dùng `formatCurrency(value)` từ `src/lib/utils.ts`.
+    - Ngày tháng: Luôn dùng `formatDate(date)` từ `src/lib/utils.ts`.
+- **UI Consistency:** 
+    - Các cột số (tiền tệ, số lượng) trong Table phải căn phải (`text-right`).
+    - Không tự ý thay đổi font-family (như `font-mono`) cho dữ liệu hiển thị thông thường trừ khi có yêu cầu đặc biệt.
 - **UX:** Luôn có trạng thái Loading (Skeleton) và Thông báo (Toast) sau mỗi hành động (Thêm/Sửa/Xóa).
 
 ## 5. Quy trình làm việc & Commit

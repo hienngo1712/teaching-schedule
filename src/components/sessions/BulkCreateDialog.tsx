@@ -14,6 +14,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Form,
   FormControl,
   FormField,
@@ -55,6 +65,8 @@ type Props = {
 
 export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
   const [mode, setMode] = useState<"create" | "assign">("create")
+  const [conflicts, setConflicts] = useState<{ date: string; conflict: string }[]>([])
+  const [pendingValues, setPendingValues] = useState<SessionBulkCreateInput | null>(null)
   const utils = trpc.useUtils()
   const { data: subjects = [] } = trpc.subject.list.useQuery({ isActive: true })
 
@@ -90,9 +102,25 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
       onOpenChange(false)
       onSuccess?.()
       form.reset()
+      setConflicts([])
+      setPendingValues(null)
     },
     onError: (err) => {
       toast.error(err.message || "Đã có lỗi xảy ra khi tạo lịch lặp")
+    },
+  })
+
+  const checkConflictsMutation = trpc.session.checkBulkConflicts.useMutation({
+    onSuccess: (res, variables) => {
+      if (res.length > 0) {
+        setConflicts(res)
+        setPendingValues(variables)
+      } else {
+        bulkCreateMutation.mutate(variables)
+      }
+    },
+    onError: (err) => {
+      toast.error(err.message || "Đã có lỗi xảy ra khi kiểm tra trùng lịch")
     },
   })
 
@@ -111,7 +139,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
 
   function onSubmit(values: SessionBulkCreateInput) {
     if (mode === "create") {
-      bulkCreateMutation.mutate(values)
+      checkConflictsMutation.mutate(values)
     } else {
       if (!values.studentIds || values.studentIds.length === 0) {
         toast.error("Vui lòng chọn ít nhất một học sinh")
@@ -124,286 +152,329 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
     }
   }
 
-  const isLoading = bulkCreateMutation.isPending || assignMutation.isPending
+  const isLoading = bulkCreateMutation.isPending || assignMutation.isPending || checkConflictsMutation.isPending
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full h-full max-w-none sm:h-auto sm:max-w-[600px] sm:max-h-[90vh] overflow-y-auto sm:rounded-lg top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
-        <DialogHeader>
-          <DialogTitle>Lịch dạy định kỳ</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-full h-full max-w-none sm:h-auto sm:max-w-[600px] sm:max-h-[90vh] overflow-y-auto sm:rounded-lg top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
+          <DialogHeader>
+            <DialogTitle>Lịch dạy định kỳ</DialogTitle>
+          </DialogHeader>
 
-        <div className="flex bg-slate-100 p-1 rounded-md mb-2">
-          <button
-            type="button"
-            onClick={() => setMode("create")}
-            className={cn(
-              "flex-1 py-1.5 text-xs font-medium rounded-sm transition-all",
-              mode === "create" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            Tạo ca dạy mới
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("assign")}
-            className={cn(
-              "flex-1 py-1.5 text-xs font-medium rounded-sm transition-all",
-              mode === "assign" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            Gán HS vào lịch sẵn
-          </button>
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Ngày bắt đầu</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              dayjs(field.value).format("DD/MM/YYYY")
-                            ) : (
-                              <span>Chọn ngày</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={new Date(field.value)}
-                          onSelect={(date) =>
-                            field.onChange(dayjs(date).format("YYYY-MM-DD"))
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Ngày kết thúc</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              dayjs(field.value).format("DD/MM/YYYY")
-                            ) : (
-                              <span>Chọn ngày</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={new Date(field.value)}
-                          onSelect={(date) =>
-                            field.onChange(dayjs(date).format("YYYY-MM-DD"))
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="weekdays"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Lặp lại vào các thứ</FormLabel>
-                  <div className="flex flex-wrap gap-4 pt-2">
-                    {DAY_NAMES.map((name, index) => (
-                      <FormField
-                        key={name}
-                        control={form.control}
-                        name="weekdays"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={name}
-                              className="flex flex-row items-start space-x-2 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(index)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...field.value, index])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== index
-                                          )
-                                        )
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal cursor-pointer">
-                                {name}
-                              </FormLabel>
-                            </FormItem>
-                          )
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
+          <div className="flex bg-slate-100 p-1 rounded-md mb-2">
+            <button
+              type="button"
+              onClick={() => setMode("create")}
+              className={cn(
+                "flex-1 py-1.5 text-xs font-medium rounded-sm transition-all",
+                mode === "create" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
               )}
-            />
+            >
+              Tạo ca dạy mới
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("assign")}
+              className={cn(
+                "flex-1 py-1.5 text-xs font-medium rounded-sm transition-all",
+                mode === "assign" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              Gán HS vào lịch sẵn
+            </button>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Giờ bắt đầu (HH:mm)</FormLabel>
-                    <FormControl>
-                      <TimeInput {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Giờ kết thúc (HH:mm)</FormLabel>
-                    <FormControl>
-                      <TimeInput {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {mode === "create" && (
-              <>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="subjectId"
+                  name="startDate"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Môn học</FormLabel>
-                      <Select
-                        onValueChange={(val) => field.onChange(Number(val))}
-                        value={String(field.value)}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Chọn môn" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {subjects.map((s) => (
-                            <SelectItem key={s.id} value={String(s.id)}>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="size-2 rounded-full"
-                                  style={{ backgroundColor: s.color }}
-                                />
-                                {s.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Ngày bắt đầu</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                dayjs(field.value).format("DD/MM/YYYY")
+                              ) : (
+                                <span>Chọn ngày</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={new Date(field.value)}
+                            onSelect={(date) =>
+                              field.onChange(dayjs(date).format("YYYY-MM-DD"))
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
-                  name="title"
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Ngày kết thúc</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                dayjs(field.value).format("DD/MM/YYYY")
+                              ) : (
+                                <span>Chọn ngày</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={new Date(field.value)}
+                            onSelect={(date) =>
+                              field.onChange(dayjs(date).format("YYYY-MM-DD"))
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="weekdays"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Lặp lại vào các thứ</FormLabel>
+                    <div className="flex flex-wrap gap-4 pt-2">
+                      {DAY_NAMES.map((name, index) => (
+                        <FormField
+                          key={name}
+                          control={form.control}
+                          name="weekdays"
+                          render={({ field }) => {
+                            return (
+                              <FormItem
+                                key={name}
+                                className="flex flex-row items-start space-x-2 space-y-0"
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(index)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, index])
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value) => value !== index
+                                            )
+                                          )
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal cursor-pointer">
+                                  {name}
+                                </FormLabel>
+                              </FormItem>
+                            )
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="startTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tiêu đề (không bắt buộc)</FormLabel>
+                      <FormLabel>Giờ bắt đầu (HH:mm)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ví dụ: Lịch tối thứ 2..." {...field} />
+                        <TimeInput {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </>
-            )}
+                <FormField
+                  control={form.control}
+                  name="endTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Giờ kết thúc (HH:mm)</FormLabel>
+                      <FormControl>
+                        <TimeInput {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <FormField
-              control={form.control}
-              name="studentIds"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {mode === "create" ? "Học sinh (gán cho tất cả các ca)" : "Học sinh cần gán"}
-                  </FormLabel>
-                  <FormControl>
-                    <StudentPicker
-                      value={field.value || []}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              {mode === "create" && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="subjectId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Môn học</FormLabel>
+                        <Select
+                          onValueChange={(val) => field.onChange(Number(val))}
+                          value={String(field.value)}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Chọn môn" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {subjects.map((s) => (
+                              <SelectItem key={s.id} value={String(s.id)}>
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="size-2 rounded-full"
+                                    style={{ backgroundColor: s.color }}
+                                  />
+                                  {s.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tiêu đề (không bắt buộc)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ví dụ: Lịch tối thứ 2..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
               )}
-            />
 
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={isLoading}
-              >
-                Hủy
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === "create" ? "Tạo lịch lặp" : "Gán học sinh"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <FormField
+                control={form.control}
+                name="studentIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {mode === "create" ? "Học sinh (gán cho tất cả các ca)" : "Học sinh cần gán"}
+                    </FormLabel>
+                    <FormControl>
+                      <StudentPicker
+                        value={field.value || []}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter className="pt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isLoading}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {mode === "create" ? "Tạo lịch lặp" : "Gán học sinh"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog 
+        open={conflicts.length > 0} 
+        onOpenChange={(open) => !open && setConflicts([])}
+      >
+        <AlertDialogContent className="max-w-[500px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Phát hiện trùng lịch</AlertDialogTitle>
+            <AlertDialogDescription>
+              Một số ngày bạn chọn bị trùng với các ca dạy đã có sẵn:
+              <div className="mt-2 max-h-[200px] overflow-y-auto rounded-md border bg-slate-50 p-2 text-xs">
+                {conflicts.map((c, i) => (
+                  <div key={i} className="py-1 border-b last:border-0">
+                    <span className="font-semibold">{c.date}:</span> {c.conflict}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-sm text-slate-600">
+                Nếu tiếp tục, hệ thống sẽ <strong>bỏ qua</strong> các ca bị trùng này và chỉ tạo các ca còn lại. Bạn có chắc chắn muốn tiếp tục?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setConflicts([])
+              setPendingValues(null)
+            }}>
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingValues) {
+                  bulkCreateMutation.mutate(pendingValues)
+                }
+              }}
+            >
+              Tiếp tục tạo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

@@ -6,6 +6,7 @@ import { CalendarDays, MoreHorizontal, Pencil, Trash2, UserPlus } from "lucide-r
 import { useRouter } from "next/navigation"
 import { trpc } from "@/lib/trpc"
 import { GRADES } from "@/lib/constants"
+import { formatCurrency } from "@/lib/utils"
 import { useFilters } from "@/hooks/useFilters"
 import { useDebounce } from "@/hooks/useDebounce"
 import { Badge } from "@/components/ui/badge"
@@ -54,6 +55,7 @@ type StudentRow = {
   parentName: string | null
   notes: string | null
   isActive: boolean
+  tuitionFee: number
 }
 
 const ALL_GRADES_VALUE = "all"
@@ -144,10 +146,11 @@ export function StudentList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">STT</TableHead>
-                <TableHead>Họ và tên</TableHead>
+                <TableHead className="w-12 text-center">STT</TableHead>
+                <TableHead className="min-w-[140px] max-w-[200px]">Họ và tên</TableHead>
                 <TableHead className="w-16">Lớp</TableHead>
-                <TableHead className="w-24">Cấp</TableHead>
+                <TableHead className="w-32">Cấp</TableHead>
+                <TableHead className="w-32">Học phí/ Buổi</TableHead>
                 <TableHead className="w-28">Trạng thái</TableHead>
                 <TableHead className="hidden md:table-cell">SĐT PH</TableHead>
                 <TableHead className="hidden lg:table-cell">Tên PH</TableHead>
@@ -158,7 +161,7 @@ export function StudentList() {
               {listQuery.isPending ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={8}>
+                    <TableCell colSpan={9}>
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
                   </TableRow>
@@ -166,7 +169,7 @@ export function StudentList() {
               ) : students.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="text-center text-sm text-slate-500 py-12"
                   >
                     Chưa có học sinh nào.
@@ -183,7 +186,7 @@ export function StudentList() {
               ) : (
                 students.map((s, idx) => (
                   <TableRow key={s.id}>
-                    <TableCell>{idx + 1}</TableCell>
+                    <TableCell className="text-center">{idx + 1}</TableCell>
                     <TableCell className="font-medium">{s.fullName}</TableCell>
                     <TableCell>{s.grade}</TableCell>
                     <TableCell>
@@ -193,9 +196,12 @@ export function StudentList() {
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                          THCS
+                          Trung học cơ sở
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell className="text-right text-slate-700 font-medium">
+                      {formatCurrency(s.tuitionFee)}
                     </TableCell>
                     <TableCell>
                       {s.isActive ? (

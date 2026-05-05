@@ -61,6 +61,12 @@ export function formatDayOfWeek(date: Date | string): string {
   return names[day]
 }
 
+// Format: "100.000 đ"
+export function formatCurrency(value: number | undefined | null): string {
+  if (value === undefined || value === null) return "0 đ"
+  return value.toLocaleString("vi-VN") + " đ"
+}
+
 // Loại bỏ dấu tiếng Việt để dùng cho tên file export
 export function removeVietnameseTones(str: string): string {
   str = str.replace(/à|á|ạ|ả|ã|â|ầ|á|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a")

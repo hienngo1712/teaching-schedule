@@ -114,6 +114,7 @@ export function SessionFormDialog({
     onSuccess: () => {
       toast.success("Tạo ca dạy thành công")
       utils.session.getMonth.invalidate()
+      utils.report.invalidate()
       onOpenChange(false)
       onSuccess?.()
     },
@@ -130,6 +131,7 @@ export function SessionFormDialog({
     onSuccess: () => {
       toast.success("Cập nhật ca dạy thành công")
       utils.session.getMonth.invalidate()
+      utils.report.invalidate()
       onOpenChange(false)
       onSuccess?.()
     },
@@ -146,6 +148,7 @@ export function SessionFormDialog({
     onSuccess: (res) => {
       toast.success(`Đã cập nhật ${res.updated} ca dạy lặp`)
       utils.session.getMonth.invalidate()
+      utils.report.invalidate()
       onOpenChange(false)
       onSuccess?.()
     },

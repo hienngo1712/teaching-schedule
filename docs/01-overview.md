@@ -60,7 +60,7 @@ teaching-schedule/
 ├── src/
 │   ├── app/                         # Next.js App Router
 │   │   ├── layout.tsx               # Root layout + Providers
-│   │   ├── page.tsx                 # Redirect → /calendar
+│   │   ├── page.tsx                 # Redirect → /dashboard
 │   │   ├── globals.css
 │   │   ├── login/page.tsx
 │   │   ├── calendar/page.tsx        ← TRANG CHÍNH
