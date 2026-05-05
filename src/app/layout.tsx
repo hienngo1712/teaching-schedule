@@ -3,6 +3,7 @@ import localFont from "next/font/local"
 import "./globals.css"
 import { TRPCProvider } from "@/components/providers/TRPCProvider"
 import { Toaster } from "@/components/ui/sonner"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import dayjs from "dayjs"
 import "dayjs/locale/vi"
 
@@ -39,6 +40,7 @@ export default function RootLayout({
         <TRPCProvider>
           {children}
           <Toaster richColors position="top-right" />
+          <SpeedInsights />
         </TRPCProvider>
       </body>
     </html>
