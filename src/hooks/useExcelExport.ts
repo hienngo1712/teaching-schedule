@@ -50,8 +50,11 @@ export function useExcelExport() {
       infoCell.alignment = { horizontal: "center" }
 
       // Grid logic - simplified for Excel
-      sheet.getRow(4).values = ["Thứ", "Ngày", "Lớp", "Giờ", "Môn", "Tiêu đề", "Học sinh", "Ghi chú"]
-      sheet.getRow(4).font = { bold: true }
+      const gridHeaderRow = sheet.getRow(4)
+      gridHeaderRow.values = ["Thứ", "Ngày", "Lớp", "Giờ", "Môn", "Tiêu đề", "Học sinh", "Ghi chú"]
+      gridHeaderRow.eachCell((cell) => {
+        cell.style = headerStyle
+      })
       
       sessions.forEach((s, i) => {
         const studentNames = s.students.map(st => st.fullName).join(", ")
