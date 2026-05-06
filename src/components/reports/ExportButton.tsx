@@ -21,7 +21,13 @@ export function ExportButton({
     <Button
       variant="outline"
       size="sm"
-      onClick={() => captureElement(elementRef.current, filename)}
+      onClick={async () => {
+        if (elementRef?.current) {
+          await captureElement(elementRef.current, filename)
+        } else {
+          console.error("ExportButton: elementRef.current is null or undefined")
+        }
+      }}
       disabled={isCapturing}
       className="btn-action"
     >

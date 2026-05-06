@@ -27,37 +27,42 @@ export default function DashboardPage() {
         <StatCard
           title="Tổng học sinh"
           value={stats?.totalStudents}
-          icon={<Users className="size-4 text-muted-foreground" />}
+          icon={<Users className="size-4 text-blue-600" />}
           loading={isLoading}
           description="Học sinh đang hoạt động"
+          className="bg-blue-50/50 border-blue-100"
         />
         <StatCard
           title="Ca dạy hôm nay"
           value={stats?.sessionsToday}
-          icon={<CalendarDays className="size-4 text-muted-foreground" />}
+          icon={<CalendarDays className="size-4 text-emerald-600" />}
           loading={isLoading}
           description="Tổng số ca dạy trong ngày"
+          className="bg-emerald-50/50 border-emerald-100"
         />
         <StatCard
           title="Ca dạy tháng này"
           value={stats?.totalSessionsMonth}
-          icon={<CalendarCheck className="size-4 text-muted-foreground" />}
+          icon={<CalendarCheck className="size-4 text-indigo-600" />}
           loading={isLoading}
           description="Đã lên lịch trong tháng này"
+          className="bg-indigo-50/50 border-indigo-100"
         />
         <StatCard
           title="Tỉ lệ điểm danh"
           value={stats ? `${stats.attendanceRate}%` : undefined}
-          icon={<BarChart3 className="size-4 text-muted-foreground" />}
+          icon={<BarChart3 className="size-4 text-orange-600" />}
           loading={isLoading}
           description="Trung bình tháng này"
+          className="bg-orange-50/50 border-orange-100"
         />
         <StatCard
           title="Doanh thu tháng này"
           value={stats ? formatCurrency(stats.totalRevenueMonth) : undefined}
-          icon={<Banknote className="size-4 text-muted-foreground" />}
+          icon={<Banknote className="size-4 text-cyan-600" />}
           loading={isLoading}
           description="Học phí thu được tháng này"
+          className="bg-cyan-50/50 border-cyan-100"
         />
       </div>
 
@@ -92,15 +97,17 @@ function StatCard({
   icon,
   description,
   loading,
+  className,
 }: {
   title: string
   value?: string | number
   icon: React.ReactNode
   description: string
   loading: boolean
+  className?: string
 }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {icon}

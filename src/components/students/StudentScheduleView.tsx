@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useRef } from "react"
 import { 
   Table, 
   TableBody, 
@@ -26,8 +26,11 @@ interface StudentScheduleViewProps {
 export function StudentScheduleView({
   studentId,
   sessions,
-  exportRef,
+  exportRef: externalRef,
 }: StudentScheduleViewProps) {
+  const localRef = useRef<HTMLDivElement>(null)
+  const exportRef = externalRef || localRef
+
   // Try to get student info from sessions
   const studentInfoFromSessions = useMemo(() => {
     for (const session of sessions) {

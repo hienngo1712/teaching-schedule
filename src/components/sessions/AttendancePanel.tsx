@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Check, Loader2 } from "lucide-react"
+import { Check, Loader2, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,7 @@ import type { AttendanceStatus } from "@/lib/schemas/attendance"
 
 type Props = {
   sessionId: number
+  onSaveSuccess?: () => void
 }
 
 type AttendanceState = {
@@ -29,7 +30,7 @@ type AttendanceState = {
   fee: number
 }
 
-export function AttendancePanel({ sessionId }: Props) {
+export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
   const utils = trpc.useUtils()
   
   const { data: attendanceData, isLoading } = trpc.attendance.get.useQuery({
@@ -60,6 +61,7 @@ export function AttendancePanel({ sessionId }: Props) {
       utils.attendance.get.invalidate({ sessionId })
       utils.report.invalidate()
       utils.session.getMonth.invalidate()
+      onSaveSuccess?.()
     },
     onError: () => {
       toast.error("Đã có lỗi xảy ra khi lưu điểm danh")
@@ -91,6 +93,14 @@ export function AttendancePanel({ sessionId }: Props) {
     const newState = { ...attendances }
     Object.keys(newState).forEach((key) => {
       newState[Number(key)].attendance = "present"
+    })
+    setAttendances(newState)
+  }
+
+  const handleMarkAllAbsent = () => {
+    const newState = { ...attendances }
+    Object.keys(newState).forEach((key) => {
+      newState[Number(key)].attendance = "absent"
     })
     setAttendances(newState)
   }
@@ -186,15 +196,26 @@ export function AttendancePanel({ sessionId }: Props) {
       </div>
 
       <div className="flex items-center justify-between pt-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleMarkAllPresent}
-          className="text-xs text-slate-600"
-        >
-          <Check className="mr-1 size-3" />
-          Tất cả có mặt
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMarkAllPresent}
+            className="text-xs text-slate-600"
+          >
+            <Check className="mr-1 size-3" />
+            Tất cả có mặt
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMarkAllAbsent}
+            className="text-xs text-slate-600"
+          >
+            <X className="mr-1 size-3" />
+            Không học
+          </Button>
+        </div>
         
         <Button
           size="sm"

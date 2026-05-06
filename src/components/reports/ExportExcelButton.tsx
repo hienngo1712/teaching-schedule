@@ -30,6 +30,15 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
 
   const teacherName = session?.user?.fullName || "Giáo viên"
 
+  // Filter data based on selectedGrade if present
+  const displayStudents = selectedGrade 
+    ? students.filter(s => s.grade === selectedGrade)
+    : students
+  
+  const displaySessions = selectedGrade
+    ? sessions.filter(s => s.students.some(st => st.grade === selectedGrade))
+    : sessions
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -46,8 +55,8 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
         <DropdownMenuLabel>Tùy chọn xuất file</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onClick={() => exportMonthlySchedule(sessions, year, month, teacherName)}>
-          📅 Xuất lịch tháng
+        <DropdownMenuItem onClick={() => exportMonthlySchedule(displaySessions, year, month, teacherName)}>
+          📅 Xuất lịch tháng {selectedGrade ? `(Lớp ${selectedGrade})` : ""}
         </DropdownMenuItem>
 
         {selectedStudentId && sessions.length > 0 && (
@@ -84,8 +93,8 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuItem onClick={() => exportAttendanceSummary(students, sessions, year, month)}>
-          📊 Xuất điểm danh
+        <DropdownMenuItem onClick={() => exportAttendanceSummary(displayStudents, displaySessions, year, month)}>
+          📊 Xuất điểm danh {selectedGrade ? `(Lớp ${selectedGrade})` : ""}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

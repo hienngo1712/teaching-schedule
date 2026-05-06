@@ -250,7 +250,10 @@ export function SessionDetailDialog({
               <Badge variant="outline">{session.studentCount} học sinh</Badge>
             </div>
             
-            <AttendancePanel sessionId={session.id} />
+            <AttendancePanel
+              sessionId={session.id}
+              onSaveSuccess={() => onOpenChange(false)}
+            />
           </div>
         </DialogContent>
       </Dialog>

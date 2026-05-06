@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
 import { trpc } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
+import { useFilters } from "@/hooks/useFilters"
 import { 
   Select, 
   SelectContent, 
@@ -20,8 +20,7 @@ import type { StudentDTO } from "@/lib/schemas/student.dto"
 
 export default function ReportsPage() {
   const { year, month } = useCalendar()
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
-  const [gradeFilter, setGradeFilter] = useState<number | null>(null)
+  const { selectedGrade: gradeFilter, setGrade: setGradeFilter, selectedStudentId, setStudentId: setSelectedStudentId } = useFilters()
 
   const { data: studentList = [] } = trpc.student.list.useQuery({
     grade: gradeFilter || undefined,

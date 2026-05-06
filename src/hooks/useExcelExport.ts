@@ -150,6 +150,19 @@ export function useExcelExport() {
   ) => {
     setIsExporting(true)
     try {
+      // Filter students by grade
+      const gradeStudents = students.filter(s => s.grade === grade)
+      
+      // Filter sessions that have students in this grade
+      const gradeSessions = sessions
+        .filter(s => s.students.some(st => st.grade === grade))
+        .sort((a, b) => a.sessionDate.getTime() - b.sessionDate.getTime() || a.startTime.localeCompare(b.startTime))
+
+      if (gradeStudents.length === 0) {
+        alert(`Không có học sinh nào thuộc lớp ${grade} trong dữ liệu hiện tại.`)
+        return
+      }
+
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet(`Lớp ${grade} - ${month}-${year}`)
 
@@ -157,28 +170,33 @@ export function useExcelExport() {
       sheet.getCell("A1").font = { size: 14, bold: true }
 
       // Table Header
+      const headerRow = sheet.getRow(3)
+      headerRow.height = 70 // Set height to accommodate vertical text
+      
       sheet.getCell("A3").value = "Học sinh"
       sheet.getCell("A3").font = { bold: true }
+      sheet.getCell("A3").alignment = { vertical: "middle", horizontal: "center" }
       
-      sessions.forEach((s, i) => {
+      gradeSessions.forEach((s, i) => {
         const cell = sheet.getCell(3, i + 2)
         cell.value = `${formatDate(s.sessionDate).substring(0, 5)}\n${s.startTime}`
-        cell.alignment = { textRotation: 90, vertical: "middle", horizontal: "center", wrapText: true }
+        cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true }
         cell.font = { size: 9, bold: true }
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E7FF" } }
       })
 
-      const summaryColIdx = sessions.length + 2
+      const summaryColIdx = gradeSessions.length + 2
       sheet.getCell(3, summaryColIdx).value = "Tổng"
       sheet.getCell(3, summaryColIdx).font = { bold: true }
+      sheet.getCell(3, summaryColIdx).alignment = { vertical: "middle", horizontal: "center" }
 
       // Data rows
-      students.forEach((student, studentIdx) => {
+      gradeStudents.forEach((student, studentIdx) => {
         const rowIdx = studentIdx + 4
         sheet.getCell(rowIdx, 1).value = student.fullName
         
         let presentCount = 0
-        sessions.forEach((session, sessionIdx) => {
+        gradeSessions.forEach((session, sessionIdx) => {
           const attendance = session.students.find(st => st.studentId === student.id)?.attendance
           const cell = sheet.getCell(rowIdx, sessionIdx + 2)
           
@@ -200,14 +218,15 @@ export function useExcelExport() {
           cell.alignment = { horizontal: "center" }
         })
         
-        sheet.getCell(rowIdx, summaryColIdx).value = `${presentCount}/${sessions.length}`
+        sheet.getCell(rowIdx, summaryColIdx).value = `${presentCount}/${gradeSessions.length}`
         sheet.getCell(rowIdx, summaryColIdx).alignment = { horizontal: "center" }
       })
 
       sheet.getColumn(1).width = 25
-      for (let i = 0; i < sessions.length; i++) {
-        sheet.getColumn(i + 2).width = 5
+      for (let i = 0; i < gradeSessions.length; i++) {
+        sheet.getColumn(i + 2).width = 10 // Increased width from 5 to 10
       }
+      sheet.getColumn(summaryColIdx).width = 10
 
       const buffer = await workbook.xlsx.writeBuffer()
       const filename = removeVietnameseTones(`BaoCaoLop_${grade}_${month}_${year}`)

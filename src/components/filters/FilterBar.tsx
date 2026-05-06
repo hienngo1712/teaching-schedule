@@ -32,20 +32,20 @@ export function FilterBar({
   sessions,
   students = []
 }: FilterBarProps) {
-  const { 
-    selectedGrade, 
-    setGrade, 
-    searchStudentName, 
-    setSearch, 
-    resetFilters, 
-    hasActiveFilter 
+  const {
+    selectedGrade,
+    setGrade,
+    searchStudentName,
+    setSearch,
+    resetFilters,
+    hasActiveFilter
   } = useFilters()
-  
+
   const { monthLabel, prevMonth, nextMonth } = useCalendar()
-  
+
   const [localSearch, setLocalSearch] = useState(searchStudentName)
   const debouncedSearch = useDebounce(localSearch, 400)
-  
+
   useEffect(() => {
     setSearch(debouncedSearch)
   }, [debouncedSearch, setSearch])
@@ -60,7 +60,27 @@ export function FilterBar({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Left: Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          <Select
+            <div className="relative w-full md:w-[200px]">
+                <Input
+                    placeholder="Tìm tên học sinh..."
+                    value={localSearch}
+                    onChange={(e) => setLocalSearch(e.target.value)}
+                    className="pr-8"
+                />
+                {localSearch && (
+                    <button
+                        onClick={() => {
+                            setLocalSearch("")
+                            setSearch("")
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                        <X className="size-4" />
+                    </button>
+                )}
+            </div>
+
+            <Select
             value={selectedGrade?.toString() || "all"}
             onValueChange={(val) => setGrade(val === "all" ? null : parseInt(val, 10))}
           >
@@ -76,26 +96,6 @@ export function FilterBar({
               ))}
             </SelectContent>
           </Select>
-
-          <div className="relative w-full md:w-[200px]">
-            <Input
-              placeholder="Tìm tên học sinh..."
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              className="pr-8"
-            />
-            {localSearch && (
-              <button
-                onClick={() => {
-                  setLocalSearch("")
-                  setSearch("")
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
 
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" onClick={prevMonth}>
@@ -125,7 +125,7 @@ export function FilterBar({
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
           <ExportExcelButton sessions={sessions} students={students} />
-          
+
           <Button
             variant="outline"
             onClick={onBulkCreateClick}

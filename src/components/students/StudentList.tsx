@@ -104,6 +104,13 @@ export function StudentList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+        <Input
+            placeholder="Tìm tên học sinh..."
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            className="w-full sm:w-64"
+        />
+
         <Select
           value={selectedGrade === null ? ALL_GRADES_VALUE : String(selectedGrade)}
           onValueChange={(v) =>
@@ -122,13 +129,6 @@ export function StudentList() {
             ))}
           </SelectContent>
         </Select>
-
-        <Input
-          placeholder="Tìm tên học sinh..."
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          className="w-full sm:w-64"
-        />
 
         <div className="sm:ml-auto">
           <Button
