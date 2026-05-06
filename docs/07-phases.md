@@ -399,7 +399,14 @@ PHÂN BIỆT DATABASE:
 - [x] `git push` → Vercel deploy ✓
 - [x] Chạy **Final Acceptance Checklist** (xem `docs/08-review.md`) ✓
 
-**✅ Phase 8 done khi:** SẢN PHẨM HOÀN CHỈNH.
+### Sub 8.7 — New Mobile Calendar Layout (Grid + Daily List)
+- [ ] Cập nhật `MonthCalendar.tsx`: thêm state `selectedMobileDate`.
+- [ ] Implement mini grid cho mobile: 7 cột, hiển thị dot nếu có ca dạy.
+- [ ] Implement daily list phía dưới grid mobile.
+- [ ] Cập nhật CSS trong `globals.css` cho calendar mobile.
+- [ ] **Test thủ công:** Click chọn ngày trên mobile → list cập nhật đúng ✓.
+
+**✅ Phase 8 done khi:** SẢN PHẨM HOÀN CHỈNH VỚI MOBILE UI MỚI.
 
 ---
 

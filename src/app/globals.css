@@ -75,12 +75,6 @@
 .session-card--tieu-hoc { @apply border-blue-500 bg-blue-50; }
 .session-card--thcs     { @apply border-emerald-500 bg-emerald-50; }
 
-/* Mobile: list view */
-@media (max-width: 768px) {
-  .calendar-day-cell { @apply min-h-0 border-b border-slate-100 p-3; }
-  .calendar-day-cell--outside { @apply hidden; }
-}
-
 /* === EXPORT PNG === */
 .exporting .btn-action    { @apply hidden !important; }
 .exporting .export-hide   { @apply hidden !important; }

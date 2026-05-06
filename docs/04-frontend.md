@@ -72,7 +72,13 @@ Icon + Label (lucide-react icons):
 - Grid 7 cột (T2 → CN), tuần bắt đầu từ Thứ Hai
 - Dùng `useCalendar()` hook để tạo grid cells
 - Mỗi cell = `CalendarDayCell`
-- Mobile (< 768px): chuyển sang list view (1 cột, mỗi ngày 1 row)
+- **Responsive Mobile (< 768px):**
+  - Hiển thị bộ lịch dạng grid thu nhỏ (mini grid).
+  - Mỗi ô ngày có 1 dấu chấm nhỏ phía dưới nếu ngày đó có lịch dạy.
+  - Khi click vào một ngày:
+    - Highlight ngày được chọn.
+    - Hiển thị danh sách các ca dạy của riêng ngày đó ở ngay phía dưới bộ lịch.
+    - Nếu không có lịch: Hiển thị "Ngày ... bạn ko có lịch dạy nào".
 
 ### CalendarDayCell.tsx
 - Hiển thị số ngày (góc trên trái)
