@@ -21,18 +21,22 @@ export async function getMonthlyTuitionStatus(
     orderBy: [{ grade: "asc" }, { fullName: "asc" }],
   })
 
-  // 2. Define month range
+  // 2. Define ranges for current and previous month
   const startDate = new Date(Date.UTC(year, month - 1, 1))
   const endDate = new Date(Date.UTC(year, month, 1))
+  
+  const prevMonth = month === 1 ? 12 : month - 1
+  const prevYear = month === 1 ? year - 1 : year
+  const prevStartDate = new Date(Date.UTC(prevYear, prevMonth - 1, 1))
 
-  // 3. Fetch all attendance records for these students in this month
+  // 3. Fetch all attendance records for these students in both current and previous months
   const studentIds = students.map(s => s.id)
-  const attendanceRecords = await db.sessionStudent.findMany({
+  const allAttendance = await db.sessionStudent.findMany({
     where: {
       studentId: { in: studentIds },
       session: {
         sessionDate: {
-          gte: startDate,
+          gte: prevStartDate,
           lt: endDate,
         },
       },
@@ -42,31 +46,55 @@ export async function getMonthlyTuitionStatus(
     },
   })
 
-  // 4. Fetch existing MonthlyTuition records
+  // 4. Fetch existing MonthlyTuition records for current and previous month
   const monthlyTuitions = await db.monthlyTuition.findMany({
     where: {
       studentId: { in: studentIds },
-      year,
-      month,
+      OR: [
+        { year, month },
+        { year: prevYear, month: prevMonth },
+      ],
     },
   })
 
   // 5. Combine data
   return students.map(student => {
-    const studentAttendance = attendanceRecords.filter(r => r.studentId === student.id)
+    const studentAttendance = allAttendance.filter(r => r.studentId === student.id)
     
-    // Calculate expected tuition (Present or Late)
-    const totalExpected = studentAttendance.reduce((sum, record) => {
+    // Current month stats
+    const currentSessions = studentAttendance.filter(r => {
+      const d = r.session.sessionDate
+      return d >= startDate && d < endDate
+    })
+    
+    const totalExpected = currentSessions.reduce((sum, record) => {
       if (record.attendance === ATTENDANCE_STATUS.PRESENT || record.attendance === ATTENDANCE_STATUS.LATE) {
         return sum + record.fee
       }
       return sum
     }, 0)
 
-    const totalSessions = studentAttendance.length
-    const presentSessions = studentAttendance.filter(r => r.attendance === ATTENDANCE_STATUS.PRESENT || r.attendance === ATTENDANCE_STATUS.LATE).length
+    const totalSessions = currentSessions.length
+    const presentSessions = currentSessions.filter(r => r.attendance === ATTENDANCE_STATUS.PRESENT || r.attendance === ATTENDANCE_STATUS.LATE).length
 
-    const tuitionRecord = monthlyTuitions.find(t => t.studentId === student.id)
+    // Previous month balance
+    const prevSessions = studentAttendance.filter(r => {
+      const d = r.session.sessionDate
+      return d >= prevStartDate && d < startDate
+    })
+
+    const prevExpected = prevSessions.reduce((sum, record) => {
+      if (record.attendance === ATTENDANCE_STATUS.PRESENT || record.attendance === ATTENDANCE_STATUS.LATE) {
+        return sum + record.fee
+      }
+      return sum
+    }, 0)
+
+    const prevTuition = monthlyTuitions.find(t => t.studentId === student.id && t.year === prevYear && t.month === prevMonth)
+    const previousBalance = (prevTuition?.paidAmount ?? 0) - prevExpected
+
+    // Current month tuition record
+    const tuitionRecord = monthlyTuitions.find(t => t.studentId === student.id && t.year === year && t.month === month)
 
     return {
       studentId: student.id,
@@ -78,6 +106,7 @@ export async function getMonthlyTuitionStatus(
       paidAmount: tuitionRecord?.paidAmount ?? 0,
       isFullPaid: tuitionRecord?.isFullPaid ?? false,
       notes: tuitionRecord?.notes ?? null,
+      previousBalance, // New field
     }
   })
 }

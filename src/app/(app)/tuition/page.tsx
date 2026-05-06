@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft, ChevronRight, Search, Wallet, CheckCircle2, AlertCircle, Clock } from "lucide-react"
+import { ChevronLeft, ChevronRight, Search, Wallet, CheckCircle2, AlertCircle, Clock, CircleDollarSign, History } from "lucide-react"
 import { trpc } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
@@ -25,15 +25,34 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency, cn } from "@/lib/utils"
 import { PaymentDialog } from "@/components/tuition/PaymentDialog"
+
+interface TuitionStatusItem {
+  studentId: number
+  fullName: string
+  grade: number
+  totalSessions: number
+  presentSessions: number
+  totalExpected: number
+  paidAmount: number
+  isFullPaid: boolean
+  notes: string | null
+  previousBalance: number
+}
 
 export default function TuitionPage() {
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
   const { selectedGrade, setGrade, searchStudentName, setSearch } = useFilters()
   
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null)
+  const [selectedStudent, setSelectedStudent] = useState<(TuitionStatusItem & { year: number; month: number }) | null>(null)
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
 
   const query = trpc.tuition.getMonthlyStatus.useQuery({
@@ -43,31 +62,38 @@ export default function TuitionPage() {
     search: searchStudentName || undefined,
   })
 
-  const handleOpenPayment = (student: any) => {
+  const handleOpenPayment = (item: TuitionStatusItem) => {
     setSelectedStudent({
-      ...student,
+      ...item,
       year,
       month,
     })
     setIsPaymentOpen(true)
   }
 
-  const getStatusBadge = (student: any) => {
-    if (student.isFullPaid) {
+  const getStatusBadge = (item: TuitionStatusItem) => {
+    if (item.paidAmount > item.totalExpected && item.totalExpected > 0) {
+      return (
+        <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">
+          <CircleDollarSign className="size-3 mr-1" /> Đóng thừa tiền
+        </Badge>
+      )
+    }
+    if (item.isFullPaid) {
       return (
         <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">
           <CheckCircle2 className="size-3 mr-1" /> Đã đóng đủ
         </Badge>
       )
     }
-    if (student.paidAmount > 0) {
+    if (item.paidAmount > 0) {
       return (
         <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">
           <Clock className="size-3 mr-1" /> Chưa đóng đủ
         </Badge>
       )
     }
-    if (student.totalExpected > 0) {
+    if (item.totalExpected > 0) {
       return (
         <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">
           <AlertCircle className="size-3 mr-1" /> Chưa đóng
@@ -141,7 +167,7 @@ export default function TuitionPage() {
               <TableRow>
                 <TableHead className="w-[60px] text-center font-bold">STT</TableHead>
                 <TableHead className="font-bold">Họ và tên</TableHead>
-                <TableHead className="w-[80px] text-center font-bold">Lớp</TableHead>
+                <TableHead className="w-[100px] text-center font-bold">Lớp</TableHead>
                 <TableHead className="w-[120px] text-center font-bold">Số buổi</TableHead>
                 <TableHead className="text-right font-bold">Tổng tiền</TableHead>
                 <TableHead className="text-right font-bold">Đã đóng</TableHead>
@@ -176,7 +202,7 @@ export default function TuitionPage() {
                       <div className="font-semibold text-slate-900">{item.fullName}</div>
                     </TableCell>
                     <TableCell className="text-center font-medium">
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none">
+                      <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none min-w-[70px] justify-center">
                         Lớp {item.grade}
                       </Badge>
                     </TableCell>
@@ -184,10 +210,32 @@ export default function TuitionPage() {
                       {item.presentSessions}/{item.totalSessions}
                     </TableCell>
                     <TableCell className="text-right font-bold text-slate-900">
-                      {formatCurrency(item.totalExpected)}
+                      <div className="flex flex-col items-end">
+                        <span>{formatCurrency(item.totalExpected)}</span>
+                        {item.previousBalance !== 0 && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={cn(
+                                  "text-[10px] flex items-center gap-0.5 cursor-help",
+                                  item.previousBalance > 0 ? "text-green-600" : "text-red-600"
+                                )}>
+                                  <History className="size-2.5" />
+                                  {item.previousBalance > 0 ? "+" : ""}{formatCurrency(item.previousBalance)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs">
+                                <p>Số dư tháng trước: {item.previousBalance > 0 ? "Thừa" : "Thiếu"} {formatCurrency(Math.abs(item.previousBalance))}</p>
+                                <p className="font-bold mt-1">Cần đóng: {formatCurrency(Math.max(0, item.totalExpected - item.previousBalance))}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className={cn(
                       "text-right font-bold",
+                      item.paidAmount > item.totalExpected ? "text-purple-600" :
                       item.isFullPaid ? "text-green-600" : item.paidAmount > 0 ? "text-amber-600" : "text-slate-400"
                     )}>
                       {formatCurrency(item.paidAmount)}
