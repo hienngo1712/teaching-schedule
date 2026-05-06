@@ -24,6 +24,8 @@
 | `docs/06-testing.md` | Vitest config, Playwright config, test helpers, toàn bộ test cases | Phase 1 Sub 1.5, trước mỗi commit |
 | `docs/07-phases.md` | 9 phases × sub-phases đầy đủ với checklist từng task | **Đọc đầu mỗi phiên làm việc** |
 | `docs/08-review.md` | Review checklist 2 lần, quy tắc code, final acceptance checklist | Sau mỗi sub-phase hoàn thành |
+| `docs/09-bulk-session-management.md` | Hướng dẫn quản lý ca dạy hàng loạt (đã xong) | Tra cứu logic bulk update/delete |
+| `docs/10-tuition-payment-tracking.md` | Kế hoạch đánh dấu và theo dõi đóng tiền học phí | Phase 10 — quản lý đóng tiền |
 
 ---
 

@@ -436,3 +436,40 @@ PHÂN BIỆT DATABASE:
 - [x] Kiểm tra tính đúng đắn của việc tính tiền dựa trên điểm danh (Vắng = 0đ, Có mặt/Muộn = tính tiền)
 
 **✅ Phase 9 done khi:** Hệ thống quản lý học phí hoạt động chính xác.
+
+---
+
+## Phase 10: Tuition Payment Tracking
+
+> Đọc: `docs/10-tuition-payment-tracking.md`
+
+### Sub 10.1 — Migration & DB Update
+- [x] Thêm model `MonthlyTuition` vào `schema.prisma`
+- [x] `pnpm prisma migrate dev --name add_monthly_tuition`
+- [x] **Test:** `pnpm prisma generate` thành công ✓
+
+### Sub 10.2 — Backend Service & Router
+- [ ] Tạo `src/server/services/tuition.service.ts`
+- [ ] Tạo `src/server/trpc/routers/tuition.ts`
+- [ ] Đăng ký vào `root.ts`
+- [ ] Viết `tests/integration/tuition.test.ts` (kiểm tra logic tính tiền và upsert)
+- [ ] **Test:** `pnpm test:integration` pass ✓
+
+### Sub 10.3 — Frontend UI: Trang danh sách
+- [ ] Tạo `src/app/(app)/reports/tuition/page.tsx`
+- [ ] Xây dựng bảng hiển thị danh sách học phí tháng
+- [ ] Tích hợp bộ lọc (Tháng/Năm, Lớp, Tên)
+- [ ] **Test thủ công:** Dữ liệu hiển thị đúng với thực tế điểm danh ✓
+
+### Sub 10.4 — Frontend UI: Dialog & Actions
+- [ ] Tạo `PaymentDialog` để ghi nhận đóng tiền
+- [ ] Tích hợp mutation `updatePayment`
+- [ ] Thêm nút "Đóng đủ nhanh"
+- [ ] **Test thủ công:** Đóng tiền thành công, Badge trạng thái cập nhật ngay ✓
+
+### Sub 10.5 — Polish & Integration
+- [ ] Thêm thông tin nợ phí vào `Dashboard`
+- [ ] Thêm tab "Học phí" vào `StudentScheduleView` hoặc trang chi tiết học sinh
+- [ ] **Review:** Toàn bộ quy trình đóng phí mượt mà, không lỗi logic ✓
+
+**✅ Phase 10 done khi:** Giáo viên có thể theo dõi và đánh dấu học sinh đã đóng tiền học hàng tháng.

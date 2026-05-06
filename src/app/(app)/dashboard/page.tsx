@@ -7,6 +7,7 @@ import {
   BarChart3,
   ArrowRight,
   Banknote,
+  AlertCircle,
 } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -63,6 +64,14 @@ export default function DashboardPage() {
           loading={isLoading}
           description="Học phí thu được tháng này"
           className="bg-cyan-50/50 border-cyan-100"
+        />
+        <StatCard
+          title="Nợ phí tháng này"
+          value={stats ? formatCurrency(stats.totalUnpaidMonth) : undefined}
+          icon={<AlertCircle className="size-4 text-red-600" />}
+          loading={isLoading}
+          description="Số tiền học sinh chưa đóng"
+          className="bg-red-50/50 border-red-100"
         />
       </div>
 

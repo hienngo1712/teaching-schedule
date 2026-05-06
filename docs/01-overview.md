@@ -11,6 +11,7 @@
 7. Xem tổng kết: số buổi học/vắng theo tuần/tháng
 8. **Quản lý học phí**: tính toán doanh thu, số tiền học dựa trên điểm danh thực tế (Có mặt/Muộn = tính tiền, Vắng = không tính)
 9. **Báo cáo tài chính**: xem tổng số tiền học theo từng học sinh, theo lớp hoặc theo tháng.
+10. **Quản lý đóng phí**: đánh dấu học sinh đã đóng đủ tiền học hàng tháng, theo dõi công nợ.
 
 ---
 

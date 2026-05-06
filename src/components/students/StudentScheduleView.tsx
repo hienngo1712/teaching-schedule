@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ATTENDANCE_LABEL, ATTENDANCE_STATUS } from "@/lib/constants"
-import { formatDate, formatDayOfWeek, calcAttendanceRate, removeVietnameseTones, formatCurrency } from "@/lib/utils"
+import { formatDate, formatDayOfWeek, calcAttendanceRate, removeVietnameseTones, formatCurrency, cn } from "@/lib/utils"
+import { Wallet } from "lucide-react"
 import type { SessionDTO } from "@/server/services/session.service"
 import { trpc } from "@/lib/trpc"
 import { ExportButton } from "../reports/ExportButton"
@@ -190,6 +192,63 @@ export function StudentScheduleView({
             </div>
           </div>
         </Card>
+
+        {/* Tuition Status Section - Only visible if not exporting */}
+        <div className="mt-6 export-hide">
+          <Card className="border-slate-200 shadow-sm bg-white">
+            <CardHeader className="py-4">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Wallet className="size-5 text-indigo-600" />
+                Trạng thái đóng học phí
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-6">
+              <TuitionStatusCard studentId={studentId} year={new Date(sessions[0]?.sessionDate || new Date()).getFullYear()} month={new Date(sessions[0]?.sessionDate || new Date()).getMonth() + 1} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TuitionStatusCard({ studentId, year, month }: { studentId: number, year: number, month: number }) {
+  const { data: statusList, isLoading } = trpc.tuition.getMonthlyStatus.useQuery({
+    year,
+    month,
+  })
+
+  const status = statusList?.find(s => s.studentId === studentId)
+
+  if (isLoading) return <Skeleton className="h-20 w-full" />
+  if (!status) return null
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="p-4 rounded-lg bg-slate-50 border border-slate-100">
+        <p className="text-sm text-slate-500 font-medium">Học phí dự kiến</p>
+        <p className="text-xl font-bold text-slate-900 mt-1">{formatCurrency(status.totalExpected)}</p>
+      </div>
+      <div className="p-4 rounded-lg bg-slate-50 border border-slate-100">
+        <p className="text-sm text-slate-500 font-medium">Đã đóng</p>
+        <p className={cn(
+          "text-xl font-bold mt-1",
+          status.isFullPaid ? "text-green-600" : status.paidAmount > 0 ? "text-amber-600" : "text-red-600"
+        )}>
+          {formatCurrency(status.paidAmount)}
+        </p>
+      </div>
+      <div className="p-4 rounded-lg bg-slate-50 border border-slate-100">
+        <p className="text-sm text-slate-500 font-medium">Trạng thái</p>
+        <div className="mt-1">
+          {status.isFullPaid ? (
+            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Đã đóng đủ</Badge>
+          ) : status.paidAmount > 0 ? (
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">Chưa đóng đủ</Badge>
+          ) : (
+            <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">Chưa đóng</Badge>
+          )}
+        </div>
       </div>
     </div>
   )

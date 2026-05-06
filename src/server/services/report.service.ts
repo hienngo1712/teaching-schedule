@@ -144,11 +144,23 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
 
   const attendanceRate = totalRecords > 0 ? (presentRecords / totalRecords) * 100 : 0
 
+  // 5. Total unpaid tuition this month
+  const monthlyTuitions = await db.monthlyTuition.findMany({
+    where: { year: now.getFullYear(), month: now.getMonth() + 1 },
+    include: { student: { select: { userId: true } } }
+  })
+  
+  // Only for this user
+  const userMonthlyTuitions = monthlyTuitions.filter(t => t.student.userId === userId)
+  const paidThisMonth = userMonthlyTuitions.reduce((sum, t) => sum + t.paidAmount, 0)
+  const totalUnpaidMonth = Math.max(0, totalRevenueMonth - paidThisMonth)
+
   return {
     totalStudents,
     sessionsToday,
     totalSessionsMonth,
     attendanceRate: Math.round(attendanceRate * 10) / 10,
-    totalRevenueMonth
+    totalRevenueMonth,
+    totalUnpaidMonth,
   }
 }

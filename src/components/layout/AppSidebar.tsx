@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Users,
   BarChart3,
+  Wallet,
   GraduationCap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -16,12 +17,14 @@ const ICONS = {
   CalendarDays,
   Users,
   BarChart3,
+  Wallet,
 } as const
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Tổng quan", icon: "LayoutDashboard" as const },
   { href: "/calendar", label: "Lịch dạy", icon: "CalendarDays" as const },
   { href: "/students", label: "Học sinh", icon: "Users" as const },
+  { href: "/reports/tuition", label: "Học phí", icon: "Wallet" as const },
   { href: "/reports", label: "Báo cáo", icon: "BarChart3" as const },
 ]
 
