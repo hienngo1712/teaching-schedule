@@ -33,6 +33,7 @@
 | Export PNG | html2canvas | Screenshot DOM |
 | Export Excel | ExcelJS + file-saver | Client-side |
 | Testing | Vitest + Playwright | Unit + Integration + E2E |
+| i18n | Custom Provider | Multi-language (VI/EN) |
 | Package | pnpm | |
 | Deploy | Vercel | Auto deploy từ GitHub |
 
@@ -51,7 +52,10 @@ teaching-schedule/
 │   ├── 05-deploy.md
 │   ├── 06-testing.md
 │   ├── 07-phases.md
-│   └── 08-review.md
+│   ├── 08-review.md
+│   ├── 09-bulk-session-management.md
+│   ├── 10-tuition-payment-tracking.md
+│   └── 11-multi-language.md
 │
 ├── prisma/
 │   ├── schema.prisma
@@ -83,33 +87,43 @@ teaching-schedule/
 │   │   │       ├── student.ts
 │   │   │       ├── session.ts
 │   │   │       ├── attendance.ts
-│   │   │       └── report.ts
+│   │   │       ├── report.ts
+│   │   │       └── tuition.ts
 │   │   └── services/
 │   │       ├── student.service.ts
 │   │       ├── session.service.ts
 │   │       ├── attendance.service.ts
-│   │       └── report.service.ts
+│   │       ├── report.service.ts
+│   │       └── tuition.service.ts
 │   │
 │   ├── lib/                         # Shared (client + server)
 │   │   ├── schemas/
 │   │   │   ├── student.ts
 │   │   │   ├── session.ts
 │   │   │   ├── attendance.ts
-│   │   │   └── report.ts
+│   │   │   ├── report.ts
+│   │   │   └── tuition.ts
 │   │   ├── trpc.ts                  # tRPC client hooks
 │   │   ├── utils.ts                 # cn(), getLevel(), date helpers
 │   │   └── constants.ts             # GRADES, ATTENDANCE_STATUS, DAY_NAMES
+│   │
+│   ├── language/                    # Bản dịch (JSON)
+│   │   ├── en.json
+│   │   └── vi.json
 │   │
 │   ├── components/
 │   │   ├── providers/
 │   │   │   ├── TRPCProvider.tsx
 │   │   │   ├── SessionProvider.tsx
+│   │   │   ├── LanguageProvider.tsx
 │   │   │   └── ThemeProvider.tsx
 │   │   ├── ui/                      # shadcn/ui (auto-generated)
+│   │   │   ├── ...
+│   │   │   └── data-table-pagination.tsx
 │   │   ├── layout/
 │   │   │   ├── AppLayout.tsx        # Sidebar 240px + main
-│   │   │   ├── AppSidebar.tsx       # Nav: Dashboard/Lịch/HS/Báo cáo
-│   │   │   └── AppHeader.tsx        # Tên GV + Logout
+│   │   │   ├── AppSidebar.tsx       # Nav: Dashboard/Lịch/HS/Báo cáo/Học phí
+│   │   │   └── AppHeader.tsx        # Tên GV + Logout + Language Switcher
 │   │   ├── calendar/
 │   │   │   ├── MonthCalendar.tsx    # Grid 7 cột T2–CN
 │   │   │   ├── CalendarDayCell.tsx  # 1 ô ngày
@@ -126,6 +140,8 @@ teaching-schedule/
 │   │   │   └── StudentScheduleView.tsx
 │   │   ├── filters/
 │   │   │   └── FilterBar.tsx
+│   │   ├── tuition/
+│   │   │   └── PaymentDialog.tsx
 │   │   └── reports/
 │   │       ├── StudentReport.tsx
 │   │       ├── ExportButton.tsx
@@ -135,7 +151,8 @@ teaching-schedule/
 │   │   ├── useCalendar.ts
 │   │   ├── useFilters.ts
 │   │   ├── useExport.ts
-│   │   └── useExcelExport.ts
+│   │   ├── useExcelExport.ts
+│   │   └── usePagination.ts
 │   │
 │   └── middleware.ts                # NextAuth route guard
 │

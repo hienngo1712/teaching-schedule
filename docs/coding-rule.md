@@ -51,3 +51,14 @@ File này quy định các tiêu chuẩn code cho dự án **Teaching Schedule M
 - **Database Testing:** Phải sử dụng database branch riêng (ví dụ trên Neon).
 - **Cấm chạy Test trên Production:** File `tests/setup.ts` sẽ tự động xóa sạch dữ liệu. Nếu thấy DATABASE_URL chứa `neon.tech` mà không có `.env.test` tương ứng cho test branch, hệ thống sẽ chặn.
 - **Vercel Build:** Nếu gặp lỗi 403, kiểm tra lại IP Allowlist trên Neon hoặc quyền truy cập của DATABASE_URL.
+
+---
+
+## 7. Quy tắc về Text & Đặt tên (I18n & Naming)
+- **Internationalization (i18n):**
+    - Luôn tìm kiếm các key hiện có trong `src/language/*.json` trước khi tạo mới để dùng chung (reusable).
+    - Chỉ tạo key mới khi thực sự cần thiết để tránh trùng lặp dữ liệu và tối ưu dung lượng file.
+- **Naming Convention:**
+    - Đặt tên ngắn gọn, tối giản, bỏ các hậu tố (suffixes) thừa thãi.
+    - Không dùng các dạng như `student_btn`, `student_label`, `student_title` nếu bản thân từ đó đã đủ nghĩa trong ngữ cảnh.
+    - Ưu tiên các key đơn lẻ như `save`, `edit`, `delete`, `title`, `name`, `status`.

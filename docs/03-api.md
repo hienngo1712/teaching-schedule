@@ -28,6 +28,7 @@ export const appRouter = createTRPCRouter({
   session:    sessionRouter,
   attendance: attendanceRouter,
   report:     reportRouter,
+  tuition:    tuitionRouter,
 })
 export type AppRouter = typeof appRouter
 ```
@@ -182,6 +183,26 @@ export const attendanceUpdateSchema = z.object({
     note:       z.string().optional(),
     fee:        z.number().int().min(0).optional(), // Học phí thực tế buổi này
   })),
+})
+```
+
+### tuition.ts
+```typescript
+export const monthlyTuitionFilterSchema = z.object({
+  year: z.number().int(),
+  month: z.number().int().min(1).max(12),
+  grade: z.number().int().min(1).max(9).optional(),
+  search: z.string().optional(),
+  status: z.enum(["all", "fully_paid", "paid_this_month", "partial", "unpaid"]).optional(),
+})
+
+export const updatePaymentSchema = z.object({
+  studentId: z.number().int().positive(),
+  year: z.number().int(),
+  month: z.number().int().min(1).max(12),
+  paidAmount: z.number().int().min(0),
+  isFullPaid: z.boolean(),
+  notes: z.string().optional().nullable(),
 })
 ```
 
@@ -376,7 +397,29 @@ report.monthlySummary → protectedProcedure
 
 report.dashboard → protectedProcedure
   Input:  (none)
-  Output: { totalStudents, sessionsToday, totalSessionsMonth, attendanceRate, totalRevenueMonth }
+  Output: { totalStudents, sessionsToday, totalSessionsMonth, attendanceRate, totalRevenueMonth, totalUnpaidMonth }
+
+---
+
+## Tuition Router
+
+```
+tuition.getMonthlyStatus → protectedProcedure
+  Input:  monthlyTuitionFilterSchema
+  Logic:
+    1. Lấy danh sách học sinh active theo user_id
+    2. Tính toán tiền học dự kiến (totalExpected) dựa trên điểm danh PRESENT/LATE trong tháng
+    3. Tính toán nợ cũ (previousBalance) từ các tháng trước
+    4. Lấy thông tin đóng tiền đã lưu (paidAmount, isFullPaid)
+  Output: Array<{ studentId, fullName, totalSessions, totalExpected, paidAmount, isFullPaid, previousBalance }>
+
+tuition.updatePayment → protectedProcedure
+  Input:  updatePaymentSchema
+  Logic:
+    1. assertOwnership student
+    2. upsert vào bảng MonthlyTuition (year, month, studentId)
+  Output: MonthlyTuition record
+```
 ```
 
 

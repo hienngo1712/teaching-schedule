@@ -8,6 +8,7 @@
 /dashboard      → auth required — TRANG CHÍNH
 /calendar       → auth required — quản lý lịch dạy
 /students       → auth required — quản lý HS
+/tuition        → auth required — quản lý đóng học phí
 /reports        → auth required — báo cáo + export
 ```
 
@@ -26,6 +27,7 @@ Icon + Label (lucide-react icons):
   LayoutDashboard  → Tổng quan        /dashboard
   CalendarDays     → Lịch dạy         /calendar
   Users            → Học sinh         /students
+  Wallet           → Học phí          /tuition
   BarChart3        → Báo cáo          /reports
 ```
 - Active item highlight indigo-600
@@ -33,6 +35,7 @@ Icon + Label (lucide-react icons):
 
 ### AppHeader.tsx
 - "Xin chào, [fullName]"
+- Language Switcher: Nút chuyển đổi VI/EN sử dụng `DropdownMenu`
 - Avatar initials (2 chữ cái đầu tên)
 - Button Logout → signOut() → redirect /login
 
@@ -276,6 +279,20 @@ Loading spinner trên button khi isExporting
 Toast sau khi xuất xong / fail
 ```
 
+### DataTablePagination.tsx
+```
+UI:
+  - Hiển thị: "Hiển thị [X]-[Y] trong [Z] bản ghi"
+  - Select: Số dòng mỗi trang (5, 10, 20, 50)
+  - Buttons: First, Prev, Next, Last page
+
+Props:
+  - table structure info (currentPage, pageSize, totalItems, totalPages)
+  - callback functions (setCurrentPage, setPageSize)
+
+Style: Sticky bottom-0, bg-white, border-t
+```
+
 ### StudentReport.tsx (trong ReportsView)
 ```
 Props: studentId, period, year, month?
@@ -287,6 +304,33 @@ Hiển thị:
   Bảng sessions (giống StudentScheduleView)
   Summary cards: Tổng | Có mặt | Vắng | Muộn | Tỉ lệ %
   ExportButton (PNG) + ExportExcelButton
+```
+
+### TuitionPage.tsx (`/tuition`)
+```
+UI:
+  - Bộ lọc: Tháng/Năm, Lớp, Tìm tên học sinh
+  - Bảng học phí:
+      STT | Họ và tên | Lớp | Số buổi | Dự kiến | Đã đóng | Trạng thái | Hành động
+  - Trạng thái (Badge):
+      Đã đóng đủ (Green) | Chưa đóng đủ (Yellow) | Chưa đóng (Red)
+  - Phân trang (DataTablePagination) ghim dưới đáy
+
+Hành động:
+  - [Ghi nhận]: Mở PaymentDialog
+```
+
+### PaymentDialog.tsx
+```
+UI:
+  - Thông tin: Học phí tháng, Nợ cũ, Tổng cần đóng
+  - Input: Số tiền đóng (paidAmount)
+  - Nút nhanh: [Đóng đủ], [Đóng đủ + Bù nợ]
+  - Checkbox: [Đánh dấu đã đóng đủ]
+  - Textarea: Ghi chú
+
+Hành động:
+  - Update: tuition.updatePayment.mutate()
 ```
 
 ---
@@ -351,6 +395,16 @@ Hiển thị:
 //     4. canvas.toBlob() → download
 //     5. Remove class "exporting"
 //     6. Set isCapturing = false
+```
+
+### useTranslation (LanguageProvider)
+```typescript
+// Hook để truy cập đa ngôn ngữ:
+//   const { t, language, setLanguage } = useTranslation()
+//
+// Methods:
+//   t(key): Lấy bản dịch theo key (đã định nghĩa trong vi.json/en.json)
+//   setLanguage(lang): Chuyển đổi giữa "vi" và "en"
 ```
 
 ### useExcelExport.ts

@@ -26,6 +26,8 @@
 | `docs/08-review.md` | Review checklist 2 lần, quy tắc code, final acceptance checklist | Sau mỗi sub-phase hoàn thành |
 | `docs/09-bulk-session-management.md` | Hướng dẫn quản lý ca dạy hàng loạt (đã xong) | Tra cứu logic bulk update/delete |
 | `docs/10-tuition-payment-tracking.md` | Kế hoạch đánh dấu và theo dõi đóng tiền học phí | Phase 10 — quản lý đóng tiền |
+| `docs/11-multi-language.md` | Hướng dẫn và kế hoạch đa ngôn ngữ (VI/EN) | Phase 11 — đa ngôn ngữ |
+| `docs/12-pagination.md` | Hướng dẫn và cơ chế phân trang cho bảng dữ liệu | Toàn bộ các màn hình dùng bảng |
 
 ---
 

@@ -400,11 +400,11 @@ PHÂN BIỆT DATABASE:
 - [x] Chạy **Final Acceptance Checklist** (xem `docs/08-review.md`) ✓
 
 ### Sub 8.7 — New Mobile Calendar Layout (Grid + Daily List)
-- [ ] Cập nhật `MonthCalendar.tsx`: thêm state `selectedMobileDate`.
-- [ ] Implement mini grid cho mobile: 7 cột, hiển thị dot nếu có ca dạy.
-- [ ] Implement daily list phía dưới grid mobile.
-- [ ] Cập nhật CSS trong `globals.css` cho calendar mobile.
-- [ ] **Test thủ công:** Click chọn ngày trên mobile → list cập nhật đúng ✓.
+- [x] Cập nhật `MonthCalendar.tsx`: thêm state `selectedMobileDate`.
+- [x] Implement mini grid cho mobile: 7 cột, hiển thị dot nếu có ca dạy.
+- [x] Implement daily list phía dưới grid mobile.
+- [x] Cập nhật CSS trong `globals.css` cho calendar mobile.
+- [x] **Test thủ công:** Click chọn ngày trên mobile → list cập nhật đúng ✓.
 
 **✅ Phase 8 done khi:** SẢN PHẨM HOÀN CHỈNH VỚI MOBILE UI MỚI.
 
@@ -449,27 +449,70 @@ PHÂN BIỆT DATABASE:
 - [x] **Test:** `pnpm prisma generate` thành công ✓
 
 ### Sub 10.2 — Backend Service & Router
-- [ ] Tạo `src/server/services/tuition.service.ts`
-- [ ] Tạo `src/server/trpc/routers/tuition.ts`
-- [ ] Đăng ký vào `root.ts`
-- [ ] Viết `tests/integration/tuition.test.ts` (kiểm tra logic tính tiền và upsert)
-- [ ] **Test:** `pnpm test:integration` pass ✓
+- [x] Tạo `src/server/services/tuition.service.ts`
+- [x] Tạo `src/server/trpc/routers/tuition.ts`
+- [x] Đăng ký vào `root.ts`
+- [x] Viết `tests/integration/tuition.test.ts` (kiểm tra logic tính tiền và upsert)
+- [x] **Test:** `pnpm test:integration` pass ✓
 
 ### Sub 10.3 — Frontend UI: Trang danh sách
-- [ ] Tạo `src/app/(app)/reports/tuition/page.tsx`
-- [ ] Xây dựng bảng hiển thị danh sách học phí tháng
-- [ ] Tích hợp bộ lọc (Tháng/Năm, Lớp, Tên)
-- [ ] **Test thủ công:** Dữ liệu hiển thị đúng với thực tế điểm danh ✓
+- [x] Tạo `src/app/(app)/tuition/page.tsx`
+- [x] Xây dựng bảng hiển thị danh sách học phí tháng
+- [x] Tích hợp bộ lọc (Tháng/Năm, Lớp, Tên)
+- [x] **Test thủ công:** Dữ liệu hiển thị đúng với thực tế điểm danh ✓
 
 ### Sub 10.4 — Frontend UI: Dialog & Actions
-- [ ] Tạo `PaymentDialog` để ghi nhận đóng tiền
-- [ ] Tích hợp mutation `updatePayment`
-- [ ] Thêm nút "Đóng đủ nhanh"
-- [ ] **Test thủ công:** Đóng tiền thành công, Badge trạng thái cập nhật ngay ✓
+- [x] Tạo `PaymentDialog` để ghi nhận đóng tiền
+- [x] Tích hợp mutation `updatePayment`
+- [x] Thêm nút "Đóng đủ nhanh"
+- [x] **Test thủ công:** Đóng tiền thành công, Badge trạng thái cập nhật ngay ✓
 
 ### Sub 10.5 — Polish & Integration
-- [ ] Thêm thông tin nợ phí vào `Dashboard`
-- [ ] Thêm tab "Học phí" vào `StudentScheduleView` hoặc trang chi tiết học sinh
-- [ ] **Review:** Toàn bộ quy trình đóng phí mượt mà, không lỗi logic ✓
+- [x] Thêm thông tin nợ phí vào `Dashboard`
+- [x] Thêm tab "Học phí" vào `StudentScheduleView` hoặc trang chi tiết học sinh
+- [x] **Review:** Toàn bộ quy trình đóng phí mượt mà, không lỗi logic ✓
 
 **✅ Phase 10 done khi:** Giáo viên có thể theo dõi và đánh dấu học sinh đã đóng tiền học hàng tháng.
+
+---
+
+## Phase 11: Multi-language Support Integration
+
+> Đọc: `docs/11-multi-language.md`
+
+### Sub 11.1 — Static Text Extraction
+- [x] Rà soát toàn bộ code và tách các chuỗi text tiếng Việt hardcoded.
+- [x] Thêm các key tương ứng vào `src/language/vi.json` và `src/language/en.json`.
+- [x] Thay thế text hardcoded bằng hàm `t("key")`.
+
+### Sub 11.2 — UI Integration & Language Switcher
+- [x] Thêm nút chuyển đổi ngôn ngữ (VI/EN) vào `AppHeader` hoặc `AppSidebar`.
+- [x] Đảm bảo các component như Calendar, Table, Dialog đều hiển thị đúng theo ngôn ngữ chọn.
+- [x] Tích hợp `dayjs` locale để format ngày tháng theo ngôn ngữ.
+
+### Sub 11.3 — Testing & Verification
+- [x] Kiểm tra toàn bộ giao diện ở cả 2 ngôn ngữ.
+- [x] Đảm bảo language state được lưu đúng vào `localStorage`.
+
+**✅ Phase 11 done khi:** Ứng dụng hỗ trợ hoàn chỉnh đa ngôn ngữ (VI/EN).
+
+---
+
+## Phase 12: Pagination & Layout Polish
+
+> Đọc: `docs/12-pagination.md`
+
+### Sub 12.1 — Pagination Hook & Component
+- [x] Tạo `src/hooks/usePagination.ts` (client-side logic)
+- [x] Tạo `src/components/ui/data-table-pagination.tsx` (UI controls)
+- [x] Tích hợp vào `StudentList.tsx`
+- [x] Tích hợp vào `TuitionPage.tsx`
+- [x] Tích hợp vào `StudentScheduleView.tsx`
+- [x] Tích hợp vào `AttendancePanel.tsx`
+
+### Sub 12.2 — Sticky Pagination & Responsive Layout
+- [x] Cập nhật `DataTablePagination` sử dụng `sticky bottom-0`
+- [x] Cập nhật `AppLayout` và page containers sử dụng Flexbox (`flex-1`, `flex-col`) để ghim pagination xuống đáy màn hình
+- [x] Đảm bảo STT (Số thứ tự) hiển thị đúng theo trang: `(page - 1) * size + index + 1`
+
+**✅ Phase 12 done khi:** Tất cả bảng dữ liệu có phân trang cố định ở đáy màn hình.
