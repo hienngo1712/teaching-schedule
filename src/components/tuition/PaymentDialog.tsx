@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { updatePaymentSchema, type UpdatePaymentInput } from "@/lib/schemas/tuition"
 import { formatCurrency, cn } from "@/lib/utils"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 interface PaymentDialogProps {
   open: boolean
@@ -46,9 +47,10 @@ interface PaymentDialogProps {
 }
 
 export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDialogProps) {
+  const { t } = useTranslation()
   const mutation = trpc.tuition.updatePayment.useMutation({
     onSuccess: () => {
-      toast.success("Cập nhật học phí thành công")
+      toast.success(t("payment_update_success"))
       onSuccess()
       onOpenChange(false)
     },
@@ -116,31 +118,31 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
 
   function quickPayAdjusted() {
     if (!data) return
-    const adjusted = Math.max(0, data.totalExpected - data.previousBalance)
+    const adjusted = Math.max(0, data.totalExpected + data.previousBalance)
     form.setValue("paidAmount", adjusted)
     form.setValue("isFullPaid", true)
   }
 
   if (!data) return null
 
-  const adjustedAmount = Math.max(0, data.totalExpected - data.previousBalance)
+  const adjustedAmount = Math.max(0, data.totalExpected + data.previousBalance)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Ghi nhận đóng học phí</DialogTitle>
+          <DialogTitle>{t("record_payment")}</DialogTitle>
         </DialogHeader>
 
         <div className="py-2">
           <div className="mb-4 p-3 bg-slate-50 rounded-md border border-slate-100 space-y-2">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm font-medium text-slate-500">Học sinh</p>
+                <p className="text-sm font-medium text-slate-500">{t("student")}</p>
                 <p className="font-semibold text-slate-900">{data.fullName}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-medium text-slate-500">Tháng {data.month}/{data.year}</p>
+                <p className="text-sm font-medium text-slate-500">{t("month")} {data.month}/{data.year}</p>
                 <p className="font-semibold text-slate-900">{formatCurrency(data.totalExpected)}</p>
               </div>
             </div>
@@ -148,24 +150,22 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
             {data.previousBalance !== 0 && (
               <div className={cn(
                 "flex justify-between items-center pt-2 border-t text-sm",
-                data.previousBalance > 0 ? "text-green-600" : "text-red-600"
+                data.previousBalance > 0 ? "text-red-600" : "text-green-600"
               )}>
                 <div className="flex items-center gap-1">
                   <History className="size-3.5" />
-                  <span>Số dư tháng trước:</span>
+                  <span>{t("previous_balance")}:</span>
                 </div>
                 <span className="font-bold">
-                  {data.previousBalance > 0 ? "Thừa" : "Thiếu"} {formatCurrency(Math.abs(data.previousBalance))}
+                  {data.previousBalance > 0 ? "+" : ""}{formatCurrency(data.previousBalance)}
                 </span>
               </div>
             )}
 
-            {data.previousBalance !== 0 && (
-              <div className="flex justify-between items-center pt-1 text-sm text-indigo-600 font-bold italic">
-                <span>Tổng cần đóng:</span>
-                <span>{formatCurrency(adjustedAmount)}</span>
-              </div>
-            )}
+            <div className="flex justify-between items-center pt-2 border-t text-sm text-indigo-600 font-bold italic">
+              <span>{t("amount_to_pay")}:</span>
+              <span>{formatCurrency(adjustedAmount)}</span>
+            </div>
           </div>
 
           <Form {...form}>
@@ -175,7 +175,7 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
                 name="paidAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Số tiền đã đóng</FormLabel>
+                    <FormLabel>{t("amount_paid")}</FormLabel>
                     <FormControl>
                       <CurrencyInput
                         value={field.value}
@@ -200,7 +200,7 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel>
-                        Đánh dấu đã đóng đủ
+                        {t("mark_fully_paid")}
                       </FormLabel>
                     </div>
                   </FormItem>
@@ -212,10 +212,10 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ghi chú</FormLabel>
+                    <FormLabel>{t("notes")}</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="VD: Đóng tiền mặt, chuyển khoản..." 
+                      <Textarea
+                        placeholder={t("notes")}
                         {...field} 
                         value={field.value || ""}
                       />
@@ -233,22 +233,22 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
                     size="sm"
                     onClick={quickPayFull}
                   >
-                    Đóng đủ tháng này
+                    {t("pay_full")}
                   </Button>
                   {data.previousBalance !== 0 && (
-                    <Button 
-                      type="button" 
-                      variant="secondary" 
+                    <Button
+                      type="button"
+                      variant="secondary"
                       size="sm"
                       onClick={quickPayAdjusted}
                       className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
                     >
-                      Đóng sau bù trừ
+                      {t("pay_adjusted")}
                     </Button>
                   )}
                 </div>
                 <Button type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending ? "Đang lưu..." : "Lưu thông tin"}
+                  {mutation.isPending ? t("saving") : t("save")}
                 </Button>
               </DialogFooter>
             </form>

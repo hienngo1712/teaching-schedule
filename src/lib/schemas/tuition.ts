@@ -5,6 +5,7 @@ export const monthlyTuitionFilterSchema = z.object({
   month: z.number().int().min(1).max(12),
   grade: z.number().int().min(1).max(9).optional(),
   search: z.string().optional(),
+  status: z.enum(["all", "fully_paid", "paid_this_month", "partial", "unpaid"]).optional(),
 })
 
 export type MonthlyTuitionFilterInput = z.infer<typeof monthlyTuitionFilterSchema>

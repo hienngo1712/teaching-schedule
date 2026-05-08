@@ -8,7 +8,7 @@ export async function getMonthlyTuitionStatus(
   userId: number,
   filter: MonthlyTuitionFilterInput
 ) {
-  const { year, month, grade, search } = filter
+  const { year, month, grade, search, status } = filter
 
   // 1. Get all active students for this user
   const students = await db.student.findMany({
@@ -21,22 +21,18 @@ export async function getMonthlyTuitionStatus(
     orderBy: [{ grade: "asc" }, { fullName: "asc" }],
   })
 
-  // 2. Define ranges for current and previous month
+  // 2. Define range for current month
   const startDate = new Date(Date.UTC(year, month - 1, 1))
   const endDate = new Date(Date.UTC(year, month, 1))
   
-  const prevMonth = month === 1 ? 12 : month - 1
-  const prevYear = month === 1 ? year - 1 : year
-  const prevStartDate = new Date(Date.UTC(prevYear, prevMonth - 1, 1))
-
-  // 3. Fetch all attendance records for these students in both current and previous months
+  // 3. Fetch current month attendance records
   const studentIds = students.map(s => s.id)
-  const allAttendance = await db.sessionStudent.findMany({
+  const currentAttendance = await db.sessionStudent.findMany({
     where: {
       studentId: { in: studentIds },
       session: {
         sessionDate: {
-          gte: prevStartDate,
+          gte: startDate,
           lt: endDate,
         },
       },
@@ -46,55 +42,68 @@ export async function getMonthlyTuitionStatus(
     },
   })
 
-  // 4. Fetch existing MonthlyTuition records for current and previous month
-  const monthlyTuitions = await db.monthlyTuition.findMany({
+  // 4. Fetch cumulative statistics for previous months
+  // Sum of all paid amounts before this month
+  const totalPaidBefore = await db.monthlyTuition.groupBy({
+    by: ['studentId'],
     where: {
       studentId: { in: studentIds },
       OR: [
-        { year, month },
-        { year: prevYear, month: prevMonth },
-      ],
+        { year: { lt: year } },
+        { year: year, month: { lt: month } }
+      ]
+    },
+    _sum: {
+      paidAmount: true
+    }
+  })
+
+  // Sum of all expected fees before this month
+  const totalExpectedBefore = await db.sessionStudent.groupBy({
+    by: ['studentId'],
+    where: {
+      studentId: { in: studentIds },
+      session: {
+        sessionDate: { lt: startDate }
+      },
+      attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] }
+    },
+    _sum: {
+      fee: true
+    }
+  })
+
+  // 5. Fetch current month's tuition record
+  const currentTuitions = await db.monthlyTuition.findMany({
+    where: {
+      studentId: { in: studentIds },
+      year,
+      month,
     },
   })
 
-  // 5. Combine data
-  return students.map(student => {
-    const studentAttendance = allAttendance.filter(r => r.studentId === student.id)
-    
+  // 6. Combine data
+  const results = students.map(student => {
     // Current month stats
-    const currentSessions = studentAttendance.filter(r => {
-      const d = r.session.sessionDate
-      return d >= startDate && d < endDate
-    })
+    const studentCurrentAttendance = currentAttendance.filter(r => r.studentId === student.id)
     
-    const totalExpected = currentSessions.reduce((sum, record) => {
+    const totalExpected = studentCurrentAttendance.reduce((sum, record) => {
       if (record.attendance === ATTENDANCE_STATUS.PRESENT || record.attendance === ATTENDANCE_STATUS.LATE) {
         return sum + record.fee
       }
       return sum
     }, 0)
 
-    const totalSessions = currentSessions.length
-    const presentSessions = currentSessions.filter(r => r.attendance === ATTENDANCE_STATUS.PRESENT || r.attendance === ATTENDANCE_STATUS.LATE).length
+    const totalSessions = studentCurrentAttendance.length
+    const presentSessions = studentCurrentAttendance.filter(r => r.attendance === ATTENDANCE_STATUS.PRESENT || r.attendance === ATTENDANCE_STATUS.LATE).length
 
-    // Previous month balance
-    const prevSessions = studentAttendance.filter(r => {
-      const d = r.session.sessionDate
-      return d >= prevStartDate && d < startDate
-    })
-
-    const prevExpected = prevSessions.reduce((sum, record) => {
-      if (record.attendance === ATTENDANCE_STATUS.PRESENT || record.attendance === ATTENDANCE_STATUS.LATE) {
-        return sum + record.fee
-      }
-      return sum
-    }, 0)
-
-    const prevTuition = monthlyTuitions.find(t => t.studentId === student.id && t.year === prevYear && t.month === prevMonth)
-    const previousBalance = (prevTuition?.paidAmount ?? 0) - prevExpected
+    // Cumulative previous balance (Debt = Expected - Paid)
+    const paidBefore = totalPaidBefore.find(t => t.studentId === student.id)?._sum?.paidAmount ?? 0
+    const expectedBefore = totalExpectedBefore.find(t => t.studentId === student.id)?._sum?.fee ?? 0
+    const previousBalance = expectedBefore - paidBefore
 
     // Current month tuition record
-    const tuitionRecord = monthlyTuitions.find(t => t.studentId === student.id && t.year === year && t.month === month)
+    const tuitionRecord = currentTuitions.find(t => t.studentId === student.id)
 
     return {
       studentId: student.id,
@@ -106,7 +115,27 @@ export async function getMonthlyTuitionStatus(
       paidAmount: tuitionRecord?.paidAmount ?? 0,
       isFullPaid: tuitionRecord?.isFullPaid ?? false,
       notes: tuitionRecord?.notes ?? null,
-      previousBalance, // New field
+      previousBalance,
+    }
+  })
+
+  // 7. Filter by status if requested
+  if (!status || status === 'all') return results
+
+  return results.filter(item => {
+    const adjustedAmount = Math.max(0, item.totalExpected + item.previousBalance)
+    
+    switch (status) {
+      case 'fully_paid':
+        return item.paidAmount >= adjustedAmount && adjustedAmount > 0
+      case 'paid_this_month':
+        return item.paidAmount >= item.totalExpected && item.totalExpected > 0 && item.previousBalance > 0 && item.paidAmount < adjustedAmount
+      case 'partial':
+        return item.paidAmount > 0 && item.paidAmount < item.totalExpected
+      case 'unpaid':
+        return item.paidAmount === 0 && adjustedAmount > 0
+      default:
+        return true
     }
   })
 }

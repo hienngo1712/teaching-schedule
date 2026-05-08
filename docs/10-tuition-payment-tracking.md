@@ -1,4 +1,4 @@
-# 10 — Quản lý đóng tiền học phí theo tháng
+# 10 — Quản lý đóng tiền học phí theo tháng (ĐÃ TRIỂN KHAI)
 
 ## Mục tiêu
 Cung cấp công cụ để giáo viên theo dõi xem học sinh nào đã đóng đủ tiền học trong tháng, số tiền đã đóng thực tế và các ghi chú liên quan.
@@ -45,7 +45,7 @@ model MonthlyTuition {
 
 ## 3. Giao diện Người dùng (Frontend)
 
-### Trang Quản lý Học phí (`/reports/tuition`)
+### Trang Quản lý Học phí (`/tuition`)
 - Bộ lọc: Tháng/Năm, Khối lớp, Tên học sinh.
 - Bảng hiển thị:
     - STT | Họ tên | Lớp | Tổng buổi học | Tổng tiền | Đã đóng | Trạng thái | Hành động
@@ -74,7 +74,7 @@ model MonthlyTuition {
 - Viết integration tests cho logic tính tiền và upsert.
 
 ### Sub 10.3 — Frontend UI: Trang danh sách
-- Tạo trang `/reports/tuition`.
+- Tạo trang `/tuition`.
 - Hiển thị bảng dữ liệu với các bộ lọc.
 - Xử lý trạng thái loading/empty.
 
