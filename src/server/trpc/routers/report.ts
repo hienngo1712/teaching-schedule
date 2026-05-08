@@ -19,6 +19,8 @@ export const reportRouter = createTRPCRouter({
     .input(z.object({
       year: z.number().int(),
       month: z.number().int().min(1).max(12),
+      toYear: z.number().int().optional(),
+      toMonth: z.number().int().min(1).max(12).optional(),
     }))
     .query(({ ctx, input }) => getMonthlySummary(ctx.db, ctx.userId, input)),
 

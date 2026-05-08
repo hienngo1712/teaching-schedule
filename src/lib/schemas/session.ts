@@ -42,6 +42,8 @@ export const sessionUpdateSchema = z.object({
 export const sessionFilterSchema = z.object({
   year: z.number().int().min(2020).max(2100),
   month: z.number().int().min(1).max(12),
+  toYear: z.number().int().min(2020).max(2100).optional(),
+  toMonth: z.number().int().min(1).max(12).optional(),
   grade: z.number().int().min(1).max(9).optional(),
   studentName: z.string().trim().max(100).optional(),
   studentId: z.number().int().positive().optional(),

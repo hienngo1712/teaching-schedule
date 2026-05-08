@@ -134,9 +134,11 @@ export async function getMonthSessions(
   userId: number,
   filter: SessionFilterInput
 ): Promise<SessionDTO[]> {
-  const { year, month, grade, studentName, studentId } = filter
+  const { year, month, toYear, toMonth, grade, studentName, studentId } = filter
   const start = new Date(Date.UTC(year, month - 1, 1))
-  const end = new Date(Date.UTC(year, month, 1))
+  const end = toYear && toMonth 
+    ? new Date(Date.UTC(toYear, toMonth, 1))
+    : new Date(Date.UTC(year, month, 1))
 
   const sessions = await db.teachingSession.findMany({
     where: {

@@ -55,11 +55,29 @@ export async function getStudentReport(
 export async function getMonthlySummary(
   db: PrismaClient,
   userId: number,
-  params: { year: number; month: number }
+  params: { 
+    year: number; 
+    month: number;
+    toYear?: number;
+    toMonth?: number;
+  }
 ) {
-  const { year, month } = params
+  const { year, month, toYear, toMonth } = params
   
-  const sessions = await getMonthSessions(db, userId, { year, month })
+  const startDate = new Date(Date.UTC(year, month - 1, 1))
+  const endDate = toYear && toMonth 
+    ? new Date(Date.UTC(toYear, toMonth, 1))
+    : new Date(Date.UTC(year, month, 1))
+
+  const sessions = await db.teachingSession.findMany({
+    where: {
+      userId,
+      sessionDate: { gte: startDate, lt: endDate }
+    },
+    include: {
+      sessionStudents: { include: { student: true } }
+    }
+  })
   
   const totalSessions = sessions.length
   const students = await db.student.findMany({ where: { userId, isActive: true } })
@@ -67,7 +85,7 @@ export async function getMonthlySummary(
 
   // By Grade
   const byGrade = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(grade => {
-    const gradeSessions = sessions.filter(s => s.students.some(st => st.grade === grade))
+    const gradeSessions = sessions.filter(s => s.sessionStudents.some(st => st.student.grade === grade))
     return {
       grade,
       sessionCount: gradeSessions.length,
@@ -80,7 +98,7 @@ export async function getMonthlySummary(
   let totalRecords = 0
 
   sessions.forEach(s => {
-    s.students.forEach(ss => {
+    s.sessionStudents.forEach(ss => {
       if (ss.attendance !== ATTENDANCE_STATUS.PENDING) {
         totalRecords++
         if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {
@@ -91,12 +109,31 @@ export async function getMonthlySummary(
     })
   })
 
+  // Total Paid
+  const monthlyTuitions = await db.monthlyTuition.findMany({
+    where: {
+      student: { userId },
+      year: { gte: year, lte: toYear ?? year }
+    }
+  })
+  
+  const startVal = year * 100 + month
+  const endVal = (toYear ?? year) * 100 + (toMonth ?? month)
+  
+  const totalPaid = monthlyTuitions
+    .filter(t => {
+      const v = t.year * 100 + t.month
+      return v >= startVal && v <= endVal
+    })
+    .reduce((sum, t) => sum + t.paidAmount, 0)
+
   const overallAttendanceRate = totalRecords > 0 ? (presentRecords / totalRecords) * 100 : 0
 
   return {
     totalSessions,
     totalStudents,
     totalRevenue,
+    totalPaid,
     byGrade,
     overallAttendanceRate: Math.round(overallAttendanceRate * 10) / 10
   }

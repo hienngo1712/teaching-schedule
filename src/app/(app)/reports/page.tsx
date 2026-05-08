@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { trpc } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
@@ -15,26 +16,48 @@ import { StudentReport } from "./StudentReport"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import { ExportExcelButton } from "@/components/reports/ExportExcelButton"
+import { ReportPeriodPicker } from "@/components/reports/ReportPeriodPicker"
 import type { SessionDTO } from "@/server/services/session.service"
 import type { StudentDTO } from "@/lib/schemas/student.dto"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export default function ReportsPage() {
   const { year, month } = useCalendar()
-  const { selectedGrade: gradeFilter, setGrade: setGradeFilter, selectedStudentId, setStudentId: setSelectedStudentId } = useFilters()
+  const { t } = useTranslation()
+  const { 
+    selectedGrade: gradeFilter, 
+    setGrade: setGradeFilter, 
+    selectedStudentId, 
+    setStudentId: setSelectedStudentId,
+    toYear: filterToYear,
+    toMonth: filterToMonth,
+    filterType,
+  } = useFilters()
+
+  const queryParams = useMemo(() => {
+    const params: { year: number; month: number; toYear?: number; toMonth?: number } = { year, month }
+    if (filterType === 'year') {
+      params.month = 1
+      params.toYear = year
+      params.toMonth = 12
+    } else if (filterType === 'range') {
+      params.toYear = filterToYear || year
+      params.toMonth = filterToMonth || month
+    }
+    return params
+  }, [year, month, filterType, filterToYear, filterToMonth])
 
   const { data: studentList = [] } = trpc.student.list.useQuery({
     grade: gradeFilter || undefined,
   })
 
   const { data: monthSessions = [] } = trpc.session.getMonth.useQuery({
-    year,
-    month,
+    ...queryParams,
+    grade: gradeFilter || undefined,
+    studentId: selectedStudentId || undefined,
   })
 
-  const { data: monthlySummary } = trpc.report.monthlySummary.useQuery({
-    year,
-    month,
-  })
+  const { data: monthlySummary } = trpc.report.monthlySummary.useQuery(queryParams)
 
   const students = studentList as unknown as StudentDTO[]
   const sessions = (monthSessions ?? []).map(s => ({
@@ -44,85 +67,107 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Báo cáo & Thống kê</h1>
-        
-        <div className="flex flex-wrap gap-2 items-center">
-          <ExportExcelButton sessions={sessions} students={students} />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h1 className="text-2xl font-bold text-slate-900">{t("reports")}</h1>
           
-          <Select 
-            value={gradeFilter?.toString() || "all"} 
-            onValueChange={(v) => {
-              setGradeFilter(v === "all" ? null : parseInt(v))
-              setSelectedStudentId(null)
-            }}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Chọn lớp" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả lớp</SelectItem>
-              {GRADES.map(g => (
-                <SelectItem key={g} value={g.toString()}>Lớp {g}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-2 items-center">
+            <ExportExcelButton sessions={sessions} students={students} />
+            
+            <ReportPeriodPicker />
+            
+            <Select 
+              value={gradeFilter?.toString() || "all"} 
+              onValueChange={(v) => {
+                setGradeFilter(v === "all" ? null : parseInt(v))
+                setSelectedStudentId(null)
+              }}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder={t("grade")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("all_grades")}</SelectItem>
+                {GRADES.map(g => (
+                  <SelectItem key={g} value={g.toString()}>{t("grade")} {g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select 
-            value={selectedStudentId?.toString() || "none"} 
-            onValueChange={(v) => setSelectedStudentId(v === "none" ? null : parseInt(v))}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Chọn học sinh" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">-- Chọn học sinh --</SelectItem>
-              {students.map(s => (
-                <SelectItem key={s.id} value={s.id.toString()}>{s.fullName}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select 
+              value={selectedStudentId?.toString() || "none"} 
+              onValueChange={(v) => setSelectedStudentId(v === "none" ? null : parseInt(v))}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder={t("student")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("select_student")}</SelectItem>
+                {students.map(s => (
+                  <SelectItem key={s.id} value={s.id.toString()}>{s.fullName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
 
-      {!selectedStudentId ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-white border-slate-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500 uppercase">Tổng số học sinh</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{students.length}</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-slate-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500 uppercase">Doanh thu tháng này</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-indigo-600">
-                {monthlySummary ? formatCurrency(monthlySummary.totalRevenue) : "0 đ"}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-slate-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500 uppercase">Tỉ lệ chuyên cần</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {monthlySummary ? `${monthlySummary.overallAttendanceRate}%` : "0%"}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        <StudentReport 
-          studentId={selectedStudentId} 
-          year={year} 
-          month={month} 
-        />
-      )}
+        {!selectedStudentId ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Card className="bg-white border-slate-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("student")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold">{students.length}</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-slate-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("attendance_rate")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-slate-700">
+                  {monthlySummary ? `${monthlySummary.overallAttendanceRate}%` : "0%"}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-slate-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("expected_revenue")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-indigo-600">
+                  {monthlySummary ? formatCurrency(monthlySummary.totalRevenue) : "0 đ"}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-slate-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("collected_amount")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-green-600">
+                  {monthlySummary ? formatCurrency(monthlySummary.totalPaid) : "0 đ"}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-slate-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("uncollected_amount")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-orange-600">
+                  {monthlySummary ? formatCurrency(Math.max(0, monthlySummary.totalRevenue - monthlySummary.totalPaid)) : "0 đ"}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <StudentReport 
+            studentId={selectedStudentId} 
+            year={year} 
+            month={month} 
+          />
+        )}
     </div>
   )
 }

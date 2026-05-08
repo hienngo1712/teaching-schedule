@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import type { SessionDTO } from "@/server/services/session.service"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 interface StudentReportProps {
   studentId: number
@@ -15,6 +16,7 @@ interface StudentReportProps {
 }
 
 export function StudentReport({ studentId, year, month }: StudentReportProps) {
+  const { t } = useTranslation()
   const { data, isLoading, error } = trpc.report.student.useQuery({
     studentId,
     year,
@@ -41,9 +43,9 @@ export function StudentReport({ studentId, year, month }: StudentReportProps) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Lỗi</AlertTitle>
+        <AlertTitle>{t("error")}</AlertTitle>
         <AlertDescription>
-          {error.message || "Không thể tải báo cáo cho học sinh này."}
+          {error.message || t("student_report_error")}
         </AlertDescription>
       </Alert>
     )
@@ -53,9 +55,9 @@ export function StudentReport({ studentId, year, month }: StudentReportProps) {
 
   return (
     <div className="animate-in fade-in duration-500">
-      <StudentScheduleView 
-        studentId={studentId} 
-        sessions={sessions} 
+      <StudentScheduleView
+        studentId={studentId}
+        sessions={sessions}
       />
     </div>
   )
