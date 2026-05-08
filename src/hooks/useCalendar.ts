@@ -13,7 +13,7 @@ export type CalendarCell = {
   sessions: SessionDTO[]
 }
 
-export function buildMonthLabel(year: number, month: number, t?: (key: any) => string): string {
+export function buildMonthLabel(year: number, month: number, t?: (key: string) => string): string {
   if (t) {
     return t("month_year_label")
       .replace("{month}", String(month))
