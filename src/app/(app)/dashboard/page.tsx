@@ -14,63 +14,65 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { trpc } from "@/lib/trpc"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatCurrency } from "@/lib/utils"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export default function DashboardPage() {
   const { data: stats, isLoading } = trpc.report.dashboard.useQuery()
+  const { t } = useTranslation()
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Tổng quan</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("dashboard")}</h1>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
-          title="Tổng học sinh"
+          title={t("total_students")}
           value={stats?.totalStudents}
           icon={<Users className="size-4 text-blue-600" />}
           loading={isLoading}
-          description="Học sinh đang hoạt động"
+          description={t("active_students")}
           className="bg-blue-50/50 border-blue-100"
         />
         <StatCard
-          title="Ca dạy hôm nay"
+          title={t("sessions_today")}
           value={stats?.sessionsToday}
           icon={<CalendarDays className="size-4 text-emerald-600" />}
           loading={isLoading}
-          description="Tổng số ca dạy trong ngày"
+          description={t("total_sessions_day")}
           className="bg-emerald-50/50 border-emerald-100"
         />
         <StatCard
-          title="Ca dạy tháng này"
+          title={t("sessions_this_month")}
           value={stats?.totalSessionsMonth}
           icon={<CalendarCheck className="size-4 text-indigo-600" />}
           loading={isLoading}
-          description="Đã lên lịch trong tháng này"
+          description={t("scheduled_this_month")}
           className="bg-indigo-50/50 border-indigo-100"
         />
         <StatCard
-          title="Tỉ lệ điểm danh"
+          title={t("attendance_rate")}
           value={stats ? `${stats.attendanceRate}%` : undefined}
           icon={<BarChart3 className="size-4 text-orange-600" />}
           loading={isLoading}
-          description="Trung bình tháng này"
+          description={t("average_this_month")}
           className="bg-orange-50/50 border-orange-100"
         />
         <StatCard
-          title="Doanh thu tháng này"
+          title={t("revenue_this_month")}
           value={stats ? formatCurrency(stats.totalRevenueMonth) : undefined}
           icon={<Banknote className="size-4 text-cyan-600" />}
           loading={isLoading}
-          description="Học phí thu được tháng này"
+          description={t("collected_this_month")}
           className="bg-cyan-50/50 border-cyan-100"
         />
         <StatCard
-          title="Nợ phí tháng này"
+          title={t("unpaid_this_month")}
           value={stats ? formatCurrency(stats.totalUnpaidMonth) : undefined}
           icon={<AlertCircle className="size-4 text-red-600" />}
           loading={isLoading}
-          description="Số tiền học sinh chưa đóng"
+          description={t("uncollected_amount")}
           className="bg-red-50/50 border-red-100"
         />
       </div>
@@ -78,19 +80,19 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Lối tắt nhanh</CardTitle>
+            <CardTitle>{t("quick_links")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <QuickLink
               href="/calendar"
-              title="Lịch dạy"
-              description="Xem và quản lý lịch dạy tháng"
+              title={t("calendar")}
+              description={t("manage_calendar")}
               icon={<CalendarDays className="size-8 text-blue-500" />}
             />
             <QuickLink
               href="/students"
-              title="Học sinh"
-              description="Quản lý danh sách học sinh"
+              title={t("students")}
+              description={t("manage_students")}
               icon={<Users className="size-8 text-green-500" />}
             />
           </CardContent>
