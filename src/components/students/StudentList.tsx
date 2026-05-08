@@ -45,6 +45,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { StudentFormDialog } from "./StudentFormDialog"
+import { usePagination } from "@/hooks/usePagination"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type StudentRow = {
   id: number
@@ -63,6 +66,7 @@ const ALL_GRADES_VALUE = "all"
 export function StudentList() {
   const utils = trpc.useUtils()
   const router = useRouter()
+  const { t } = useTranslation()
   const { selectedGrade, searchStudentName, setGrade, setSearch } = useFilters()
 
   const [localSearch, setLocalSearch] = useState(searchStudentName)
@@ -93,7 +97,7 @@ export function StudentList() {
   const deleteMut = trpc.student.delete.useMutation({
     onSuccess: () => {
       utils.student.list.invalidate()
-      toast.success("Đã xóa học sinh")
+      toast.success(t("delete_success"))
       setDeleteTarget(null)
     },
     onError: (e) => toast.error(e.message),
@@ -101,16 +105,19 @@ export function StudentList() {
 
   const students = listQuery.data ?? []
 
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    paginatedData,
+    totalItems,
+    totalPages,
+  } = usePagination(students)
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-        <Input
-            placeholder="Tìm tên học sinh..."
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            className="w-full sm:w-64"
-        />
-
         <Select
           value={selectedGrade === null ? ALL_GRADES_VALUE : String(selectedGrade)}
           onValueChange={(v) =>
@@ -118,17 +125,24 @@ export function StudentList() {
           }
         >
           <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Tất cả lớp" />
+            <SelectValue placeholder={t("all_grades")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_GRADES_VALUE}>Tất cả lớp</SelectItem>
+            <SelectItem value={ALL_GRADES_VALUE}>{t("all_grades")}</SelectItem>
             {GRADES.map((g) => (
               <SelectItem key={g} value={String(g)}>
-                Lớp {g}
+                {t("grade")} {g}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+
+        <Input
+          placeholder={t("search_student")}
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          className="w-full sm:w-64"
+        />
 
         <div className="sm:ml-auto">
           <Button
@@ -136,7 +150,7 @@ export function StudentList() {
             className="w-full sm:w-auto"
           >
             <UserPlus className="size-4 mr-2" />
-            Thêm học sinh
+            {t("add_student")}
           </Button>
         </div>
       </div>
@@ -146,14 +160,14 @@ export function StudentList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12 text-center">STT</TableHead>
-                <TableHead className="min-w-[140px] max-w-[200px]">Họ và tên</TableHead>
-                <TableHead className="w-16">Lớp</TableHead>
-                <TableHead className="w-32">Cấp</TableHead>
-                <TableHead className="w-32">Học phí/ Buổi</TableHead>
-                <TableHead className="w-28">Trạng thái</TableHead>
-                <TableHead className="hidden md:table-cell">SĐT PH</TableHead>
-                <TableHead className="hidden lg:table-cell">Tên PH</TableHead>
+                <TableHead className="w-12 text-center">{t("stt")}</TableHead>
+                <TableHead className="min-w-[140px] max-w-[200px]">{t("full_name")}</TableHead>
+                <TableHead className="w-16">{t("grade")}</TableHead>
+                <TableHead className="w-32">{t("level")}</TableHead>
+                <TableHead className="w-32">{t("tuition_fee")}</TableHead>
+                <TableHead className="w-28">{t("status")}</TableHead>
+                <TableHead className="hidden md:table-cell">{t("parent_phone")}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t("parent_name")}</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -172,31 +186,31 @@ export function StudentList() {
                     colSpan={9}
                     className="text-center text-sm text-slate-500 py-12"
                   >
-                    Chưa có học sinh nào.
+                    {t("no_students_message")}
                     {selectedGrade === null && searchStudentName === "" && (
                       <>
                         {" "}
-                        Nhấn{" "}
-                        <span className="font-medium">+ Thêm học sinh</span> để
-                        bắt đầu.
+                        {t("click_add_student_hint")}
                       </>
                     )}
                   </TableCell>
                 </TableRow>
               ) : (
-                students.map((s, idx) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="text-center">{idx + 1}</TableCell>
-                    <TableCell className="font-medium">{s.fullName}</TableCell>
+                paginatedData.map((s, idx) => {
+                  const actualIndex = (currentPage - 1) * pageSize + idx + 1
+                  return (
+                    <TableRow key={s.id}>
+                      <TableCell className="text-center">{actualIndex}</TableCell>
+                      <TableCell className="font-medium">{s.fullName}</TableCell>
                     <TableCell>{s.grade}</TableCell>
                     <TableCell>
                       {s.level === "tieu_hoc" ? (
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                          Tiểu học
+                          {t("primary_school")}
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                          Trung học cơ sở
+                          {t("secondary_school")}
                         </Badge>
                       )}
                     </TableCell>
@@ -206,11 +220,11 @@ export function StudentList() {
                     <TableCell>
                       {s.isActive ? (
                         <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
-                          Đang học
+                          {t("studying")}
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="bg-red-50 text-red-600 hover:bg-red-50 border-red-100">
-                          Đã nghỉ
+                          {t("dropped")}
                         </Badge>
                       )}
                     </TableCell>
@@ -232,7 +246,7 @@ export function StudentList() {
                             onSelect={() => router.push(`/calendar?studentId=${s.id}`)}
                           >
                             <CalendarDays className="size-4 mr-2" />
-                            Xem lịch
+                            {t("view_schedule")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onSelect={() =>
@@ -244,25 +258,35 @@ export function StudentList() {
                             }
                           >
                             <Pencil className="size-4 mr-2" />
-                            Sửa
+                            {t("edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600 focus:text-red-700"
                             onSelect={() => setDeleteTarget(s)}
                           >
                             <Trash2 className="size-4 mr-2" />
-                            Xóa
+                            {t("delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
+                  )
+                })
               )}
             </TableBody>
           </Table>
         </div>
       </div>
+
+      <DataTablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+        totalItems={totalItems}
+      />
 
       <StudentFormDialog
         open={formState.open}
@@ -283,18 +307,18 @@ export function StudentList() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xóa học sinh?</AlertDialogTitle>
+            <AlertDialogTitle>{t("delete_student")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Học sinh{" "}
+              {t("student")}{" "}
               <span className="font-medium text-slate-900">
                 {deleteTarget?.fullName}
               </span>{" "}
-              sẽ bị ẩn khỏi danh sách. Dữ liệu lịch sử vẫn được giữ lại.
+              {t("delete_student_desc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMut.isPending}>
-              Hủy
+              {t("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={deleteMut.isPending}
@@ -303,7 +327,7 @@ export function StudentList() {
               }
               className="bg-red-600 hover:bg-red-700"
             >
-              {deleteMut.isPending ? "Đang xóa..." : "Xóa"}
+              {deleteMut.isPending ? t("deleting") : t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

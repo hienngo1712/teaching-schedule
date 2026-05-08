@@ -56,6 +56,7 @@ import {
 } from "@/lib/schemas/session"
 import { trpc } from "@/lib/trpc"
 import { StudentPicker } from "./StudentPicker"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
   open: boolean
@@ -64,6 +65,7 @@ type Props = {
 }
 
 export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<"create" | "assign">("create")
   const [conflicts, setConflicts] = useState<{ date: string; conflict: string }[]>([])
   const [pendingValues, setPendingValues] = useState<SessionBulkCreateInput | null>(null)
@@ -94,9 +96,9 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
 
   const bulkCreateMutation = trpc.session.bulkCreate.useMutation({
     onSuccess: (res) => {
-      toast.success(`Đã tạo ${res.created} ca dạy thành công.`)
+      toast.success(t("bulk_create_success").replace("{count}", String(res.created)))
       if (res.skipped > 0) {
-        toast.info(`Đã bỏ qua ${res.skipped} ca do trùng lịch.`)
+        toast.info(t("bulk_skip_info").replace("{count}", String(res.skipped)))
       }
       utils.session.getMonth.invalidate()
       onOpenChange(false)
@@ -106,7 +108,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
       setPendingValues(null)
     },
     onError: (err) => {
-      toast.error(err.message || "Đã có lỗi xảy ra khi tạo lịch lặp")
+      toast.error(err.message || t("bulk_create_error"))
     },
   })
 
@@ -120,20 +122,20 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
       }
     },
     onError: (err) => {
-      toast.error(err.message || "Đã có lỗi xảy ra khi kiểm tra trùng lịch")
+      toast.error(err.message || t("check_conflicts_error"))
     },
   })
 
   const assignMutation = trpc.session.addRecurringStudents.useMutation({
     onSuccess: (res) => {
-      toast.success(`Đã thêm học sinh vào ${res.updatedSessions} ca dạy khớp lịch.`)
+      toast.success(t("add_recurring_students_success").replace("{count}", String(res.updatedSessions)))
       utils.session.getMonth.invalidate()
       onOpenChange(false)
       onSuccess?.()
       form.reset()
     },
     onError: (err) => {
-      toast.error(err.message || "Đã có lỗi xảy ra khi gán học sinh")
+      toast.error(err.message || t("assign_students_error"))
     },
   })
 
@@ -142,7 +144,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
       checkConflictsMutation.mutate(values)
     } else {
       if (!values.studentIds || values.studentIds.length === 0) {
-        toast.error("Vui lòng chọn ít nhất một học sinh")
+        toast.error(t("select_at_least_one_student"))
         return
       }
       assignMutation.mutate({
@@ -159,7 +161,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full h-full max-w-none sm:h-auto sm:max-w-[600px] sm:max-h-[90vh] overflow-y-auto sm:rounded-lg top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
           <DialogHeader>
-            <DialogTitle>Lịch dạy định kỳ</DialogTitle>
+            <DialogTitle>{t("periodic_schedule")}</DialogTitle>
           </DialogHeader>
 
           <div className="flex bg-slate-100 p-1 rounded-md mb-2">
@@ -171,7 +173,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                 mode === "create" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
               )}
             >
-              Tạo ca dạy mới
+              {t("create_session")}
             </button>
             <button
               type="button"
@@ -181,7 +183,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                 mode === "assign" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
               )}
             >
-              Gán HS vào lịch sẵn
+              {t("assign_to_existing")}
             </button>
           </div>
 
@@ -193,7 +195,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                   name="startDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Ngày bắt đầu</FormLabel>
+                      <FormLabel>{t("start_date")}</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -207,7 +209,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                               {field.value ? (
                                 dayjs(field.value).format("DD/MM/YYYY")
                               ) : (
-                                <span>Chọn ngày</span>
+                                <span>{t("pick_date")}</span>
                               )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
@@ -233,7 +235,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                   name="endDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Ngày kết thúc</FormLabel>
+                      <FormLabel>{t("end_date")}</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -247,7 +249,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                               {field.value ? (
                                 dayjs(field.value).format("DD/MM/YYYY")
                               ) : (
-                                <span>Chọn ngày</span>
+                                <span>{t("pick_date")}</span>
                               )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
@@ -275,7 +277,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                 name="weekdays"
                 render={() => (
                   <FormItem>
-                    <FormLabel>Lặp lại vào các thứ</FormLabel>
+                    <FormLabel>{t("repeat_on_weekdays")}</FormLabel>
                     <div className="flex flex-wrap gap-4 pt-2">
                       {DAY_NAMES.map((name, index) => (
                         <FormField
@@ -322,7 +324,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                   name="startTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Giờ bắt đầu (HH:mm)</FormLabel>
+                      <FormLabel>{t("start_time")}</FormLabel>
                       <FormControl>
                         <TimeInput {...field} />
                       </FormControl>
@@ -335,7 +337,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                   name="endTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Giờ kết thúc (HH:mm)</FormLabel>
+                      <FormLabel>{t("end_time")}</FormLabel>
                       <FormControl>
                         <TimeInput {...field} />
                       </FormControl>
@@ -352,14 +354,14 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                     name="subjectId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Môn học</FormLabel>
+                        <FormLabel>{t("subject")}</FormLabel>
                         <Select
                           onValueChange={(val) => field.onChange(Number(val))}
                           value={String(field.value)}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Chọn môn" />
+                              <SelectValue placeholder={t("select_subject")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -386,9 +388,9 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                     name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tiêu đề (không bắt buộc)</FormLabel>
+                        <FormLabel>{t("title_optional")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ví dụ: Lịch tối thứ 2..." {...field} />
+                          <Input placeholder={t("bulk_title")} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -403,7 +405,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {mode === "create" ? "Học sinh (gán cho tất cả các ca)" : "Học sinh cần gán"}
+                      {mode === "create" ? t("students_for_all_sessions") : t("students_to_assign")}
                     </FormLabel>
                     <FormControl>
                       <StudentPicker
@@ -423,11 +425,11 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                   onClick={() => onOpenChange(false)}
                   disabled={isLoading}
                 >
-                  Hủy
+                  {t("cancel")}
                 </Button>
                 <Button type="submit" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {mode === "create" ? "Tạo lịch lặp" : "Gán học sinh"}
+                  {mode === "create" ? t("create_bulk") : t("assign_students")}
                 </Button>
               </DialogFooter>
             </form>
@@ -435,15 +437,15 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog 
-        open={conflicts.length > 0} 
+      <AlertDialog
+        open={conflicts.length > 0}
         onOpenChange={(open) => !open && setConflicts([])}
       >
         <AlertDialogContent className="max-w-[500px]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">Phát hiện trùng lịch</AlertDialogTitle>
+            <AlertDialogTitle className="text-destructive">{t("conflict_detected")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Một số ngày bạn chọn bị trùng với các ca dạy đã có sẵn:
+              {t("conflict_detected_desc")}
               <div className="mt-2 max-h-[200px] overflow-y-auto rounded-md border bg-slate-50 p-2 text-xs">
                 {conflicts.map((c, i) => (
                   <div key={i} className="py-1 border-b last:border-0">
@@ -452,7 +454,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                 ))}
               </div>
               <p className="mt-3 text-sm text-slate-600">
-                Nếu tiếp tục, hệ thống sẽ <strong>bỏ qua</strong> các ca bị trùng này và chỉ tạo các ca còn lại. Bạn có chắc chắn muốn tiếp tục?
+                {t("conflict_continue_desc")}
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -461,7 +463,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
               setConflicts([])
               setPendingValues(null)
             }}>
-              Hủy
+              {t("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
@@ -470,7 +472,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                 }
               }}
             >
-              Tiếp tục tạo
+              {t("continue_create")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

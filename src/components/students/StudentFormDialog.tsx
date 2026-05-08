@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type StudentRecord = {
   id: number
@@ -47,6 +48,7 @@ type Props = {
 }
 
 export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) {
+  const { t } = useTranslation()
   const utils = trpc.useUtils()
 
   const form = useForm<z.input<typeof studentCreateSchema>>({
@@ -62,7 +64,6 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
     },
   })
 
-  // Reset form khi dialog mở (cho cả create + edit)
   useEffect(() => {
     if (open) {
       form.reset({
@@ -79,10 +80,9 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   const createMut = trpc.student.create.useMutation({
     onSuccess: () => {
-      // Invalidate toàn bộ query liên quan đến student.list
       utils.student.list.invalidate()
       utils.report.invalidate()
-      toast.success("Đã thêm học sinh")
+      toast.success(t("student_added_success"))
       onOpenChange(false)
     },
     onError: (e) => toast.error(e.message),
@@ -92,7 +92,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
     onSuccess: () => {
       utils.student.list.invalidate()
       utils.report.invalidate()
-      toast.success("Đã cập nhật học sinh")
+      toast.success(t("student_updated_success"))
       onOpenChange(false)
     },
     onError: (e) => toast.error(e.message),
@@ -114,16 +114,16 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
       <DialogContent className="w-full h-full max-w-none sm:h-auto sm:max-w-md sm:max-h-[90vh] overflow-y-auto sm:rounded-lg top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
         <DialogHeader>
           <DialogTitle>
-            {mode === "create" ? "Thêm học sinh" : "Sửa học sinh"}
+            {mode === "create" ? t("add_student") : t("edit_student")}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="fullName">
-              Họ và tên <span className="text-red-500">*</span>
+              {t("full_name")} <span className="text-red-500">*</span>
             </Label>
-            <Input id="fullName" placeholder="Nhập họ tên" {...form.register("fullName")} />
+            <Input id="fullName" placeholder={t("enter_full_name")} {...form.register("fullName")} />
             {form.formState.errors.fullName && (
               <p className="text-xs text-red-600">
                 {form.formState.errors.fullName.message}
@@ -133,19 +133,19 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
           <div className="space-y-2">
             <Label htmlFor="grade">
-              Lớp <span className="text-red-500">*</span>
+              {t("grade")} <span className="text-red-500">*</span>
             </Label>
             <Select
               value={String(form.watch("grade"))}
               onValueChange={(v) => form.setValue("grade", Number(v))}
             >
               <SelectTrigger id="grade">
-                <SelectValue placeholder="Chọn lớp" />
+                <SelectValue placeholder={t("select_grade")} />
               </SelectTrigger>
               <SelectContent>
                 {GRADES.map((g) => (
                   <SelectItem key={g} value={String(g)}>
-                    Lớp {g}
+                    {t("grade")} {g}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -154,7 +154,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
           <div className="space-y-2">
             <Label htmlFor="tuitionFee">
-              Học phí / Buổi (VNĐ) <span className="text-red-500">*</span>
+              {t("tuition_fee_per_session")} <span className="text-red-500">*</span>
             </Label>
             <Controller
               control={form.control}
@@ -176,23 +176,23 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="isActive">Trạng thái</Label>
+            <Label htmlFor="isActive">{t("status")}</Label>
             <Select
               value={form.watch("isActive") ? "true" : "false"}
               onValueChange={(v) => form.setValue("isActive", v === "true")}
             >
               <SelectTrigger id="isActive">
-                <SelectValue placeholder="Chọn trạng thái" />
+                <SelectValue placeholder={t("select_status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Đang học</SelectItem>
-                <SelectItem value="false">Đã nghỉ</SelectItem>
+                <SelectItem value="true">{t("studying")}</SelectItem>
+                <SelectItem value="false">{t("dropped")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="parentPhone">SĐT phụ huynh</Label>
+            <Label htmlFor="parentPhone">{t("parent_phone")}</Label>
             <Input
               id="parentPhone"
               placeholder="0901234567"
@@ -206,12 +206,12 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="parentName">Tên phụ huynh</Label>
-            <Input id="parentName" placeholder="Nhập họ tên" {...form.register("parentName")} />
+            <Label htmlFor="parentName">{t("parent_name")}</Label>
+            <Input id="parentName" placeholder={t("enter_full_name")} {...form.register("parentName")} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Ghi chú</Label>
+            <Label htmlFor="notes">{t("notes")}</Label>
             <Textarea id="notes" rows={2} {...form.register("notes")} />
           </div>
 
@@ -222,14 +222,14 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Hủy
+              {t("cancel")}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending
-                ? "Đang lưu..."
+                ? t("saving")
                 : mode === "create"
-                  ? "Thêm"
-                  : "Cập nhật"}
+                  ? t("add")
+                  : t("update")}
             </Button>
           </DialogFooter>
         </form>

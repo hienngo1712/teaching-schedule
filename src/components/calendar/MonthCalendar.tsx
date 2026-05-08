@@ -20,8 +20,10 @@ import { SessionFormDialog } from "../sessions/SessionFormDialog"
 import { BulkCreateDialog } from "../sessions/BulkCreateDialog"
 import { SessionDetailDialog } from "../sessions/SessionDetailDialog"
 import { Badge } from "@/components/ui/badge"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export function MonthCalendar() {
+  const { t } = useTranslation()
   const { year, month } = useCalendar()
   const { filterParams, selectedStudentId } = useFilters()
   const exportRef = useRef<HTMLDivElement>(null)
@@ -189,11 +191,11 @@ export function MonthCalendar() {
           <div className="flex items-center justify-between px-1">
             <h3 className="font-bold text-slate-900 flex items-center gap-2">
               <div className="size-2 rounded-full bg-indigo-500" />
-              Lịch dạy {dayjs(selectedMobileDate).format("DD/MM/YYYY")}
+              {t("schedule_of")} {dayjs(selectedMobileDate).format("DD/MM/YYYY")}
             </h3>
             {selectedDateSessions.length > 0 && (
               <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                {selectedDateSessions.length} ca dạy
+                {selectedDateSessions.length} {t("sessions_suffix")}
               </span>
             )}
           </div>
@@ -202,13 +204,13 @@ export function MonthCalendar() {
             {selectedDateSessions.length === 0 ? (
               <div className="text-center py-10 bg-white rounded-xl border border-dashed border-slate-200">
                 <p className="text-slate-400 text-sm italic">
-                  Ngày {dayjs(selectedMobileDate).format("DD/MM")} bạn ko có lịch dạy nào
+                  {t("no_sessions_on_date").replace("{date}", dayjs(selectedMobileDate).format("DD/MM"))}
                 </p>
-                <button 
+                <button
                   onClick={() => handleEmptyClick(selectedMobileDate)}
                   className="mt-3 text-xs font-semibold text-indigo-600 hover:underline"
                 >
-                  + Thêm ca dạy mới
+                  {t("add_session")}
                 </button>
               </div>
             ) : (
@@ -232,11 +234,11 @@ export function MonthCalendar() {
                         {s.startTime} – {s.endTime}
                       </div>
                       <span className="text-slate-300">|</span>
-                      <span className="font-medium">{s.studentCount} Học sinh</span>
+                      <span className="font-medium">{s.studentCount} {t("students")}</span>
                     </div>
                   </div>
                   <Badge variant="secondary" className="shrink-0 text-[10px] font-bold">
-                    CHI TIẾT
+                    {t("details")}
                   </Badge>
                 </button>
               ))

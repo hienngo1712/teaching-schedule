@@ -17,6 +17,7 @@ import { trpc } from "@/lib/trpc"
 import { ATTENDANCE_LABEL, ATTENDANCE_STATUS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import type { AttendanceStatus } from "@/lib/schemas/attendance"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
   sessionId: number
@@ -31,15 +32,15 @@ type AttendanceState = {
 }
 
 export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
+  const { t } = useTranslation()
   const utils = trpc.useUtils()
-  
+
   const { data: attendanceData, isLoading } = trpc.attendance.get.useQuery({
     sessionId,
   })
 
   const [attendances, setAttendances] = useState<Record<number, AttendanceState>>({})
 
-  // Initialize state when data is loaded
   useEffect(() => {
     if (attendanceData) {
       const initialState: Record<number, AttendanceState> = {}
@@ -57,14 +58,14 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
 
   const updateMutation = trpc.attendance.update.useMutation({
     onSuccess: () => {
-      toast.success("Đã lưu điểm danh")
+      toast.success(t("save_attendance_success"))
       utils.attendance.get.invalidate({ sessionId })
       utils.report.invalidate()
       utils.session.getMonth.invalidate()
       onSaveSuccess?.()
     },
     onError: () => {
-      toast.error("Đã có lỗi xảy ra khi lưu điểm danh")
+      toast.error(t("save_attendance_error"))
     },
   })
 
@@ -116,83 +117,85 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
   }
 
   if (isLoading) {
-    return <div className="text-center py-4 text-slate-500">Đang tải danh sách học sinh...</div>
+    return <div className="text-center py-4 text-slate-500">{t("loading_students")}</div>
   }
 
   if (!attendanceData || attendanceData.length === 0) {
-    return <div className="text-center py-4 text-slate-500">Chưa có học sinh nào trong ca học này.</div>
+    return <div className="text-center py-4 text-slate-500">{t("no_students_in_session")}</div>
   }
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-md divide-y overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-500 text-xs">
-            <tr>
-              <th className="px-3 py-2 font-medium">Học sinh</th>
-              <th className="px-3 py-2 font-medium w-[160px]">Điểm danh</th>
-              <th className="px-3 py-2 font-medium w-[120px]">Học phí</th>
-              <th className="px-3 py-2 font-medium">Ghi chú</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {attendanceData.map((student) => {
-              const state = attendances[student.studentId]
-              if (!state) return null
+      <div className="border rounded-md overflow-hidden flex flex-col bg-white">
+        <div className="overflow-x-auto flex-1">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-500 text-xs border-b">
+              <tr>
+                <th className="px-3 py-2 font-medium">{t("student")}</th>
+                <th className="px-3 py-2 font-medium w-[160px]">{t("attendance_col")}</th>
+                <th className="px-3 py-2 font-medium w-[120px]">{t("tuition_col")}</th>
+                <th className="px-3 py-2 font-medium">{t("notes")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {attendanceData.map((student) => {
+                const state = attendances[student.studentId]
+                if (!state) return null
 
-              return (
-                <tr key={student.studentId} className="bg-white hover:bg-slate-50">
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-slate-900">{student.fullName}</div>
-                    <div className="text-xs text-slate-500">Lớp {student.grade}</div>
-                  </td>
-                  <td className="px-3 py-2">
-                    <Select
-                      value={state.attendance}
-                      onValueChange={(val) =>
-                        handleUpdateStatus(student.studentId, val as AttendanceStatus)
-                      }
-                    >
-                      <SelectTrigger
-                        className={cn(
-                          "w-full h-8 text-xs font-medium",
-                          state.attendance === "present" && "bg-green-50 text-green-700 border-green-200",
-                          state.attendance === "absent" && "bg-red-50 text-red-700 border-red-200",
-                          state.attendance === "late" && "bg-amber-50 text-amber-700 border-amber-200",
-                          state.attendance === "pending" && "bg-slate-50 text-slate-600 border-slate-200"
-                        )}
+                return (
+                  <tr key={student.studentId} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-3 py-2">
+                      <div className="font-medium text-slate-900">{student.fullName}</div>
+                      <div className="text-xs text-slate-500">{t("grade")} {student.grade}</div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Select
+                        value={state.attendance}
+                        onValueChange={(val) =>
+                          handleUpdateStatus(student.studentId, val as AttendanceStatus)
+                        }
                       >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(ATTENDANCE_STATUS).map(([, value]) => (
-                          <SelectItem key={value} value={value}>
-                            {ATTENDANCE_LABEL[value]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-3 py-2">
-                    <CurrencyInput
-                      value={state.fee}
-                      onChange={(val) => handleUpdateFee(student.studentId, val || 0)}
-                      className="w-full h-8 text-xs"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      placeholder="Ghi chú..."
-                      value={state.note}
-                      onChange={(e) => handleUpdateNote(student.studentId, e.target.value)}
-                      className="w-full h-8 text-xs"
-                    />
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                        <SelectTrigger
+                          className={cn(
+                            "w-full h-8 text-xs font-medium",
+                            state.attendance === "present" && "bg-green-50 text-green-700 border-green-200",
+                            state.attendance === "absent" && "bg-red-50 text-red-700 border-red-200",
+                            state.attendance === "late" && "bg-amber-50 text-amber-700 border-amber-200",
+                            state.attendance === "pending" && "bg-slate-50 text-slate-600 border-slate-200"
+                          )}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(ATTENDANCE_STATUS).map(([, value]) => (
+                            <SelectItem key={value} value={value}>
+                              {ATTENDANCE_LABEL[value]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <CurrencyInput
+                        value={state.fee}
+                        onChange={(val) => handleUpdateFee(student.studentId, val || 0)}
+                        className="w-full h-8 text-xs"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input
+                        placeholder={t("note")}
+                        value={state.note}
+                        onChange={(e) => handleUpdateNote(student.studentId, e.target.value)}
+                        className="w-full h-8 text-xs"
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="flex items-center justify-between pt-2">
@@ -204,7 +207,7 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
             className="text-xs text-slate-600"
           >
             <Check className="mr-1 size-3" />
-            Tất cả có mặt
+            {t("mark_all_present")}
           </Button>
           <Button
             variant="outline"
@@ -213,10 +216,10 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
             className="text-xs text-slate-600"
           >
             <X className="mr-1 size-3" />
-            Không học
+            {t("mark_all_absent")}
           </Button>
         </div>
-        
+
         <Button
           size="sm"
           onClick={handleSave}
@@ -225,7 +228,7 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
           {updateMutation.isPending && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
-          Lưu điểm danh
+          {t("save_attendance")}
         </Button>
       </div>
     </div>

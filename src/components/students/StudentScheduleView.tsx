@@ -1,13 +1,13 @@
 "use client"
 
 import { useMemo, useRef } from "react"
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +18,9 @@ import { Wallet } from "lucide-react"
 import type { SessionDTO } from "@/server/services/session.service"
 import { trpc } from "@/lib/trpc"
 import { ExportButton } from "../reports/ExportButton"
+import { usePagination } from "@/hooks/usePagination"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 interface StudentScheduleViewProps {
   studentId: number
@@ -30,10 +33,10 @@ export function StudentScheduleView({
   sessions,
   exportRef: externalRef,
 }: StudentScheduleViewProps) {
+  const { t } = useTranslation()
   const localRef = useRef<HTMLDivElement>(null)
   const exportRef = externalRef || localRef
 
-  // Try to get student info from sessions
   const studentInfoFromSessions = useMemo(() => {
     for (const session of sessions) {
       const s = session.students.find(st => st.studentId === studentId)
@@ -42,9 +45,8 @@ export function StudentScheduleView({
     return null
   }, [sessions, studentId])
 
-  // Fallback: fetch student info if not found in sessions
   const studentQuery = trpc.student.list.useQuery(
-    { search: "" }, 
+    { search: "" },
     { enabled: !studentInfoFromSessions }
   )
 
@@ -90,6 +92,16 @@ export function StudentScheduleView({
 
   }, [studentSessions, studentId])
 
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    paginatedData,
+    totalItems,
+    totalPages,
+  } = usePagination(studentSessions)
+
   if (!studentInfo && studentSessions.length === 0 && studentQuery.isPending) return null
 
   const filename = removeVietnameseTones(
@@ -99,51 +111,53 @@ export function StudentScheduleView({
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <ExportButton 
-          elementRef={exportRef as React.RefObject<HTMLDivElement>} 
-          filename={filename} 
+        <ExportButton
+          elementRef={exportRef as React.RefObject<HTMLDivElement>}
+          filename={filename}
         />
       </div>
-      
-      <div ref={exportRef}>
-        <Card className="overflow-hidden border-slate-200 shadow-md bg-white">
-          <CardHeader className="bg-slate-50 border-b">
+
+      <div ref={exportRef} className="space-y-4">
+        <Card className="border-slate-200 shadow-md bg-white">
+          <CardHeader className="bg-slate-50 border-b rounded-t-lg">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-xl font-bold text-slate-900 uppercase tracking-tight">
-                  Lịch học cá nhân
+                  {t("personal_schedule")}
                 </CardTitle>
                 <div className="text-sm text-slate-500 mt-1 flex flex-wrap gap-x-4">
-                  <span>Học sinh: <span className="font-semibold text-slate-700">{studentInfo?.fullName || "N/A"}</span></span>
-                  <span>Lớp: <span className="font-semibold text-slate-700">{studentInfo?.grade || "N/A"}</span></span>
+                  <span>{t("student")}: <span className="font-semibold text-slate-700">{studentInfo?.fullName || "N/A"}</span></span>
+                  <span>{t("grade")}: <span className="font-semibold text-slate-700">{studentInfo?.grade || "N/A"}</span></span>
                 </div>
               </div>
               <div className="text-right">
                 <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50 font-bold px-3 py-1 text-sm">
-                  Tỉ lệ chuyên cần: {summary.rate}%
+                  {t("attendance_rate_with_colon")} {summary.rate}%
                 </Badge>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
-                  <TableHead className="w-[60px] text-center font-bold">STT</TableHead>
-                  <TableHead className="font-bold">Ngày học</TableHead>
-                  <TableHead className="font-bold">Thứ</TableHead>
-                  <TableHead className="font-bold">Giờ học</TableHead>
-                  <TableHead className="font-bold text-right">Học phí</TableHead>
-                  <TableHead className="font-bold">Điểm danh</TableHead>
-                  <TableHead className="font-bold">Ghi chú</TableHead>
+                  <TableHead className="w-[60px] text-center font-bold">{t("stt")}</TableHead>
+                  <TableHead className="font-bold">{t("study_date")}</TableHead>
+                  <TableHead className="font-bold">{t("weekday")}</TableHead>
+                  <TableHead className="font-bold">{t("time")}</TableHead>
+                  <TableHead className="font-bold text-right">{t("tuition_col")}</TableHead>
+                  <TableHead className="font-bold">{t("attendance_col")}</TableHead>
+                  <TableHead className="font-bold">{t("notes")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {studentSessions.map((session, index) => {
+                {paginatedData.map((session, index) => {
                   const studentData = session.students.find(st => st.studentId === studentId)
+                  const actualIndex = (currentPage - 1) * pageSize + index + 1
                   return (
-                    <TableRow key={session.id} className="hover:bg-slate-50/50">
-                      <TableCell className="text-center text-slate-500 font-medium">{index + 1}</TableCell>
+                    <TableRow key={session.id} className="hover:bg-slate-50/50 transition-colors">
+                      <TableCell className="text-center text-slate-500 font-medium">{actualIndex}</TableCell>
                       <TableCell className="font-medium text-slate-700">{formatDate(session.sessionDate)}</TableCell>
                       <TableCell className="text-slate-600">{formatDayOfWeek(session.sessionDate)}</TableCell>
                       <TableCell className="text-slate-600">{session.startTime} – {session.endTime}</TableCell>
@@ -151,14 +165,15 @@ export function StudentScheduleView({
                         {formatCurrency(studentData?.fee)}
                       </TableCell>
                       <TableCell>
-                        <Badge 
+                        <Badge
                           variant="secondary"
-                          className={
+                          className={cn(
+                            "border",
                             studentData?.attendance === ATTENDANCE_STATUS.PRESENT ? "bg-green-100 text-green-700 border-green-200" :
                             studentData?.attendance === ATTENDANCE_STATUS.ABSENT ? "bg-red-100 text-red-700 border-red-200" :
                             studentData?.attendance === ATTENDANCE_STATUS.LATE ? "bg-amber-100 text-amber-700 border-amber-200" :
                             "bg-slate-100 text-slate-600 border-slate-200"
-                          }
+                          )}
                         >
                           {studentData ? ATTENDANCE_LABEL[studentData.attendance] : "N/A"}
                         </Badge>
@@ -172,34 +187,34 @@ export function StudentScheduleView({
                 {studentSessions.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 text-slate-400 italic">
-                      Không có ca dạy nào cho học sinh này trong tháng.
+                      {t("no_sessions_for_student")}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
-          <div className="p-4 bg-slate-50 border-t flex flex-col sm:flex-row justify-between gap-2 text-sm text-slate-600">
+          <div className="p-4 bg-slate-50 border-t flex flex-col sm:flex-row justify-between gap-2 text-sm text-slate-600 rounded-b-lg">
             <div className="flex gap-x-4">
-              <span>Tổng số buổi: <span className="font-bold text-slate-800">{summary.total}</span></span>
-              <span>Có mặt: <span className="text-green-600 font-bold">{summary.present}</span></span>
-              <span>Vắng: <span className="text-red-600 font-bold">{summary.absent}</span></span>
-              <span>Muộn: <span className="text-amber-600 font-bold">{summary.late}</span></span>
-              <span>Học phí: <span className="text-indigo-600 font-bold">{formatCurrency(summary.totalFee)}</span></span>
+              <span>{t("total_sessions")} <span className="font-bold text-slate-800">{summary.total}</span></span>
+              <span>{t("present")} <span className="text-green-600 font-bold">{summary.present}</span></span>
+              <span>{t("absent")} <span className="text-red-600 font-bold">{summary.absent}</span></span>
+              <span>{t("late")} <span className="text-amber-600 font-bold">{summary.late}</span></span>
+              <span>{t("tuition_with_colon")} <span className="text-indigo-600 font-bold">{formatCurrency(summary.totalFee)}</span></span>
             </div>
             <div className="text-slate-400 italic">
-              Ngày xuất: {formatDate(new Date())}
+              {t("export_date")} {formatDate(new Date())}
             </div>
           </div>
         </Card>
 
-        {/* Tuition Status Section - Only visible if not exporting */}
-        <div className="mt-6 export-hide">
+        <div className="mt-6 export-hide pb-6">
           <Card className="border-slate-200 shadow-sm bg-white">
             <CardHeader className="py-4">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <Wallet className="size-5 text-indigo-600" />
-                Trạng thái đóng học phí
+                {t("tuition_status")}
               </CardTitle>
             </CardHeader>
             <CardContent className="pb-6">
@@ -208,11 +223,22 @@ export function StudentScheduleView({
           </Card>
         </div>
       </div>
+
+      <div className="export-hide">
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          totalItems={totalItems}
+        />
+      </div>
     </div>
   )
 }
-
 function TuitionStatusCard({ studentId, year, month }: { studentId: number, year: number, month: number }) {
+  const { t } = useTranslation()
   const { data: statusList, isLoading } = trpc.tuition.getMonthlyStatus.useQuery({
     year,
     month,
@@ -226,11 +252,11 @@ function TuitionStatusCard({ studentId, year, month }: { studentId: number, year
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div className="p-4 rounded-lg bg-slate-50 border border-slate-100">
-        <p className="text-sm text-slate-500 font-medium">Học phí dự kiến</p>
+        <p className="text-sm text-slate-500 font-medium">{t("expected_tuition")}</p>
         <p className="text-xl font-bold text-slate-900 mt-1">{formatCurrency(status.totalExpected)}</p>
       </div>
       <div className="p-4 rounded-lg bg-slate-50 border border-slate-100">
-        <p className="text-sm text-slate-500 font-medium">Đã đóng</p>
+        <p className="text-sm text-slate-500 font-medium">{t("paid")}</p>
         <p className={cn(
           "text-xl font-bold mt-1",
           status.isFullPaid ? "text-green-600" : status.paidAmount > 0 ? "text-amber-600" : "text-red-600"
@@ -239,14 +265,14 @@ function TuitionStatusCard({ studentId, year, month }: { studentId: number, year
         </p>
       </div>
       <div className="p-4 rounded-lg bg-slate-50 border border-slate-100">
-        <p className="text-sm text-slate-500 font-medium">Trạng thái</p>
+        <p className="text-sm text-slate-500 font-medium">{t("status")}</p>
         <div className="mt-1">
           {status.isFullPaid ? (
-            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Đã đóng đủ</Badge>
+            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">{t("fully_paid")}</Badge>
           ) : status.paidAmount > 0 ? (
-            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">Chưa đóng đủ</Badge>
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">{t("partial_paid")}</Badge>
           ) : (
-            <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">Chưa đóng</Badge>
+            <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">{t("unpaid")}</Badge>
           )}
         </div>
       </div>

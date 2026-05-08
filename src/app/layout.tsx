@@ -2,12 +2,9 @@ import type { Metadata } from "next"
 import localFont from "next/font/local"
 import "./globals.css"
 import { TRPCProvider } from "@/components/providers/TRPCProvider"
+import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { Toaster } from "@/components/ui/sonner"
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import dayjs from "dayjs"
-import "dayjs/locale/vi"
-
-dayjs.locale("vi")
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -25,22 +22,22 @@ export const metadata: Metadata = {
   description: "Ứng dụng quản lý lịch dạy học cá nhân",
 }
 
-// Root layout: KHÔNG gọi auth() để /login không tốn JWT decode + cookie parse.
-// Auth + SessionProvider chuyển vào (app)/layout.tsx — chỉ chạy cho route protected.
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="vi">
+    <html lang="vi" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <TRPCProvider>
-          {children}
-          <Toaster richColors position="top-right" />
-          <SpeedInsights />
+          <LanguageProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+            <SpeedInsights />
+          </LanguageProvider>
         </TRPCProvider>
       </body>
     </html>

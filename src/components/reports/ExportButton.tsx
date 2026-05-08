@@ -3,6 +3,7 @@
 import { Camera, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useExport } from "@/hooks/useExport"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 interface ExportButtonProps {
   elementRef: React.RefObject<HTMLDivElement>
@@ -13,9 +14,11 @@ interface ExportButtonProps {
 export function ExportButton({
   elementRef,
   filename,
-  label = "Chụp lịch (PNG)",
+  label,
 }: ExportButtonProps) {
+  const { t } = useTranslation()
   const { isCapturing, captureElement } = useExport()
+  const displayLabel = label ?? t("capture_schedule_png")
 
   return (
     <Button
@@ -36,7 +39,7 @@ export function ExportButton({
       ) : (
         <Camera className="mr-2 h-4 w-4" />
       )}
-      {label}
+      {displayLabel}
     </Button>
   )
 }

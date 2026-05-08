@@ -8,25 +8,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/ui/password-input"
 import { loginAction, type LoginResult } from "./actions"
-
-const ERROR_MESSAGES: Record<
-  Exclude<LoginResult, { ok: true }>["error"],
-  string
-> = {
-  MISSING_FIELDS: "Vui lòng nhập tên đăng nhập và mật khẩu.",
-  // Không nói rõ username có tồn tại hay không
-  INVALID_CREDENTIALS: "Tên đăng nhập hoặc mật khẩu không đúng.",
-  RATE_LIMITED:
-    "Tài khoản tạm khóa 15 phút do đăng nhập sai nhiều lần. Vui lòng thử lại sau.",
-}
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard"
+  const { t } = useTranslation()
 
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const ERROR_MESSAGES: Record<
+    Exclude<LoginResult, { ok: true }>["error"],
+    string
+  > = {
+    MISSING_FIELDS: t("missing_fields"),
+    INVALID_CREDENTIALS: t("invalid_credentials"),
+    RATE_LIMITED: t("rate_limited_msg"),
+  }
 
   function handleSubmit(formData: FormData) {
     setError(null)
@@ -44,7 +44,7 @@ export function LoginForm() {
   return (
     <form action={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="username">Tên đăng nhập</Label>
+        <Label htmlFor="username">{t("username")}</Label>
         <Input
           id="username"
           name="username"
@@ -55,7 +55,7 @@ export function LoginForm() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Mật khẩu</Label>
+        <Label htmlFor="password">{t("password")}</Label>
         <PasswordInput
           id="password"
           name="password"
@@ -75,13 +75,13 @@ export function LoginForm() {
       )}
 
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? "Đang đăng nhập..." : "Đăng nhập"}
+        {isPending ? t("logging_in") : t("login")}
       </Button>
 
       <div className="text-center text-sm">
-        <span className="text-slate-500">Chưa có tài khoản? </span>
+        <span className="text-slate-500">{t("no_account")}{" "}</span>
         <Link href="/register" className="text-indigo-600 hover:underline font-medium">
-          Đăng ký ngay
+          {t("register_now")}
         </Link>
       </div>
     </form>

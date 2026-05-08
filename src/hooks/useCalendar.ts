@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import type { SessionDTO } from "@/server/services/session.service"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export type CalendarCell = {
   date: string // "YYYY-MM-DD"
@@ -12,11 +13,13 @@ export type CalendarCell = {
   sessions: SessionDTO[]
 }
 
-const VN_MONTH_LABEL = (month: number, year: number) =>
-  `Tháng ${month} / ${year}`
-
-export function buildMonthLabel(year: number, month: number): string {
-  return VN_MONTH_LABEL(month, year)
+export function buildMonthLabel(year: number, month: number, t?: (key: any) => string): string {
+  if (t) {
+    return t("month_year_label")
+      .replace("{month}", String(month))
+      .replace("{year}", String(year))
+  }
+  return `Tháng ${month} / ${year}`
 }
 
 /**
@@ -120,6 +123,7 @@ export function buildCalendarGrid(
 }
 
 export function useCalendar() {
+  const { t } = useTranslation()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -136,7 +140,7 @@ export function useCalendar() {
     return m ? parseInt(m, 10) : now.getMonth() + 1
   }, [searchParams, now])
 
-  const monthLabel = useMemo(() => buildMonthLabel(year, month), [year, month])
+  const monthLabel = useMemo(() => buildMonthLabel(year, month, t), [year, month, t])
 
   const createQueryString = useCallback(
     (params: Record<string, string | number | null>) => {

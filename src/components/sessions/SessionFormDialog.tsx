@@ -48,11 +48,12 @@ import {
 import { trpc } from "@/lib/trpc"
 import type { SessionDTO } from "@/server/services/session.service"
 import { StudentPicker } from "./StudentPicker"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  initialDate?: string // "YYYY-MM-DD"
+  initialDate?: string
   editingSession?: SessionDTO
   onSuccess?: () => void
 }
@@ -64,6 +65,7 @@ export function SessionFormDialog({
   editingSession,
   onSuccess,
 }: Props) {
+  const { t } = useTranslation()
   const isEdit = !!editingSession
   const [isUpdateFuture, setIsUpdateFuture] = useState(false)
   const utils = trpc.useUtils()
@@ -83,7 +85,6 @@ export function SessionFormDialog({
     },
   })
 
-  // Set default subject if any is marked as default
   useEffect(() => {
     if (!isEdit && subjects.length > 0 && !form.getValues("subjectId")) {
       const defaultSubject = subjects.find((s) => s.isDefault) || subjects[0]
@@ -91,7 +92,6 @@ export function SessionFormDialog({
     }
   }, [subjects, isEdit, form])
 
-  // Reset form when editingSession or initialDate changes
   useEffect(() => {
     if (editingSession) {
       form.reset({
@@ -112,7 +112,7 @@ export function SessionFormDialog({
 
   const createMutation = trpc.session.create.useMutation({
     onSuccess: () => {
-      toast.success("Tạo ca dạy thành công")
+      toast.success(t("session_created_success"))
       utils.session.getMonth.invalidate()
       utils.report.invalidate()
       onOpenChange(false)
@@ -122,14 +122,14 @@ export function SessionFormDialog({
       if (err.data?.code === "CONFLICT") {
         toast.error(err.message)
       } else {
-        toast.error("Đã có lỗi xảy ra khi tạo ca dạy")
+        toast.error(t("session_create_error"))
       }
     },
   })
 
   const updateMutation = trpc.session.update.useMutation({
     onSuccess: () => {
-      toast.success("Cập nhật ca dạy thành công")
+      toast.success(t("session_updated_success"))
       utils.session.getMonth.invalidate()
       utils.report.invalidate()
       onOpenChange(false)
@@ -139,14 +139,14 @@ export function SessionFormDialog({
       if (err.data?.code === "CONFLICT") {
         toast.error(err.message)
       } else {
-        toast.error("Đã có lỗi xảy ra khi cập nhật ca dạy")
+        toast.error(t("session_update_error"))
       }
     },
   })
 
   const updateFutureMutation = trpc.session.updateFuture.useMutation({
     onSuccess: (res) => {
-      toast.success(`Đã cập nhật ${res.updated} ca dạy lặp`)
+      toast.success(t("session_update_future_success").replace("{count}", String(res.updated)))
       utils.session.getMonth.invalidate()
       utils.report.invalidate()
       onOpenChange(false)
@@ -156,7 +156,7 @@ export function SessionFormDialog({
       if (err.data?.code === "CONFLICT") {
         toast.error(err.message)
       } else {
-        toast.error(err.message || "Đã có lỗi xảy ra khi cập nhật chuỗi ca dạy")
+        toast.error(err.message || t("session_series_update_error"))
       }
     },
   })
@@ -186,7 +186,7 @@ export function SessionFormDialog({
       <DialogContent className="w-full h-full max-w-none sm:h-auto sm:max-w-[500px] sm:max-h-[90vh] overflow-y-auto sm:rounded-lg top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Sửa ca dạy" : "Tạo ca dạy mới"}
+            {isEdit ? t("edit_session") : t("create_session")}
           </DialogTitle>
         </DialogHeader>
 
@@ -198,7 +198,7 @@ export function SessionFormDialog({
                 name="sessionDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Ngày dạy</FormLabel>
+                    <FormLabel>{t("session_date")}</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -212,7 +212,7 @@ export function SessionFormDialog({
                             {field.value ? (
                               dayjs(field.value).format("DD/MM/YYYY")
                             ) : (
-                              <span>Chọn ngày</span>
+                              <span>{t("pick_date")}</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -240,14 +240,14 @@ export function SessionFormDialog({
                 name="subjectId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Môn học</FormLabel>
+                    <FormLabel>{t("subject")}</FormLabel>
                     <Select
                       onValueChange={(val) => field.onChange(Number(val))}
                       value={String(field.value)}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn môn" />
+                          <SelectValue placeholder={t("select_subject")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -276,7 +276,7 @@ export function SessionFormDialog({
                 name="startTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bắt đầu (HH:mm)</FormLabel>
+                    <FormLabel>{t("start_time")}</FormLabel>
                     <FormControl>
                       <TimeInput {...field} />
                     </FormControl>
@@ -289,7 +289,7 @@ export function SessionFormDialog({
                 name="endTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kết thúc (HH:mm)</FormLabel>
+                    <FormLabel>{t("end_time")}</FormLabel>
                     <FormControl>
                       <TimeInput {...field} />
                     </FormControl>
@@ -304,9 +304,9 @@ export function SessionFormDialog({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tiêu đề (không bắt buộc)</FormLabel>
+                  <FormLabel>{t("title_optional")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ví dụ: Nhóm nâng cao, Lớp 7A..." {...field} />
+                    <Input placeholder={t("title")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -318,7 +318,7 @@ export function SessionFormDialog({
               name="studentIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Học sinh</FormLabel>
+                  <FormLabel>{t("student")}</FormLabel>
                   <FormControl>
                     <StudentPicker
                       value={field.value || []}
@@ -335,10 +335,10 @@ export function SessionFormDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ghi chú</FormLabel>
+                  <FormLabel>{t("notes")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Nội dung bài học, dặn dò..."
+                      placeholder={t("session_notes")}
                       className="resize-none"
                       {...field}
                     />
@@ -356,7 +356,7 @@ export function SessionFormDialog({
                   onCheckedChange={(val) => setIsUpdateFuture(!!val)}
                 />
                 <Label htmlFor="update-future" className="text-sm font-medium cursor-pointer">
-                  Áp dụng cho các ca dạy lặp trong tương lai (cùng thứ, giờ, môn)
+                  {t("apply_to_recurring")}
                 </Label>
               </div>
             )}
@@ -368,11 +368,11 @@ export function SessionFormDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={isLoading}
               >
-                Hủy
+                {t("cancel")}
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEdit ? "Cập nhật" : "Tạo ca dạy"}
+                {isEdit ? t("update") : t("create_session")}
               </Button>
             </DialogFooter>
           </form>

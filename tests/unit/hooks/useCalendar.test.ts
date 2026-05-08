@@ -29,9 +29,17 @@ describe("useCalendar grid", () => {
     expect(grid.length % 7).toBe(0)
   })
 
-  it("monthLabel đúng format", () => {
+  it("monthLabel đúng format mặc định (VN)", () => {
     expect(buildMonthLabel(2026, 4)).toBe("Tháng 4 / 2026")
     expect(buildMonthLabel(2026, 12)).toBe("Tháng 12 / 2026")
+  })
+
+  it("monthLabel đúng format với localization (EN)", () => {
+    const t = (key: any) => {
+      if (key === "month_year_label") return "Month {month} / {year}"
+      return key
+    }
+    expect(buildMonthLabel(2026, 4, t)).toBe("Month 4 / 2026")
   })
 
   it("daysOfWeek đúng thứ tự T2–CN", () => {

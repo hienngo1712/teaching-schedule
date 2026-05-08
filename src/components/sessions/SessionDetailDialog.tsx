@@ -42,6 +42,7 @@ import { trpc } from "@/lib/trpc"
 import type { SessionDTO } from "@/server/services/session.service"
 import { AttendancePanel } from "./AttendancePanel"
 import { StudentPicker } from "./StudentPicker"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
   open: boolean
@@ -56,6 +57,7 @@ export function SessionDetailDialog({
   session,
   onEdit,
 }: Props) {
+  const { t } = useTranslation()
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false)
   const [isAddStudentsOpen, setIsAddStudentsOpen] = useState(false)
@@ -72,63 +74,62 @@ export function SessionDetailDialog({
 
   const deleteMutation = trpc.session.delete.useMutation({
     onSuccess: () => {
-      toast.success("Đã xóa ca dạy")
+      toast.success(t("delete_session_success"))
       utils.session.getMonth.invalidate()
       utils.report.invalidate()
       onOpenChange(false)
     },
     onError: () => {
-      toast.error("Đã có lỗi xảy ra khi xóa ca dạy")
+      toast.error(t("delete_session_error"))
     },
   })
 
   const deleteFutureMutation = trpc.session.deleteFuture.useMutation({
     onSuccess: (res) => {
-      toast.success(`Đã xóa ${res.deleted} ca dạy lặp`)
+      toast.success(t("delete_recurring_success").replace("{count}", String(res.deleted)))
       utils.session.getMonth.invalidate()
       utils.report.invalidate()
       onOpenChange(false)
     },
     onError: (err) => {
-      toast.error(err.message || "Đã có lỗi xảy ra khi xóa chuỗi ca dạy")
+      toast.error(err.message || t("delete_series_error"))
     },
   })
 
-
   const duplicateMutation = trpc.session.duplicate.useMutation({
     onSuccess: () => {
-      toast.success("Đã nhân bản ca dạy thành công")
+      toast.success(t("duplicate_success"))
       utils.session.getMonth.invalidate()
       setIsDuplicateDialogOpen(false)
     },
     onError: (err) => {
-      toast.error(err.message || "Đã có lỗi xảy ra khi nhân bản")
+      toast.error(err.message || t("duplicate_error"))
     },
   })
 
   const addStudentsMutation = trpc.session.addStudents.useMutation({
     onSuccess: () => {
-      toast.success("Đã cập nhật danh sách học sinh")
+      toast.success(t("update_students_success"))
       utils.session.getMonth.invalidate()
       utils.report.invalidate()
       utils.attendance.get.invalidate({ sessionId: session.id })
       setIsAddStudentsOpen(false)
     },
     onError: (err) => {
-      toast.error(err.message || "Đã có lỗi xảy ra")
+      toast.error(err.message || t("generic_error"))
     },
   })
 
   const addRecurringMutation = trpc.session.addRecurringStudents.useMutation({
     onSuccess: (res) => {
-      toast.success(`Đã thêm học sinh vào ${res.updatedSessions} ca dạy khớp lịch.`)
+      toast.success(t("add_recurring_students_success").replace("{count}", String(res.updatedSessions)))
       utils.session.getMonth.invalidate()
       utils.report.invalidate()
       utils.attendance.get.invalidate({ sessionId: session.id })
       setIsAddStudentsOpen(false)
     },
     onError: (err) => {
-      toast.error(err.message || "Đã có lỗi xảy ra")
+      toast.error(err.message || t("generic_error"))
     },
   })
 
@@ -157,10 +158,10 @@ export function SessionDetailDialog({
   const handleSaveStudents = () => {
     if (isRecurring) {
       if (selectedStudentIds.length === 0) {
-        toast.error("Vui lòng chọn ít nhất một học sinh")
+        toast.error(t("select_at_least_one_student"))
         return
       }
-      
+
       const vnDayIndex = (dayjs(session.sessionDate).day() + 6) % 7
       addRecurringMutation.mutate({
         studentIds: selectedStudentIds,
@@ -209,29 +210,29 @@ export function SessionDetailDialog({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Menu hành động">
+                <Button variant="ghost" size="icon" aria-label={t("actions")}>
                   <MoreVertical className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onEdit(session)}>
                   <Edit2 className="mr-2 size-4" />
-                  Sửa ca dạy
+                  {t("edit_session")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleOpenAddStudents}>
                   <UserPlus className="mr-2 size-4" />
-                  Thêm học sinh
+                  {t("add_student")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsDuplicateDialogOpen(true)}>
                   <Copy className="mr-2 size-4" />
-                  Nhân bản ca dạy
+                  {t("duplicate_session")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-red-600 focus:text-red-600"
                   onClick={() => setIsDeleteDialogOpen(true)}
                 >
                   <Trash2 className="mr-2 size-4" />
-                  Xóa ca dạy
+                  {t("delete_session")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -239,17 +240,19 @@ export function SessionDetailDialog({
 
           {session.notes && (
             <div className="bg-slate-50 p-3 rounded-md text-sm text-slate-600 whitespace-pre-wrap">
-              <span className="font-semibold block mb-1">Ghi chú:</span>
+              <span className="font-semibold block mb-1">{t("notes")}</span>
               {session.notes}
             </div>
           )}
 
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-slate-900">Điểm danh học sinh</h3>
-              <Badge variant="outline">{session.studentCount} học sinh</Badge>
+              <h3 className="font-semibold text-slate-900">{t("attendance")}</h3>
+              <Badge variant="outline">
+                {t("students_count").replace("{count}", String(session.studentCount))}
+              </Badge>
             </div>
-            
+
             <AttendancePanel
               sessionId={session.id}
               onSaveSuccess={() => onOpenChange(false)}
@@ -261,7 +264,7 @@ export function SessionDetailDialog({
       <Dialog open={isAddStudentsOpen} onOpenChange={setIsAddStudentsOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Quản lý học sinh trong ca</DialogTitle>
+            <DialogTitle>{t("manage_session_students")}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <StudentPicker
@@ -271,20 +274,20 @@ export function SessionDetailDialog({
 
             <div className="pt-4 border-t space-y-3">
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="recur" 
-                  checked={isRecurring} 
-                  onCheckedChange={(val) => setIsRecurring(!!val)} 
+                <Checkbox
+                  id="recur"
+                  checked={isRecurring}
+                  onCheckedChange={(val) => setIsRecurring(!!val)}
                 />
                 <Label htmlFor="recur" className="text-sm font-medium cursor-pointer">
-                  Áp dụng cho tất cả các buổi cùng khung giờ & thứ này
+                  {t("apply_to_recurring")}
                 </Label>
               </div>
 
               {isRecurring && (
                 <div className="pl-6 animate-in slide-in-from-top-1 duration-200">
                   <div className="flex flex-col gap-2">
-                    <Label className="text-xs text-slate-500">Đến ngày:</Label>
+                    <Label className="text-xs text-slate-500">{t("until_date")}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -299,7 +302,7 @@ export function SessionDetailDialog({
                           {recurEndDate ? (
                             dayjs(recurEndDate).format("DD/MM/YYYY")
                           ) : (
-                            <span>Chọn ngày</span>
+                            <span>{t("pick_date")}</span>
                           )}
                         </Button>
                       </PopoverTrigger>
@@ -316,7 +319,9 @@ export function SessionDetailDialog({
                     </Popover>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1">
-                    Hệ thống sẽ tìm các ca dạy khớp giờ vào các ngày cùng thứ trong khoảng từ {dayjs(session.sessionDate).format("DD/MM")} đến {dayjs(recurEndDate).format("DD/MM/YYYY")}.
+                    {t("recurring_note")
+                      .replace("{start}", dayjs(session.sessionDate).format("DD/MM"))
+                      .replace("{end}", dayjs(recurEndDate).format("DD/MM/YYYY"))}
                   </p>
                 </div>
               )}
@@ -328,7 +333,7 @@ export function SessionDetailDialog({
               onClick={() => setIsAddStudentsOpen(false)}
               disabled={isSaving}
             >
-              Hủy
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleSaveStudents}
@@ -337,7 +342,7 @@ export function SessionDetailDialog({
               {isSaving && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {isRecurring ? "Gán vào chuỗi" : "Lưu thay đổi"}
+              {isRecurring ? t("assign_to_series") : t("save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -346,11 +351,11 @@ export function SessionDetailDialog({
       <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Nhân bản ca dạy</DialogTitle>
+            <DialogTitle>{t("duplicate_session")}</DialogTitle>
           </DialogHeader>
           <div className="py-4 flex flex-col items-center">
             <p className="text-sm text-slate-500 mb-4 text-center">
-              Chọn ngày để nhân bản ca dạy này. Giờ dạy và danh sách học sinh sẽ được giữ nguyên.
+              {t("duplicate_session_desc")}
             </p>
             <Calendar
               mode="single"
@@ -366,7 +371,7 @@ export function SessionDetailDialog({
               onClick={() => setIsDuplicateDialogOpen(false)}
               disabled={duplicateMutation.isPending}
             >
-              Hủy
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleDuplicate}
@@ -375,7 +380,7 @@ export function SessionDetailDialog({
               {duplicateMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Nhân bản
+              {t("duplicate")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -384,9 +389,9 @@ export function SessionDetailDialog({
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+            <AlertDialogTitle>{t("confirm_delete")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Hành động này không thể hoàn tác. Ca dạy này và toàn bộ dữ liệu điểm danh liên quan sẽ bị xóa vĩnh viễn.
+              {t("confirm_delete_desc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -397,13 +402,13 @@ export function SessionDetailDialog({
               onCheckedChange={(val) => setIsDeleteFuture(!!val)}
             />
             <Label htmlFor="delete-future" className="text-sm font-medium cursor-pointer">
-              Xóa cả các ca dạy lặp trong tương lai (cùng thứ, giờ, môn)
+              {t("delete_future_recurring")}
             </Label>
           </div>
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMutation.isPending || deleteFutureMutation.isPending}>
-              Hủy
+              {t("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
@@ -413,7 +418,7 @@ export function SessionDetailDialog({
               {(deleteMutation.isPending || deleteFutureMutation.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Xóa ca dạy
+              {t("delete_session")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

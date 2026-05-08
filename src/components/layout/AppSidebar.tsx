@@ -11,6 +11,7 @@ import {
   GraduationCap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 const ICONS = {
   LayoutDashboard,
@@ -20,22 +21,23 @@ const ICONS = {
   Wallet,
 } as const
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Tổng quan", icon: "LayoutDashboard" as const },
-  { href: "/calendar", label: "Lịch dạy", icon: "CalendarDays" as const },
-  { href: "/students", label: "Học sinh", icon: "Users" as const },
-  { href: "/tuition", label: "Học phí", icon: "Wallet" as const },
-  { href: "/reports", label: "Báo cáo", icon: "BarChart3" as const },
-]
-
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
+  const { t } = useTranslation()
+
+  const NAV_ITEMS = [
+    { href: "/dashboard", label: t("dashboard"), icon: "LayoutDashboard" as const },
+    { href: "/calendar", label: t("calendar"), icon: "CalendarDays" as const },
+    { href: "/students", label: t("students"), icon: "Users" as const },
+    { href: "/tuition", label: t("tuition"), icon: "Wallet" as const },
+    { href: "/reports", label: t("reports"), icon: "BarChart3" as const },
+  ]
 
   return (
     <aside className="h-full w-60 shrink-0 border-r border-slate-200 bg-white flex flex-col">
       <div className="h-14 px-4 flex items-center gap-2 border-b border-slate-200">
         <GraduationCap className="size-6 text-indigo-600" />
-        <span className="font-semibold text-slate-900">Lịch dạy</span>
+        <span className="font-semibold text-slate-900">{t("calendar")}</span>
       </div>
       <nav className="p-2 flex flex-col gap-1">
         {NAV_ITEMS.map((item) => {

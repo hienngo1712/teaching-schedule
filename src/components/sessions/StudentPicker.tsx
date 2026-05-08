@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import { trpc } from "@/lib/trpc"
 import { GRADES } from "@/lib/constants"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
   value: number[]
@@ -21,6 +22,7 @@ type Props = {
 }
 
 export function StudentPicker({ value, onChange }: Props) {
+  const { t } = useTranslation()
   const [search, setSearch] = useState("")
   const [grade, setGrade] = useState<string>("all")
 
@@ -68,7 +70,7 @@ export function StudentPicker({ value, onChange }: Props) {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 size-4 text-slate-400" />
           <Input
-            placeholder="Tìm tên học sinh..."
+            placeholder={t("search_student")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8"
@@ -76,13 +78,13 @@ export function StudentPicker({ value, onChange }: Props) {
         </div>
         <Select value={grade} onValueChange={setGrade}>
           <SelectTrigger className="w-[120px]">
-            <SelectValue placeholder="Lớp" />
+            <SelectValue placeholder={t("grade")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tất cả lớp</SelectItem>
+            <SelectItem value="all">{t("all_grades")}</SelectItem>
             {GRADES.map((g) => (
               <SelectItem key={g} value={String(g)}>
-                Lớp {g}
+                {t("grade")} {g}
               </SelectItem>
             ))}
           </SelectContent>
@@ -101,18 +103,18 @@ export function StudentPicker({ value, onChange }: Props) {
               htmlFor="select-all"
               className="flex-1 cursor-pointer text-sm font-semibold"
             >
-              Chọn tất cả ({filteredStudents.length})
+              {t("select_all_count").replace("{count}", String(filteredStudents.length))}
             </Label>
           </div>
         )}
         <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
           {isLoading ? (
             <div className="text-center py-4 text-sm text-slate-500">
-              Đang tải danh sách...
+              {t("loading")}
             </div>
           ) : filteredStudents.length === 0 ? (
             <div className="text-center py-4 text-sm text-slate-500">
-              Không tìm thấy học sinh nào
+              {t("no_students_found")}
             </div>
           ) : (
             filteredStudents.map((s) => (
@@ -131,7 +133,7 @@ export function StudentPicker({ value, onChange }: Props) {
                 >
                   <span className="font-medium">{s.fullName}</span>
                   <span className="ml-2 text-slate-500 text-xs">
-                    Lớp {s.grade}
+                    {t("grade")} {s.grade}
                   </span>
                 </Label>
               </div>
@@ -140,7 +142,7 @@ export function StudentPicker({ value, onChange }: Props) {
         </div>
       </div>
       <div className="text-xs text-slate-500">
-        Đã chọn: {value.length} học sinh
+        {t("selected_count").replace("{count}", String(value.length))}
       </div>
     </div>
   )

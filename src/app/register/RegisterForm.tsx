@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export function RegisterForm() {
   const router = useRouter()
+  const { t } = useTranslation()
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -33,7 +35,7 @@ export function RegisterForm() {
 
   const mutation = trpc.auth.register.useMutation({
     onSuccess: () => {
-      toast.success("Đăng ký thành công! Vui lòng đăng nhập.")
+      toast.success(t("register_success"))
       router.push("/login")
     },
     onError: (err) => {
@@ -53,7 +55,7 @@ export function RegisterForm() {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tên đăng nhập</FormLabel>
+              <FormLabel>{t("username")}</FormLabel>
               <FormControl>
                 <Input placeholder="giaovien123" {...field} disabled={mutation.isPending} />
               </FormControl>
@@ -67,7 +69,7 @@ export function RegisterForm() {
           name="fullName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Họ và tên (không bắt buộc)</FormLabel>
+              <FormLabel>{t("fullname_optional")}</FormLabel>
               <FormControl>
                 <Input placeholder="Nguyễn Văn A" {...field} disabled={mutation.isPending} />
               </FormControl>
@@ -81,7 +83,7 @@ export function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Mật khẩu</FormLabel>
+              <FormLabel>{t("password")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   placeholder="••••••••••"
@@ -95,13 +97,13 @@ export function RegisterForm() {
         />
 
         <Button type="submit" className="w-full" disabled={mutation.isPending}>
-          {mutation.isPending ? "Đang xử lý..." : "Đăng ký"}
+          {mutation.isPending ? t("processing") : t("register")}
         </Button>
 
         <div className="text-center text-sm">
-          <span className="text-slate-500">Đã có tài khoản? </span>
+          <span className="text-slate-500">{t("already_have_account")} </span>
           <Link href="/login" className="text-indigo-600 hover:underline font-medium">
-            Đăng nhập ngay
+            {t("login_now")}
           </Link>
         </div>
       </form>

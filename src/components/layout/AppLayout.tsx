@@ -9,9 +9,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="h-screen bg-slate-50 flex overflow-hidden">
       {/* Desktop sidebar */}
-      <div className="hidden md:flex sticky top-0 h-screen">
+      <div className="hidden md:flex h-full border-r border-slate-200 bg-white">
         <AppSidebar />
       </div>
 
@@ -33,11 +33,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </>
       )}
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="sticky top-0 z-30">
-          <AppHeader onToggleSidebar={() => setMobileOpen(true)} />
-        </div>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <AppHeader onToggleSidebar={() => setMobileOpen(true)} />
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-24 relative">
+          {children}
+        </main>
       </div>
     </div>
   )

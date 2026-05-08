@@ -3,6 +3,7 @@
 import type { SessionDTO } from "@/server/services/session.service"
 import { getLevel } from "@/lib/utils"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
   session: SessionDTO
@@ -20,10 +21,11 @@ function deriveLevel(session: SessionDTO): "tieu_hoc" | "thcs" | "mixed" {
 }
 
 export function SessionCard({ session, onClick }: Props) {
+  const { t } = useTranslation()
   const level = deriveLevel(session)
   const label = session.title ?? session.subject.name
   const studentCountText =
-    session.studentCount > 0 ? `· ${session.studentCount} HS` : ""
+    session.studentCount > 0 ? `· ${session.studentCount} ${t("student_abbrev")}` : ""
 
   return (
     <button
