@@ -57,16 +57,16 @@ export function FilterBar({
   }, [searchStudentName])
 
   return (
-    <div className="bg-white p-4 rounded-lg border shadow-sm">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Left: Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-full md:w-[200px]">
+    <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+        {/* Top/Left: Search & Primary Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-3 flex-1">
+            <div className="relative w-full md:w-[240px]">
                 <Input
                     placeholder={t("search_student")}
                     value={localSearch}
                     onChange={(e) => setLocalSearch(e.target.value)}
-                    className="pr-8"
+                    className="pr-9 h-11 md:h-10 bg-slate-50 border-slate-200 focus:bg-white transition-colors"
                 />
                 {localSearch && (
                     <button
@@ -74,48 +74,50 @@ export function FilterBar({
                             setLocalSearch("")
                             setSearch("")
                         }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 active:bg-slate-100 rounded-full transition-colors"
                     >
                         <X className="size-4" />
                     </button>
                 )}
             </div>
 
-            <Select
-            value={selectedGrade?.toString() || "all"}
-            onValueChange={(val) => setGrade(val === "all" ? null : parseInt(val, 10))}
-          >
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder={t("all_grades")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("all_grades")}</SelectItem>
-              {GRADES.map((grade) => (
-                <SelectItem key={grade} value={grade.toString()}>
-                  {t("grade")} {grade}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Select
+                value={selectedGrade?.toString() || "all"}
+                onValueChange={(val) => setGrade(val === "all" ? null : parseInt(val, 10))}
+              >
+                <SelectTrigger className="flex-1 sm:w-[130px] h-11 md:h-10 bg-slate-50 border-slate-200">
+                  <SelectValue placeholder={t("all_grades")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all_grades")}</SelectItem>
+                  {GRADES.map((grade) => (
+                    <SelectItem key={grade} value={grade.toString()}>
+                      {t("grade")} {grade}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" onClick={prevMonth}>
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[120px] text-center">
-              {monthLabel}
-            </span>
-            <Button variant="outline" size="icon" onClick={nextMonth}>
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
+              <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-0.5 md:p-1 h-11 md:h-10">
+                <Button variant="ghost" size="icon" onClick={prevMonth} className="h-9 w-9 md:h-8 md:w-8 hover:bg-white shadow-none">
+                  <ChevronLeft className="size-4 md:size-5" />
+                </Button>
+                <span className="text-xs md:text-sm font-bold min-w-[90px] md:min-w-[110px] text-center text-slate-700">
+                  {monthLabel}
+                </span>
+                <Button variant="ghost" size="icon" onClick={nextMonth} className="h-9 w-9 md:h-8 md:w-8 hover:bg-white shadow-none">
+                  <ChevronRight className="size-4 md:size-5" />
+                </Button>
+              </div>
+            </div>
 
           {hasActiveFilter && (
             <Button
               variant="ghost"
               size="sm"
               onClick={resetFilters}
-              className="text-slate-500 h-9 px-2 hover:bg-slate-100"
+              className="text-indigo-600 h-9 px-2 hover:bg-indigo-50 font-medium"
             >
               <X className="size-4 mr-1" />
               {t("clear_filters")}
@@ -123,21 +125,24 @@ export function FilterBar({
           )}
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2">
-          <ExportExcelButton sessions={sessions} students={students} />
+        {/* Bottom/Right: Actions */}
+        <div className="flex items-center gap-2 pt-1 md:pt-0 border-t border-slate-100 md:border-t-0 justify-between md:justify-end">
+          <div className="flex items-center gap-2">
+            <ExportExcelButton sessions={sessions} students={students} />
 
-          <Button
-            variant="outline"
-            onClick={onBulkCreateClick}
-            className="gap-2"
-          >
-            <Repeat className="size-4" />
-            <span className="hidden sm:inline">{t("bulk_schedule")}</span>
-          </Button>
-          <Button onClick={onCreateClick} className="gap-2">
-            <Plus className="size-4" />
-            <span className="hidden sm:inline">{t("create_session")}</span>
+            <Button
+              variant="outline"
+              onClick={onBulkCreateClick}
+              className="gap-2 h-11 md:h-10 border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              <Repeat className="size-4" />
+              <span className="hidden sm:inline">{t("bulk_schedule")}</span>
+            </Button>
+          </div>
+          
+          <Button onClick={onCreateClick} className="gap-2 h-11 md:h-10 bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100 px-4 md:px-6">
+            <Plus className="size-4 md:size-5" />
+            <span className="hidden xs:inline">{t("create_session")}</span>
           </Button>
         </div>
       </div>

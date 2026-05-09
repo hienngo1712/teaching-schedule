@@ -24,7 +24,7 @@ File này quy định các tiêu chuẩn code cho dự án **Teaching Schedule M
 ## 4. Frontend (Next.js & shadcn/ui)
 - **"use client":** Chỉ đặt ở đầu file khi component sử dụng Hook (useState, useEffect) hoặc Browser API.
 - **Components:** Chia nhỏ components vào `src/components/ui/` (nguyên tử) và `src/components/[feature]/` (nghiệp vụ).
-- **Responsive:** Ưu tiên Mobile-first. Sử dụng các class `sm:`, `md:`, `lg:` của Tailwind.
+- **Responsive:** **Ưu tiên Mobile-first Tuyệt đối.** Phải thiết kế và tối ưu hoàn chỉnh cho Mobile (screens >= 375px) TRƯỚC khi mở rộng ra bản Web. Một tính năng chưa được tối ưu cho Mobile được coi là chưa hoàn thành. Sử dụng các class `sm:`, `md:`, `lg:` của Tailwind để mở rộng dần layout.
 - **Định dạng dữ liệu:** 
     - Tiền tệ: Luôn dùng `formatCurrency(value)` từ `src/lib/utils.ts`.
     - Ngày tháng: Luôn dùng `formatDate(date)` từ `src/lib/utils.ts`.
