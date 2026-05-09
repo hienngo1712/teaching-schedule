@@ -20,11 +20,10 @@ export async function getStudentReport(
   assertOwnership(student, userId)
 
   // Fetch sessions for this student in the period
-  // We can reuse getMonthSessions by filtering for this student
   const sessions = await getMonthSessions(db, userId, {
     year,
     month,
-    studentName: student!.fullName // This is a bit loose, better to filter by studentId if getMonthSessions supports it
+    studentId: studentId
   })
 
   // Calculate summary
@@ -69,18 +68,26 @@ export async function getMonthlySummary(
     ? new Date(Date.UTC(toYear, toMonth, 1))
     : new Date(Date.UTC(year, month, 1))
 
-  const sessions = await db.teachingSession.findMany({
-    where: {
-      userId,
-      sessionDate: { gte: startDate, lt: endDate }
-    },
-    include: {
-      sessionStudents: { include: { student: true } }
-    }
-  })
+  const [sessions, students, monthlyTuitions] = await Promise.all([
+    db.teachingSession.findMany({
+      where: {
+        userId,
+        sessionDate: { gte: startDate, lt: endDate }
+      },
+      include: {
+        sessionStudents: { include: { student: true } }
+      }
+    }),
+    db.student.findMany({ where: { userId, isActive: true } }),
+    db.monthlyTuition.findMany({
+      where: {
+        student: { userId },
+        year: { gte: year, lte: toYear ?? year }
+      }
+    })
+  ])
   
   const totalSessions = sessions.length
-  const students = await db.student.findMany({ where: { userId, isActive: true } })
   const totalStudents = students.length
 
   // By Grade
@@ -109,14 +116,6 @@ export async function getMonthlySummary(
     })
   })
 
-  // Total Paid
-  const monthlyTuitions = await db.monthlyTuition.findMany({
-    where: {
-      student: { userId },
-      year: { gte: year, lte: toYear ?? year }
-    }
-  })
-  
   const startVal = year * 100 + month
   const endVal = (toYear ?? year) * 100 + (toMonth ?? month)
   
@@ -142,23 +141,34 @@ export async function getMonthlySummary(
 export async function getDashboardStats(db: PrismaClient, userId: number) {
   const now = new Date()
   const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
-
-  // 1. Total active students
-  const totalStudents = await db.student.count({ where: { userId, isActive: true } })
-
-  // 2. Sessions today
-  const sessionsToday = await db.teachingSession.count({
-    where: { userId, sessionDate: today }
-  })
-
-  // 3. This month's sessions
   const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1))
   const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1))
 
-  const sessionsThisMonth = await db.teachingSession.findMany({
-    where: { userId, sessionDate: { gte: startOfMonth, lt: endOfMonth } },
-    include: { sessionStudents: true }
-  })
+  // Chạy các query song song để giảm latency tổng (đặc biệt quan trọng với serverless DB)
+  const [totalStudents, sessionsToday, sessionsThisMonth, userMonthlyTuitions] = await Promise.all([
+    // 1. Total active students
+    db.student.count({ where: { userId, isActive: true } }),
+
+    // 2. Sessions today
+    db.teachingSession.count({
+      where: { userId, sessionDate: today }
+    }),
+
+    // 3. This month's sessions
+    db.teachingSession.findMany({
+      where: { userId, sessionDate: { gte: startOfMonth, lt: endOfMonth } },
+      include: { sessionStudents: true }
+    }),
+
+    // 5. Total unpaid tuition this month
+    db.monthlyTuition.findMany({
+      where: {
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        student: { userId },
+      },
+    })
+  ])
 
   const totalSessionsMonth = sessionsThisMonth.length
 
@@ -180,15 +190,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
   })
 
   const attendanceRate = totalRecords > 0 ? (presentRecords / totalRecords) * 100 : 0
-
-  // 5. Total unpaid tuition this month
-  const monthlyTuitions = await db.monthlyTuition.findMany({
-    where: { year: now.getFullYear(), month: now.getMonth() + 1 },
-    include: { student: { select: { userId: true } } }
-  })
   
-  // Only for this user
-  const userMonthlyTuitions = monthlyTuitions.filter(t => t.student.userId === userId)
   const paidThisMonth = userMonthlyTuitions.reduce((sum, t) => sum + t.paidAmount, 0)
   const totalUnpaidMonth = Math.max(0, totalRevenueMonth - paidThisMonth)
 

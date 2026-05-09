@@ -55,6 +55,7 @@ export default function ReportsPage() {
     ...queryParams,
     grade: gradeFilter || undefined,
     studentId: selectedStudentId || undefined,
+    includeStudents: true,
   })
 
   const { data: monthlySummary } = trpc.report.monthlySummary.useQuery(queryParams)

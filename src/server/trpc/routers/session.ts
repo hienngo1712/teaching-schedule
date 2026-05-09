@@ -28,6 +28,10 @@ export const sessionRouter = createTRPCRouter({
     .input(sessionFilterSchema)
     .query(({ ctx, input }) => getMonthSessions(ctx.db, ctx.userId, input)),
 
+  getDetail: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(({ ctx, input }) => getSessionDetail(ctx.db, ctx.userId, input.id)),
+
   create: protectedProcedure
     .input(sessionCreateSchema)
     .mutation(({ ctx, input }) => createSession(ctx.db, ctx.userId, input)),

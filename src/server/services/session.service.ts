@@ -13,7 +13,7 @@ import {
   type SessionFilterInput,
 } from "@/lib/schemas/session"
 
-export type SessionDTO = {
+export type SessionListDTO = {
   id: number
   userId: number
   sessionDate: Date
@@ -30,6 +30,9 @@ export type SessionDTO = {
   notes: string | null
   status: string
   studentCount: number
+}
+
+export type SessionDTO = SessionListDTO & {
   students: Array<{
     id: number
     studentId: number
@@ -43,7 +46,6 @@ export type SessionDTO = {
 
 /**
  * Kiểm tra ca dạy mới có trùng giờ với ca khác trong cùng ngày, cùng user.
- * Dùng raw SQL: start_a < end_b AND end_a > start_b (chuẩn interval overlap).
  */
 export async function checkOverlap(
   db: PrismaClient,
@@ -92,14 +94,15 @@ export function parseSessionDate(dateStr: string): Date {
   return new Date(Date.UTC(y, m - 1, d))
 }
 
-type SessionWithRelations = Prisma.TeachingSessionGetPayload<{
+type SessionWithSubjectAndStudents = Prisma.TeachingSessionGetPayload<{
   include: {
     subject: true
     sessionStudents: { include: { student: true } }
+    _count: { select: { sessionStudents: true } }
   }
 }>
 
-function toDTO(s: SessionWithRelations): SessionDTO {
+function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
   return {
     id: s.id,
     userId: s.userId,
@@ -116,8 +119,8 @@ function toDTO(s: SessionWithRelations): SessionDTO {
     title: s.title,
     notes: s.notes,
     status: s.status,
-    studentCount: s.sessionStudents.length,
-    students: s.sessionStudents.map((ss) => ({
+    studentCount: s._count?.sessionStudents ?? s.sessionStudents.length,
+    students: s.sessionStudents?.map((ss) => ({
       id: ss.id,
       studentId: ss.studentId,
       fullName: ss.student.fullName,
@@ -125,7 +128,7 @@ function toDTO(s: SessionWithRelations): SessionDTO {
       attendance: ss.attendance,
       note: ss.note,
       fee: ss.fee,
-    })),
+    })) ?? [],
   }
 }
 
@@ -134,7 +137,7 @@ export async function getMonthSessions(
   userId: number,
   filter: SessionFilterInput
 ): Promise<SessionDTO[]> {
-  const { year, month, toYear, toMonth, grade, studentName, studentId } = filter
+  const { year, month, toYear, toMonth, grade, studentName, studentId, includeStudents } = filter
   const start = new Date(Date.UTC(year, month - 1, 1))
   const end = toYear && toMonth 
     ? new Date(Date.UTC(toYear, toMonth, 1))
@@ -167,12 +170,37 @@ export async function getMonthSessions(
     },
     include: {
       subject: true,
-      sessionStudents: { include: { student: true } },
+      ...(includeStudents 
+        ? { sessionStudents: { include: { student: true }, orderBy: { student: { fullName: 'asc' } } } }
+        : { _count: { select: { sessionStudents: true } } }
+      ),
     },
     orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }],
   })
 
-  return sessions.map(toDTO)
+  return sessions.map(s => toDTO(s as SessionWithSubjectAndStudents))
+}
+
+export async function getSessionDetail(
+  db: PrismaClient,
+  userId: number,
+  id: number
+): Promise<SessionDTO> {
+  const session = await db.teachingSession.findUnique({
+    where: { id },
+    include: {
+      subject: true,
+      sessionStudents: {
+        include: { student: true },
+        orderBy: { student: { fullName: "asc" } },
+      },
+      _count: { select: { sessionStudents: true } },
+    },
+  })
+
+  assertOwnership(session, userId)
+
+  return toDTO(session as SessionWithSubjectAndStudents)
 }
 
 async function assertSubjectOwned(

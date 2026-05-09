@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
-import type { SessionDTO } from "@/server/services/session.service"
+import type { SessionListDTO, SessionDTO } from "@/server/services/session.service"
 import { AttendancePanel } from "./AttendancePanel"
 import { StudentPicker } from "./StudentPicker"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -47,14 +47,14 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  session: SessionDTO
+  session: SessionListDTO
   onEdit: (session: SessionDTO) => void
 }
 
 export function SessionDetailDialog({
   open,
   onOpenChange,
-  session,
+  session: basicSession,
   onEdit,
 }: Props) {
   const { t } = useTranslation()
@@ -63,14 +63,20 @@ export function SessionDetailDialog({
   const [isAddStudentsOpen, setIsAddStudentsOpen] = useState(false)
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurEndDate, setRecurEndDate] = useState<string>(
-    dayjs(session.sessionDate).add(2, "month").format("YYYY-MM-DD")
+    dayjs(basicSession.sessionDate).add(2, "month").format("YYYY-MM-DD")
   )
   const [targetDate, setTargetDate] = useState<Date | undefined>(
-    dayjs(session.sessionDate).add(7, "day").toDate()
+    dayjs(basicSession.sessionDate).add(7, "day").toDate()
   )
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([])
   const [isDeleteFuture, setIsDeleteFuture] = useState(false)
   const utils = trpc.useUtils()
+
+  // Fetch full details (Lazy load)
+  const { data: session, isLoading } = trpc.session.getDetail.useQuery(
+    { id: basicSession.id },
+    { enabled: open }
+  )
 
   const deleteMutation = trpc.session.delete.useMutation({
     onSuccess: () => {
@@ -112,7 +118,8 @@ export function SessionDetailDialog({
       toast.success(t("update_students_success"))
       utils.session.getMonth.invalidate()
       utils.report.invalidate()
-      utils.attendance.get.invalidate({ sessionId: session.id })
+      utils.attendance.get.invalidate({ sessionId: basicSession.id })
+      utils.session.getDetail.invalidate({ id: basicSession.id })
       setIsAddStudentsOpen(false)
     },
     onError: (err) => {
@@ -125,7 +132,8 @@ export function SessionDetailDialog({
       toast.success(t("add_recurring_students_success").replace("{count}", String(res.updatedSessions)))
       utils.session.getMonth.invalidate()
       utils.report.invalidate()
-      utils.attendance.get.invalidate({ sessionId: session.id })
+      utils.attendance.get.invalidate({ sessionId: basicSession.id })
+      utils.session.getDetail.invalidate({ id: basicSession.id })
       setIsAddStudentsOpen(false)
     },
     onError: (err) => {
@@ -135,21 +143,22 @@ export function SessionDetailDialog({
 
   const handleDelete = () => {
     if (isDeleteFuture) {
-      deleteFutureMutation.mutate({ id: session.id })
+      deleteFutureMutation.mutate({ id: basicSession.id })
     } else {
-      deleteMutation.mutate({ id: session.id })
+      deleteMutation.mutate({ id: basicSession.id })
     }
   }
 
   const handleDuplicate = () => {
     if (!targetDate) return
     duplicateMutation.mutate({
-      id: session.id,
+      id: basicSession.id,
       targetDate: dayjs(targetDate).format("YYYY-MM-DD"),
     })
   }
 
   const handleOpenAddStudents = () => {
+    if (!session) return
     setSelectedStudentIds(session.students.map((s) => s.studentId))
     setIsRecurring(false)
     setIsAddStudentsOpen(true)
@@ -162,18 +171,18 @@ export function SessionDetailDialog({
         return
       }
 
-      const vnDayIndex = (dayjs(session.sessionDate).day() + 6) % 7
+      const vnDayIndex = (dayjs(basicSession.sessionDate).day() + 6) % 7
       addRecurringMutation.mutate({
         studentIds: selectedStudentIds,
-        startTime: session.startTime,
-        endTime: session.endTime,
-        startDate: dayjs(session.sessionDate).format("YYYY-MM-DD"),
+        startTime: basicSession.startTime,
+        endTime: basicSession.endTime,
+        startDate: dayjs(basicSession.sessionDate).format("YYYY-MM-DD"),
         endDate: recurEndDate,
         weekdays: [vnDayIndex],
       })
     } else {
       addStudentsMutation.mutate({
-        sessionId: session.id,
+        sessionId: basicSession.id,
         studentIds: selectedStudentIds,
       })
     }
@@ -185,79 +194,88 @@ export function SessionDetailDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full h-full max-w-none sm:h-auto sm:max-w-[600px] sm:max-h-[90vh] overflow-y-auto sm:rounded-lg top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
-          <DialogHeader className="flex flex-row items-start justify-between space-y-0">
-            <div className="space-y-1">
-              <DialogTitle className="text-xl flex items-center gap-2">
-                <div
-                  className="size-3 rounded-full shrink-0"
-                  style={{ backgroundColor: session.subject.color }}
+          {isLoading || !session ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="size-8 animate-spin text-indigo-500" />
+              <p className="text-sm text-slate-500 font-medium">{t("loading_details")}</p>
+            </div>
+          ) : (
+            <>
+              <DialogHeader className="flex flex-row items-start justify-between space-y-0">
+                <div className="space-y-1">
+                  <DialogTitle className="text-xl flex items-center gap-2">
+                    <div
+                      className="size-3 rounded-full shrink-0"
+                      style={{ backgroundColor: session.subject.color }}
+                    />
+                    <span className="truncate">
+                      {session.title || session.subject.name}
+                    </span>
+                  </DialogTitle>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
+                    <div className="flex items-center gap-1">
+                      <CalendarDays className="size-4" />
+                      {dayjs(session.sessionDate).format("DD/MM/YYYY")}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="size-4" />
+                      {session.startTime} – {session.endTime} ({session.durationMins}p)
+                    </div>
+                  </div>
+                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label={t("actions")}>
+                      <MoreVertical className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onEdit(session)}>
+                      <Edit2 className="mr-2 size-4" />
+                      {t("edit_session")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleOpenAddStudents}>
+                      <UserPlus className="mr-2 size-4" />
+                      {t("add_student")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsDuplicateDialogOpen(true)}>
+                      <Copy className="mr-2 size-4" />
+                      {t("duplicate_session")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="mr-2 size-4" />
+                      {t("delete_session")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </DialogHeader>
+
+              {session.notes && (
+                <div className="bg-slate-50 p-3 rounded-md text-sm text-slate-600 whitespace-pre-wrap">
+                  <span className="font-semibold block mb-1">{t("notes")}</span>
+                  {session.notes}
+                </div>
+              )}
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-slate-900">{t("attendance")}</h3>
+                  <Badge variant="outline">
+                    {t("students_count").replace("{count}", String(session.studentCount))}
+                  </Badge>
+                </div>
+
+                <AttendancePanel
+                  sessionId={session.id}
+                  onSaveSuccess={() => onOpenChange(false)}
                 />
-                <span className="truncate">
-                  {session.title || session.subject.name}
-                </span>
-              </DialogTitle>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
-                <div className="flex items-center gap-1">
-                  <CalendarDays className="size-4" />
-                  {dayjs(session.sessionDate).format("DD/MM/YYYY")}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="size-4" />
-                  {session.startTime} – {session.endTime} ({session.durationMins}p)
-                </div>
               </div>
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label={t("actions")}>
-                  <MoreVertical className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(session)}>
-                  <Edit2 className="mr-2 size-4" />
-                  {t("edit_session")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleOpenAddStudents}>
-                  <UserPlus className="mr-2 size-4" />
-                  {t("add_student")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsDuplicateDialogOpen(true)}>
-                  <Copy className="mr-2 size-4" />
-                  {t("duplicate_session")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-red-600 focus:text-red-600"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="mr-2 size-4" />
-                  {t("delete_session")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </DialogHeader>
-
-          {session.notes && (
-            <div className="bg-slate-50 p-3 rounded-md text-sm text-slate-600 whitespace-pre-wrap">
-              <span className="font-semibold block mb-1">{t("notes")}</span>
-              {session.notes}
-            </div>
+            </>
           )}
-
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-slate-900">{t("attendance")}</h3>
-              <Badge variant="outline">
-                {t("students_count").replace("{count}", String(session.studentCount))}
-              </Badge>
-            </div>
-
-            <AttendancePanel
-              sessionId={session.id}
-              onSaveSuccess={() => onOpenChange(false)}
-            />
-          </div>
         </DialogContent>
       </Dialog>
 

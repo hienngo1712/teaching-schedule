@@ -14,9 +14,15 @@ export type Context = {
 export async function createTRPCContext(
   opts: FetchCreateContextFnOptions
 ): Promise<Context> {
+  const start = Date.now()
   // Lazy-load NextAuth để tránh kéo `next-auth` (next/server) vào unit/integration test runtime.
   const { auth } = await import("@/server/auth")
   const session = await auth()
+  const duration = Date.now() - start
+  if (duration > 100) {
+    console.log(`[tRPC] createTRPCContext took ${duration}ms`)
+  }
+
   const userId = session?.user?.id ? Number(session.user.id) : null
 
   const fwd = opts.req.headers.get("x-forwarded-for")
@@ -42,6 +48,16 @@ export const createTRPCRouter = t.router
 export const createCallerFactory = t.createCallerFactory
 export const publicProcedure = t.procedure
 
+const loggerMiddleware = t.middleware(async ({ path, type, next }) => {
+  const start = Date.now()
+  const result = await next()
+  const durationMs = Date.now() - start
+  console.log(`[tRPC] ${type} ${path} - ${durationMs}ms`)
+  return result
+})
+
+export const timingProcedure = t.procedure.use(loggerMiddleware)
+
 const enforceAuth = t.middleware(({ ctx, next }) => {
   if (!ctx.session || !ctx.userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" })
@@ -55,4 +71,4 @@ const enforceAuth = t.middleware(({ ctx, next }) => {
   })
 })
 
-export const protectedProcedure = t.procedure.use(enforceAuth)
+export const protectedProcedure = t.procedure.use(loggerMiddleware).use(enforceAuth)

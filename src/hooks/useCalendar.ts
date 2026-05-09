@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import type { SessionDTO } from "@/server/services/session.service"
+import type { SessionListDTO } from "@/server/services/session.service"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export type CalendarCell = {
@@ -10,7 +10,7 @@ export type CalendarCell = {
   dayNumber: number
   isCurrentMonth: boolean
   isToday: boolean
-  sessions: SessionDTO[]
+  sessions: SessionListDTO[]
 }
 
 export function buildMonthLabel(year: number, month: number, t?: (key: any) => string): string { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -50,10 +50,10 @@ function daysInMonth(year: number, month: number): number {
 export function buildCalendarGrid(
   year: number,
   month: number,
-  sessions: SessionDTO[],
+  sessions: SessionListDTO[],
   today: Date = new Date()
 ): { grid: CalendarCell[] } {
-  const sessionMap = new Map<string, SessionDTO[]>()
+  const sessionMap = new Map<string, SessionListDTO[]>()
   for (const s of sessions) {
     const d = s.sessionDate
     const key = ymd(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate())

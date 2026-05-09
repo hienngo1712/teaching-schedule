@@ -14,7 +14,7 @@ import {
 import { useFilters } from "@/hooks/useFilters"
 import { FilterBar } from "../filters/FilterBar"
 import { StudentScheduleView } from "../students/StudentScheduleView"
-import type { SessionDTO } from "@/server/services/session.service"
+import type { SessionListDTO, SessionDTO } from "@/server/services/session.service"
 import { CalendarDayCell } from "./CalendarDayCell"
 import { SessionFormDialog } from "../sessions/SessionFormDialog"
 import { BulkCreateDialog } from "../sessions/BulkCreateDialog"
@@ -33,7 +33,7 @@ export function MonthCalendar() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | undefined>()
   const [editingSession, setEditingSession] = useState<SessionDTO | undefined>()
-  const [selectedSession, setSelectedSession] = useState<SessionDTO | undefined>()
+  const [selectedSession, setSelectedSession] = useState<SessionListDTO | undefined>()
   
   // Mobile state
   const [selectedMobileDate, setSelectedMobileDate] = useState<string>(dayjs().format("YYYY-MM-DD"))
@@ -57,13 +57,14 @@ export function MonthCalendar() {
   const query = trpc.session.getMonth.useQuery({ 
     year, 
     month,
-    ...filterParams
+    ...filterParams,
+    includeStudents: !!selectedStudentId || !!filterParams.studentName
   })
 
   const { data: students = [] } = trpc.student.list.useQuery({})
 
   // Convert sessionDate string từ tRPC → Date object cho buildCalendarGrid
-  const sessions = useMemo<SessionDTO[]>(() => {
+  const sessions = useMemo<SessionListDTO[]>(() => {
     return (query.data ?? []).map((s) => ({
       ...s,
       sessionDate: new Date(s.sessionDate),
@@ -91,7 +92,7 @@ export function MonthCalendar() {
     setIsDialogOpen(true)
   }
 
-  const handleSessionClick = (session: SessionDTO) => {
+  const handleSessionClick = (session: SessionListDTO) => {
     setSelectedSession(session)
     setIsDetailOpen(true)
   }

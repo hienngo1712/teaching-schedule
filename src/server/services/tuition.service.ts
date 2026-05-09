@@ -24,63 +24,53 @@ export async function getMonthlyTuitionStatus(
   // 2. Define range for current month
   const startDate = new Date(Date.UTC(year, month - 1, 1))
   const endDate = new Date(Date.UTC(year, month, 1))
-  
-  // 3. Fetch current month attendance records
   const studentIds = students.map(s => s.id)
-  const currentAttendance = await db.sessionStudent.findMany({
-    where: {
-      studentId: { in: studentIds },
-      session: {
-        sessionDate: {
-          gte: startDate,
-          lt: endDate,
+
+  if (studentIds.length === 0) return []
+
+  // 3+4+5: Chạy các query lấy data song song
+  const [currentAttendance, totalPaidBefore, totalExpectedBefore, currentTuitions] = await Promise.all([
+    // 3. Fetch current month attendance records
+    db.sessionStudent.findMany({
+      where: {
+        studentId: { in: studentIds },
+        session: {
+          sessionDate: { gte: startDate, lt: endDate },
         },
       },
-    },
-    include: {
-      session: true,
-    },
-  })
-
-  // 4. Fetch cumulative statistics for previous months
-  // Sum of all paid amounts before this month
-  const totalPaidBefore = await db.monthlyTuition.groupBy({
-    by: ['studentId'],
-    where: {
-      studentId: { in: studentIds },
-      OR: [
-        { year: { lt: year } },
-        { year: year, month: { lt: month } }
-      ]
-    },
-    _sum: {
-      paidAmount: true
-    }
-  })
-
-  // Sum of all expected fees before this month
-  const totalExpectedBefore = await db.sessionStudent.groupBy({
-    by: ['studentId'],
-    where: {
-      studentId: { in: studentIds },
-      session: {
-        sessionDate: { lt: startDate }
+      include: { session: true },
+    }),
+    // 4a. Sum of all paid amounts before this month
+    db.monthlyTuition.groupBy({
+      by: ['studentId'],
+      where: {
+        studentId: { in: studentIds },
+        OR: [
+          { year: { lt: year } },
+          { year: year, month: { lt: month } }
+        ]
       },
-      attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] }
-    },
-    _sum: {
-      fee: true
-    }
-  })
-
-  // 5. Fetch current month's tuition record
-  const currentTuitions = await db.monthlyTuition.findMany({
-    where: {
-      studentId: { in: studentIds },
-      year,
-      month,
-    },
-  })
+      _sum: { paidAmount: true }
+    }),
+    // 4b. Sum of all expected fees before this month
+    db.sessionStudent.groupBy({
+      by: ['studentId'],
+      where: {
+        studentId: { in: studentIds },
+        session: { sessionDate: { lt: startDate } },
+        attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] }
+      },
+      _sum: { fee: true }
+    }),
+    // 5. Fetch current month's tuition record
+    db.monthlyTuition.findMany({
+      where: {
+        studentId: { in: studentIds },
+        year,
+        month,
+      },
+    })
+  ])
 
   // 6. Combine data
   const results = students.map(student => {
