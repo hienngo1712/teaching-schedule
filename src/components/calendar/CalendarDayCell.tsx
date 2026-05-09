@@ -1,14 +1,14 @@
 "use client"
 
 import type { CalendarCell } from "@/hooks/useCalendar"
-import type { SessionDTO } from "@/server/services/session.service"
+import type { SessionListDTO } from "@/server/services/session.service"
 import { cn } from "@/lib/utils"
 import { SessionCard } from "./SessionCard"
 
 type Props = {
   cell: CalendarCell
   onClickEmpty?: (date: string) => void
-  onClickSession?: (session: SessionDTO) => void
+  onClickSession?: (session: SessionListDTO) => void
 }
 
 export function CalendarDayCell({

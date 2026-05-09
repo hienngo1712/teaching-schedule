@@ -163,6 +163,7 @@
   "save_attendance_success": "Attendance saved",
   "save_attendance_error": "Error saving attendance",
   "loading_students": "Loading students...",
+  "loading_details": "Loading details...",
   "no_students_in_session": "No students in this session.",
   "attendance_col": "Attendance",
   "tuition_col": "Tuition",

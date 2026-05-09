@@ -64,7 +64,7 @@ export function MonthCalendar() {
   const { data: students = [] } = trpc.student.list.useQuery({})
 
   // Convert sessionDate string từ tRPC → Date object cho buildCalendarGrid
-  const sessions = useMemo<SessionListDTO[]>(() => {
+  const sessions = useMemo<SessionDTO[]>(() => {
     return (query.data ?? []).map((s) => ({
       ...s,
       sessionDate: new Date(s.sessionDate),

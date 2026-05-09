@@ -163,6 +163,7 @@
   "save_attendance_success": "Đã lưu điểm danh",
   "save_attendance_error": "Đã có lỗi xảy ra khi lưu điểm danh",
   "loading_students": "Đang tải danh sách học sinh...",
+  "loading_details": "Đang tải chi tiết...",
   "no_students_in_session": "Chưa có học sinh nào trong ca học này.",
   "attendance_col": "Điểm danh",
   "tuition_col": "Học phí",

@@ -60,6 +60,7 @@ describe("useCalendar grid", () => {
       notes: null,
       status: "scheduled",
       studentCount: 0,
+      level: "tieu_hoc" as const,
       students: [],
     }
     const { grid } = buildCalendarGrid(2026, 4, [session])

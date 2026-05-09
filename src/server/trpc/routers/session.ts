@@ -19,6 +19,7 @@ import {
   deleteSession,
   duplicateSession,
   getMonthSessions,
+  getSessionDetail,
   removeStudentFromSession,
   updateSession,
 } from "@/server/services/session.service"

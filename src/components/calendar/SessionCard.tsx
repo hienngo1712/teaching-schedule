@@ -1,28 +1,17 @@
 "use client"
 
-import type { SessionDTO } from "@/server/services/session.service"
-import { getLevel } from "@/lib/utils"
+import type { SessionListDTO } from "@/server/services/session.service"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
-  session: SessionDTO
-  onClick?: (session: SessionDTO) => void
-}
-
-function deriveLevel(session: SessionDTO): "tieu_hoc" | "thcs" | "mixed" {
-  if (session.students.length === 0) return "tieu_hoc"
-  const levels = session.students.map((s) => getLevel(s.grade))
-  const allTieuHoc = levels.every((l) => l === "tieu_hoc")
-  const allThcs = levels.every((l) => l === "thcs")
-  if (allTieuHoc) return "tieu_hoc"
-  if (allThcs) return "thcs"
-  return "mixed"
+  session: SessionListDTO
+  onClick?: (session: SessionListDTO) => void
 }
 
 export function SessionCard({ session, onClick }: Props) {
   const { t } = useTranslation()
-  const level = deriveLevel(session)
+  const level = session.level
   const label = session.title ?? session.subject.name
   const studentCountText =
     session.studentCount > 0 ? `· ${session.studentCount} ${t("student_abbrev")}` : ""

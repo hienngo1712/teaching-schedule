@@ -231,7 +231,7 @@ export function SessionDetailDialog({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onEdit(session)}>
+                    <DropdownMenuItem onClick={() => onEdit({ ...session, sessionDate: new Date(session.sessionDate) })}>
                       <Edit2 className="mr-2 size-4" />
                       {t("edit_session")}
                     </DropdownMenuItem>
@@ -338,7 +338,7 @@ export function SessionDetailDialog({
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1">
                     {t("recurring_note")
-                      .replace("{start}", dayjs(session.sessionDate).format("DD/MM"))
+                      .replace("{start}", dayjs(basicSession.sessionDate).format("DD/MM"))
                       .replace("{end}", dayjs(recurEndDate).format("DD/MM/YYYY"))}
                   </p>
                 </div>

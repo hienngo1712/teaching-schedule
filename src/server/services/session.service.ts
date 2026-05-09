@@ -4,6 +4,7 @@ import dayjs from "dayjs"
 import {
   calcDurationMinutes,
   formatTime,
+  getLevel,
   parseTimeToDate,
 } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
@@ -30,6 +31,7 @@ export type SessionListDTO = {
   notes: string | null
   status: string
   studentCount: number
+  level: "tieu_hoc" | "thcs" | "mixed"
 }
 
 export type SessionDTO = SessionListDTO & {
@@ -98,11 +100,38 @@ type SessionWithSubjectAndStudents = Prisma.TeachingSessionGetPayload<{
   include: {
     subject: true
     sessionStudents: { include: { student: true } }
-    _count: { select: { sessionStudents: true } }
   }
-}>
+}> & {
+  _count?: { sessionStudents: number }
+}
 
 function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
+  const students = s.sessionStudents?.map((ss) => ({
+    id: ss.id,
+    studentId: ss.studentId,
+    fullName: ss.student?.fullName || "",
+    grade: ss.student?.grade || 0,
+    attendance: ss.attendance,
+    note: ss.note,
+    fee: ss.fee,
+  })) ?? []
+
+  // Derive level
+  let level: "tieu_hoc" | "thcs" | "mixed" = "tieu_hoc"
+  if (students.length > 0) {
+    const levels = students
+      .filter(st => st.grade > 0)
+      .map((st) => getLevel(st.grade))
+    
+    if (levels.length > 0) {
+      const allTieuHoc = levels.every((l) => l === "tieu_hoc")
+      const allThcs = levels.every((l) => l === "thcs")
+      if (allTieuHoc) level = "tieu_hoc"
+      else if (allThcs) level = "thcs"
+      else level = "mixed"
+    }
+  }
+
   return {
     id: s.id,
     userId: s.userId,
@@ -119,16 +148,9 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
     title: s.title,
     notes: s.notes,
     status: s.status,
-    studentCount: s._count?.sessionStudents ?? s.sessionStudents.length,
-    students: s.sessionStudents?.map((ss) => ({
-      id: ss.id,
-      studentId: ss.studentId,
-      fullName: ss.student.fullName,
-      grade: ss.student.grade,
-      attendance: ss.attendance,
-      note: ss.note,
-      fee: ss.fee,
-    })) ?? [],
+    studentCount: s._count?.sessionStudents ?? s.sessionStudents?.length ?? 0,
+    level,
+    students,
   }
 }
 
@@ -171,10 +193,12 @@ export async function getMonthSessions(
     include: {
       subject: true,
       ...(includeStudents 
-        ? { sessionStudents: { include: { student: true }, orderBy: { student: { fullName: 'asc' } } } }
-        : { _count: { select: { sessionStudents: true } } }
+        ? { sessionStudents: { include: { student: true }, orderBy: { student: { fullName: 'asc' } } } }       
+        : { sessionStudents: { select: { student: { select: { grade: true } } } } }
       ),
+      _count: { select: { sessionStudents: true } },
     },
+
     orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }],
   })
 
