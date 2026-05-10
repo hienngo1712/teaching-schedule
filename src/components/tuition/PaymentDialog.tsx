@@ -146,7 +146,7 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
                 <p className="font-semibold text-slate-700">{data.month}/{data.year}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("fee")}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("tuition")}</p>
                 <p className="font-semibold text-slate-700">{formatCurrency(data.totalExpected)}</p>
               </div>
             </div>
