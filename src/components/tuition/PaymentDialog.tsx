@@ -130,20 +130,24 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+        <DialogHeader className="text-center sm:text-center">
           <DialogTitle>{t("record_payment")}</DialogTitle>
         </DialogHeader>
 
         <div className="py-2">
-          <div className="mb-4 p-3 bg-slate-50 rounded-md border border-slate-100 space-y-2">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-slate-500">{t("student")}</p>
-                <p className="font-semibold text-slate-900">{data.fullName}</p>
+          <div className="mb-4 p-3 bg-slate-50 rounded-md border border-slate-100 space-y-2 text-center">
+            <div className="flex flex-col items-center">
+              <p className="text-sm font-medium text-slate-500">{t("student")}</p>
+              <p className="font-semibold text-slate-900">{data.fullName}</p>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t border-slate-200/50">
+              <div className="text-left">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("month")}</p>
+                <p className="font-semibold text-slate-700">{data.month}/{data.year}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-medium text-slate-500">{t("month")} {data.month}/{data.year}</p>
-                <p className="font-semibold text-slate-900">{formatCurrency(data.totalExpected)}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("fee")}</p>
+                <p className="font-semibold text-slate-700">{formatCurrency(data.totalExpected)}</p>
               </div>
             </div>
             
@@ -162,7 +166,7 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
               </div>
             )}
 
-            <div className="flex justify-between items-center pt-2 border-t text-sm text-indigo-600 font-bold italic">
+            <div className="flex justify-between items-center pt-2 border-t text-sm text-slate-900 font-bold italic">
               <span>{t("amount_to_pay")}:</span>
               <span>{formatCurrency(adjustedAmount)}</span>
             </div>
@@ -225,12 +229,13 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
                 )}
               />
 
-              <DialogFooter className="gap-2 sm:gap-0">
-                <div className="flex flex-wrap gap-2 mr-auto">
+              <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:justify-center pt-2">
+                <div className="flex flex-wrap gap-2 justify-center w-full sm:w-auto">
                   <Button 
                     type="button" 
                     variant="outline" 
                     size="sm"
+                    className="h-9 px-4"
                     onClick={quickPayFull}
                   >
                     {t("pay_full")}
@@ -241,13 +246,13 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
                       variant="secondary"
                       size="sm"
                       onClick={quickPayAdjusted}
-                      className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                      className="h-9 px-4 bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-100"
                     >
                       {t("pay_adjusted")}
                     </Button>
                   )}
                 </div>
-                <Button type="submit" disabled={mutation.isPending}>
+                <Button type="submit" className="h-9 px-8 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto" disabled={mutation.isPending}>
                   {mutation.isPending ? t("saving") : t("save")}
                 </Button>
               </DialogFooter>

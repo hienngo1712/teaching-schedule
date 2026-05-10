@@ -43,7 +43,7 @@ export function DataTablePagination({
 
   return (
     <div className={cn(
-      "fixed bottom-0 left-0 right-0 md:left-60 z-20 flex items-center justify-between px-4 md:px-6 py-2 md:py-3 bg-white border-t border-slate-200 gap-2 md:gap-4",
+      "fixed bottom-0 left-0 right-0 md:left-60 z-30 flex items-center justify-between px-4 md:px-6 py-1.5 md:py-2 bg-white/95 backdrop-blur-sm border-t border-slate-200 gap-4 md:gap-12",
       className
     )}>
       <div className="text-xs md:text-sm text-slate-500 font-medium truncate">
@@ -99,21 +99,21 @@ export function DataTablePagination({
             </Button>
             <Button
                 variant="outline"
-                className="h-9 w-9 md:h-8 md:w-8 p-0 border-slate-200"
+                className="h-8 w-8 p-0 border-slate-200"
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1 || totalPages === 0}
             >
                 <span className="sr-only">{t("prev_page")}</span>
-                <ChevronLeft className="h-5 w-5 md:h-4 md:w-4 text-slate-600" />
+                <ChevronLeft className="h-4 w-4 text-slate-600" />
             </Button>
             <Button
                 variant="outline"
-                className="h-9 w-9 md:h-8 md:w-8 p-0 border-slate-200"
+                className="h-8 w-8 p-0 border-slate-200"
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages || totalPages === 0}
             >
                 <span className="sr-only">{t("next_page")}</span>
-                <ChevronRight className="h-5 w-5 md:h-4 md:w-4 text-slate-600" />
+                <ChevronRight className="h-4 w-4 text-slate-600" />
             </Button>
             <Button
                 variant="outline"

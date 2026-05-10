@@ -11,7 +11,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-screen bg-slate-50 flex overflow-hidden">
       {/* Desktop sidebar */}
-      <div className="hidden md:flex h-full border-r border-slate-200 bg-white">
+      <div className="hidden md:flex h-full bg-white">
         <AppSidebar />
       </div>
 

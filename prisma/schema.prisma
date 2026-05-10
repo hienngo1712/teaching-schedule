@@ -78,14 +78,19 @@ model Student {
 }
 
 model MonthlyTuition {
-  id          Int      @id @default(autoincrement())
-  studentId   Int      @map("student_id")
-  year        Int
-  month       Int
-  paidAmount  Int      @default(0) @map("paid_amount")
-  isFullPaid  Boolean  @default(false) @map("is_full_paid")
-  notes       String?  @db.Text
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  studentId       Int      @map("student_id")
+  year            Int
+  month           Int
+  totalSessions   Int      @default(0) @map("total_sessions")
+  presentSessions Int      @default(0) @map("present_sessions")
+  previousBalance Int      @default(0) @map("previous_balance")
+  currentMonthFee Int      @default(0) @map("current_month_fee")
+  totalAmountDue  Int      @default(0) @map("total_amount_due")
+  paidAmount      Int      @default(0) @map("paid_amount")
+  isFullPaid      Boolean  @default(false) @map("is_full_paid")
+  notes           String?  @db.Text
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 

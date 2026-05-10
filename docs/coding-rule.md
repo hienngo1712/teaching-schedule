@@ -19,7 +19,7 @@ File này quy định các tiêu chuẩn code cho dự án **Teaching Schedule M
 ## 3. Database (Prisma)
 - **Tránh N+1:** Luôn sử dụng `include` hoặc `select` để lấy dữ liệu liên quan trong một câu query duy nhất.
 - **Naming:** Table name dùng PascalCase, Field name dùng camelCase (theo schema.prisma hiện tại).
-- **Migrations:** Luôn chạy `pnpm build` hoặc `prisma migrate dev` để kiểm tra schema trước khi commit.
+- **Migrations:** Luôn chạy `pnpm build` hoặc `prisma migrate dev` để kiểm tra schema trước khi commit. Khi thay đổi schema (thêm field, đổi kiểu), PHẢI apply migration cho cả môi trường Production và Test (ví dụ: `.env` và `.env.local`) để đảm bảo code và DB luôn đồng bộ.
 
 ## 4. Frontend (Next.js & shadcn/ui)
 - **"use client":** Chỉ đặt ở đầu file khi component sử dụng Hook (useState, useEffect) hoặc Browser API.
