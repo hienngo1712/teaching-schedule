@@ -140,7 +140,7 @@ export function FilterBar({
             </Button>
           </div>
           
-          <Button onClick={onCreateClick} className="gap-2 h-11 md:h-10 bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100 px-4 md:px-6">
+          <Button onClick={onCreateClick} className="gap-2 h-11 md:h-10 bg-slate-900 hover:bg-slate-800 shadow-md shadow-slate-200 px-4 md:px-6">
             <Plus className="size-4 md:size-5" />
             <span className="hidden xs:inline">{t("create_session")}</span>
           </Button>

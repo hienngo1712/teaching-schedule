@@ -102,11 +102,11 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
         const paidAmount = value.paidAmount || 0
         const totalAmountDue = data.totalAmountDue
         const currentNotes = form.getValues("notes") || ""
-        
+
         if (paidAmount > totalAmountDue && totalAmountDue > 0) {
           const excess = paidAmount - totalAmountDue
           const overpaidNote = `Đóng thừa ${formatCurrency(excess)}, tháng sau cần trừ ${formatCurrency(excess)}`
-          
+
           if (!currentNotes.includes("Đóng thừa")) {
             form.setValue("notes", currentNotes ? `${currentNotes}\n${overpaidNote}` : overpaidNote)
           }
@@ -137,7 +137,7 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
           {t("tuition_detail")}
         </div>
         <div className="text-sm text-slate-500">
-          {t("student")}: <span className="font-bold text-slate-900">{data.fullName}</span> • {t("month")} {data.month}/{data.year}
+          {t("student")}: <span className="font-medium text-slate-900">{data.fullName}</span> • {t("month")} {data.month}/{data.year}
         </div>
       </div>
 
@@ -168,8 +168,8 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
             </div>
             <Separator />
             <div className="flex justify-between items-center">
-              <span className="font-bold text-slate-900">{t("total_amount_due")}</span>
-              <span className="text-lg font-bold text-slate-900">
+              <span className="font-medium text-slate-900">{t("total_amount_due")}</span>
+              <span className="text-lg font-medium text-slate-900">
                 {formatCurrency(data.totalAmountDue)}
               </span>
             </div>
@@ -182,7 +182,7 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
             <Wallet className="size-4" />
             {t("payment_action")}
           </h3>
-          
+
           <div className="space-y-4">
             <FormField
               control={form.control}
@@ -194,24 +194,21 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
                     <CurrencyInput
                       value={field.value}
                       onChange={(v) => field.onChange(v)}
-                      className="text-lg font-bold h-12"
+                      className="text-lg font-medium h-12"
                     />
                   </FormControl>
                   <div className="flex flex-wrap gap-2 pt-1">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-7 px-2 text-[10px]"
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={quickPayFull}
                       >
                         {t("pay_current_month")}
                       </Button>
-                      <Button 
-                        type="button" 
-                        variant="secondary" 
-                        size="sm" 
-                        className="h-7 px-2 text-[10px] bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100"
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100"
                         onClick={quickPayAdjusted}
                       >
                         {t("pay_full_debt")}
@@ -252,7 +249,7 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
                     <Textarea
                       placeholder={t("notes_placeholder")}
                       className="min-h-[80px] text-sm"
-                      {...field} 
+                      {...field}
                       value={field.value || ""}
                     />
                   </FormControl>
@@ -275,10 +272,10 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
           {t("payment_tip_snapshot")}
         </p>
       </div>
-      
-      <Button 
-        type="submit" 
-        className="w-full h-12 text-md font-bold bg-black hover:bg-slate-800 text-white shadow-lg transition-all active:scale-[0.98] rounded-xl" 
+
+      <Button
+        type="submit"
+        className="w-full h-12 text-md font-bold bg-black hover:bg-slate-800 text-white shadow-lg transition-all active:scale-[0.98] rounded-xl"
         disabled={mutation.isPending}
       >
         {mutation.isPending ? t("saving") : t("confirm_payment")}

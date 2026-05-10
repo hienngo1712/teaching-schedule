@@ -234,7 +234,7 @@ export default function TuitionPage() {
                   <CardContent className="p-4 space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-bold text-slate-900 text-lg leading-tight">{item.fullName}</div>
+                        <div className="font-medium text-slate-900 text-lg leading-tight">{item.fullName}</div>
                         <Badge variant="secondary" className="mt-1 bg-slate-100 text-slate-500 border-none font-medium">
                           {t("grade")} {item.grade}
                         </Badge>
@@ -250,9 +250,9 @@ export default function TuitionPage() {
                     <div className="pt-3 border-t border-slate-100 flex justify-between items-end">
                       <div className="space-y-0.5">
                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t("amount_to_pay")}</div>
-                        <div className="text-lg font-bold text-slate-900">{formatCurrency(item.totalAmountDue)}</div>
+                        <div className="text-lg font-medium text-slate-900">{formatCurrency(item.totalAmountDue)}</div>
                       </div>
-                      <Button size="sm" className="rounded-xl h-9 px-4 font-bold bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-100">
+                      <Button size="sm" className="rounded-xl h-9 px-4 font-bold bg-slate-900 hover:bg-slate-800 shadow-md shadow-slate-200">
                         <Wallet className="size-3.5 mr-1.5" />
                         {t("record_payment")}
                       </Button>
@@ -304,17 +304,17 @@ export default function TuitionPage() {
                             {actualIndex}
                           </TableCell>
                           <TableCell>
-                            <div className="font-bold text-slate-900">{item.fullName}</div>
+                            <div className="font-medium text-slate-900">{item.fullName}</div>
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none min-w-[50px] justify-center font-medium">
                               {item.grade}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-center font-bold text-slate-600 text-sm">
+                          <TableCell className="text-center font-medium text-slate-600 text-sm">
                             {item.presentSessions}/{item.totalSessions}
                           </TableCell>
-                          <TableCell className="text-right font-bold text-slate-900">
+                          <TableCell className="text-right font-medium text-slate-900">
                             {formatCurrency(item.totalAmountDue)}
                           </TableCell>
                           <TableCell className="text-center">
