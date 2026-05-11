@@ -35,7 +35,7 @@ import type { MonthlyTuitionFilterInput } from "@/lib/schemas/tuition"
 
 type TuitionStatusItem = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
 
-function getStatusBadge(item: TuitionStatusItem, t: (key: string) => string) {
+function getStatusBadge(item: TuitionStatusItem, t: ReturnType<typeof useTranslation>["t"]) {
   const adjustedAmount = Math.max(0, item.totalAmountDue)
 
   if (item.paidAmount > adjustedAmount && adjustedAmount > 0) {
