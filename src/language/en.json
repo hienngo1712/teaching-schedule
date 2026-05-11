@@ -121,6 +121,8 @@
   "no_students_found": "No students found",
   "record_payment": "Record Payment",
   "overpaid": "Overpaid",
+  "overpaid_note_prefix": "Overpaid by",
+  "overpaid_note_suffix": "deduct next month",
   "no_sessions": "No sessions",
   "app": "Teaching Schedule Management",
   "login_to_continue": "Login to continue",

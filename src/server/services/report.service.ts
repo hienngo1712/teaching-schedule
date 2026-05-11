@@ -23,7 +23,8 @@ export async function getStudentReport(
   const sessions = await getMonthSessions(db, userId, {
     year,
     month,
-    studentId: studentId
+    studentId,
+    includeStudents: true,
   })
 
   // Calculate summary

@@ -35,10 +35,10 @@ describe("Student CRUD", () => {
     await caller.student.create({ fullName: "Bình", grade: 3 })
 
     const list = await caller.student.list({})
-    expect(list).toHaveLength(3)
-    expect(list[0].fullName).toBe("An")
-    expect(list[1].fullName).toBe("Bình")
-    expect(list[2].fullName).toBe("Hùng")
+    expect(list.items).toHaveLength(3)
+    expect(list.items[0].fullName).toBe("An")
+    expect(list.items[1].fullName).toBe("Bình")
+    expect(list.items[2].fullName).toBe("Hùng")
   })
 
   it("✓ list { grade: 3 } → chỉ HS lớp 3", async () => {
@@ -46,8 +46,8 @@ describe("Student CRUD", () => {
     await caller.student.create({ fullName: "An", grade: 3 })
     await caller.student.create({ fullName: "Hùng", grade: 5 })
     const list = await caller.student.list({ grade: 3 })
-    expect(list).toHaveLength(1)
-    expect(list[0].fullName).toBe("An")
+    expect(list.items).toHaveLength(1)
+    expect(list.items[0].fullName).toBe("An")
   })
 
   it("✓ list { search: 'NGUY' } → tìm không phân biệt hoa thường", async () => {
@@ -55,14 +55,14 @@ describe("Student CRUD", () => {
     await caller.student.create({ fullName: "Nguyễn An", grade: 3 })
     await caller.student.create({ fullName: "Trần Bình", grade: 5 })
     const list = await caller.student.list({ search: "NGUY" })
-    expect(list).toHaveLength(1)
-    expect(list[0].fullName).toBe("Nguyễn An")
+    expect(list.items).toHaveLength(1)
+    expect(list.items[0].fullName).toBe("Nguyễn An")
   })
 
   it("✓ update → cập nhật fields + updatedAt thay đổi", async () => {
     const caller = await getAuthedCaller()
     const s = await caller.student.create({ fullName: "An", grade: 3 })
-    const before = s.updatedAt
+    const before = new Date(s.updatedAt).getTime()
     await new Promise((r) => setTimeout(r, 10))
     const updated = await caller.student.update({
       id: s.id,
@@ -71,7 +71,7 @@ describe("Student CRUD", () => {
     expect(updated.fullName).toBe("An (đổi tên)")
     expect(updated.grade).toBe(4)
     expect(updated.level).toBe("tieu_hoc")
-    expect(updated.updatedAt.getTime()).toBeGreaterThan(before.getTime())
+    expect(new Date(updated.updatedAt).getTime()).toBeGreaterThan(before)
   })
 
   it("✓ delete (soft) → isActive=false, vẫn còn trong DB", async () => {
@@ -89,7 +89,7 @@ describe("Student CRUD", () => {
     const s = await caller.student.create({ fullName: "An", grade: 3 })
     await caller.student.delete({ id: s.id })
     const list = await caller.student.list({})
-    expect(list.find((x) => x.id === s.id)).toBeUndefined()
+    expect(list.items.find((x) => x.id === s.id)).toBeUndefined()
   })
 
   it("✓ list { isActive: false } → thấy HS đã xóa", async () => {
@@ -97,7 +97,7 @@ describe("Student CRUD", () => {
     const s = await caller.student.create({ fullName: "An", grade: 3 })
     await caller.student.delete({ id: s.id })
     const list = await caller.student.list({ isActive: false })
-    expect(list.find((x) => x.id === s.id)).toBeDefined()
+    expect(list.items.find((x) => x.id === s.id)).toBeDefined()
   })
 
   it("✗ create thiếu fullName → validation error", async () => {
@@ -140,7 +140,7 @@ describe("Student CRUD", () => {
     const sA = await callerA.student.create({ fullName: "HS của A", grade: 3 })
 
     const listB = await callerB.student.list({})
-    expect(listB.find((x) => x.id === sA.id)).toBeUndefined()
+    expect(listB.items.find((x) => x.id === sA.id)).toBeUndefined()
   })
 
   it("✗ multi-tenant: userB update HS của userA → NOT_FOUND", async () => {

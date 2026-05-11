@@ -13,9 +13,9 @@ import {
 import { useExcelExport } from "@/hooks/useExcelExport"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
-import type { SessionDTO } from "@/server/services/session.service"
+import { ATTENDANCE_STATUS } from "@/lib/constants"
+import type { SessionDTO, StudentDTO } from "@/lib/types/models"
 import { useSession } from "next-auth/react"
-import type { StudentDTO } from "@/lib/schemas/student.dto"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 interface ExportExcelButtonProps {
@@ -29,6 +29,32 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
   const { isExporting, exportMonthlySchedule, exportStudentSchedule, exportGradeReport, exportAttendanceSummary } = useExcelExport()
   const { year, month } = useCalendar()
   const { selectedGrade, selectedStudentId } = useFilters()
+
+  function handleExportStudent() {
+    if (!selectedStudentId) return
+    const studentSessions = sessions.filter(s =>
+      s.students.some(st => st.studentId === selectedStudentId)
+    )
+    const studentInfo = students.find(s => s.id === selectedStudentId)
+    const { present, absent, late } = studentSessions.reduce(
+      (acc, s) => {
+        const att = s.students.find(st => st.studentId === selectedStudentId)?.attendance
+        if (att === ATTENDANCE_STATUS.PRESENT) acc.present++
+        else if (att === ATTENDANCE_STATUS.ABSENT) acc.absent++
+        else if (att === ATTENDANCE_STATUS.LATE) acc.late++
+        return acc
+      },
+      { present: 0, absent: 0, late: 0 }
+    )
+    const total = studentSessions.length
+    const rate = total > 0 ? ((present + late) / total) * 100 : 0
+    exportStudentSchedule(
+      { fullName: studentInfo?.fullName || t("student"), grade: studentInfo?.grade || 0 },
+      studentSessions,
+      { total, present, absent, late, rate },
+      `${t("month")} ${month}/${year}`
+    )
+  }
 
   const teacherName = session?.user?.fullName || t("teacher_fallback")
 
@@ -60,30 +86,8 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
           📅 {t("export_monthly")} {selectedGrade ? `(${t("grade")} ${selectedGrade})` : ""}
         </DropdownMenuItem>
 
-        {selectedStudentId && sessions.length > 0 && (
-          <DropdownMenuItem onClick={() => {
-            const studentSessions = sessions.filter(s =>
-              s.students.some(st => st.studentId === selectedStudentId)
-            )
-            const fullName = studentSessions[0]?.students.find(st => st.studentId === selectedStudentId)?.fullName || t("student")
-            const grade = studentSessions[0]?.students.find(st => st.studentId === selectedStudentId)?.grade || 0
-
-            const present = studentSessions.filter(s =>
-              s.students.some(st => st.studentId === selectedStudentId && (st.attendance === "present" || st.attendance === "late"))
-            ).length
-            const absent = studentSessions.filter(s =>
-              s.students.some(st => st.studentId === selectedStudentId && st.attendance === "absent")
-            ).length
-            const total = studentSessions.length
-            const rate = total > 0 ? (present / total) * 100 : 0
-
-            exportStudentSchedule(
-              { fullName, grade },
-              studentSessions,
-              { total, present, absent, late: 0, rate },
-              `${t("month")} ${month}/${year}`
-            )
-          }}>
+        {selectedStudentId && (
+          <DropdownMenuItem onClick={handleExportStudent}>
             👤 {t("export_student")}
           </DropdownMenuItem>
         )}

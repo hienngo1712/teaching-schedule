@@ -5,7 +5,7 @@ import { useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { trpc } from "@/lib/trpc"
+import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { studentCreateSchema, type StudentCreateInput } from "@/lib/schemas/student"
 import { GRADES } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
@@ -29,16 +29,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
-type StudentRecord = {
-  id: number
-  fullName: string
-  grade: number
-  parentPhone: string | null
-  parentName: string | null
-  notes: string | null
-  isActive: boolean
-  tuitionFee: number
-}
+type StudentRecord = RouterOutputs["student"]["list"]["items"][number]
 
 type Props = {
   open: boolean

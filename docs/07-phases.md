@@ -516,3 +516,28 @@ PHÂN BIỆT DATABASE:
 - [x] Đảm bảo STT (Số thứ tự) hiển thị đúng theo trang: `(page - 1) * size + index + 1`
 
 **✅ Phase 12 done khi:** Tất cả bảng dữ liệu có phân trang cố định ở đáy màn hình.
+
+---
+
+## Phase 13: Backend Pagination Implementation
+
+> Đọc: `docs/13-backend-pagination.md`, `docs/12-pagination.md`
+
+### Sub 13.1 — Student Module Pagination
+- [x] Cập nhật `student.ts` schema với `page` và `limit`.
+- [x] Cập nhật `student.service.ts` hỗ trợ `skip` và `take`.
+- [x] Cập nhật `student.ts` router trả về `{ items, totalCount }`.
+- [x] Cập nhật `StudentList.tsx` để fetch dữ liệu theo trang.
+
+### Sub 13.2 — Tuition Module Pagination
+- [x] Cập nhật `tuition.ts` schema với `page` và `limit`.
+- [x] Cập nhật `tuition.service.ts` hỗ trợ phân trang ngay từ bước lấy HS.
+- [x] Cập nhật `tuition.ts` router trả về `{ items, totalCount }`.
+- [x] Cập nhật `TuitionPage.tsx` để fetch dữ liệu theo trang.
+
+### Sub 13.3 — Testing with 500 Students
+- [x] Tạo script seed 500 học sinh.
+- [x] Kiểm tra tốc độ phản hồi API (< 100ms).
+- [x] Kiểm tra logic chuyển trang, đổi số lượng bản ghi trên trang.
+
+**✅ Phase 13 done khi:** Student và Tuition modules hoạt động hoàn toàn với phân trang backend.

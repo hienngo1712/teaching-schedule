@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { trpc } from "@/lib/trpc"
-import type { SessionListDTO, SessionDTO } from "@/server/services/session.service"
+import type { SessionListDTO, SessionDTO } from "@/lib/types/models"
 import { AttendancePanel } from "./AttendancePanel"
 import { StudentPicker } from "./StudentPicker"
 import { useTranslation } from "@/components/providers/LanguageProvider"

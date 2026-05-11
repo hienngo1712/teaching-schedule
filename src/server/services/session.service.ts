@@ -13,38 +13,7 @@ import {
   type SessionCreateInput,
   type SessionFilterInput,
 } from "@/lib/schemas/session"
-
-export type SessionListDTO = {
-  id: number
-  userId: number
-  sessionDate: Date
-  startTime: string
-  endTime: string
-  durationMins: number
-  subjectId: number
-  subject: {
-    id: number
-    name: string
-    color: string
-  }
-  title: string | null
-  notes: string | null
-  status: string
-  studentCount: number
-  level: "tieu_hoc" | "thcs" | "mixed"
-}
-
-export type SessionDTO = SessionListDTO & {
-  students: Array<{
-    id: number
-    studentId: number
-    fullName: string
-    grade: number
-    attendance: string
-    note: string | null
-    fee: number
-  }>
-}
+import type { SessionDTO } from "@/lib/types/models"
 
 /**
  * Kiểm tra ca dạy mới có trùng giờ với ca khác trong cùng ngày, cùng user.
@@ -105,6 +74,14 @@ type SessionWithSubjectAndStudents = Prisma.TeachingSessionGetPayload<{
   _count?: { sessionStudents: number }
 }
 
+function deriveLevel(students: Array<{ grade: number }>): "tieu_hoc" | "thcs" | "mixed" {
+  const levels = students.filter(st => st.grade > 0).map(st => getLevel(st.grade))
+  if (levels.length === 0) return "tieu_hoc"
+  if (levels.every(l => l === "tieu_hoc")) return "tieu_hoc"
+  if (levels.every(l => l === "thcs")) return "thcs"
+  return "mixed"
+}
+
 function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
   const students = s.sessionStudents?.map((ss) => ({
     id: ss.id,
@@ -115,22 +92,6 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
     note: ss.note,
     fee: ss.fee,
   })) ?? []
-
-  // Derive level
-  let level: "tieu_hoc" | "thcs" | "mixed" = "tieu_hoc"
-  if (students.length > 0) {
-    const levels = students
-      .filter(st => st.grade > 0)
-      .map((st) => getLevel(st.grade))
-    
-    if (levels.length > 0) {
-      const allTieuHoc = levels.every((l) => l === "tieu_hoc")
-      const allThcs = levels.every((l) => l === "thcs")
-      if (allTieuHoc) level = "tieu_hoc"
-      else if (allThcs) level = "thcs"
-      else level = "mixed"
-    }
-  }
 
   return {
     id: s.id,
@@ -149,7 +110,7 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
     notes: s.notes,
     status: s.status,
     studentCount: s._count?.sessionStudents ?? s.sessionStudents?.length ?? 0,
-    level,
+    level: deriveLevel(students),
     students,
   }
 }

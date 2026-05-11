@@ -46,7 +46,7 @@ import {
   type SessionCreateInput,
 } from "@/lib/schemas/session"
 import { trpc } from "@/lib/trpc"
-import type { SessionDTO } from "@/server/services/session.service"
+import type { SessionDTO } from "@/lib/types/models"
 import { StudentPicker } from "./StudentPicker"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 

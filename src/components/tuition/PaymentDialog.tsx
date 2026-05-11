@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { History } from "lucide-react"
-import { trpc } from "@/lib/trpc"
+import { trpc, type RouterOutputs } from "@/lib/trpc"
 import {
   Dialog,
   DialogContent,
@@ -29,20 +29,12 @@ import { updatePaymentSchema, type UpdatePaymentInput } from "@/lib/schemas/tuit
 import { formatCurrency, cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
+type TuitionStatus = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
+
 interface PaymentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  data: {
-    studentId: number
-    fullName: string
-    year: number
-    month: number
-    totalExpected: number
-    paidAmount: number
-    isFullPaid: boolean
-    notes: string | null
-    previousBalance: number
-  } | null
+  data: (TuitionStatus & { year: number; month: number }) | null
   onSuccess: () => void
 }
 
@@ -88,32 +80,31 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
     mutation.mutate(values)
   }
 
-  // Auto-fill note when overpaid
+  // Auto-fill note when overpaid (compared against total adjusted amount, not just this month's fee)
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === "paidAmount" && data) {
         const paidAmount = value.paidAmount || 0
-        const totalExpected = data.totalExpected
+        const adjustedAmount = Math.max(0, data.totalExpected + data.previousBalance)
         const currentNotes = form.getValues("notes") || ""
-        
-        if (paidAmount > totalExpected) {
-          const excess = paidAmount - totalExpected
-          const overpaidNote = `Đóng thừa ${formatCurrency(excess)}, tháng sau cần trừ ${formatCurrency(excess)}`
-          
-          // Only update if the note isn't already there to avoid recursion/overwriting manual notes
-          if (!currentNotes.includes("Đóng thừa")) {
+        const prefix = t("overpaid_note_prefix")
+
+        if (paidAmount > adjustedAmount) {
+          const excess = paidAmount - adjustedAmount
+          const overpaidNote = `${prefix} ${formatCurrency(excess)}, ${t("overpaid_note_suffix")} ${formatCurrency(excess)}`
+
+          if (!currentNotes.includes(prefix)) {
             form.setValue("notes", currentNotes ? `${currentNotes}\n${overpaidNote}` : overpaidNote)
           }
         }
       }
     })
     return () => subscription.unsubscribe()
-  }, [form, data])
+  }, [form, data, t])
 
   function quickPayFull() {
     if (!data) return
     form.setValue("paidAmount", data.totalExpected)
-    form.setValue("isFullPaid", true)
   }
 
   function quickPayAdjusted() {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { trpc } from "@/lib/trpc"
+import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
 import { 
@@ -17,8 +17,7 @@ import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import { ExportExcelButton } from "@/components/reports/ExportExcelButton"
 import { ReportPeriodPicker } from "@/components/reports/ReportPeriodPicker"
-import type { SessionDTO } from "@/server/services/session.service"
-import type { StudentDTO } from "@/lib/schemas/student.dto"
+type SessionItem = Omit<RouterOutputs["session"]["getMonth"][number], "sessionDate"> & { sessionDate: Date }
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export default function ReportsPage() {
@@ -47,11 +46,12 @@ export default function ReportsPage() {
     return params
   }, [year, month, filterType, filterToYear, filterToMonth])
 
-  const { data: studentList = [] } = trpc.student.list.useQuery({
+  const { data: studentListData } = trpc.student.list.useQuery({
     grade: gradeFilter || undefined,
+    limit: 1000, // For reports we want more students
   })
 
-  const { data: monthSessions = [] } = trpc.session.getMonth.useQuery({
+  const { data: monthSessionsData = [] } = trpc.session.getMonth.useQuery({
     ...queryParams,
     grade: gradeFilter || undefined,
     studentId: selectedStudentId || undefined,
@@ -60,11 +60,11 @@ export default function ReportsPage() {
 
   const { data: monthlySummary } = trpc.report.monthlySummary.useQuery(queryParams)
 
-  const students = studentList as unknown as StudentDTO[]
-  const sessions = (monthSessions ?? []).map(s => ({
+  const students = studentListData?.items ?? []
+  const sessions = (monthSessionsData ?? []).map(s => ({
     ...s,
-    sessionDate: new Date(s.sessionDate)
-  })) as unknown as SessionDTO[]
+    sessionDate: new Date(s.sessionDate),
+  })) as SessionItem[]
 
   return (
     <div className="space-y-6">

@@ -26,11 +26,13 @@ export function StudentPicker({ value, onChange }: Props) {
   const [search, setSearch] = useState("")
   const [grade, setGrade] = useState<string>("all")
 
-  const { data: students = [], isLoading } = trpc.student.list.useQuery({
+  const { data: studentListData, isLoading } = trpc.student.list.useQuery({
     isActive: true,
+    limit: 1000,
   })
 
   const filteredStudents = useMemo(() => {
+    const students = studentListData?.items ?? []
     return students.filter((s) => {
       const matchSearch = s.fullName
         .toLowerCase()
@@ -38,7 +40,7 @@ export function StudentPicker({ value, onChange }: Props) {
       const matchGrade = grade === "all" || s.grade === Number(grade)
       return matchSearch && matchGrade
     })
-  }, [students, search, grade])
+  }, [studentListData?.items, search, grade])
 
   const toggleStudent = (id: number) => {
     if (value.includes(id)) {

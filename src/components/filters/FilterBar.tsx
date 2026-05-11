@@ -16,8 +16,7 @@ import { useCalendar } from "@/hooks/useCalendar"
 import { useEffect, useState } from "react"
 import { useDebounce } from "@/hooks/useDebounce"
 import { ExportExcelButton } from "../reports/ExportExcelButton"
-import type { SessionDTO } from "@/server/services/session.service"
-import type { StudentDTO } from "@/lib/schemas/student.dto"
+import type { SessionDTO, StudentDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 interface FilterBarProps {

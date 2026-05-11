@@ -67,6 +67,11 @@ Icon + Label (lucide-react icons):
 - Click SessionCard → `SessionDetailDialog`
 - Filter thay đổi → TanStack Query auto refetch
 
+### Best Practices cho Component Types
+- Ưu tiên sử dụng `RouterOutputs` để định nghĩa kiểu dữ liệu cho props và state.
+- Ví dụ: `type StudentRow = RouterOutputs["student"]["list"]["items"][number]`.
+- Việc này giúp component luôn đồng bộ với dữ liệu thực tế trả về từ API.
+
 ---
 
 ## Components
@@ -283,7 +288,7 @@ Toast sau khi xuất xong / fail
 ```
 UI:
   - Hiển thị: "Hiển thị [X]-[Y] trong [Z] bản ghi"
-  - Select: Số dòng mỗi trang (5, 10, 20, 50)
+  - Select: Số dòng mỗi trang (5, 10, 20, 50). Mặc định là **5**.
   - Buttons: First, Prev, Next, Last page
 
 Props:

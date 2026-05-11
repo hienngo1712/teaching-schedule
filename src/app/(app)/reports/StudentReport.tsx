@@ -6,7 +6,7 @@ import { StudentScheduleView } from "@/components/students/StudentScheduleView"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import type { SessionDTO } from "@/server/services/session.service"
+import type { SessionDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 interface StudentReportProps {
@@ -58,6 +58,8 @@ export function StudentReport({ studentId, year, month }: StudentReportProps) {
       <StudentScheduleView
         studentId={studentId}
         sessions={sessions}
+        year={year}
+        month={month}
       />
     </div>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import type { CalendarCell } from "@/hooks/useCalendar"
-import type { SessionListDTO } from "@/server/services/session.service"
+import type { SessionListDTO } from "@/lib/types/models"
 import { cn } from "@/lib/utils"
 import { SessionCard } from "./SessionCard"
 

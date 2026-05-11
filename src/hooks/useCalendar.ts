@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import type { SessionListDTO } from "@/server/services/session.service"
+import type { SessionListDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export type CalendarCell = {

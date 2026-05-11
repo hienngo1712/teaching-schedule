@@ -3,16 +3,7 @@ import { type PrismaClient } from "@prisma/client"
 import { assertOwnership } from "./_base.service"
 import type { AttendanceUpdateInput } from "@/lib/schemas/attendance"
 import { getLevel } from "@/lib/utils"
-
-export type AttendanceDTO = {
-  studentId: number
-  fullName: string
-  grade: number
-  level: "tieu_hoc" | "thcs"
-  attendance: string
-  note: string | null
-  fee: number
-}
+import type { AttendanceDTO } from "@/lib/types/models"
 
 export async function getAttendance(
   db: PrismaClient,

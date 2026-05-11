@@ -14,8 +14,8 @@ import {
 
 export const studentRouter = createTRPCRouter({
   list: protectedProcedure
-    .input(studentFilterSchema.optional())
-    .query(({ ctx, input }) => listStudents(ctx.db, ctx.userId, input ?? {})),
+    .input(studentFilterSchema)
+    .query(({ ctx, input }) => listStudents(ctx.db, ctx.userId, input)),
 
   create: protectedProcedure
     .input(studentCreateSchema)

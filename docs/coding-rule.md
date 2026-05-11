@@ -12,7 +12,11 @@ File này quy định các tiêu chuẩn code cho dự án **Teaching Schedule M
 - **An toàn:** KHÔNG bao giờ commit secrets, file `.env`, hoặc file `.env.test` vào repo.
 
 ## 2. Tiêu chuẩn Code (TypeScript)
-- **Strict Typing:** Tuyệt đối không dùng `any`. Sử dụng `z.infer<typeof schema>` cho các kiểu dữ liệu từ Zod.
+- **Strict Typing:** Tuyệt đối không dùng `any`. Không sử dụng `any` để ép kiểu (casting) hoặc gán cho các thuộc tính/key của object. Phải dùng types đầy đủ hoặc `z.infer<typeof schema>` cho các kiểu dữ liệu từ Zod.
+- **Model & Type Management:**
+    - Tuyệt đối không khai báo lại các Interface/Type của Model thủ công ở nhiều nơi.
+    - Sử dụng `src/lib/types/models.ts` cho các DTO dùng chung giữa FE và BE.
+    - Ưu tiên sử dụng `RouterOutputs` và `RouterInputs` từ `@/lib/trpc` để suy luận (infer) type từ API, đảm bảo tính nhất quán 100% khi API thay đổi.
 - **Service Layer:** Logic nghiệp vụ (Business Logic) phải nằm ở thư mục `src/server/services/`. Router tRPC chỉ gọi service.
 - **Error Handling:** Sử dụng `TRPCError` với các mã lỗi phù hợp (`NOT_FOUND`, `BAD_REQUEST`, `UNAUTHORIZED`).
 
@@ -32,6 +36,11 @@ File này quy định các tiêu chuẩn code cho dự án **Teaching Schedule M
     - Các cột số (tiền tệ, số lượng) trong Table phải căn phải (`text-right`).
     - Không tự ý thay đổi font-family (như `font-mono`) cho dữ liệu hiển thị thông thường trừ khi có yêu cầu đặc biệt.
 - **UX:** Luôn có trạng thái Loading (Skeleton) và Thông báo (Toast) sau mỗi hành động (Thêm/Sửa/Xóa).
+- **Phân trang (Pagination):**
+    - Tất cả các danh sách (Table/List) bắt buộc phải có phân trang.
+    - **Default Page Size:** Phải là **5** item/trang để tối ưu tốc độ load trên mobile.
+    - Phải sử dụng `DataTablePagination` ghim ở đáy (`sticky bottom-0`).
+    - Các API lấy danh sách phải hỗ trợ phân trang ở Backend (Server-side) thông qua `paginationSchema`.
 
 ## 5. Quy trình làm việc & Commit
 - **Kiểm tra trước khi commit:**

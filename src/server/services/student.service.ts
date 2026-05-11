@@ -1,12 +1,12 @@
-import type { PrismaClient, Student } from "@prisma/client"
+import type { PrismaClient } from "@prisma/client"
 import { getLevel } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
 import type {
   StudentCreateInput,
   StudentFilterInput,
 } from "@/lib/schemas/student"
-
-export type StudentWithLevel = Student & { level: "tieu_hoc" | "thcs" }
+import type { PaginatedResponse } from "@/lib/schemas/common"
+import type { StudentDTO } from "@/lib/types/models"
 
 function withLevel<T extends { grade: number }>(s: T): T & { level: "tieu_hoc" | "thcs" } {
   return { ...s, level: getLevel(s.grade) }
@@ -16,26 +16,42 @@ export async function listStudents(
   db: PrismaClient,
   userId: number,
   filter: StudentFilterInput
-): Promise<StudentWithLevel[]> {
-  const students = await db.student.findMany({
-    where: {
-      userId,
-      ...(filter.isActive !== undefined ? { isActive: filter.isActive } : { isActive: true }),
-      ...(filter.grade ? { grade: filter.grade } : {}),
-      ...(filter.search
-        ? { fullName: { contains: filter.search, mode: "insensitive" } }
-        : {}),
-    },
-    orderBy: [{ grade: "asc" }, { fullName: "asc" }],
-  })
-  return students.map(withLevel)
+): Promise<PaginatedResponse<StudentDTO>> {
+  const { page, limit, grade, search, isActive } = filter
+  const skip = (page - 1) * limit
+  const take = limit
+
+  const where = {
+    userId,
+    ...(isActive !== undefined ? { isActive } : { isActive: true }),
+    ...(grade ? { grade } : {}),
+    ...(search
+      ? { fullName: { contains: search, mode: "insensitive" as const } }
+      : {}),
+  }
+
+  const [students, totalCount] = await Promise.all([
+    db.student.findMany({
+      where,
+      orderBy: [{ grade: "asc" }, { fullName: "asc" }],
+      skip,
+      take,
+    }),
+    db.student.count({ where }),
+  ])
+
+  return {
+    items: students.map(withLevel),
+    totalCount,
+    totalPages: Math.ceil(totalCount / limit),
+  }
 }
 
 export async function createStudent(
   db: PrismaClient,
   userId: number,
   input: StudentCreateInput
-): Promise<StudentWithLevel> {
+): Promise<StudentDTO> {
   const student = await db.student.create({
     data: {
       userId,
@@ -56,7 +72,7 @@ export async function updateStudent(
   userId: number,
   id: number,
   data: Partial<StudentCreateInput>
-): Promise<StudentWithLevel> {
+): Promise<StudentDTO> {
   const existing = await db.student.findUnique({ where: { id } })
   assertOwnership(existing, userId)
 

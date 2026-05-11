@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ATTENDANCE_LABEL, ATTENDANCE_STATUS } from "@/lib/constants"
 import { formatDate, formatDayOfWeek, calcAttendanceRate, removeVietnameseTones, formatCurrency, cn } from "@/lib/utils"
 import { Wallet } from "lucide-react"
-import type { SessionDTO } from "@/server/services/session.service"
+import type { SessionDTO } from "@/lib/types/models"
 import { trpc } from "@/lib/trpc"
 import { ExportButton } from "../reports/ExportButton"
 import { usePagination } from "@/hooks/usePagination"
@@ -25,12 +25,16 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 interface StudentScheduleViewProps {
   studentId: number
   sessions: SessionDTO[]
+  year: number
+  month: number
   exportRef?: React.RefObject<HTMLDivElement>
 }
 
 export function StudentScheduleView({
   studentId,
   sessions,
+  year,
+  month,
   exportRef: externalRef,
 }: StudentScheduleViewProps) {
   const { t } = useTranslation()
@@ -46,14 +50,14 @@ export function StudentScheduleView({
   }, [sessions, studentId])
 
   const studentQuery = trpc.student.list.useQuery(
-    { search: "" },
+    { search: "", limit: 1000 },
     { enabled: !studentInfoFromSessions }
   )
 
   const studentInfo = useMemo(() => {
     if (studentInfoFromSessions) return studentInfoFromSessions
-    if (studentQuery.data) {
-      return studentQuery.data.find(s => s.id === studentId)
+    if (studentQuery.data?.items) {
+      return studentQuery.data.items.find(s => s.id === studentId)
     }
     return null
   }, [studentInfoFromSessions, studentQuery.data, studentId])
@@ -218,7 +222,7 @@ export function StudentScheduleView({
               </CardTitle>
             </CardHeader>
             <CardContent className="pb-6">
-              <TuitionStatusCard studentId={studentId} year={new Date(sessions[0]?.sessionDate || new Date()).getFullYear()} month={new Date(sessions[0]?.sessionDate || new Date()).getMonth() + 1} />
+              <TuitionStatusCard studentId={studentId} year={year} month={month} />
             </CardContent>
           </Card>
         </div>
@@ -242,9 +246,10 @@ function TuitionStatusCard({ studentId, year, month }: { studentId: number, year
   const { data: statusList, isLoading } = trpc.tuition.getMonthlyStatus.useQuery({
     year,
     month,
+    limit: 1000,
   })
 
-  const status = statusList?.find(s => s.studentId === studentId)
+  const status = statusList?.items.find(s => s.studentId === studentId)
 
   if (isLoading) return <Skeleton className="h-20 w-full" />
   if (!status) return null

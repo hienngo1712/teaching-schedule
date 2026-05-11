@@ -6,7 +6,7 @@ import { Clock } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DAY_NAMES } from "@/lib/constants"
 import { cn } from "@/lib/utils"
-import { trpc } from "@/lib/trpc"
+import { trpc, type RouterOutputs } from "@/lib/trpc"
 import {
   buildCalendarGrid,
   useCalendar,
@@ -14,13 +14,15 @@ import {
 import { useFilters } from "@/hooks/useFilters"
 import { FilterBar } from "../filters/FilterBar"
 import { StudentScheduleView } from "../students/StudentScheduleView"
-import type { SessionListDTO, SessionDTO } from "@/server/services/session.service"
+import type { SessionListDTO, SessionDTO } from "@/lib/types/models"
 import { CalendarDayCell } from "./CalendarDayCell"
 import { SessionFormDialog } from "../sessions/SessionFormDialog"
 import { BulkCreateDialog } from "../sessions/BulkCreateDialog"
 import { SessionDetailDialog } from "../sessions/SessionDetailDialog"
 import { Badge } from "@/components/ui/badge"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+
+type SessionWithDate = Omit<RouterOutputs["session"]["getMonth"][number], "sessionDate"> & { sessionDate: Date }
 
 export function MonthCalendar() {
   const { t } = useTranslation()
@@ -61,10 +63,11 @@ export function MonthCalendar() {
     includeStudents: !!selectedStudentId || !!filterParams.studentName
   })
 
-  const { data: students = [] } = trpc.student.list.useQuery({})
+  const { data: studentListData } = trpc.student.list.useQuery({ limit: 1000 })
+  const students = studentListData?.items ?? []
 
   // Convert sessionDate string từ tRPC → Date object cho buildCalendarGrid
-  const sessions = useMemo<SessionDTO[]>(() => {
+  const sessions = useMemo<SessionWithDate[]>(() => {
     return (query.data ?? []).map((s) => ({
       ...s,
       sessionDate: new Date(s.sessionDate),
@@ -249,9 +252,11 @@ export function MonthCalendar() {
       </div>
 
       {selectedStudentId && (
-        <StudentScheduleView 
-          studentId={selectedStudentId} 
+        <StudentScheduleView
+          studentId={selectedStudentId}
           sessions={sessions}
+          year={year}
+          month={month}
           exportRef={exportRef}
         />
       )}

@@ -1,10 +1,21 @@
 import { useState } from "react"
 import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
-import { ATTENDANCE_LABEL, ATTENDANCE_STATUS } from "@/lib/constants"
+import { toast } from "sonner"
+import { ATTENDANCE_LABEL, ATTENDANCE_STATUS, COLORS } from "@/lib/constants"
 import { formatDate, formatDayOfWeek, removeVietnameseTones } from "@/lib/utils"
-import type { SessionDTO } from "@/server/services/session.service"
-import type { StudentDTO } from "@/lib/schemas/student.dto"
+import type { SessionDTO, StudentDTO } from "@/lib/types/models"
+
+const toArgb = (hex: string) => `FF${hex.replace("#", "")}`
+const EXCEL_COLORS = {
+  primary: toArgb(COLORS.primary),
+  present: toArgb(COLORS.present),
+  absent: toArgb(COLORS.absent),
+  late: toArgb(COLORS.late),
+  pending: toArgb(COLORS.pending),
+  headerBg: "FFE0E7FF",
+  white: "FFFFFFFF",
+} as const
 
 export function useExcelExport() {
   const [isExporting, setIsExporting] = useState(false)
@@ -27,8 +38,8 @@ export function useExcelExport() {
         alignment: { horizontal: "center" },
       }
       const headerStyle: Partial<ExcelJS.Style> = {
-        font: { name: "Arial", size: 11, bold: true, color: { argb: "FFFFFFFF" } },
-        fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF4F46E5" } },
+        font: { name: "Arial", size: 11, bold: true, color: { argb: EXCEL_COLORS.white } },
+        fill: { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_COLORS.primary } },
         alignment: { horizontal: "center", vertical: "middle" },
         border: {
           top: { style: "thin" },
@@ -101,9 +112,9 @@ export function useExcelExport() {
 
       const headerRow = sheet.getRow(5)
       headerRow.values = ["STT", "Ngày", "Thứ", "Giờ", "Điểm danh", "Ghi chú"]
-      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } }
+      headerRow.font = { bold: true, color: { argb: EXCEL_COLORS.white } }
       headerRow.eachCell(cell => {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4F46E5" } }
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_COLORS.primary } }
       })
 
       sessions.forEach((s, i) => {
@@ -120,9 +131,9 @@ export function useExcelExport() {
         
         // Color for attendance
         const attendanceCell = row.getCell(5)
-        if (st?.attendance === ATTENDANCE_STATUS.PRESENT) attendanceCell.font = { color: { argb: "FF22C55E" } }
-        if (st?.attendance === ATTENDANCE_STATUS.ABSENT) attendanceCell.font = { color: { argb: "FFEF4444" } }
-        if (st?.attendance === ATTENDANCE_STATUS.LATE) attendanceCell.font = { color: { argb: "FFF59E0B" } }
+        if (st?.attendance === ATTENDANCE_STATUS.PRESENT) attendanceCell.font = { color: { argb: EXCEL_COLORS.present } }
+        if (st?.attendance === ATTENDANCE_STATUS.ABSENT) attendanceCell.font = { color: { argb: EXCEL_COLORS.absent } }
+        if (st?.attendance === ATTENDANCE_STATUS.LATE) attendanceCell.font = { color: { argb: EXCEL_COLORS.late } }
       })
 
       const lastRowIdx = 6 + sessions.length + 1
@@ -159,7 +170,7 @@ export function useExcelExport() {
         .sort((a, b) => a.sessionDate.getTime() - b.sessionDate.getTime() || a.startTime.localeCompare(b.startTime))
 
       if (gradeStudents.length === 0) {
-        alert(`Không có học sinh nào thuộc lớp ${grade} trong dữ liệu hiện tại.`)
+        toast.error(`Không có học sinh nào thuộc lớp ${grade} trong dữ liệu hiện tại.`)
         return
       }
 
@@ -182,7 +193,7 @@ export function useExcelExport() {
         cell.value = `${formatDate(s.sessionDate).substring(0, 5)}\n${s.startTime}`
         cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true }
         cell.font = { size: 9, bold: true }
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E7FF" } }
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_COLORS.headerBg } }
       })
 
       const summaryColIdx = gradeSessions.length + 2
@@ -202,18 +213,18 @@ export function useExcelExport() {
           
           if (attendance === ATTENDANCE_STATUS.PRESENT) {
             cell.value = "✓"
-            cell.font = { color: { argb: "FF22C55E" } }
+            cell.font = { color: { argb: EXCEL_COLORS.present } }
             presentCount++
           } else if (attendance === ATTENDANCE_STATUS.ABSENT) {
             cell.value = "✗"
-            cell.font = { color: { argb: "FFEF4444" } }
+            cell.font = { color: { argb: EXCEL_COLORS.absent } }
           } else if (attendance === ATTENDANCE_STATUS.LATE) {
             cell.value = "M"
-            cell.font = { color: { argb: "FFF59E0B" } }
+            cell.font = { color: { argb: EXCEL_COLORS.late } }
             presentCount++
           } else {
             cell.value = "-"
-            cell.font = { color: { argb: "FF9CA3AF" } }
+            cell.font = { color: { argb: EXCEL_COLORS.pending } }
           }
           cell.alignment = { horizontal: "center" }
         })
@@ -255,15 +266,21 @@ export function useExcelExport() {
       headerRow.values = ["STT", "Học sinh", "Lớp", "Tổng buổi", "Có mặt", "Vắng", "Muộn", "Tỉ lệ %"]
       headerRow.font = { bold: true }
 
-      students.sort((a, b) => (a.grade - b.grade) || a.fullName.localeCompare(b.fullName))
+      const sortedStudents = [...students].sort((a, b) => (a.grade - b.grade) || a.fullName.localeCompare(b.fullName))
 
-      students.forEach((student, i) => {
+      sortedStudents.forEach((student, i) => {
         const studentSessions = sessions.filter(s => s.students.some(st => st.studentId === student.id))
         const total = studentSessions.length
-        const present = studentSessions.filter(s => s.students.find(ss => ss.studentId === student.id)?.attendance === ATTENDANCE_STATUS.PRESENT).length
-        const absent = studentSessions.filter(s => s.students.find(ss => ss.studentId === student.id)?.attendance === ATTENDANCE_STATUS.ABSENT).length
-        const late = studentSessions.filter(s => s.students.find(ss => ss.studentId === student.id)?.attendance === ATTENDANCE_STATUS.LATE).length
-        
+        const { present, absent, late } = studentSessions.reduce(
+          (acc, s) => {
+            const att = s.students.find(ss => ss.studentId === student.id)?.attendance
+            if (att === ATTENDANCE_STATUS.PRESENT) acc.present++
+            else if (att === ATTENDANCE_STATUS.ABSENT) acc.absent++
+            else if (att === ATTENDANCE_STATUS.LATE) acc.late++
+            return acc
+          },
+          { present: 0, absent: 0, late: 0 }
+        )
         const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0
 
         sheet.getRow(4 + i).values = [

@@ -205,6 +205,36 @@ export const updatePaymentSchema = z.object({
   notes: z.string().optional().nullable(),
 })
 ```
+## API Conventions
+
+### Model & Type Management
+Để đảm bảo tính nhất quán và dễ bảo trì, dự án áp dụng quy chuẩn quản lý type như sau:
+
+1.  **Centralized DTOs:** Các interface dùng chung cho cả FE và BE (như `StudentDTO`, `SessionDTO`) được định nghĩa tại `src/lib/types/models.ts`.
+2.  **tRPC Inferred Types:** 
+    *   Sử dụng `RouterOutputs["routerName"]["procedureName"]` để lấy kiểu dữ liệu trả về từ API.
+    *   Sử dụng `RouterInputs["routerName"]["procedureName"]` để lấy kiểu dữ liệu đầu vào.
+    *   Điều này giúp Frontend tự động cập nhật khi Backend thay đổi logic mà không cần sửa code thủ công ở nhiều nơi.
+3.  **No Manual Duplication:** Tuyệt đối không khai báo lại các object structure của model trong các component Frontend.
+
+### Backend Pagination (Server-side)
+...
+
+Tất cả các API danh sách (List/Query) có tiềm năng dữ liệu lớn (> 100 bản ghi) bắt buộc phải triển khai phân trang ở Backend.
+
+**Input:**
+- Phải merge với `paginationSchema` (từ `src/lib/schemas/common.ts`).
+- Bao gồm các trường: `page` (mặc định 1), `limit` (mặc định 5, max 1000).
+
+**Output:**
+- Phải sử dụng kiểu `PaginatedResponse<T>`.
+- Bao gồm các trường: `items: T[]`, `totalCount: number`, `totalPages: number`.
+
+**Implementation:**
+- Sử dụng `skip` và `take` của Prisma.
+- `skip = (page - 1) * limit`.
+- `take = limit`.
+- Luôn sử dụng `Promise.all` để chạy song song truy vấn dữ liệu và đếm tổng số bản ghi.
 
 ---
 

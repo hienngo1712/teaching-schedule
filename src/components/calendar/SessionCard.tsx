@@ -1,6 +1,6 @@
 "use client"
 
-import type { SessionListDTO } from "@/server/services/session.service"
+import type { SessionListDTO } from "@/lib/types/models"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 

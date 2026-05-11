@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { CalendarDays, MoreHorizontal, Pencil, Trash2, UserPlus } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { trpc } from "@/lib/trpc"
+import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import { useFilters } from "@/hooks/useFilters"
@@ -45,21 +45,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { StudentFormDialog } from "./StudentFormDialog"
-import { usePagination } from "@/hooks/usePagination"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
-type StudentRow = {
-  id: number
-  fullName: string
-  grade: number
-  level: "tieu_hoc" | "thcs"
-  parentPhone: string | null
-  parentName: string | null
-  notes: string | null
-  isActive: boolean
-  tuitionFee: number
-}
+type StudentRow = RouterOutputs["student"]["list"]["items"][number]
 
 const ALL_GRADES_VALUE = "all"
 
@@ -72,18 +61,29 @@ export function StudentList() {
   const [localSearch, setLocalSearch] = useState(searchStudentName)
   const debouncedSearch = useDebounce(localSearch, 400)
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
+
   useEffect(() => {
     setSearch(debouncedSearch)
+    setCurrentPage(1) // Reset to page 1 when search changes
   }, [debouncedSearch, setSearch])
 
   useEffect(() => {
     setLocalSearch(searchStudentName)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchStudentName])
+
+  useEffect(() => {
+    setCurrentPage(1) // Reset to page 1 when grade changes
+  }, [selectedGrade])
 
   const listQuery = trpc.student.list.useQuery({
     grade: selectedGrade ?? undefined,
     search: searchStudentName.trim() || undefined,
-    isActive: undefined, // Lấy cả đang học và đã nghỉ
+    isActive: undefined,
+    page: currentPage,
+    limit: pageSize,
   })
 
   const [formState, setFormState] = useState<
@@ -103,17 +103,9 @@ export function StudentList() {
     onError: (e) => toast.error(e.message),
   })
 
-  const students = listQuery.data ?? []
-
-  const {
-    currentPage,
-    setCurrentPage,
-    pageSize,
-    setPageSize,
-    paginatedData,
-    totalItems,
-    totalPages,
-  } = usePagination(students)
+  const students = listQuery.data?.items ?? []
+  const totalItems = listQuery.data?.totalCount ?? 0
+  const totalPages = listQuery.data?.totalPages ?? 0
 
   return (
     <div className="space-y-4">
@@ -196,7 +188,7 @@ export function StudentList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedData.map((s, idx) => {
+                students.map((s, idx) => {
                   const actualIndex = (currentPage - 1) * pageSize + idx + 1
                   return (
                     <TableRow key={s.id}>

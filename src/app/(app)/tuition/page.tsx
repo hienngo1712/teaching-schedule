@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, Search, Wallet, CheckCircle2, AlertCircle, Clock, CircleDollarSign } from "lucide-react"
-import { trpc } from "@/lib/trpc"
+import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
 import { Button } from "@/components/ui/button"
@@ -28,24 +28,61 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
-import { usePagination } from "@/hooks/usePagination"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import type { MonthlyTuitionFilterInput } from "@/lib/schemas/tuition"
 
 
-interface TuitionStatusItem {
-  studentId: number
-  fullName: string
-  grade: number
-  totalSessions: number
-  presentSessions: number
-  totalExpected: number
-  paidAmount: number
-  isFullPaid: boolean
-  notes: string | null
-  previousBalance: number
-  totalAmountDue: number
+type TuitionStatusItem = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
+
+function getStatusBadge(item: TuitionStatusItem, t: (key: string) => string) {
+  const adjustedAmount = Math.max(0, item.totalAmountDue)
+
+  if (item.paidAmount > adjustedAmount && adjustedAmount > 0) {
+    return (
+      <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">
+        <CircleDollarSign className="size-3 mr-1" /> {t("overpaid")}
+      </Badge>
+    )
+  }
+
+  if (item.paidAmount >= adjustedAmount && adjustedAmount > 0) {
+    return (
+      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">
+        <CheckCircle2 className="size-3 mr-1" /> {t("fully_paid")}
+      </Badge>
+    )
+  }
+
+  if (item.paidAmount >= item.totalExpected && item.totalExpected > 0 && item.previousBalance > 0) {
+    return (
+      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">
+        <CheckCircle2 className="size-3 mr-1" /> {t("paid_this_month")}
+      </Badge>
+    )
+  }
+
+  if (item.paidAmount > 0) {
+    return (
+      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">
+        <Clock className="size-3 mr-1" /> {t("partial_paid")}
+      </Badge>
+    )
+  }
+
+  if (adjustedAmount > 0) {
+    return (
+      <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">
+        <AlertCircle className="size-3 mr-1" /> {t("unpaid")}
+      </Badge>
+    )
+  }
+
+  return (
+    <Badge variant="outline" className="text-slate-400 border-slate-200 font-normal">
+      {t("no_sessions")}
+    </Badge>
+  )
 }
 
 export default function TuitionPage() {
@@ -55,81 +92,32 @@ export default function TuitionPage() {
   const [selectedStudent, setSelectedStudent] = useState<(TuitionStatusItem & { year: number; month: number }) | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const { t } = useTranslation()
+
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
+
   const query = trpc.tuition.getMonthlyStatus.useQuery({
     year,
     month,
     grade: selectedGrade || undefined,
     search: searchStudentName || undefined,
     status: selectedStatus as MonthlyTuitionFilterInput["status"],
+    page: currentPage,
+    limit: pageSize,
   })
 
-  const {
-    currentPage,
-    setCurrentPage,
-    pageSize,
-    setPageSize,
-    paginatedData,
-    totalItems,
-    totalPages,
-  } = usePagination(query.data)
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedGrade, searchStudentName, selectedStatus, year, month])
+
+  const items = query.data?.items ?? []
+  const totalItems = query.data?.totalCount ?? 0
+  const totalPages = query.data?.totalPages ?? 0
 
   const handleOpenDetail = (item: TuitionStatusItem) => {
-    setSelectedStudent({
-      ...item,
-      year,
-      month,
-    })
+    setSelectedStudent({ ...item, year, month })
     setIsSheetOpen(true)
-  }
-
-  const getStatusBadge = (item: TuitionStatusItem) => {
-    const adjustedAmount = Math.max(0, item.totalAmountDue)
-
-    if (item.paidAmount > adjustedAmount && adjustedAmount > 0) {
-      return (
-        <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">
-          <CircleDollarSign className="size-3 mr-1" /> {t("overpaid")}
-        </Badge>
-      )
-    }
-
-    if (item.paidAmount >= adjustedAmount && adjustedAmount > 0) {
-      return (
-        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">
-          <CheckCircle2 className="size-3 mr-1" /> {t("fully_paid")}
-        </Badge>
-      )
-    }
-
-    if (item.paidAmount >= item.totalExpected && item.totalExpected > 0 && item.previousBalance > 0) {
-      return (
-        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">
-          <CheckCircle2 className="size-3 mr-1" /> {t("paid_this_month")}
-        </Badge>
-      )
-    }
-
-    if (item.paidAmount > 0) {
-      return (
-        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">
-          <Clock className="size-3 mr-1" /> {t("partial_paid")}
-        </Badge>
-      )
-    }
-
-    if (adjustedAmount > 0) {
-      return (
-        <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">
-          <AlertCircle className="size-3 mr-1" /> {t("unpaid")}
-        </Badge>
-      )
-    }
-
-    return (
-      <Badge variant="outline" className="text-slate-400 border-slate-200 font-normal">
-        {t("no_sessions")}
-      </Badge>
-    )
   }
 
   return (
@@ -220,12 +208,12 @@ export default function TuitionPage() {
                   </CardContent>
                 </Card>
               ))
-            ) : paginatedData.length === 0 ? (
+            ) : items.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
                 <p className="text-slate-400 italic">{t("no_students_found")}</p>
               </div>
             ) : (
-              paginatedData.map((item) => (
+              items.map((item) => (
                 <Card 
                   key={item.studentId} 
                   className="border-slate-200 shadow-sm rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
@@ -240,7 +228,7 @@ export default function TuitionPage() {
                         </Badge>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        {getStatusBadge(item)}
+                        {getStatusBadge(item, t)}
                         <span className="text-[10px] text-slate-400 font-medium">
                           {item.presentSessions}/{item.totalSessions} {t("sessions")}
                         </span>
@@ -289,14 +277,14 @@ export default function TuitionPage() {
                         ))}
                       </TableRow>
                     ))
-                  ) : paginatedData.length === 0 ? (
+                  ) : items.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="h-32 text-center text-slate-400 italic">
                         {t("no_students_found")}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedData.map((item, index) => {
+                    items.map((item, index) => {
                       const actualIndex = (currentPage - 1) * pageSize + index + 1
                       return (
                         <TableRow key={item.studentId} className="hover:bg-slate-50/50 transition-colors border-slate-100 cursor-pointer" onClick={() => handleOpenDetail(item)}>
@@ -318,7 +306,7 @@ export default function TuitionPage() {
                             {formatCurrency(item.totalAmountDue)}
                           </TableCell>
                           <TableCell className="text-center">
-                            {getStatusBadge(item)}
+                            {getStatusBadge(item, t)}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button

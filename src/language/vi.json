@@ -121,6 +121,8 @@
   "no_students_found": "Không tìm thấy học sinh nào",
   "record_payment": "Ghi nhận",
   "overpaid": "Đóng thừa tiền",
+  "overpaid_note_prefix": "Đóng thừa",
+  "overpaid_note_suffix": "tháng sau cần trừ",
   "no_sessions": "Không có buổi học",
   "app": "Quản lý lịch dạy",
   "login_to_continue": "Đăng nhập để tiếp tục",

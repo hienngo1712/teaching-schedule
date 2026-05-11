@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { paginationSchema } from "./common"
 
 const phoneRegex = /^(0|\+84)[0-9]{8,9}$/
 
@@ -27,7 +28,7 @@ export const studentFilterSchema = z.object({
   grade: z.number().int().min(1).max(9).optional(),
   search: z.string().trim().max(100).optional(),
   isActive: z.boolean().optional(),
-})
+}).merge(paginationSchema)
 
 export type StudentCreateInput = z.infer<typeof studentCreateSchema>
 export type StudentUpdateInput = z.infer<typeof studentUpdateSchema>

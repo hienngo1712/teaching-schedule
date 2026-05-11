@@ -86,13 +86,13 @@ describe("Tuition Management", () => {
       month: 5,
     })
 
-    expect(status).toHaveLength(1)
-    expect(status[0].fullName).toBe("Nguyễn Văn An")
-    expect(status[0].totalSessions).toBe(3)
-    expect(status[0].presentSessions).toBe(2)
-    expect(status[0].totalExpected).toBe(200000)
-    expect(status[0].paidAmount).toBe(0)
-    expect(status[0].isFullPaid).toBe(false)
+    expect(status.items).toHaveLength(1)
+    expect(status.items[0].fullName).toBe("Nguyễn Văn An")
+    expect(status.items[0].totalSessions).toBe(3)
+    expect(status.items[0].presentSessions).toBe(2)
+    expect(status.items[0].totalExpected).toBe(200000)
+    expect(status.items[0].paidAmount).toBe(0)
+    expect(status.items[0].isFullPaid).toBe(false)
   })
 
   it("✓ updatePayment → lưu thông tin đóng tiền", async () => {
@@ -109,9 +109,9 @@ describe("Tuition Management", () => {
     })
 
     const status = await caller.tuition.getMonthlyStatus({ year: 2026, month: 5 })
-    expect(status[0].paidAmount).toBe(150000)
-    expect(status[0].isFullPaid).toBe(false)
-    expect(status[0].notes).toBe("Mới đóng một nửa")
+    expect(status.items[0].paidAmount).toBe(150000)
+    expect(status.items[0].isFullPaid).toBe(false)
+    expect(status.items[0].notes).toBe("Mới đóng một nửa")
 
     // Update again (upsert test)
     await caller.tuition.updatePayment({
@@ -124,9 +124,9 @@ describe("Tuition Management", () => {
     })
 
     const updatedStatus = await caller.tuition.getMonthlyStatus({ year: 2026, month: 5 })
-    expect(updatedStatus[0].paidAmount).toBe(200000)
-    expect(updatedStatus[0].isFullPaid).toBe(true)
-    expect(updatedStatus[0].notes).toBe("Đã đóng đủ")
+    expect(updatedStatus.items[0].paidAmount).toBe(200000)
+    expect(updatedStatus.items[0].isFullPaid).toBe(true)
+    expect(updatedStatus.items[0].notes).toBe("Đã đóng đủ")
   })
 
   it("✗ updatePayment student của user khác → NOT_FOUND", async () => {

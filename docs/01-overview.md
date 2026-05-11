@@ -103,7 +103,9 @@ teaching-schedule/
 │   │   │   ├── attendance.ts
 │   │   │   ├── report.ts
 │   │   │   └── tuition.ts
-│   │   ├── trpc.ts                  # tRPC client hooks
+│   │   ├── types/
+│   │   │   └── models.ts             ← CENTRALIZED TYPES/DTOs
+│   │   ├── trpc.ts                  # tRPC client hooks + RouterOutputs
 │   │   ├── utils.ts                 # cn(), getLevel(), date helpers
 │   │   └── constants.ts             # GRADES, ATTENDANCE_STATUS, DAY_NAMES
 │   │
