@@ -55,17 +55,18 @@ export async function getStudentReport(
 export async function getMonthlySummary(
   db: PrismaClient,
   userId: number,
-  params: { 
-    year: number; 
+  params: {
+    year: number;
     month: number;
     toYear?: number;
     toMonth?: number;
+    grade?: number;
   }
 ) {
-  const { year, month, toYear, toMonth } = params
-  
+  const { year, month, toYear, toMonth, grade } = params
+
   const startDate = new Date(Date.UTC(year, month - 1, 1))
-  const endDate = toYear && toMonth 
+  const endDate = toYear && toMonth
     ? new Date(Date.UTC(toYear, toMonth, 1))
     : new Date(Date.UTC(year, month, 1))
 
@@ -73,31 +74,32 @@ export async function getMonthlySummary(
     db.teachingSession.findMany({
       where: {
         userId,
-        sessionDate: { gte: startDate, lt: endDate }
+        sessionDate: { gte: startDate, lt: endDate },
+        ...(grade ? { sessionStudents: { some: { student: { grade } } } } : {})
       },
       include: {
         sessionStudents: { include: { student: true } }
       }
     }),
-    db.student.findMany({ where: { userId, isActive: true } }),
+    db.student.findMany({ where: { userId, isActive: true, ...(grade ? { grade } : {}) } }),
     db.monthlyTuition.findMany({
       where: {
-        student: { userId },
+        student: { userId, ...(grade ? { grade } : {}) },
         year: { gte: year, lte: toYear ?? year }
       }
     })
   ])
-  
+
   const totalSessions = sessions.length
   const totalStudents = students.length
 
   // By Grade
-  const byGrade = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(grade => {
-    const gradeSessions = sessions.filter(s => s.sessionStudents.some(st => st.student.grade === grade))
+  const byGrade = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(g => {
+    const gradeSessions = sessions.filter(s => s.sessionStudents.some(st => st.student.grade === g))
     return {
-      grade,
+      grade: g,
       sessionCount: gradeSessions.length,
-      studentCount: students.filter(s => s.grade === grade).length
+      studentCount: students.filter(s => s.grade === g).length
     }
   })
 
@@ -107,6 +109,7 @@ export async function getMonthlySummary(
 
   sessions.forEach(s => {
     s.sessionStudents.forEach(ss => {
+      if (grade && ss.student.grade !== grade) return
       if (ss.attendance !== ATTENDANCE_STATUS.PENDING) {
         totalRecords++
         if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {

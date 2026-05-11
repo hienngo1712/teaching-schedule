@@ -58,7 +58,10 @@ export default function ReportsPage() {
     includeStudents: true,
   })
 
-  const { data: monthlySummary } = trpc.report.monthlySummary.useQuery(queryParams)
+  const { data: monthlySummary } = trpc.report.monthlySummary.useQuery({
+    ...queryParams,
+    grade: gradeFilter || undefined,
+  })
 
   const students = studentListData?.items ?? []
   const sessions = (monthSessionsData ?? []).map(s => ({
@@ -80,7 +83,6 @@ export default function ReportsPage() {
               value={gradeFilter?.toString() || "all"} 
               onValueChange={(v) => {
                 setGradeFilter(v === "all" ? null : parseInt(v))
-                setSelectedStudentId(null)
               }}
             >
               <SelectTrigger className="w-[120px]">
