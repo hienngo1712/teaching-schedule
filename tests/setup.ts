@@ -1,5 +1,5 @@
-import { config } from "dotenv"
-import { existsSync } from "node:fs"
+import { config, parse } from "dotenv"
+import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 
 // 1. NGĂN CHẶN CHẠY TRÊN VERCEL/PRODUCTION
@@ -18,29 +18,49 @@ if (!existsSync(testEnvPath)) {
   process.exit(1)
 }
 
+// 3. SO SÁNH ENDPOINT VỚI PRODUCTION TRƯỚC KHI LOAD
+// Đọc production URL từ .env (không override env hiện tại)
+function extractEndpoint(url: string): string {
+  // Lấy hostname từ URL: postgresql://user:pass@hostname/db → hostname
+  const match = url.match(/@([^/]+)\//)
+  return match ? match[1] : url
+}
+
+const prodEnvPath = join(process.cwd(), ".env")
+if (existsSync(prodEnvPath)) {
+  const prodVars = parse(readFileSync(prodEnvPath))
+  const prodUrl = prodVars["DATABASE_URL"] || ""
+  const testVars = parse(readFileSync(testEnvPath))
+  const testUrl = testVars["DATABASE_URL"] || ""
+
+  if (prodUrl && testUrl && extractEndpoint(prodUrl) === extractEndpoint(testUrl)) {
+    console.error("\n❌ [DANGER]: .env.test đang trỏ vào CÙNG endpoint với production!")
+    console.error(`Endpoint: ${extractEndpoint(testUrl)}`)
+    console.error("Chạy tests sẽ XÓA SẠCH dữ liệu production. Tạo Neon branch riêng cho test.\n")
+    process.exit(1)
+  }
+}
+
 // Load biến môi trường từ .env.test
 config({ path: testEnvPath, override: true })
 
-// 3. KIỂM TRA DATABASE_URL SAU KHI LOAD
+// 4. KIỂM TRA DATABASE_URL SAU KHI LOAD
 const dbUrl = process.env.DATABASE_URL || ""
 const isLocal = dbUrl.includes("localhost") || dbUrl.includes("127.0.0.1") || dbUrl.includes("::1")
-const hasTestKeyword = dbUrl.toLowerCase().includes("test")
 
-// Nếu trỏ tới các dịch vụ Cloud nhạy cảm mà không có từ khóa 'test' trong DB name
-const isSensitiveCloud = dbUrl.includes("neon.tech") || dbUrl.includes("vercel-storage.com") || dbUrl.includes("supabase.co")
+if (!isLocal) {
+  const isSensitiveCloud =
+    dbUrl.includes("neon.tech") ||
+    dbUrl.includes("vercel-storage.com") ||
+    dbUrl.includes("supabase.co")
+  const hasTestKeyword = dbUrl.toLowerCase().includes("test")
 
-if (isSensitiveCloud && !hasTestKeyword) {
-  console.error("\n❌ [DANGER]: DATABASE_URL có vẻ đang trỏ tới Production (Cloud)!")
-  console.error(`URL: ${dbUrl.split("@")[1] || dbUrl}`)
-  console.error("Database name phải chứa từ khóa 'test' để xác nhận đây là DB dùng cho thử nghiệm.")
-  console.error("Ví dụ: postgresql://.../my_database_test\n")
-  process.exit(1)
-}
-
-if (!isLocal && !hasTestKeyword) {
-  console.error("\n❌ [DANGER]: Database không an toàn cho testing!")
-  console.error("DATABASE_URL phải trỏ về localhost hoặc tên database phải có hậu tố '_test'.\n")
-  process.exit(1)
+  // Cảnh báo nếu cloud DB không có từ "test" trong URL (best-effort check)
+  if (isSensitiveCloud && !hasTestKeyword) {
+    console.warn("\n⚠️  [WARNING]: DATABASE_URL không chứa từ 'test'.")
+    console.warn(`Endpoint: ${extractEndpoint(dbUrl)}`)
+    console.warn("Đảm bảo đây là Neon branch test, không phải production.\n")
+  }
 }
 
 // Thiết lập NODE_ENV và bcrypt cost
