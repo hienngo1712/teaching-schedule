@@ -88,6 +88,7 @@ describe("student.upgradeAllClasses — manual", () => {
 
     await expect(caller.student.upgradeAllClasses()).rejects.toMatchObject({
       code: "CONFLICT",
+      message: expect.stringContaining("đã nâng lớp"),
     })
   })
 
