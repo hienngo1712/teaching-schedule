@@ -289,3 +289,95 @@ describe("Historical grade filtering after upgrade", () => {
     expect(grade4Bucket?.sessionCount ?? 0).toBe(0)
   })
 })
+
+describe("Lazy auto-upgrade via auth.me", () => {
+  beforeEach(async () => {
+    await resetUserData("teacher")
+    vi.useRealTimers()
+  })
+
+  it("auto-runs upgrade when calling auth.me on July 1st and no log exists", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2099-07-01T00:00:00Z"))
+
+    const caller = await getAuthedCaller("teacher")
+    const student = await caller.student.create({
+      fullName: "HS Auto",
+      grade: 2,
+      tuitionFee: 0,
+      isActive: true,
+    })
+
+    await caller.auth.me()
+
+    const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    const log = await db.classUpgradeLog.findUnique({
+      where: { userId_year: { userId: user.id, year: 2099 } },
+    })
+    expect(log).not.toBeNull()
+    expect(log?.trigger).toBe("auto")
+
+    const after = await db.student.findUnique({ where: { id: student.id } })
+    expect(after?.grade).toBe(3)
+
+    vi.useRealTimers()
+  })
+
+  it("does NOT auto-run before July (e.g. June)", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2099-06-30T23:59:00Z"))
+
+    const caller = await getAuthedCaller("teacher")
+    const student = await caller.student.create({
+      fullName: "HS June",
+      grade: 2,
+      tuitionFee: 0,
+      isActive: true,
+    })
+
+    await caller.auth.me()
+
+    const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    const log = await db.classUpgradeLog.findUnique({
+      where: { userId_year: { userId: user.id, year: 2099 } },
+    })
+    expect(log).toBeNull()
+
+    const after = await db.student.findUnique({ where: { id: student.id } })
+    expect(after?.grade).toBe(2)
+
+    vi.useRealTimers()
+  })
+
+  it("does NOT re-run when log already exists for current year", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2099-07-15T00:00:00Z"))
+
+    const caller = await getAuthedCaller("teacher")
+    const student = await caller.student.create({
+      fullName: "HS Pre-upgraded",
+      grade: 2,
+      tuitionFee: 0,
+      isActive: true,
+    })
+
+    // Manual upgrade first
+    await caller.student.upgradeAllClasses()
+    const studentAfterManual = await db.student.findUniqueOrThrow({ where: { id: student.id } })
+    expect(studentAfterManual.grade).toBe(3)
+
+    // auth.me should NOT re-run upgrade
+    await caller.auth.me()
+
+    const after = await db.student.findUniqueOrThrow({ where: { id: student.id } })
+    expect(after.grade).toBe(3) // unchanged from manual upgrade
+
+    const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    const log = await db.classUpgradeLog.findUniqueOrThrow({
+      where: { userId_year: { userId: user.id, year: 2099 } },
+    })
+    expect(log.trigger).toBe("manual") // not overwritten by auto
+
+    vi.useRealTimers()
+  })
+})
