@@ -75,7 +75,7 @@ export async function getMonthlySummary(
       where: {
         userId,
         sessionDate: { gte: startDate, lt: endDate },
-        ...(grade ? { sessionStudents: { some: { student: { grade } } } } : {})
+        ...(grade ? { sessionStudents: { some: { grade } } } : {})
       },
       include: {
         sessionStudents: { include: { student: true } }
@@ -95,11 +95,17 @@ export async function getMonthlySummary(
 
   // By Grade
   const byGrade = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(g => {
-    const gradeSessions = sessions.filter(s => s.sessionStudents.some(st => st.student.grade === g))
+    const gradeSessions = sessions.filter(s => s.sessionStudents.some(st => st.grade === g))
+    const gradeStudentIds = new Set<number>()
+    for (const s of sessions) {
+      for (const st of s.sessionStudents) {
+        if (st.grade === g) gradeStudentIds.add(st.studentId)
+      }
+    }
     return {
       grade: g,
       sessionCount: gradeSessions.length,
-      studentCount: students.filter(s => s.grade === g).length
+      studentCount: gradeStudentIds.size,
     }
   })
 
@@ -109,7 +115,7 @@ export async function getMonthlySummary(
 
   sessions.forEach(s => {
     s.sessionStudents.forEach(ss => {
-      if (grade && ss.student.grade !== grade) return
+      if (grade && ss.grade !== grade) return
       if (ss.attendance !== ATTENDANCE_STATUS.PENDING) {
         totalRecords++
         if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {

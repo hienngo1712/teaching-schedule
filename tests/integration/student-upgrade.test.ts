@@ -228,3 +228,64 @@ describe("SessionStudent.grade snapshot", () => {
     expect(ss?.grade).toBe(4) // current grade after upgrade
   })
 })
+
+describe("Historical grade filtering after upgrade", () => {
+  beforeEach(async () => {
+    await resetUserData("teacher")
+    vi.useRealTimers()
+  })
+
+  it("session.getMonth with grade=3 returns past session even after student upgraded to grade 4", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const subjects = await caller.subject.list({})
+    const subject = subjects[0]
+    const student = await caller.student.create({
+      fullName: "HS3 Historical Filter",
+      grade: 3,
+      tuitionFee: 0,
+      isActive: true,
+    })
+    await caller.session.create({
+      sessionDate: "2099-03-10",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+
+    await caller.student.upgradeAllClasses()
+
+    const grade3Sessions = await caller.session.getMonth({ year: 2099, month: 3, grade: 3 })
+    const grade4Sessions = await caller.session.getMonth({ year: 2099, month: 3, grade: 4 })
+
+    expect(grade3Sessions.length).toBe(1)
+    expect(grade4Sessions.length).toBe(0)
+  })
+
+  it("report.monthlySummary counts students by historical snapshot grade", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const subjects = await caller.subject.list({})
+    const subject = subjects[0]
+    const student = await caller.student.create({
+      fullName: "HS3 Historical Report",
+      grade: 3,
+      tuitionFee: 0,
+      isActive: true,
+    })
+    await caller.session.create({
+      sessionDate: "2099-04-10",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+
+    await caller.student.upgradeAllClasses()
+
+    const summary = await caller.report.monthlySummary({ year: 2099, month: 4 })
+    const grade3Bucket = summary.byGrade.find((g) => g.grade === 3)
+    const grade4Bucket = summary.byGrade.find((g) => g.grade === 4)
+    expect(grade3Bucket?.sessionCount ?? 0).toBeGreaterThanOrEqual(1)
+    expect(grade4Bucket?.sessionCount ?? 0).toBe(0)
+  })
+})

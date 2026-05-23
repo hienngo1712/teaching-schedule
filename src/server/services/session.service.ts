@@ -87,7 +87,7 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
     id: ss.id,
     studentId: ss.studentId,
     fullName: ss.student?.fullName || "",
-    grade: ss.student?.grade || 0,
+    grade: ss.grade,
     attendance: ss.attendance,
     note: ss.note,
     fee: ss.fee,
@@ -134,18 +134,17 @@ export async function getMonthSessions(
         ? {
             sessionStudents: {
               some: {
-                student: {
-                  ...(grade ? { grade } : {}),
-                  ...(studentId ? { id: studentId } : {}),
-                  ...(studentName
-                    ? {
-                        fullName: {
-                          contains: studentName,
-                          mode: "insensitive",
-                        },
-                      }
-                    : {}),
-                },
+                ...(grade ? { grade } : {}),
+                ...(studentId || studentName
+                  ? {
+                      student: {
+                        ...(studentId ? { id: studentId } : {}),
+                        ...(studentName
+                          ? { fullName: { contains: studentName, mode: "insensitive" as const } }
+                          : {}),
+                      },
+                    }
+                  : {}),
               },
             },
           }
@@ -153,9 +152,9 @@ export async function getMonthSessions(
     },
     include: {
       subject: true,
-      ...(includeStudents 
-        ? { sessionStudents: { include: { student: true }, orderBy: { student: { fullName: 'asc' } } } }       
-        : { sessionStudents: { select: { student: { select: { grade: true } } } } }
+      ...(includeStudents
+        ? { sessionStudents: { include: { student: true }, orderBy: { student: { fullName: 'asc' } } } }
+        : { sessionStudents: { select: { id: true, studentId: true, grade: true, attendance: true, note: true, fee: true } } }
       ),
       _count: { select: { sessionStudents: true } },
     },
