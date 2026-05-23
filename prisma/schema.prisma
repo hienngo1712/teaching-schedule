@@ -21,6 +21,7 @@ model User {
   students      Student[]
   subjects      Subject[]
   sessions      TeachingSession[]
+  classUpgradeLogs ClassUpgradeLog[]
 
   @@map("users")
 }
@@ -128,11 +129,29 @@ model SessionStudent {
   attendance String          @default("pending") @db.VarChar(10)
   note       String?
   fee        Int             @default(0)
+  grade      Int             @db.SmallInt
   session    TeachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   student    Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, studentId])
   @@index([studentId])
   @@index([sessionId])
+  @@index([grade])
   @@map("session_students")
+}
+
+model ClassUpgradeLog {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @map("user_id")
+  year              Int
+  executedAt        DateTime @default(now()) @map("executed_at")
+  trigger           String   @db.VarChar(10)
+  upgradedCount     Int      @default(0) @map("upgraded_count")
+  deactivatedCount  Int      @default(0) @map("deactivated_count")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, year])
+  @@index([userId])
+  @@map("class_upgrade_logs")
 }
