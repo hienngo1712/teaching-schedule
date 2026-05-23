@@ -144,3 +144,87 @@ describe("student.getUpgradeLogThisYear", () => {
     expect(log?.trigger).toBe("manual")
   })
 })
+
+describe("SessionStudent.grade snapshot", () => {
+  beforeEach(async () => {
+    await resetUserData("teacher")
+    vi.useRealTimers()
+  })
+
+  it("populates grade snapshot from current Student.grade on session create", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const subjects = await caller.subject.list({})
+    const subject = subjects[0]
+    const student = await caller.student.create({
+      fullName: "HS Lop 3 Snapshot",
+      grade: 3,
+      tuitionFee: 0,
+      isActive: true,
+    })
+    const session = await caller.session.create({
+      sessionDate: "2099-01-15",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+    const ss = await db.sessionStudent.findFirst({
+      where: { sessionId: session.id, studentId: student.id },
+    })
+    expect(ss?.grade).toBe(3)
+  })
+
+  it("preserves historical grade after upgradeAllClasses", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const subjects = await caller.subject.list({})
+    const subject = subjects[0]
+    const student = await caller.student.create({
+      fullName: "HS Lop 3 Historical",
+      grade: 3,
+      tuitionFee: 0,
+      isActive: true,
+    })
+    const session = await caller.session.create({
+      sessionDate: "2099-02-15",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+
+    await caller.student.upgradeAllClasses()
+
+    const ss = await db.sessionStudent.findFirst({
+      where: { sessionId: session.id, studentId: student.id },
+    })
+    expect(ss?.grade).toBe(3) // historical snapshot unchanged
+
+    const studentAfter = await db.student.findUnique({ where: { id: student.id } })
+    expect(studentAfter?.grade).toBe(4) // current grade upgraded
+  })
+
+  it("new session after upgrade uses NEW current grade", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const subjects = await caller.subject.list({})
+    const subject = subjects[0]
+    const student = await caller.student.create({
+      fullName: "HS New After Upgrade",
+      grade: 3,
+      tuitionFee: 0,
+      isActive: true,
+    })
+    await caller.student.upgradeAllClasses()
+
+    const session = await caller.session.create({
+      sessionDate: "2099-08-15",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+    const ss = await db.sessionStudent.findFirst({
+      where: { sessionId: session.id, studentId: student.id },
+    })
+    expect(ss?.grade).toBe(4) // current grade after upgrade
+  })
+})
