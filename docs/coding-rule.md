@@ -63,6 +63,45 @@ File này quy định các tiêu chuẩn code cho dự án **Teaching Schedule M
 
 ---
 
+## 6.1. RULE BẤT KHẢ XÂM PHẠM — Bảo vệ Production Data
+
+**Sự cố tham chiếu (2026-05-23):** Production DB bị wipe vì `tests/setup.ts` chạy `deleteMany()` trên endpoint production do ES module import hoisting (db.ts được import TRƯỚC khi `dotenv.config({ path: ".env.test" })` chạy). Sau đó phải restore từ Neon PITR.
+
+### A. Push/Merge code KHÔNG được xóa dữ liệu production
+1. **Migration policy:**
+   - Chỉ dùng `prisma migrate deploy` cho production (additive, idempotent). Build script Vercel hiện tại đã dùng đúng (`prisma generate && prisma migrate deploy && next build`).
+   - **TUYỆT ĐỐI CẤM** chạy `prisma migrate reset`, `prisma db push --force-reset`, hoặc bất kỳ lệnh nào có flag `--force`/`--reset` lên `.env` (production).
+2. **Schema thay đổi destructive (drop column, drop table, rename):**
+   - Phải qua quy trình 2 bước: deploy code đọc cả old + new field → backfill data → deploy migration drop. KHÔNG được drop trực tiếp.
+3. **Build/deploy pipeline KHÔNG được trigger test scripts.**
+   - `pnpm test`, `pnpm test:e2e`, hoặc bất kỳ command nào load `tests/setup.ts` KHÔNG được nằm trong Vercel build pipeline.
+   - Verify trong `vercel.json` (nếu có) và `package.json#scripts.build` — chỉ chứa `prisma generate`, `prisma migrate deploy`, `next build`.
+
+### B. Test setup KHÔNG được đè lên data production
+1. **Tách env loading khỏi db import:**
+   - File `tests/env-setup.ts` (side-effect module) PHẢI là `setupFiles[0]` trong `vitest.config.ts`. Nó load `.env.test` và assert endpoint TRƯỚC khi module khác chạy.
+   - File `tests/setup.ts` (chứa `beforeAll` + db reset) chạy SAU. Phải re-assert endpoint runtime ngay trước `deleteMany()` — defense-in-depth.
+   - **Không bao giờ** đặt `import { db } from "@/server/db"` vào cùng file với `dotenv.config({ path: ".env.test" })` — ES module hoisting sẽ load db.ts trước.
+2. **Endpoint guards (cả 3 phải pass mới chạy deleteMany):**
+   - `.env.test` PHẢI tồn tại.
+   - Endpoint của `.env.test` PHẢI khác endpoint của `.env` (so sánh hostname).
+   - Tại runtime, `process.env.DATABASE_URL` sau khi load `.env.test` PHẢI bằng `.env.test` DATABASE_URL VÀ khác `.env` endpoint.
+3. **Trước mọi destructive script** (`db:reset`, `db:seed`, `db:push`, các script `scripts/*.ts` xóa/sửa data):
+   - Phải có safety check: refuse to run nếu endpoint trùng production endpoint trong `.env`, hoặc nếu thiếu env biến explicit confirm (vd `CONFIRM_DESTRUCTIVE=YES`).
+
+### C. Local dev và manual test KHÔNG được wipe production
+1. **`pnpm dev`** load `.env.local` (nếu có) + `.env`. Đây là môi trường developer thường dùng. Mọi nút bấm trong UI (vd "Nâng lớp hàng loạt", "Xóa học sinh") chạy MUTATION thật lên DB được set trong `.env`.
+   - Nếu bạn không muốn touch production: tạo `.env.local` trỏ DATABASE_URL vào test branch và override `.env`.
+2. **Manual test E2E** (Playwright với `headless: false`) tương tự — chạy lên DB của `.env`. Để an toàn, dùng `.env.local` trỏ tới test branch.
+
+### D. Quy tắc sống còn cho AI agent / developer mới
+1. **Trước khi chạy bất kỳ lệnh nào tương tác DB**, xác định rõ env file đang được load: `cat .env | grep DATABASE_URL` so sánh với `cat .env.test | grep DATABASE_URL`. Nếu giống nhau → STOP, báo user.
+2. **Trước khi merge feature branch lên main**, verify migration mới là additive: `git diff main..feature -- prisma/migrations/` không chứa `DROP TABLE`, `DROP COLUMN`, `ALTER ... DROP NOT NULL` mà không có backfill.
+3. **Sau mọi merge lên main**, monitor Vercel deploy log. Nếu thấy log dạng `Resetting database`, `Applied migration ... rolled_back`, hoặc bất kỳ message destructive → rollback ngay.
+4. **Backup trước operation rủi ro:** trước khi apply migration phức tạp, Neon có "Branch from current" — tạo backup branch trước, sau đó migrate. Nếu lỗi, swap connection string.
+
+---
+
 ## 7. Quy tắc về Text & Đặt tên (I18n & Naming)
 - **Internationalization (i18n):**
     - Luôn tìm kiếm các key hiện có trong `src/language/*.json` trước khi tạo mới để dùng chung (reusable).

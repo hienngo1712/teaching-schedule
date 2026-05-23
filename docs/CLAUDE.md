@@ -42,6 +42,28 @@
 
 ---
 
+## 🚨 PRODUCTION DATA SAFETY (RULE TUYỆT ĐỐI)
+
+> **Sự cố 2026-05-23:** Production DB bị wipe do `tests/setup.ts` chạy `deleteMany()` lên endpoint production. Restore từ Neon PITR. Tuyệt đối không tái diễn.
+
+**Trước khi chạy bất kỳ lệnh nào tương tác DB (test, seed, migrate, db:push, db:reset), MỌI AI agent / developer PHẢI:**
+
+1. **Đọc kỹ `docs/coding-rule.md` §6.1** (RULE BẤT KHẢ XÂM PHẠM — Bảo vệ Production Data) trước khi action.
+2. **Verify endpoint:** so sánh `.env` (production) và `.env.test` DATABASE_URL — phải KHÁC nhau.
+3. **`pnpm test` / `pnpm test:integration` / `pnpm test:e2e`** chỉ được chạy khi:
+   - `.env.test` tồn tại VÀ trỏ vào test branch riêng (khác endpoint `.env`).
+   - `tests/env-setup.ts` là `setupFiles[0]` trong `vitest.config.ts`.
+   - Không sửa `tests/setup.ts` thành nơi load env trực tiếp (vì ES module import hoisting).
+4. **`pnpm db:reset` / `prisma migrate reset` / `prisma db push --force-reset`** TUYỆT ĐỐI CẤM trên `.env` (production). Chỉ chạy trên test/dev branches.
+5. **Migration destructive** (drop column/table, rename) phải qua 2-step migration (deploy backward-compatible code trước → backfill → deploy drop sau).
+6. **Vercel build pipeline** chỉ chứa `prisma generate && prisma migrate deploy && next build`. KHÔNG được có `pnpm test`, `migrate reset`, `db push`.
+7. **Mô tả intent rõ ràng** trước action destructive: agent phải nói trước action (vd "tôi sẽ chạy `prisma migrate deploy` lên `.env` production") và CHỜ user confirm.
+8. **Backup trước migration phức tạp:** dùng Neon "Branch from current" để snapshot trước, có thể rollback nếu lỗi.
+
+**Vi phạm các rule trên → STOP NGAY và escalate cho user.**
+
+---
+
 ## Bắt đầu từ đâu?
 
 ```

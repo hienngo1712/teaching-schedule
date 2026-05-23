@@ -1,76 +1,39 @@
-import { config, parse } from "dotenv"
-import { existsSync, readFileSync } from "node:fs"
-import { join } from "node:path"
-
-// 1. NGĂN CHẶN CHẠY TRÊN VERCEL/PRODUCTION
-if (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") {
-  console.error("\n❌ [SECURITY ERROR]: Đang ở môi trường PRODUCTION/VERCEL!")
-  console.error("Hệ thống đã chặn hành động chạy tests để bảo vệ dữ liệu khách hàng.\n")
-  process.exit(1)
-}
-
-// 2. BẮT BUỘC DÙNG .ENV.TEST
-const testEnvPath = join(process.cwd(), ".env.test")
-if (!existsSync(testEnvPath)) {
-  console.error("\n❌ [ERROR]: Thiếu file .env.test!")
-  console.error("Để chạy integration tests, bạn bắt buộc phải tạo file .env.test.")
-  console.error("Vui lòng copy từ .env.test.example và trỏ DATABASE_URL vào database test riêng.\n")
-  process.exit(1)
-}
-
-// 3. SO SÁNH ENDPOINT VỚI PRODUCTION TRƯỚC KHI LOAD
-// Đọc production URL từ .env (không override env hiện tại)
-function extractEndpoint(url: string): string {
-  // Lấy hostname từ URL: postgresql://user:pass@hostname/db → hostname
-  const match = url.match(/@([^/]+)\//)
-  return match ? match[1] : url
-}
-
-const prodEnvPath = join(process.cwd(), ".env")
-if (existsSync(prodEnvPath)) {
-  const prodVars = parse(readFileSync(prodEnvPath))
-  const prodUrl = prodVars["DATABASE_URL"] || ""
-  const testVars = parse(readFileSync(testEnvPath))
-  const testUrl = testVars["DATABASE_URL"] || ""
-
-  if (prodUrl && testUrl && extractEndpoint(prodUrl) === extractEndpoint(testUrl)) {
-    console.error("\n❌ [DANGER]: .env.test đang trỏ vào CÙNG endpoint với production!")
-    console.error(`Endpoint: ${extractEndpoint(testUrl)}`)
-    console.error("Chạy tests sẽ XÓA SẠCH dữ liệu production. Tạo Neon branch riêng cho test.\n")
-    process.exit(1)
-  }
-}
-
-// Load biến môi trường từ .env.test
-config({ path: testEnvPath, override: true })
-
-// 4. KIỂM TRA DATABASE_URL SAU KHI LOAD
-const dbUrl = process.env.DATABASE_URL || ""
-const isLocal = dbUrl.includes("localhost") || dbUrl.includes("127.0.0.1") || dbUrl.includes("::1")
-
-if (!isLocal) {
-  const isSensitiveCloud =
-    dbUrl.includes("neon.tech") ||
-    dbUrl.includes("vercel-storage.com") ||
-    dbUrl.includes("supabase.co")
-  const hasTestKeyword = dbUrl.toLowerCase().includes("test")
-
-  // Cảnh báo nếu cloud DB không có từ "test" trong URL (best-effort check)
-  if (isSensitiveCloud && !hasTestKeyword) {
-    console.warn("\n⚠️  [WARNING]: DATABASE_URL không chứa từ 'test'.")
-    console.warn(`Endpoint: ${extractEndpoint(dbUrl)}`)
-    console.warn("Đảm bảo đây là Neon branch test, không phải production.\n")
-  }
-}
-
-// Thiết lập NODE_ENV và bcrypt cost
-;(process.env as Record<string, string | undefined>).NODE_ENV = "test"
+// NOTE: Env loading + safety checks live in tests/env-setup.ts, which MUST
+// run as the first setupFile in vitest.config.ts. This file assumes
+// process.env.DATABASE_URL has already been pinned to .env.test and that any
+// production endpoint mismatch already aborted the process.
 
 import { db } from "@/server/db"
 import bcrypt from "bcryptjs"
 import { beforeAll, afterAll } from "vitest"
+import { EXPECTED_TEST_ENDPOINT, FORBIDDEN_PROD_ENDPOINT } from "./env-setup"
+
+function extractEndpoint(url: string): string {
+  const match = url.match(/@([^/]+)\//)
+  return match ? match[1] : url
+}
 
 beforeAll(async () => {
+  // RUNTIME DOUBLE-CHECK — verify the LIVE Prisma connection points to the
+  // test endpoint and NOT to production, RIGHT BEFORE any destructive op.
+  // If env-setup.ts and module hoisting ever desync again, this catches it.
+  const liveUrl = process.env.DATABASE_URL || ""
+  const liveEndpoint = extractEndpoint(liveUrl)
+
+  if (!EXPECTED_TEST_ENDPOINT || liveEndpoint !== EXPECTED_TEST_ENDPOINT) {
+    console.error("\n❌ [DANGER]: Live DATABASE_URL endpoint does not match .env.test!")
+    console.error(`Expected (.env.test): ${EXPECTED_TEST_ENDPOINT}`)
+    console.error(`Live (process.env):   ${liveEndpoint}`)
+    console.error("Aborting before any deleteMany() to protect production data.\n")
+    process.exit(1)
+  }
+  if (FORBIDDEN_PROD_ENDPOINT && liveEndpoint === FORBIDDEN_PROD_ENDPOINT) {
+    console.error("\n❌ [DANGER]: Live DATABASE_URL endpoint EQUALS production endpoint!")
+    console.error(`Endpoint: ${liveEndpoint}`)
+    console.error("Aborting before any deleteMany() to protect production data.\n")
+    process.exit(1)
+  }
+
   // Reset DB theo thứ tự FK
   try {
     await db.sessionStudent.deleteMany()

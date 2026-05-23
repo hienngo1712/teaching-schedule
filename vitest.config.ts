@@ -5,7 +5,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    setupFiles: ["./tests/setup.ts"],
+    // ORDER MATTERS: env-setup.ts MUST run before setup.ts. It pins
+    // DATABASE_URL to .env.test BEFORE any module imports src/server/db.ts.
+    setupFiles: ["./tests/env-setup.ts", "./tests/setup.ts"],
     // Integration tests share 1 DB → buộc chạy tuần tự, tránh race condition trên seed.
     pool: "forks",
     fileParallelism: false,
