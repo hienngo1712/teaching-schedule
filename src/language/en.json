@@ -255,5 +255,11 @@
   "year": "Year",
   "range": "Range",
   "from_month": "From month",
-  "to_month": "To month"
+  "to_month": "To month",
+  "confirm": "Confirm",
+  "upgrade_all_button": "Bulk grade up",
+  "upgrade_all_confirm_title": "Upgrade all students?",
+  "upgrade_all_confirm_body": "All students in grades 1–8 will move up by 1 grade. Grade 9 students will be marked Inactive (moved to grade 10). This action runs only once per year and cannot be undone.",
+  "upgrade_all_success": "Upgraded {upgraded} students; {deactivated} grade-9 students set to Inactive.",
+  "upgrade_all_already_done": "Already upgraded for year {year}"
 }

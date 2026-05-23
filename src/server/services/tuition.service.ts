@@ -73,9 +73,22 @@ export async function getMonthlyTuitionStatus(
   const students = await db.student.findMany({
     where: {
       userId,
-      isActive: true,
-      ...(grade ? { grade } : {}),
-      ...(search ? { fullName: { contains: search, mode: "insensitive" } } : {}),
+      ...(grade
+        ? {
+            sessionStudents: {
+              some: {
+                grade,
+                session: {
+                  sessionDate: {
+                    gte: new Date(Date.UTC(year, month - 1, 1)),
+                    lt: new Date(Date.UTC(year, month, 1)),
+                  },
+                },
+              },
+            },
+          }
+        : { isActive: true }),
+      ...(search ? { fullName: { contains: search, mode: "insensitive" as const } } : {}),
     },
     orderBy: [{ grade: "asc" }, { fullName: "asc" }],
   })

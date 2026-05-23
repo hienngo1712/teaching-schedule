@@ -87,7 +87,7 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
     id: ss.id,
     studentId: ss.studentId,
     fullName: ss.student?.fullName || "",
-    grade: ss.student?.grade || 0,
+    grade: ss.grade,
     attendance: ss.attendance,
     note: ss.note,
     fee: ss.fee,
@@ -134,18 +134,17 @@ export async function getMonthSessions(
         ? {
             sessionStudents: {
               some: {
-                student: {
-                  ...(grade ? { grade } : {}),
-                  ...(studentId ? { id: studentId } : {}),
-                  ...(studentName
-                    ? {
-                        fullName: {
-                          contains: studentName,
-                          mode: "insensitive",
-                        },
-                      }
-                    : {}),
-                },
+                ...(grade ? { grade } : {}),
+                ...(studentId || studentName
+                  ? {
+                      student: {
+                        ...(studentId ? { id: studentId } : {}),
+                        ...(studentName
+                          ? { fullName: { contains: studentName, mode: "insensitive" as const } }
+                          : {}),
+                      },
+                    }
+                  : {}),
               },
             },
           }
@@ -153,9 +152,9 @@ export async function getMonthSessions(
     },
     include: {
       subject: true,
-      ...(includeStudents 
-        ? { sessionStudents: { include: { student: true }, orderBy: { student: { fullName: 'asc' } } } }       
-        : { sessionStudents: { select: { student: { select: { grade: true } } } } }
+      ...(includeStudents
+        ? { sessionStudents: { include: { student: true }, orderBy: { student: { fullName: 'asc' } } } }
+        : { sessionStudents: { select: { id: true, studentId: true, grade: true, attendance: true, note: true, fee: true } } }
       ),
       _count: { select: { sessionStudents: true } },
     },
@@ -201,11 +200,11 @@ async function assertStudentsOwned(
   db: PrismaClient,
   userId: number,
   studentIds: number[]
-): Promise<Array<{ id: number; tuitionFee: number }>> {
+): Promise<Array<{ id: number; tuitionFee: number; grade: number }>> {
   if (!studentIds.length) return []
   const owned = await db.student.findMany({
     where: { id: { in: studentIds }, userId },
-    select: { id: true, tuitionFee: true },
+    select: { id: true, tuitionFee: true, grade: true },
   })
   if (owned.length !== studentIds.length) {
     throw new TRPCError({ code: "NOT_FOUND" })
@@ -226,7 +225,7 @@ export async function createSession(
 
   await checkOverlap(db, { userId, sessionDate, startTime, endTime })
 
-  let studentFees: Array<{ id: number; tuitionFee: number }> = []
+  let studentFees: Array<{ id: number; tuitionFee: number; grade: number }> = []
   if (input.studentIds) {
     studentFees = await assertStudentsOwned(db, userId, input.studentIds)
   }
@@ -246,6 +245,7 @@ export async function createSession(
               create: studentFees.map((s) => ({
                 studentId: s.id,
                 fee: s.tuitionFee,
+                grade: s.grade,
               })),
             },
           }
@@ -286,7 +286,7 @@ export async function updateSession(
   }
 
   // Verify studentIds thuộc userId và lấy học phí
-  let studentFees: Array<{ id: number; tuitionFee: number }> = []
+  let studentFees: Array<{ id: number; tuitionFee: number; grade: number }> = []
   if (data.studentIds !== undefined && data.studentIds.length > 0) {
     studentFees = await assertStudentsOwned(db, userId, data.studentIds)
   }
@@ -334,6 +334,7 @@ export async function updateSession(
             sessionId: id,
             studentId: s.id,
             fee: s.tuitionFee,
+            grade: s.grade,
           })),
         })
       }
@@ -413,11 +414,11 @@ export async function addStudentsToRecurringSessions(
 
   const existingMap = new Set(existing.map((e) => `${e.sessionId}-${e.studentId}`))
 
-  const toCreate: Array<{ sessionId: number; studentId: number; fee: number }> = []
+  const toCreate: Array<{ sessionId: number; studentId: number; fee: number; grade: number }> = []
   for (const sessionId of matchingSessionIds) {
     for (const s of owned) {
       if (!existingMap.has(`${sessionId}-${s.id}`)) {
-        toCreate.push({ sessionId, studentId: s.id, fee: s.tuitionFee })
+        toCreate.push({ sessionId, studentId: s.id, fee: s.tuitionFee, grade: s.grade })
       }
     }
   }
@@ -468,6 +469,7 @@ export async function addStudentsToSession(
           sessionId,
           studentId: s.id,
           fee: s.tuitionFee,
+          grade: s.grade,
         })),
       })
     }
@@ -569,7 +571,7 @@ export async function bulkCreateSessions(
 ): Promise<{ created: number; skipped: number }> {
   await assertSubjectOwned(db, userId, input.subjectId)
 
-  let studentFees: Array<{ id: number; tuitionFee: number }> = []
+  let studentFees: Array<{ id: number; tuitionFee: number; grade: number }> = []
   if (input.studentIds) {
     studentFees = await assertStudentsOwned(db, userId, input.studentIds)
   }
@@ -654,6 +656,7 @@ export async function bulkCreateSessions(
             sessionId: session.id,
             studentId: sf.id,
             fee: sf.tuitionFee,
+            grade: sf.grade,
           }))
         )
         await tx.sessionStudent.createMany({
@@ -757,13 +760,13 @@ export async function bulkUpdateFutureSessions(
         // Cần fetch phí của các học sinh mới
         const studentFees = await tx.student.findMany({
           where: { id: { in: data.studentIds }, userId },
-          select: { id: true, tuitionFee: true },
+          select: { id: true, tuitionFee: true, grade: true },
         })
 
-        const toCreate: Array<{ sessionId: number; studentId: number; fee: number }> = []
+        const toCreate: Array<{ sessionId: number; studentId: number; fee: number; grade: number }> = []
         for (const sid of sessionIds) {
           for (const s of studentFees) {
-            toCreate.push({ sessionId: sid, studentId: s.id, fee: s.tuitionFee })
+            toCreate.push({ sessionId: sid, studentId: s.id, fee: s.tuitionFee, grade: s.grade })
           }
         }
         await tx.sessionStudent.createMany({ data: toCreate })
@@ -824,6 +827,7 @@ export async function duplicateSession(
               create: studentFees.map((s) => ({
                 studentId: s.id,
                 fee: s.tuitionFee,
+                grade: s.grade,
               })),
             },
           }

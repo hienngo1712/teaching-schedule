@@ -70,24 +70,52 @@ export async function getMonthlySummary(
     ? new Date(Date.UTC(toYear, toMonth, 1))
     : new Date(Date.UTC(year, month, 1))
 
+  // Historical filter: when `grade` is set, scope `students` and `monthlyTuitions`
+  // by sessionStudent.grade WITHIN the report period — so past months keep
+  // showing students by the grade they attended as, not by their current grade.
+  const studentsWhere = grade
+    ? {
+        userId,
+        sessionStudents: {
+          some: {
+            grade,
+            session: { sessionDate: { gte: startDate, lt: endDate } },
+          },
+        },
+      }
+    : { userId, isActive: true }
+
+  const monthlyTuitionsWhere = grade
+    ? {
+        student: {
+          userId,
+          sessionStudents: {
+            some: {
+              grade,
+              session: { sessionDate: { gte: startDate, lt: endDate } },
+            },
+          },
+        },
+        year: { gte: year, lte: toYear ?? year },
+      }
+    : {
+        student: { userId },
+        year: { gte: year, lte: toYear ?? year },
+      }
+
   const [sessions, students, monthlyTuitions] = await Promise.all([
     db.teachingSession.findMany({
       where: {
         userId,
         sessionDate: { gte: startDate, lt: endDate },
-        ...(grade ? { sessionStudents: { some: { student: { grade } } } } : {})
+        ...(grade ? { sessionStudents: { some: { grade } } } : {})
       },
       include: {
         sessionStudents: { include: { student: true } }
       }
     }),
-    db.student.findMany({ where: { userId, isActive: true, ...(grade ? { grade } : {}) } }),
-    db.monthlyTuition.findMany({
-      where: {
-        student: { userId, ...(grade ? { grade } : {}) },
-        year: { gte: year, lte: toYear ?? year }
-      }
-    })
+    db.student.findMany({ where: studentsWhere }),
+    db.monthlyTuition.findMany({ where: monthlyTuitionsWhere })
   ])
 
   const totalSessions = sessions.length
@@ -95,11 +123,17 @@ export async function getMonthlySummary(
 
   // By Grade
   const byGrade = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(g => {
-    const gradeSessions = sessions.filter(s => s.sessionStudents.some(st => st.student.grade === g))
+    const gradeSessions = sessions.filter(s => s.sessionStudents.some(st => st.grade === g))
+    const gradeStudentIds = new Set<number>()
+    for (const s of sessions) {
+      for (const st of s.sessionStudents) {
+        if (st.grade === g) gradeStudentIds.add(st.studentId)
+      }
+    }
     return {
       grade: g,
       sessionCount: gradeSessions.length,
-      studentCount: students.filter(s => s.grade === g).length
+      studentCount: gradeStudentIds.size,
     }
   })
 
@@ -109,7 +143,7 @@ export async function getMonthlySummary(
 
   sessions.forEach(s => {
     s.sessionStudents.forEach(ss => {
-      if (grade && ss.student.grade !== grade) return
+      if (grade && ss.grade !== grade) return
       if (ss.attendance !== ATTENDANCE_STATUS.PENDING) {
         totalRecords++
         if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {

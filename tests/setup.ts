@@ -76,6 +76,7 @@ beforeAll(async () => {
     await db.sessionStudent.deleteMany()
     await db.teachingSession.deleteMany()
     await db.student.deleteMany()
+    await db.classUpgradeLog.deleteMany()
     await db.subject.deleteMany()
     await db.loginAttempt.deleteMany()
     await db.user.deleteMany()
