@@ -10,6 +10,8 @@ import {
   listStudents,
   softDeleteStudent,
   updateStudent,
+  upgradeAllClasses,
+  getUpgradeLogThisYear,
 } from "@/server/services/student.service"
 
 export const studentRouter = createTRPCRouter({
@@ -32,4 +34,10 @@ export const studentRouter = createTRPCRouter({
     .mutation(({ ctx, input }) =>
       softDeleteStudent(ctx.db, ctx.userId, input.id)
     ),
+
+  upgradeAllClasses: protectedProcedure
+    .mutation(({ ctx }) => upgradeAllClasses(ctx.db, ctx.userId, "manual")),
+
+  getUpgradeLogThisYear: protectedProcedure
+    .query(({ ctx }) => getUpgradeLogThisYear(ctx.db, ctx.userId)),
 })

@@ -1,4 +1,5 @@
-import type { PrismaClient } from "@prisma/client"
+import type { PrismaClient, ClassUpgradeLog } from "@prisma/client"
+import { TRPCError } from "@trpc/server"
 import { getLevel } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
 import type {
@@ -108,4 +109,66 @@ export async function softDeleteStudent(
     data: { isActive: false },
   })
   return { success: true }
+}
+
+export async function upgradeAllClasses(
+  db: PrismaClient,
+  userId: number,
+  trigger: "auto" | "manual"
+): Promise<{ upgradedCount: number; deactivatedCount: number; year: number }> {
+  const year = new Date().getFullYear()
+
+  const existing = await db.classUpgradeLog.findUnique({
+    where: { userId_year: { userId, year } },
+  })
+  if (existing) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: `Bạn đã nâng lớp toàn bộ học sinh trong năm ${year} rồi.`,
+    })
+  }
+
+  return db.$transaction(async (tx) => {
+    // Collect grade-9 student IDs BEFORE any updates to avoid catching
+    // grade-8 students that were just incremented to 9
+    const grade9Students = await tx.student.findMany({
+      where: { userId, isActive: true, grade: 9 },
+      select: { id: true },
+    })
+    const grade9Ids = grade9Students.map((s) => s.id)
+
+    const upgraded = await tx.student.updateMany({
+      where: { userId, isActive: true, grade: { gte: 1, lte: 8 } },
+      data: { grade: { increment: 1 } },
+    })
+    const deactivated = grade9Ids.length > 0
+      ? await tx.student.updateMany({
+          where: { id: { in: grade9Ids } },
+          data: { isActive: false },
+        })
+      : { count: 0 }
+    await tx.classUpgradeLog.create({
+      data: {
+        userId,
+        year,
+        trigger,
+        upgradedCount: upgraded.count,
+        deactivatedCount: deactivated.count,
+      },
+    })
+    return {
+      upgradedCount: upgraded.count,
+      deactivatedCount: deactivated.count,
+      year,
+    }
+  })
+}
+
+export async function getUpgradeLogThisYear(
+  db: PrismaClient,
+  userId: number
+): Promise<ClassUpgradeLog | null> {
+  return db.classUpgradeLog.findUnique({
+    where: { userId_year: { userId, year: new Date().getFullYear() } },
+  })
 }
