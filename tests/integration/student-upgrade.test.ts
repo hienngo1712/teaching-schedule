@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
+import * as studentService from "@/server/services/student.service"
 
 async function resetUserData(username: string) {
   const user = await db.user.findUnique({ where: { username } })
@@ -378,6 +379,31 @@ describe("Lazy auto-upgrade via auth.me", () => {
     })
     expect(log.trigger).toBe("manual") // not overwritten by auto
 
+    vi.useRealTimers()
+  })
+
+  it("auth.me still returns user even if auto-upgrade throws", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2099-07-02T00:00:00Z"))
+
+    const spy = vi
+      .spyOn(studentService, "upgradeAllClasses")
+      .mockRejectedValueOnce(new Error("simulated DB failure"))
+
+    const caller = await getAuthedCaller("teacher")
+    const result = await caller.auth.me()
+
+    expect(result.username).toBe("teacher")
+    expect(spy).toHaveBeenCalledOnce()
+
+    // No log should have been written since upgrade threw
+    const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    const log = await db.classUpgradeLog.findUnique({
+      where: { userId_year: { userId: user.id, year: 2099 } },
+    })
+    expect(log).toBeNull()
+
+    spy.mockRestore()
     vi.useRealTimers()
   })
 })

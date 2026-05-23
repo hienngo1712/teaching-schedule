@@ -70,6 +70,39 @@ export async function getMonthlySummary(
     ? new Date(Date.UTC(toYear, toMonth, 1))
     : new Date(Date.UTC(year, month, 1))
 
+  // Historical filter: when `grade` is set, scope `students` and `monthlyTuitions`
+  // by sessionStudent.grade WITHIN the report period — so past months keep
+  // showing students by the grade they attended as, not by their current grade.
+  const studentsWhere = grade
+    ? {
+        userId,
+        sessionStudents: {
+          some: {
+            grade,
+            session: { sessionDate: { gte: startDate, lt: endDate } },
+          },
+        },
+      }
+    : { userId, isActive: true }
+
+  const monthlyTuitionsWhere = grade
+    ? {
+        student: {
+          userId,
+          sessionStudents: {
+            some: {
+              grade,
+              session: { sessionDate: { gte: startDate, lt: endDate } },
+            },
+          },
+        },
+        year: { gte: year, lte: toYear ?? year },
+      }
+    : {
+        student: { userId },
+        year: { gte: year, lte: toYear ?? year },
+      }
+
   const [sessions, students, monthlyTuitions] = await Promise.all([
     db.teachingSession.findMany({
       where: {
@@ -81,13 +114,8 @@ export async function getMonthlySummary(
         sessionStudents: { include: { student: true } }
       }
     }),
-    db.student.findMany({ where: { userId, isActive: true, ...(grade ? { grade } : {}) } }),
-    db.monthlyTuition.findMany({
-      where: {
-        student: { userId, ...(grade ? { grade } : {}) },
-        year: { gte: year, lte: toYear ?? year }
-      }
-    })
+    db.student.findMany({ where: studentsWhere }),
+    db.monthlyTuition.findMany({ where: monthlyTuitionsWhere })
   ])
 
   const totalSessions = sessions.length

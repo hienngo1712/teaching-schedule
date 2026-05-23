@@ -1,4 +1,4 @@
-import type { PrismaClient, ClassUpgradeLog } from "@prisma/client"
+import { Prisma, type PrismaClient, type ClassUpgradeLog } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { getLevel } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
@@ -117,51 +117,65 @@ export async function upgradeAllClasses(
   trigger: "auto" | "manual"
 ): Promise<{ upgradedCount: number; deactivatedCount: number; year: number }> {
   const year = new Date().getFullYear()
-
-  const existing = await db.classUpgradeLog.findUnique({
-    where: { userId_year: { userId, year } },
+  const conflictError = new TRPCError({
+    code: "CONFLICT",
+    message: `Bạn đã nâng lớp toàn bộ học sinh trong năm ${year} rồi.`,
   })
-  if (existing) {
-    throw new TRPCError({
-      code: "CONFLICT",
-      message: `Bạn đã nâng lớp toàn bộ học sinh trong năm ${year} rồi.`,
-    })
-  }
 
-  return db.$transaction(async (tx) => {
-    // Collect grade-9 student IDs BEFORE any updates to avoid catching
-    // grade-8 students that were just incremented to 9
-    const grade9Students = await tx.student.findMany({
-      where: { userId, isActive: true, grade: 9 },
-      select: { id: true },
-    })
-    const grade9Ids = grade9Students.map((s) => s.id)
+  try {
+    return await db.$transaction(async (tx) => {
+      // Idempotency check INSIDE the transaction to avoid TOCTOU race where
+      // two concurrent callers both pass the check and one hits the unique
+      // constraint with an opaque P2002 error.
+      const existing = await tx.classUpgradeLog.findUnique({
+        where: { userId_year: { userId, year } },
+      })
+      if (existing) throw conflictError
 
-    const upgraded = await tx.student.updateMany({
-      where: { userId, isActive: true, grade: { gte: 1, lte: 8 } },
-      data: { grade: { increment: 1 } },
-    })
-    const deactivated = grade9Ids.length > 0
-      ? await tx.student.updateMany({
-          where: { id: { in: grade9Ids } },
-          data: { isActive: false },
-        })
-      : { count: 0 }
-    await tx.classUpgradeLog.create({
-      data: {
-        userId,
-        year,
-        trigger,
+      // Collect grade-9 student IDs BEFORE any updates to avoid catching
+      // grade-8 students that were just incremented to 9
+      const grade9Students = await tx.student.findMany({
+        where: { userId, isActive: true, grade: 9 },
+        select: { id: true },
+      })
+      const grade9Ids = grade9Students.map((s) => s.id)
+
+      const upgraded = await tx.student.updateMany({
+        where: { userId, isActive: true, grade: { gte: 1, lte: 8 } },
+        data: { grade: { increment: 1 } },
+      })
+      const deactivated = grade9Ids.length > 0
+        ? await tx.student.updateMany({
+            where: { id: { in: grade9Ids } },
+            data: { isActive: false },
+          })
+        : { count: 0 }
+      await tx.classUpgradeLog.create({
+        data: {
+          userId,
+          year,
+          trigger,
+          upgradedCount: upgraded.count,
+          deactivatedCount: deactivated.count,
+        },
+      })
+      return {
         upgradedCount: upgraded.count,
         deactivatedCount: deactivated.count,
-      },
+        year,
+      }
     })
-    return {
-      upgradedCount: upgraded.count,
-      deactivatedCount: deactivated.count,
-      year,
+  } catch (err) {
+    // Defense-in-depth: if two callers race past the in-tx check (extremely
+    // rare given short transaction window), the unique constraint catches it.
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      throw conflictError
     }
-  })
+    throw err
+  }
 }
 
 export async function getUpgradeLogThisYear(

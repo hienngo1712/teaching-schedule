@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { ArrowUpCircle, Loader2 } from "lucide-react"
-import { trpc } from "@/lib/trpc"
+import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +16,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+
+export type UpgradeResult = RouterOutputs["student"]["upgradeAllClasses"]
+export type UpgradeLog = RouterOutputs["student"]["getUpgradeLogThisYear"]
 
 export function UpgradeAllClassesButton() {
   const { t } = useTranslation()
