@@ -255,5 +255,11 @@
   "year": "Năm",
   "range": "Khoảng",
   "from_month": "Từ tháng",
-  "to_month": "Đến tháng"
+  "to_month": "Đến tháng",
+  "confirm": "Xác nhận",
+  "upgrade_all_button": "Nâng lớp hàng loạt",
+  "upgrade_all_confirm_title": "Nâng lớp toàn bộ học sinh?",
+  "upgrade_all_confirm_body": "Tất cả học sinh lớp 1–8 sẽ tăng 1 lớp. Học sinh lớp 9 sẽ chuyển sang trạng thái Đã nghỉ (lên lớp 10). Hành động này chỉ chạy 1 lần / năm và không thể hoàn tác.",
+  "upgrade_all_success": "Đã nâng lớp {upgraded} học sinh, {deactivated} học sinh lớp 9 chuyển sang Đã nghỉ.",
+  "upgrade_all_already_done": "Đã nâng lớp năm {year}"
 }

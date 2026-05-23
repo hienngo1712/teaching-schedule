@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { StudentFormDialog } from "./StudentFormDialog"
+import { UpgradeAllClassesButton } from "./UpgradeAllClassesButton"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
@@ -136,7 +137,8 @@ export function StudentList() {
           className="w-full sm:w-64"
         />
 
-        <div className="sm:ml-auto">
+        <div className="sm:ml-auto flex flex-col sm:flex-row gap-2">
+          <UpgradeAllClassesButton />
           <Button
             onClick={() => setFormState({ open: true, mode: "create" })}
             className="w-full sm:w-auto"
