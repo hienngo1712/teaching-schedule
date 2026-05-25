@@ -131,32 +131,37 @@ export function useExcelExport() {
       if (tuitionInfo) {
         headerRowIdx = 11 // shift attendance table down
 
-        // Row 5: section title
+        // Row 5: section title — merge A5:D5
+        sheet.mergeCells("A5:D5")
         const tuitionTitleCell = sheet.getCell("A5")
         tuitionTitleCell.value = `─── HỌC PHÍ ${period.toUpperCase()} ───`
         tuitionTitleCell.font = { bold: true, size: 12 }
 
-        // Row 6: Học phí/buổi
+        // Row 6: Học phí/buổi — label A6:C6, value D6
+        sheet.mergeCells("A6:C6")
         sheet.getCell("A6").value = "Học phí/buổi (mặc định)"
-        sheet.getCell("B6").value = formatCurrency(tuitionInfo.tuitionFeePerSession)
-        sheet.getCell("B6").alignment = { horizontal: "right" }
+        sheet.getCell("D6").value = formatCurrency(tuitionInfo.tuitionFeePerSession)
+        sheet.getCell("D6").alignment = { horizontal: "right" }
 
-        // Row 7: Học phí tháng này
+        // Row 7: Học phí tháng này — label A7:C7, value D7
+        sheet.mergeCells("A7:C7")
         sheet.getCell("A7").value = "Học phí tháng này"
-        sheet.getCell("B7").value = formatCurrency(tuitionInfo.currentMonthFee)
-        sheet.getCell("B7").alignment = { horizontal: "right" }
+        sheet.getCell("D7").value = formatCurrency(tuitionInfo.currentMonthFee)
+        sheet.getCell("D7").alignment = { horizontal: "right" }
 
-        // Row 8: Nợ tháng trước
+        // Row 8: Nợ tháng trước — label A8:C8, value D8
+        sheet.mergeCells("A8:C8")
         sheet.getCell("A8").value = "Nợ tháng trước"
-        sheet.getCell("B8").value = formatCurrency(tuitionInfo.previousBalance)
-        sheet.getCell("B8").alignment = { horizontal: "right" }
+        sheet.getCell("D8").value = formatCurrency(tuitionInfo.previousBalance)
+        sheet.getCell("D8").alignment = { horizontal: "right" }
         if (tuitionInfo.previousBalance > 0) {
-          sheet.getCell("B8").font = { color: { argb: EXCEL_COLORS.absent }, bold: true }
+          sheet.getCell("D8").font = { color: { argb: EXCEL_COLORS.absent }, bold: true }
         }
 
-        // Row 9: TỔNG CẦN ĐÓNG (highlighted yellow)
+        // Row 9: TỔNG CẦN ĐÓNG — label A9:C9 (yellow), value D9 (yellow)
+        sheet.mergeCells("A9:C9")
         const totalLabelCell = sheet.getCell("A9")
-        const totalValueCell = sheet.getCell("B9")
+        const totalValueCell = sheet.getCell("D9")
         totalLabelCell.value = "TỔNG CẦN ĐÓNG"
         totalLabelCell.font = { bold: true, size: 12 }
         totalLabelCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF3CD" } }
