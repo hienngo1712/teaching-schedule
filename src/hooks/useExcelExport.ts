@@ -110,11 +110,20 @@ export function useExcelExport() {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet(student.fullName)
 
+      // Row 1–3: merge A:F và center
+      sheet.mergeCells("A1:F1")
       sheet.getCell("A1").value = "BÁO CÁO LỊCH HỌC CÁ NHÂN"
       sheet.getCell("A1").font = { size: 16, bold: true }
+      sheet.getCell("A1").alignment = { horizontal: "center", vertical: "middle" }
+      sheet.getRow(1).height = 28
 
+      sheet.mergeCells("A2:F2")
       sheet.getCell("A2").value = `Học sinh: ${student.fullName} | Lớp: ${student.grade}`
+      sheet.getCell("A2").alignment = { horizontal: "center" }
+
+      sheet.mergeCells("A3:F3")
       sheet.getCell("A3").value = `Kỳ báo cáo: ${period} | Ngày xuất: ${formatDate(new Date())}`
+      sheet.getCell("A3").alignment = { horizontal: "center" }
 
       // --- Tuition block (rows 5–9, only when tuitionInfo is provided) ---
       let headerRowIdx = 5 // default: no tuition block
@@ -185,13 +194,22 @@ export function useExcelExport() {
       })
 
       const lastRowIdx = headerRowIdx + 1 + sessions.length + 1
+      sheet.mergeCells(`A${lastRowIdx}:F${lastRowIdx}`)
       sheet.getCell(`A${lastRowIdx}`).value = `Tổng: ${summary.total} | Có mặt: ${summary.present} | Vắng: ${summary.absent} | Muộn: ${summary.late} | Tỉ lệ: ${summary.rate}%`
       sheet.getCell(`A${lastRowIdx}`).font = { bold: true }
 
-      sheet.columns.forEach(col => col.width = 15)
-      sheet.getColumn(6).width = 30
-      sheet.getColumn(2).width = 12
-      sheet.getColumn(1).width = 6
+      // Column widths
+      sheet.getColumn(1).width = 5   // STT
+      sheet.getColumn(2).width = 12  // Ngày
+      sheet.getColumn(3).width = 6   // Thứ
+      sheet.getColumn(4).width = 15  // Giờ
+      sheet.getColumn(5).width = 16  // Điểm danh
+      sheet.getColumn(6).width = 22  // Ghi chú
+
+      // Ghi chú column: wrapText
+      sheet.getColumn(6).eachCell({ includeEmpty: false }, cell => {
+        cell.alignment = { ...(cell.alignment ?? {}), wrapText: true, vertical: "top" }
+      })
 
       const buffer = await workbook.xlsx.writeBuffer()
       const filename = removeVietnameseTones(`LichHoc_${student.fullName}_${period}`)
