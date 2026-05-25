@@ -67,13 +67,15 @@ export async function getMonthlyTuitionStatus(
   userId: number,
   filter: MonthlyTuitionFilterInput
 ): Promise<PaginatedResponse<TuitionStatusDTO>> {
-  const { year, month, grade, search, status, page, limit } = filter
+  const { year, month, grade, search, studentId, status, page, limit } = filter
 
   // 1. Lấy toàn bộ học sinh active theo filter
   const students = await db.student.findMany({
     where: {
       userId,
-      ...(grade
+      ...(studentId
+        ? { id: studentId }
+        : grade
         ? {
             sessionStudents: {
               some: {

@@ -3,7 +3,7 @@ import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
 import { toast } from "sonner"
 import { ATTENDANCE_LABEL, ATTENDANCE_STATUS, COLORS } from "@/lib/constants"
-import { formatDate, formatDayOfWeek, removeVietnameseTones } from "@/lib/utils"
+import { formatDate, formatDayOfWeek, removeVietnameseTones, formatCurrency } from "@/lib/utils"
 import type { SessionDTO, StudentDTO } from "@/lib/types/models"
 
 const toArgb = (hex: string) => `FF${hex.replace("#", "")}`
@@ -97,7 +97,13 @@ export function useExcelExport() {
     student: { fullName: string; grade: number },
     sessions: SessionDTO[],
     summary: { total: number; present: number; absent: number; late: number; rate: number },
-    period: string
+    period: string,
+    tuitionInfo?: {
+      tuitionFeePerSession: number   // student.tuitionFee (mặc định/buổi)
+      currentMonthFee: number        // TuitionStatusDTO.totalExpected
+      previousBalance: number        // TuitionStatusDTO.previousBalance
+      totalAmountDue: number         // TuitionStatusDTO.totalAmountDue
+    }
   ) => {
     setIsExporting(true)
     try {
@@ -106,11 +112,54 @@ export function useExcelExport() {
 
       sheet.getCell("A1").value = "BÁO CÁO LỊCH HỌC CÁ NHÂN"
       sheet.getCell("A1").font = { size: 16, bold: true }
-      
+
       sheet.getCell("A2").value = `Học sinh: ${student.fullName} | Lớp: ${student.grade}`
       sheet.getCell("A3").value = `Kỳ báo cáo: ${period} | Ngày xuất: ${formatDate(new Date())}`
 
-      const headerRow = sheet.getRow(5)
+      // --- Tuition block (rows 5–9, only when tuitionInfo is provided) ---
+      let headerRowIdx = 5 // default: no tuition block
+
+      if (tuitionInfo) {
+        headerRowIdx = 11 // shift attendance table down
+
+        // Row 5: section title
+        const tuitionTitleCell = sheet.getCell("A5")
+        tuitionTitleCell.value = `─── HỌC PHÍ ${period.toUpperCase()} ───`
+        tuitionTitleCell.font = { bold: true, size: 12 }
+
+        // Row 6: Học phí/buổi
+        sheet.getCell("A6").value = "Học phí/buổi (mặc định)"
+        sheet.getCell("B6").value = formatCurrency(tuitionInfo.tuitionFeePerSession)
+        sheet.getCell("B6").alignment = { horizontal: "right" }
+
+        // Row 7: Học phí tháng này
+        sheet.getCell("A7").value = "Học phí tháng này"
+        sheet.getCell("B7").value = formatCurrency(tuitionInfo.currentMonthFee)
+        sheet.getCell("B7").alignment = { horizontal: "right" }
+
+        // Row 8: Nợ tháng trước
+        sheet.getCell("A8").value = "Nợ tháng trước"
+        sheet.getCell("B8").value = formatCurrency(tuitionInfo.previousBalance)
+        sheet.getCell("B8").alignment = { horizontal: "right" }
+        if (tuitionInfo.previousBalance > 0) {
+          sheet.getCell("B8").font = { color: { argb: EXCEL_COLORS.absent }, bold: true }
+        }
+
+        // Row 9: TỔNG CẦN ĐÓNG (highlighted yellow)
+        const totalLabelCell = sheet.getCell("A9")
+        const totalValueCell = sheet.getCell("B9")
+        totalLabelCell.value = "TỔNG CẦN ĐÓNG"
+        totalLabelCell.font = { bold: true, size: 12 }
+        totalLabelCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF3CD" } }
+        totalValueCell.value = formatCurrency(tuitionInfo.totalAmountDue)
+        totalValueCell.font = { bold: true, size: 12, color: { argb: "FF856404" } }
+        totalValueCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF3CD" } }
+        totalValueCell.alignment = { horizontal: "right" }
+        // Row 10: intentionally blank — visual separator before attendance table
+      }
+
+      // --- Attendance table ---
+      const headerRow = sheet.getRow(headerRowIdx)
       headerRow.values = ["STT", "Ngày", "Thứ", "Giờ", "Điểm danh", "Ghi chú"]
       headerRow.font = { bold: true, color: { argb: EXCEL_COLORS.white } }
       headerRow.eachCell(cell => {
@@ -119,7 +168,7 @@ export function useExcelExport() {
 
       sessions.forEach((s, i) => {
         const st = s.students.find(ss => ss.fullName === student.fullName)
-        const row = sheet.getRow(6 + i)
+        const row = sheet.getRow(headerRowIdx + 1 + i)
         row.values = [
           i + 1,
           formatDate(s.sessionDate),
@@ -128,20 +177,21 @@ export function useExcelExport() {
           st ? ATTENDANCE_LABEL[st.attendance as keyof typeof ATTENDANCE_LABEL] : "N/A",
           st?.note || ""
         ]
-        
-        // Color for attendance
+
         const attendanceCell = row.getCell(5)
         if (st?.attendance === ATTENDANCE_STATUS.PRESENT) attendanceCell.font = { color: { argb: EXCEL_COLORS.present } }
         if (st?.attendance === ATTENDANCE_STATUS.ABSENT) attendanceCell.font = { color: { argb: EXCEL_COLORS.absent } }
         if (st?.attendance === ATTENDANCE_STATUS.LATE) attendanceCell.font = { color: { argb: EXCEL_COLORS.late } }
       })
 
-      const lastRowIdx = 6 + sessions.length + 1
+      const lastRowIdx = headerRowIdx + 1 + sessions.length + 1
       sheet.getCell(`A${lastRowIdx}`).value = `Tổng: ${summary.total} | Có mặt: ${summary.present} | Vắng: ${summary.absent} | Muộn: ${summary.late} | Tỉ lệ: ${summary.rate}%`
       sheet.getCell(`A${lastRowIdx}`).font = { bold: true }
 
       sheet.columns.forEach(col => col.width = 15)
       sheet.getColumn(6).width = 30
+      sheet.getColumn(2).width = 12
+      sheet.getColumn(1).width = 6
 
       const buffer = await workbook.xlsx.writeBuffer()
       const filename = removeVietnameseTones(`LichHoc_${student.fullName}_${period}`)

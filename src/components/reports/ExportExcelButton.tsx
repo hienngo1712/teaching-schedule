@@ -17,6 +17,7 @@ import { ATTENDANCE_STATUS } from "@/lib/constants"
 import type { SessionDTO, StudentDTO } from "@/lib/types/models"
 import { useSession } from "next-auth/react"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { trpc } from "@/lib/trpc"
 
 interface ExportExcelButtonProps {
   sessions: SessionDTO[]
@@ -29,6 +30,12 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
   const { isExporting, exportMonthlySchedule, exportStudentSchedule, exportGradeReport, exportAttendanceSummary } = useExcelExport()
   const { year, month } = useCalendar()
   const { selectedGrade, selectedStudentId } = useFilters()
+
+  // Fetch tuition data cho học sinh đang được chọn (enabled only when a student is selected)
+  const { data: tuitionData } = trpc.tuition.getMonthlyStatus.useQuery(
+    { year, month, studentId: selectedStudentId ?? undefined },
+    { enabled: !!selectedStudentId }
+  )
 
   function handleExportStudent() {
     if (!selectedStudentId) return
@@ -47,12 +54,25 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
       { present: 0, absent: 0, late: 0 }
     )
     const total = studentSessions.length
-    const rate = total > 0 ? ((present + late) / total) * 100 : 0
+    const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0
+
+    // Build tuitionInfo if data is already fetched
+    const studentTuition = tuitionData?.items?.[0]
+    const tuitionInfo = studentTuition
+      ? {
+          tuitionFeePerSession: studentInfo?.tuitionFee ?? 0,
+          currentMonthFee: studentTuition.totalExpected,
+          previousBalance: studentTuition.previousBalance,
+          totalAmountDue: studentTuition.totalAmountDue,
+        }
+      : undefined
+
     exportStudentSchedule(
       { fullName: studentInfo?.fullName || t("student"), grade: studentInfo?.grade || 0 },
       studentSessions,
       { total, present, absent, late, rate },
-      `${t("month")} ${month}/${year}`
+      `${t("month")} ${month}/${year}`,
+      tuitionInfo
     )
   }
 
