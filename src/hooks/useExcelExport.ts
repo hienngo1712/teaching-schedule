@@ -128,7 +128,7 @@ export function useExcelExport() {
         tuitionTitleCell.font = { bold: true, size: 12 }
 
         // Row 6: Học phí/buổi
-        sheet.getCell("A6").value = "Học phí/buổi"
+        sheet.getCell("A6").value = "Học phí/buổi (mặc định)"
         sheet.getCell("B6").value = formatCurrency(tuitionInfo.tuitionFeePerSession)
         sheet.getCell("B6").alignment = { horizontal: "right" }
 
@@ -155,7 +155,7 @@ export function useExcelExport() {
         totalValueCell.font = { bold: true, size: 12, color: { argb: "FF856404" } }
         totalValueCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF3CD" } }
         totalValueCell.alignment = { horizontal: "right" }
-        // Row 10: blank separator (skip — just leave empty)
+        // Row 10: intentionally blank — visual separator before attendance table
       }
 
       // --- Attendance table ---
