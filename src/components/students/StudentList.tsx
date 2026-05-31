@@ -54,7 +54,6 @@ type StudentRow = RouterOutputs["student"]["list"]["items"][number]
 const ALL_GRADES_VALUE = "all"
 
 export function StudentList() {
-  const utils = trpc.useUtils()
   const router = useRouter()
   const { t } = useTranslation()
   const { selectedGrade, searchStudentName, setGrade, setSearch } = useFilters()
@@ -97,7 +96,6 @@ export function StudentList() {
 
   const deleteMut = trpc.student.delete.useMutation({
     onSuccess: () => {
-      utils.student.list.invalidate()
       toast.success(t("delete_success"))
       setDeleteTarget(null)
     },

@@ -33,7 +33,6 @@ type AttendanceState = {
 
 export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
   const { t } = useTranslation()
-  const utils = trpc.useUtils()
 
   const { data: attendanceData, isLoading } = trpc.attendance.get.useQuery({
     sessionId,
@@ -59,9 +58,6 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
   const updateMutation = trpc.attendance.update.useMutation({
     onSuccess: () => {
       toast.success(t("save_attendance_success"))
-      utils.attendance.get.invalidate({ sessionId })
-      utils.report.invalidate()
-      utils.session.getMonth.invalidate()
       onSaveSuccess?.()
     },
     onError: () => {

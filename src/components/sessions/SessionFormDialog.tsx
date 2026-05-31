@@ -68,7 +68,6 @@ export function SessionFormDialog({
   const { t } = useTranslation()
   const isEdit = !!editingSession
   const [isUpdateFuture, setIsUpdateFuture] = useState(false)
-  const utils = trpc.useUtils()
 
   const { data: subjects = [] } = trpc.subject.list.useQuery({ isActive: true })
 
@@ -113,8 +112,6 @@ export function SessionFormDialog({
   const createMutation = trpc.session.create.useMutation({
     onSuccess: () => {
       toast.success(t("session_created_success"))
-      utils.session.getMonth.invalidate()
-      utils.report.invalidate()
       onOpenChange(false)
       onSuccess?.()
     },
@@ -130,8 +127,6 @@ export function SessionFormDialog({
   const updateMutation = trpc.session.update.useMutation({
     onSuccess: () => {
       toast.success(t("session_updated_success"))
-      utils.session.getMonth.invalidate()
-      utils.report.invalidate()
       onOpenChange(false)
       onSuccess?.()
     },
@@ -147,8 +142,6 @@ export function SessionFormDialog({
   const updateFutureMutation = trpc.session.updateFuture.useMutation({
     onSuccess: (res) => {
       toast.success(t("session_update_future_success").replace("{count}", String(res.updated)))
-      utils.session.getMonth.invalidate()
-      utils.report.invalidate()
       onOpenChange(false)
       onSuccess?.()
     },
