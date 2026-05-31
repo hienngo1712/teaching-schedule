@@ -70,7 +70,6 @@ export function SessionDetailDialog({
   )
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([])
   const [isDeleteFuture, setIsDeleteFuture] = useState(false)
-  const utils = trpc.useUtils()
 
   // Fetch full details (Lazy load)
   const { data: session, isLoading } = trpc.session.getDetail.useQuery(
@@ -81,8 +80,6 @@ export function SessionDetailDialog({
   const deleteMutation = trpc.session.delete.useMutation({
     onSuccess: () => {
       toast.success(t("delete_session_success"))
-      utils.session.getMonth.invalidate()
-      utils.report.invalidate()
       onOpenChange(false)
     },
     onError: () => {
@@ -93,8 +90,6 @@ export function SessionDetailDialog({
   const deleteFutureMutation = trpc.session.deleteFuture.useMutation({
     onSuccess: (res) => {
       toast.success(t("delete_recurring_success").replace("{count}", String(res.deleted)))
-      utils.session.getMonth.invalidate()
-      utils.report.invalidate()
       onOpenChange(false)
     },
     onError: (err) => {
@@ -105,7 +100,6 @@ export function SessionDetailDialog({
   const duplicateMutation = trpc.session.duplicate.useMutation({
     onSuccess: () => {
       toast.success(t("duplicate_success"))
-      utils.session.getMonth.invalidate()
       setIsDuplicateDialogOpen(false)
     },
     onError: (err) => {
@@ -116,10 +110,6 @@ export function SessionDetailDialog({
   const addStudentsMutation = trpc.session.addStudents.useMutation({
     onSuccess: () => {
       toast.success(t("update_students_success"))
-      utils.session.getMonth.invalidate()
-      utils.report.invalidate()
-      utils.attendance.get.invalidate({ sessionId: basicSession.id })
-      utils.session.getDetail.invalidate({ id: basicSession.id })
       setIsAddStudentsOpen(false)
     },
     onError: (err) => {
@@ -130,10 +120,6 @@ export function SessionDetailDialog({
   const addRecurringMutation = trpc.session.addRecurringStudents.useMutation({
     onSuccess: (res) => {
       toast.success(t("add_recurring_students_success").replace("{count}", String(res.updatedSessions)))
-      utils.session.getMonth.invalidate()
-      utils.report.invalidate()
-      utils.attendance.get.invalidate({ sessionId: basicSession.id })
-      utils.session.getDetail.invalidate({ id: basicSession.id })
       setIsAddStudentsOpen(false)
     },
     onError: (err) => {

@@ -22,7 +22,6 @@ export type UpgradeLog = RouterOutputs["student"]["getUpgradeLogThisYear"]
 
 export function UpgradeAllClassesButton() {
   const { t } = useTranslation()
-  const utils = trpc.useUtils()
   const [open, setOpen] = useState(false)
 
   const logQuery = trpc.student.getUpgradeLogThisYear.useQuery()
@@ -36,8 +35,6 @@ export function UpgradeAllClassesButton() {
           .replace("{upgraded}", String(data.upgradedCount))
           .replace("{deactivated}", String(data.deactivatedCount)),
       )
-      utils.student.list.invalidate()
-      utils.student.getUpgradeLogThisYear.invalidate()
       setOpen(false)
     },
     onError: (err) => {

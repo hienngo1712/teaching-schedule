@@ -40,7 +40,6 @@ type Props = {
 
 export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) {
   const { t } = useTranslation()
-  const utils = trpc.useUtils()
 
   const form = useForm<z.input<typeof studentCreateSchema>>({
     resolver: zodResolver(studentCreateSchema),
@@ -71,8 +70,6 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   const createMut = trpc.student.create.useMutation({
     onSuccess: () => {
-      utils.student.list.invalidate()
-      utils.report.invalidate()
       toast.success(t("student_added_success"))
       onOpenChange(false)
     },
@@ -81,8 +78,6 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   const updateMut = trpc.student.update.useMutation({
     onSuccess: () => {
-      utils.student.list.invalidate()
-      utils.report.invalidate()
       toast.success(t("student_updated_success"))
       onOpenChange(false)
     },

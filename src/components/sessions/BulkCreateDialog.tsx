@@ -69,7 +69,6 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
   const [mode, setMode] = useState<"create" | "assign">("create")
   const [conflicts, setConflicts] = useState<{ date: string; conflict: string }[]>([])
   const [pendingValues, setPendingValues] = useState<SessionBulkCreateInput | null>(null)
-  const utils = trpc.useUtils()
   const { data: subjects = [] } = trpc.subject.list.useQuery({ isActive: true })
 
   const form = useForm<SessionBulkCreateInput>({
@@ -100,7 +99,6 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
       if (res.skipped > 0) {
         toast.info(t("bulk_skip_info").replace("{count}", String(res.skipped)))
       }
-      utils.session.getMonth.invalidate()
       onOpenChange(false)
       onSuccess?.()
       form.reset()
@@ -129,7 +127,6 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
   const assignMutation = trpc.session.addRecurringStudents.useMutation({
     onSuccess: (res) => {
       toast.success(t("add_recurring_students_success").replace("{count}", String(res.updatedSessions)))
-      utils.session.getMonth.invalidate()
       onOpenChange(false)
       onSuccess?.()
       form.reset()
