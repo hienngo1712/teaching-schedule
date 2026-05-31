@@ -151,6 +151,7 @@ export function StudentScheduleView({
                   <TableHead className="font-bold">{t("weekday")}</TableHead>
                   <TableHead className="font-bold">{t("time")}</TableHead>
                   <TableHead className="font-bold text-right">{t("tuition_col")}</TableHead>
+                  <TableHead className="font-bold">{t("subject")}</TableHead>
                   <TableHead className="font-bold">{t("attendance_col")}</TableHead>
                   <TableHead className="font-bold">{t("notes")}</TableHead>
                 </TableRow>
@@ -168,6 +169,7 @@ export function StudentScheduleView({
                       <TableCell className="text-right font-medium text-slate-700">
                         {formatCurrency(studentData?.fee)}
                       </TableCell>
+                      <TableCell className="text-slate-600">{session.subject.name}</TableCell>
                       <TableCell>
                         <Badge
                           variant="secondary"
@@ -190,7 +192,7 @@ export function StudentScheduleView({
                 })}
                 {studentSessions.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-slate-400 italic">
+                    <TableCell colSpan={8} className="text-center py-12 text-slate-400 italic">
                       {t("no_sessions_for_student")}
                     </TableCell>
                   </TableRow>

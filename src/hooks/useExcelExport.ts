@@ -110,18 +110,18 @@ export function useExcelExport() {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet(student.fullName)
 
-      // Row 1–3: merge A:F và center
-      sheet.mergeCells("A1:F1")
+      // Row 1–3: merge A:G và center
+      sheet.mergeCells("A1:G1")
       sheet.getCell("A1").value = "BÁO CÁO LỊCH HỌC CÁ NHÂN"
       sheet.getCell("A1").font = { size: 16, bold: true }
       sheet.getCell("A1").alignment = { horizontal: "center", vertical: "middle" }
       sheet.getRow(1).height = 28
 
-      sheet.mergeCells("A2:F2")
+      sheet.mergeCells("A2:G2")
       sheet.getCell("A2").value = `Học sinh: ${student.fullName} | Lớp: ${student.grade}`
       sheet.getCell("A2").alignment = { horizontal: "center" }
 
-      sheet.mergeCells("A3:F3")
+      sheet.mergeCells("A3:G3")
       sheet.getCell("A3").value = `Kỳ báo cáo: ${period} | Ngày xuất: ${formatDate(new Date())}`
       sheet.getCell("A3").alignment = { horizontal: "center" }
 
@@ -174,7 +174,7 @@ export function useExcelExport() {
 
       // --- Attendance table ---
       const headerRow = sheet.getRow(headerRowIdx)
-      headerRow.values = ["STT", "Ngày", "Thứ", "Giờ", "Điểm danh", "Ghi chú"]
+      headerRow.values = ["STT", "Ngày", "Thứ", "Giờ", "Môn học", "Điểm danh", "Ghi chú"]
       headerRow.font = { bold: true, color: { argb: EXCEL_COLORS.white } }
       headerRow.eachCell(cell => {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_COLORS.primary } }
@@ -188,18 +188,19 @@ export function useExcelExport() {
           formatDate(s.sessionDate),
           formatDayOfWeek(s.sessionDate),
           `${s.startTime}-${s.endTime}`,
+          s.subject.name,
           st ? ATTENDANCE_LABEL[st.attendance as keyof typeof ATTENDANCE_LABEL] : "N/A",
           st?.note || ""
         ]
 
-        const attendanceCell = row.getCell(5)
+        const attendanceCell = row.getCell(6)
         if (st?.attendance === ATTENDANCE_STATUS.PRESENT) attendanceCell.font = { color: { argb: EXCEL_COLORS.present } }
         if (st?.attendance === ATTENDANCE_STATUS.ABSENT) attendanceCell.font = { color: { argb: EXCEL_COLORS.absent } }
         if (st?.attendance === ATTENDANCE_STATUS.LATE) attendanceCell.font = { color: { argb: EXCEL_COLORS.late } }
       })
 
       const lastRowIdx = headerRowIdx + 1 + sessions.length + 1
-      sheet.mergeCells(`A${lastRowIdx}:F${lastRowIdx}`)
+      sheet.mergeCells(`A${lastRowIdx}:G${lastRowIdx}`)
       sheet.getCell(`A${lastRowIdx}`).value = `Tổng: ${summary.total} | Có mặt: ${summary.present} | Vắng: ${summary.absent} | Muộn: ${summary.late} | Tỉ lệ: ${summary.rate}%`
       sheet.getCell(`A${lastRowIdx}`).font = { bold: true }
 
@@ -208,11 +209,12 @@ export function useExcelExport() {
       sheet.getColumn(2).width = 12  // Ngày
       sheet.getColumn(3).width = 6   // Thứ
       sheet.getColumn(4).width = 15  // Giờ
-      sheet.getColumn(5).width = 16  // Điểm danh
-      sheet.getColumn(6).width = 22  // Ghi chú
+      sheet.getColumn(5).width = 16  // Môn học
+      sheet.getColumn(6).width = 16  // Điểm danh
+      sheet.getColumn(7).width = 22  // Ghi chú
 
       // Ghi chú column: wrapText
-      sheet.getColumn(6).eachCell({ includeEmpty: false }, cell => {
+      sheet.getColumn(7).eachCell({ includeEmpty: false }, cell => {
         cell.alignment = { ...(cell.alignment ?? {}), wrapText: true, vertical: "top" }
       })
 
