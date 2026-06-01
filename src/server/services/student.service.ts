@@ -18,13 +18,17 @@ export async function listStudents(
   userId: number,
   filter: StudentFilterInput
 ): Promise<PaginatedResponse<StudentDTO>> {
-  const { page, limit, grade, search, isActive } = filter
+  const { page, limit, grade, search, isActive, includeInactive } = filter
   const skip = (page - 1) * limit
   const take = limit
 
   const where = {
     userId,
-    ...(isActive !== undefined ? { isActive } : { isActive: true }),
+    ...(isActive !== undefined
+      ? { isActive }
+      : includeInactive
+      ? {}
+      : { isActive: true }),
     ...(grade ? { grade } : {}),
     ...(search
       ? { fullName: { contains: search, mode: "insensitive" as const } }

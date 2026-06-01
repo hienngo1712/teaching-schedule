@@ -120,7 +120,7 @@ export default function ReportsPage() {
                 <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("student")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{students.length}</div>
+                <div className="text-xl font-bold">{monthlySummary?.totalStudents ?? 0}</div>
               </CardContent>
             </Card>
             <Card className="bg-white border-slate-200">

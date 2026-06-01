@@ -63,6 +63,7 @@ export function StudentList() {
 
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active")
 
   useEffect(() => {
     setSearch(debouncedSearch)
@@ -78,10 +79,19 @@ export function StudentList() {
     setCurrentPage(1) // Reset to page 1 when grade changes
   }, [selectedGrade])
 
+  useEffect(() => {
+    setCurrentPage(1) // Reset to page 1 when status filter changes
+  }, [statusFilter])
+
+  const statusQuery =
+    statusFilter === "all"
+      ? { includeInactive: true as const }
+      : { isActive: statusFilter === "active" }
+
   const listQuery = trpc.student.list.useQuery({
     grade: selectedGrade ?? undefined,
     search: searchStudentName.trim() || undefined,
-    isActive: undefined,
+    ...statusQuery,
     page: currentPage,
     limit: pageSize,
   })
@@ -134,6 +144,20 @@ export function StudentList() {
           onChange={(e) => setLocalSearch(e.target.value)}
           className="w-full sm:w-64"
         />
+
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as "active" | "inactive" | "all")}
+        >
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder={t("status")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">{t("studying")}</SelectItem>
+            <SelectItem value="inactive">{t("dropped")}</SelectItem>
+            <SelectItem value="all">{t("all_status")}</SelectItem>
+          </SelectContent>
+        </Select>
 
         <div className="sm:ml-auto flex flex-col sm:flex-row gap-2">
           <UpgradeAllClassesButton />
