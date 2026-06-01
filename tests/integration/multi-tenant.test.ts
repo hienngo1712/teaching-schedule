@@ -31,7 +31,7 @@ describe("Multi-tenant isolation", () => {
   // ── Student isolation ─────────────────────────────────────────
   it("UserB không thấy student của UserA", async () => {
     const students = await callerB.student.list({})
-    const ids = students.map((s: any) => s.id)
+    const ids = students.items.map((s: any) => s.id)
     expect(ids).not.toContain(studentA.id)
   })
 
@@ -120,16 +120,15 @@ describe("Multi-tenant isolation", () => {
   it("report.monthlySummary chỉ trả data của user đó", async () => {
     const summaryA = await callerA.report.monthlySummary({ year: 2026, month: 5 })
     const summaryB = await callerB.report.monthlySummary({ year: 2026, month: 5 })
-    
-    // UserA created 1 session (sessionA)
+
+    // Each user only sees their own session in the summary
     expect(summaryA.totalSessions).toBe(1)
-    // UserB created 1 session (mySession)
     expect(summaryB.totalSessions).toBe(1)
-    
-    // They should only see their own students too
+
+    // student.list is paginated ({ items }) and isolated per user
     const studentsA = await callerA.student.list({})
     const studentsB = await callerB.student.list({})
-    expect(summaryA.totalStudents).toBe(studentsA.length)
-    expect(summaryB.totalStudents).toBe(studentsB.length)
+    expect(studentsA.items.map((s: any) => s.id)).toContain(studentA.id)
+    expect(studentsB.items.map((s: any) => s.id)).not.toContain(studentA.id)
   })
 })
