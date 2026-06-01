@@ -71,21 +71,9 @@ export async function getMonthlySummary(
     ? new Date(Date.UTC(toYear, toMonth, 1))
     : new Date(Date.UTC(year, month, 1))
 
-  // Historical filter: when `grade` is set, scope `students` and `monthlyTuitions`
-  // by sessionStudent.grade WITHIN the report period — so past months keep
+  // Historical filter: when `grade` is set, scope `monthlyTuitions` by
+  // sessionStudent.grade WITHIN the report period — so past months keep
   // showing students by the grade they attended as, not by their current grade.
-  const studentsWhere = grade
-    ? {
-        userId,
-        sessionStudents: {
-          some: {
-            grade,
-            session: { sessionDate: { gte: startDate, lt: endDate } },
-          },
-        },
-      }
-    : { userId, isActive: true }
-
   const monthlyTuitionsWhere = grade
     ? {
         student: {
@@ -104,7 +92,7 @@ export async function getMonthlySummary(
         year: { gte: year, lte: toYear ?? year },
       }
 
-  const [sessions, students, monthlyTuitions] = await Promise.all([
+  const [sessions, monthlyTuitions] = await Promise.all([
     db.teachingSession.findMany({
       where: {
         userId,
@@ -115,12 +103,22 @@ export async function getMonthlySummary(
         sessionStudents: { include: { student: true } }
       }
     }),
-    db.student.findMany({ where: studentsWhere }),
     db.monthlyTuition.findMany({ where: monthlyTuitionsWhere })
   ])
 
   const totalSessions = sessions.length
-  const totalStudents = students.length
+
+  // Headcount = distinct students actually taught in the period (snapshot
+  // grade-aware), so it ties out with byGrade/revenue below and includes
+  // students who have since graduated / gone inactive.
+  const studentIdsInPeriod = new Set<number>()
+  for (const s of sessions) {
+    for (const ss of s.sessionStudents) {
+      if (grade && ss.grade !== grade) continue
+      studentIdsInPeriod.add(ss.studentId)
+    }
+  }
+  const totalStudents = studentIdsInPeriod.size
 
   // By Grade
   const byGrade = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(g => {

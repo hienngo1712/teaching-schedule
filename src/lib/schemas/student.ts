@@ -28,6 +28,9 @@ export const studentFilterSchema = z.object({
   grade: z.number().int().min(1).max(9).optional(),
   search: z.string().trim().max(100).optional(),
   isActive: z.boolean().optional(),
+  // When true, return both active and inactive students (overrides the
+  // default active-only behavior). Used by the "all students" view.
+  includeInactive: z.boolean().optional(),
 }).merge(paginationSchema)
 
 export type StudentCreateInput = z.infer<typeof studentCreateSchema>
