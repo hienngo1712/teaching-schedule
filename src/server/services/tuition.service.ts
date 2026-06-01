@@ -293,6 +293,20 @@ export async function updateTuitionPayment(
   const student = await db.student.findUnique({ where: { id: studentId } })
   await assertOwnership(student, userId)
 
+  // Ensure the month's snapshot exists with correct computed fields
+  // (previousBalance carry-over, currentMonthFee, totalAmountDue) BEFORE
+  // recording payment. Otherwise paying for a not-yet-viewed month would
+  // create a bare snapshot with previousBalance=0 and silently drop the
+  // student's prior-month debt.
+  await getMonthlyTuitionStatus(db, userId, {
+    studentId,
+    year,
+    month,
+    status: "all",
+    page: 1,
+    limit: 1,
+  })
+
   return await db.monthlyTuition.upsert({
     where: {
       studentId_year_month: {
