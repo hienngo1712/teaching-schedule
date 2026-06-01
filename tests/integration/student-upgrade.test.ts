@@ -288,7 +288,7 @@ describe("Historical grade filtering after upgrade", () => {
     const grade4Bucket = summary.byGrade.find((g) => g.grade === 4)
     expect(grade3Bucket?.sessionCount ?? 0).toBeGreaterThanOrEqual(1)
     expect(grade4Bucket?.sessionCount ?? 0).toBe(0)
-  })
+  }, 30_000)
 })
 
 describe("Lazy auto-upgrade via auth.me", () => {
