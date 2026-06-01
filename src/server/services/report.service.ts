@@ -3,6 +3,7 @@ import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { calcAttendanceRate } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
 import { getMonthSessions } from "./session.service"
+import { getMonthlyOutstanding } from "./tuition.service"
 
 export async function getStudentReport(
   db: PrismaClient,
@@ -166,11 +167,20 @@ export async function getMonthlySummary(
 
   const overallAttendanceRate = totalRecords > 0 ? (presentRecords / totalRecords) * 100 : 0
 
+  // Outstanding (còn nợ) must match the tuition page: per-student carry-over,
+  // netted per student. Computed at the END month of the period.
+  const { totalOutstanding } = await getMonthlyOutstanding(db, userId, {
+    year: toYear ?? year,
+    month: toMonth ?? month,
+    grade,
+  })
+
   return {
     totalSessions,
     totalStudents,
     totalRevenue,
     totalPaid,
+    totalOutstanding,
     byGrade,
     overallAttendanceRate: Math.round(overallAttendanceRate * 10) / 10
   }
@@ -183,7 +193,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
   const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1))
 
   // Chạy các query song song để giảm latency tổng (đặc biệt quan trọng với serverless DB)
-  const [totalStudents, sessionsToday, sessionsThisMonth, userMonthlyTuitions] = await Promise.all([
+  const [totalStudents, sessionsToday, sessionsThisMonth, outstanding] = await Promise.all([
     // 1. Total active students
     db.student.count({ where: { userId, isActive: true } }),
 
@@ -198,13 +208,10 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
       include: { sessionStudents: true }
     }),
 
-    // 5. Total unpaid tuition this month
-    db.monthlyTuition.findMany({
-      where: {
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
-        student: { userId },
-      },
+    // 5. Outstanding tuition — same per-student carry-over math as the tuition page
+    getMonthlyOutstanding(db, userId, {
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
     })
   ])
 
@@ -228,9 +235,8 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
   })
 
   const attendanceRate = totalRecords > 0 ? (presentRecords / totalRecords) * 100 : 0
-  
-  const paidThisMonth = userMonthlyTuitions.reduce((sum, t) => sum + t.paidAmount, 0)
-  const totalUnpaidMonth = Math.max(0, totalRevenueMonth - paidThisMonth)
+
+  const totalUnpaidMonth = outstanding.totalOutstanding
 
   return {
     totalStudents,

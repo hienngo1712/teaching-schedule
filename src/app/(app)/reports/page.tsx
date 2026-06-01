@@ -159,7 +159,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold text-orange-600">
-                  {monthlySummary ? formatCurrency(Math.max(0, monthlySummary.totalRevenue - monthlySummary.totalPaid)) : "0 đ"}
+                  {monthlySummary ? formatCurrency(monthlySummary.totalOutstanding) : "0 đ"}
                 </div>
               </CardContent>
             </Card>

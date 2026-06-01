@@ -316,3 +316,37 @@ export async function updateTuitionPayment(
     },
   })
 }
+
+/**
+ * Aggregate outstanding tuition for a month, using the EXACT same per-student
+ * computation as the tuition page (carry-over included, netted per student).
+ * Reuses getMonthlyTuitionStatus so Dashboard/Reports cannot drift from it.
+ *
+ * `totalOutstanding` = Σ max(0, totalAmountDue - paidAmount) per student — a
+ * student's overpayment never offsets another student's debt.
+ */
+export async function getMonthlyOutstanding(
+  db: PrismaClient,
+  userId: number,
+  params: { year: number; month: number; grade?: number }
+): Promise<{ totalOutstanding: number; totalDue: number; totalPaid: number; studentCount: number }> {
+  const { items } = await getMonthlyTuitionStatus(db, userId, {
+    year: params.year,
+    month: params.month,
+    grade: params.grade,
+    status: "all",
+    page: 1,
+    limit: 1_000_000,
+  })
+
+  let totalOutstanding = 0
+  let totalDue = 0
+  let totalPaid = 0
+  for (const it of items) {
+    totalDue += Math.max(0, it.totalAmountDue)
+    totalPaid += it.paidAmount
+    totalOutstanding += Math.max(0, it.totalAmountDue - it.paidAmount)
+  }
+
+  return { totalOutstanding, totalDue, totalPaid, studentCount: items.length }
+}
