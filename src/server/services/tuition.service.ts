@@ -89,7 +89,23 @@ export async function getMonthlyTuitionStatus(
               },
             },
           }
-        : { isActive: true }),
+        : {
+            OR: [
+              { isActive: true },
+              {
+                sessionStudents: {
+                  some: {
+                    session: {
+                      sessionDate: {
+                        gte: new Date(Date.UTC(year, month - 1, 1)),
+                        lt: new Date(Date.UTC(year, month, 1)),
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          }),
       ...(search ? { fullName: { contains: search, mode: "insensitive" as const } } : {}),
     },
     orderBy: [{ grade: "asc" }, { fullName: "asc" }],
