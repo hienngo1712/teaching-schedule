@@ -93,4 +93,59 @@ describe("Report Router", () => {
       caller.report.student({ studentId: 99999, year: 2026, month: 5 })
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
+
+  it("report.student → summary.expectedRevenue tính tổng tất cả fee không lọc attendance", async () => {
+    const studentFee = await caller.student.create({
+      fullName: "HS Fee Kỳ Vọng",
+      grade: 7,
+      tuitionFee: 50000,
+    })
+
+    const sess1 = await caller.session.create({
+      sessionDate: "2026-05-15",
+      startTime: "14:00",
+      endTime: "15:30",
+      subjectId: subject.id,
+      studentIds: [studentFee.id],
+    })
+
+    const sess2 = await caller.session.create({
+      sessionDate: "2026-05-17",
+      startTime: "14:00",
+      endTime: "15:30",
+      subjectId: subject.id,
+      studentIds: [studentFee.id],
+    })
+
+    await caller.attendance.update({
+      sessionId: sess1.id,
+      attendances: [{ studentId: studentFee.id, attendance: "present" }],
+    })
+    await caller.attendance.update({
+      sessionId: sess2.id,
+      attendances: [{ studentId: studentFee.id, attendance: "absent" }],
+    })
+
+    const report = await caller.report.student({
+      studentId: studentFee.id,
+      year: 2026,
+      month: 5,
+    })
+
+    expect(report.summary.totalRevenue).toBe(50000)
+    expect(report.summary.expectedRevenue).toBe(100000)
+  }, 15000)
+
+  it("report.monthlySummary → expectedRevenue >= totalRevenue khi có học sinh vắng", async () => {
+    const summary = await caller.report.monthlySummary({
+      year: 2026,
+      month: 5,
+      grade: 7,
+    })
+
+    expect(summary.expectedRevenue).toBeGreaterThanOrEqual(summary.totalRevenue)
+    expect(summary.expectedRevenue).toBeGreaterThan(summary.totalRevenue)
+    expect(summary.expectedRevenue).toBe(100000)
+    expect(summary.totalRevenue).toBe(50000)
+  })
 })
