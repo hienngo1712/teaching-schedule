@@ -75,6 +75,7 @@ export function StudentScheduleView({
     let late = 0
     let pending = 0
     let totalFee = 0
+    let expectedFee = 0
 
     studentSessions.forEach(s => {
       const st = s.students.find(ss => ss.studentId === studentId)
@@ -85,6 +86,7 @@ export function StudentScheduleView({
       else if (st.attendance === ATTENDANCE_STATUS.LATE) late++
       else pending++
 
+      expectedFee += st.fee ?? 0
       if (st.attendance === ATTENDANCE_STATUS.PRESENT || st.attendance === ATTENDANCE_STATUS.LATE) {
         totalFee += st.fee ?? 0
       }
@@ -92,7 +94,7 @@ export function StudentScheduleView({
 
     const rate = calcAttendanceRate(present + late, total - pending)
 
-    return { total, present, absent, late, pending, rate, totalFee }
+    return { total, present, absent, late, pending, rate, totalFee, expectedFee }
 
   }, [studentSessions, studentId])
 
@@ -207,7 +209,8 @@ export function StudentScheduleView({
               <span>{t("present")} <span className="text-green-600 font-bold">{summary.present}</span></span>
               <span>{t("absent")} <span className="text-red-600 font-bold">{summary.absent}</span></span>
               <span>{t("late")} <span className="text-amber-600 font-bold">{summary.late}</span></span>
-              <span>{t("tuition_with_colon")} <span className="text-indigo-600 font-bold">{formatCurrency(summary.totalFee)}</span></span>
+              <span>{t("expected_revenue")}: <span className="text-indigo-600 font-bold">{formatCurrency(summary.expectedFee)}</span></span>
+              <span>{t("actual_revenue")}: <span className="text-emerald-600 font-bold">{formatCurrency(summary.totalFee)}</span></span>
             </div>
             <div className="text-slate-400 italic">
               {t("export_date")} {formatDate(new Date())}
