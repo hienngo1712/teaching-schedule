@@ -64,6 +64,7 @@ export default function ReportsPage() {
   })
 
   const students = studentListData?.items ?? []
+  const gap = (monthlySummary?.expectedRevenue ?? 0) - (monthlySummary?.totalRevenue ?? 0)
   const sessions = (monthSessionsData ?? []).map(s => ({
     ...s,
     sessionDate: new Date(s.sessionDate),
@@ -114,7 +115,7 @@ export default function ReportsPage() {
         </div>
 
         {!selectedStudentId ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             <Card className="bg-white border-slate-200">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("student")}</CardTitle>
@@ -139,8 +140,23 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold text-indigo-600">
+                  {monthlySummary ? formatCurrency(monthlySummary.expectedRevenue) : "0 đ"}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-slate-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("actual_revenue")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-emerald-600">
                   {monthlySummary ? formatCurrency(monthlySummary.totalRevenue) : "0 đ"}
                 </div>
+                {gap > 0 && (
+                  <p className="text-xs text-orange-500 mt-1">
+                    Hụt: {formatCurrency(gap)}
+                  </p>
+                )}
               </CardContent>
             </Card>
             <Card className="bg-white border-slate-200">
