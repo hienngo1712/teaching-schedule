@@ -154,7 +154,7 @@ export default function ReportsPage() {
                 </div>
                 {gap > 0 && (
                   <p className="text-xs text-orange-500 mt-1">
-                    Hụt: {formatCurrency(gap)}
+                    {t("revenue_shortfall")} {formatCurrency(gap)}
                   </p>
                 )}
               </CardContent>

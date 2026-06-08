@@ -54,6 +54,7 @@
   "select_student": "-- Học sinh --",
   "expected_revenue": "Doanh thu kỳ vọng",
   "actual_revenue": "Doanh thu thực tế",
+  "revenue_shortfall": "Hụt:",
   "collected_amount": "Đã thu",
   "search_student": "Tìm tên học sinh...",
   "stt": "STT",
