@@ -26,7 +26,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">{t("dashboard")}</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
         <StatCard
           title={t("total_students")}
           value={stats?.totalStudents}
@@ -58,6 +58,14 @@ export default function DashboardPage() {
           loading={isLoading}
           description={t("average_this_month")}
           className="bg-orange-50/50 border-orange-100"
+        />
+        <StatCard
+          title={t("expected_revenue")}
+          value={stats ? formatCurrency(stats.expectedRevenueMonth) : undefined}
+          icon={<Banknote className="size-4 text-violet-600" />}
+          loading={isLoading}
+          description={t("revenue_this_month")}
+          className="bg-violet-50/50 border-violet-100"
         />
         <StatCard
           title={t("revenue_this_month")}
