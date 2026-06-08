@@ -53,6 +53,7 @@
   "all_grades": "Tất cả lớp",
   "select_student": "-- Học sinh --",
   "expected_revenue": "Doanh thu kỳ vọng",
+  "actual_revenue": "Doanh thu thực tế",
   "collected_amount": "Đã thu",
   "search_student": "Tìm tên học sinh...",
   "stt": "STT",

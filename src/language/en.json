@@ -53,6 +53,7 @@
   "all_grades": "All Grades",
   "select_student": "-- Select Student --",
   "expected_revenue": "Expected Revenue",
+  "actual_revenue": "Actual Revenue",
   "collected_amount": "Collected",
   "search_student": "Search student name...",
   "stt": "No.",
