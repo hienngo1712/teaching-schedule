@@ -26,7 +26,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">{t("dashboard")}</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         <StatCard
           title={t("total_students")}
           value={stats?.totalStudents}
