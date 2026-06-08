@@ -39,17 +39,21 @@ export async function getStudentReport(
   const rate = calcAttendanceRate(present + late, total - pending)
 
   let totalRevenue = 0
+  let expectedRevenue = 0
   studentSessions.forEach(s => {
     const ss = s.students.find(x => x.studentId === studentId)
-    if (ss && (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE)) {
-      totalRevenue += ss.fee
+    if (ss) {
+      expectedRevenue += ss.fee
+      if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {
+        totalRevenue += ss.fee
+      }
     }
   })
 
   return {
     student,
     sessions: studentSessions,
-    summary: { total, present, absent, late, pending, rate, totalRevenue }
+    summary: { total, present, absent, late, pending, rate, totalRevenue, expectedRevenue }
   }
 }
 
@@ -137,12 +141,14 @@ export async function getMonthlySummary(
   })
 
   let totalRevenue = 0
+  let expectedRevenue = 0
   let presentRecords = 0
   let totalRecords = 0
 
   sessions.forEach(s => {
     s.sessionStudents.forEach(ss => {
       if (grade && ss.grade !== grade) return
+      expectedRevenue += ss.fee
       if (ss.attendance !== ATTENDANCE_STATUS.PENDING) {
         totalRecords++
         if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {
@@ -177,6 +183,7 @@ export async function getMonthlySummary(
     totalSessions,
     totalStudents,
     totalRevenue,
+    expectedRevenue,
     totalPaid,
     totalOutstanding,
     byGrade,
@@ -219,9 +226,11 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
   let totalRecords = 0
   let presentRecords = 0
   let totalRevenueMonth = 0
+  let expectedRevenueMonth = 0
 
   sessionsThisMonth.forEach(s => {
     s.sessionStudents.forEach(ss => {
+      expectedRevenueMonth += ss.fee
       if (ss.attendance !== ATTENDANCE_STATUS.PENDING) {
         totalRecords++
         if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {
@@ -242,6 +251,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
     totalSessionsMonth,
     attendanceRate: Math.round(attendanceRate * 10) / 10,
     totalRevenueMonth,
+    expectedRevenueMonth,
     totalUnpaidMonth,
   }
 }
