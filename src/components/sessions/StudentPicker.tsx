@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { trpc } from "@/lib/trpc"
 import { GRADES } from "@/lib/constants"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -19,9 +20,15 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 type Props = {
   value: number[]
   onChange: (value: number[]) => void
+  /**
+   * HS đang gắn với ca (kèm tên), dùng để hiển thị các HS đã được chọn nhưng đã bị
+   * xóa khỏi danh sách (isActive=false) — vốn không xuất hiện trong list active —
+   * để user vẫn có thể bỏ chọn / gỡ ra.
+   */
+  knownStudents?: Array<{ studentId: number; fullName: string; grade: number }>
 }
 
-export function StudentPicker({ value, onChange }: Props) {
+export function StudentPicker({ value, onChange, knownStudents = [] }: Props) {
   const { t } = useTranslation()
   const [search, setSearch] = useState("")
   const [grade, setGrade] = useState<string>("all")
@@ -41,6 +48,17 @@ export function StudentPicker({ value, onChange }: Props) {
       return matchSearch && matchGrade
     })
   }, [studentListData?.items, search, grade])
+
+  // HS đã được chọn nhưng không còn trong danh sách active (đã bị xóa).
+  // Hiện riêng ở đầu để user có thể bỏ chọn, dù chúng bị ẩn khỏi list active.
+  const inactiveSelected = useMemo(() => {
+    const activeIds = new Set((studentListData?.items ?? []).map((s) => s.id))
+    const byId = new Map(knownStudents.map((s) => [s.studentId, s]))
+    return value
+      .filter((id) => !activeIds.has(id))
+      .map((id) => byId.get(id))
+      .filter((s): s is NonNullable<typeof s> => s != null)
+  }, [studentListData?.items, knownStudents, value])
 
   const toggleStudent = (id: number) => {
     if (value.includes(id)) {
@@ -94,6 +112,36 @@ export function StudentPicker({ value, onChange }: Props) {
       </div>
 
       <div className="border rounded-md p-2">
+        {inactiveSelected.length > 0 && (
+          <div className="space-y-2 border-b pb-2 mb-2">
+            {inactiveSelected.map((s) => (
+              <div
+                key={s.studentId}
+                className="flex items-center space-x-2 rounded-sm p-1 bg-amber-50"
+              >
+                <Checkbox
+                  id={`student-inactive-${s.studentId}`}
+                  checked={value.includes(s.studentId)}
+                  onCheckedChange={() => toggleStudent(s.studentId)}
+                />
+                <Label
+                  htmlFor={`student-inactive-${s.studentId}`}
+                  className="flex-1 cursor-pointer text-sm font-normal"
+                >
+                  <span className="font-medium text-slate-500 line-through">
+                    {s.fullName}
+                  </span>
+                  <span className="ml-2 text-slate-400 text-xs">
+                    {t("grade")} {s.grade}
+                  </span>
+                </Label>
+                <Badge variant="outline" className="text-amber-700 border-amber-300 text-[10px]">
+                  {t("deleted_student_badge")}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
         {filteredStudents.length > 0 && (
           <div className="flex items-center space-x-2 border-b pb-2 mb-2 px-1">
             <Checkbox

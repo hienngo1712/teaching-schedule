@@ -274,6 +274,11 @@ export function SessionDetailDialog({
             <StudentPicker
               value={selectedStudentIds}
               onChange={setSelectedStudentIds}
+              knownStudents={session?.students.map((s) => ({
+                studentId: s.studentId,
+                fullName: s.fullName,
+                grade: s.grade,
+              }))}
             />
 
             <div className="pt-4 border-t space-y-3">

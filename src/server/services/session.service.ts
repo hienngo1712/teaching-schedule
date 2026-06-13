@@ -269,6 +269,43 @@ export type SessionUpdateData = {
   studentIds?: number[]
 }
 
+/**
+ * Đồng bộ danh sách HS của một ca theo kiểu delta: chỉ xóa HS bị bỏ, chỉ thêm HS
+ * mới — GIỮ NGUYÊN điểm danh/ghi chú/học phí của HS đã có. Tránh kiểu xóa-sạch-tạo-lại
+ * làm reset toàn bộ trạng thái điểm danh khi chỉ thay đổi 1 HS.
+ */
+async function syncSessionStudents(
+  tx: Prisma.TransactionClient,
+  sessionId: number,
+  studentFees: Array<{ id: number; tuitionFee: number; grade: number }>
+): Promise<void> {
+  const current = await tx.sessionStudent.findMany({
+    where: { sessionId },
+    select: { studentId: true },
+  })
+  const currentIds = new Set(current.map((c) => c.studentId))
+  const targetIds = new Set(studentFees.map((s) => s.id))
+
+  const toRemove = Array.from(currentIds).filter((sid) => !targetIds.has(sid))
+  if (toRemove.length > 0) {
+    await tx.sessionStudent.deleteMany({
+      where: { sessionId, studentId: { in: toRemove } },
+    })
+  }
+
+  const toAdd = studentFees.filter((s) => !currentIds.has(s.id))
+  if (toAdd.length > 0) {
+    await tx.sessionStudent.createMany({
+      data: toAdd.map((s) => ({
+        sessionId,
+        studentId: s.id,
+        fee: s.tuitionFee,
+        grade: s.grade,
+      })),
+    })
+  }
+}
+
 export async function updateSession(
   db: PrismaClient,
   userId: number,
@@ -325,19 +362,9 @@ export async function updateSession(
 
   // Cập nhật session và sync học sinh
   const updated = await db.$transaction(async (tx) => {
-    // Nếu có truyền studentIds, xóa cũ tạo mới
+    // Nếu có truyền studentIds, đồng bộ delta (giữ điểm danh HS còn lại)
     if (data.studentIds !== undefined) {
-      await tx.sessionStudent.deleteMany({ where: { sessionId: id } })
-      if (studentFees.length > 0) {
-        await tx.sessionStudent.createMany({
-          data: studentFees.map((s) => ({
-            sessionId: id,
-            studentId: s.id,
-            fee: s.tuitionFee,
-            grade: s.grade,
-          })),
-        })
-      }
+      await syncSessionStudents(tx, id, studentFees)
     }
 
     return await tx.teachingSession.update({
@@ -457,22 +484,9 @@ export async function addStudentsToSession(
   // Verify all students belong to the user and get fees
   const studentFees = await assertStudentsOwned(db, userId, studentIds)
 
-  // Sync: Xóa hết cũ, tạo mới
+  // Sync delta: chỉ xóa HS bị bỏ, chỉ thêm HS mới — giữ nguyên điểm danh HS còn lại
   await db.$transaction(async (tx) => {
-    await tx.sessionStudent.deleteMany({
-      where: { sessionId },
-    })
-
-    if (studentFees.length > 0) {
-      await tx.sessionStudent.createMany({
-        data: studentFees.map((s) => ({
-          sessionId,
-          studentId: s.id,
-          fee: s.tuitionFee,
-          grade: s.grade,
-        })),
-      })
-    }
+    await syncSessionStudents(tx, sessionId, studentFees)
   })
 
   const updated = await db.teachingSession.findUnique({

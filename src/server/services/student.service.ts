@@ -108,10 +108,26 @@ export async function softDeleteStudent(
   const existing = await db.student.findUnique({ where: { id } })
   assertOwnership(existing, userId)
 
-  await db.student.update({
-    where: { id },
-    data: { isActive: false },
-  })
+  // Mốc "hôm nay" theo UTC, khớp cách sessionDate được lưu (Date.UTC trong parseSessionDate).
+  const now = new Date()
+  const todayUTC = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  )
+
+  await db.$transaction([
+    // Gỡ HS khỏi các buổi học từ hôm nay trở đi; giữ nguyên buổi đã qua để bảo toàn
+    // lịch sử điểm danh & doanh thu. (Buổi đã qua giữ snapshot, dù HS đã bị xóa.)
+    db.sessionStudent.deleteMany({
+      where: {
+        studentId: id,
+        session: { userId, sessionDate: { gte: todayUTC } },
+      },
+    }),
+    db.student.update({
+      where: { id },
+      data: { isActive: false },
+    }),
+  ])
   return { success: true }
 }
 

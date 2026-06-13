@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Check, Loader2, X } from "lucide-react"
+import { Check, Loader2, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { trpc } from "@/lib/trpc"
 import { ATTENDANCE_LABEL, ATTENDANCE_STATUS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
@@ -39,6 +49,21 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
   })
 
   const [attendances, setAttendances] = useState<Record<number, AttendanceState>>({})
+  const [studentToRemove, setStudentToRemove] = useState<{
+    studentId: number
+    fullName: string
+  } | null>(null)
+
+  const removeStudentMutation = trpc.session.removeStudent.useMutation({
+    onSuccess: () => {
+      toast.success(t("remove_student_success"))
+      setStudentToRemove(null)
+    },
+    onError: (err) => {
+      toast.error(err.message || t("remove_student_error"))
+      setStudentToRemove(null)
+    },
+  })
 
   useEffect(() => {
     if (attendanceData) {
@@ -121,6 +146,7 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
   }
 
   return (
+    <>
     <div className="space-y-4">
       <div className="border rounded-md overflow-hidden flex flex-col bg-white">
         <div className="overflow-x-auto flex-1">
@@ -131,6 +157,7 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
                 <th className="px-3 py-2 font-medium w-[160px]">{t("attendance_col")}</th>
                 <th className="px-3 py-2 font-medium w-[120px]">{t("tuition_col")}</th>
                 <th className="px-3 py-2 font-medium">{t("notes")}</th>
+                <th className="px-3 py-2 font-medium w-[40px]"><span className="sr-only">{t("remove_from_session")}</span></th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -186,6 +213,23 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
                         className="w-full h-8 text-xs"
                       />
                     </td>
+                    <td className="px-3 py-2 text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-slate-400 hover:text-red-600"
+                        aria-label={t("remove_from_session")}
+                        title={t("remove_from_session")}
+                        onClick={() =>
+                          setStudentToRemove({
+                            studentId: student.studentId,
+                            fullName: student.fullName,
+                          })
+                        }
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </td>
                   </tr>
                 )
               })}
@@ -228,5 +272,44 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
         </Button>
       </div>
     </div>
+
+    <AlertDialog
+      open={studentToRemove !== null}
+      onOpenChange={(open) => {
+        if (!open) setStudentToRemove(null)
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("confirm_delete")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("confirm_remove_student").replace("{name}", studentToRemove?.fullName ?? "")}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={removeStudentMutation.isPending}>
+            {t("cancel")}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              if (studentToRemove) {
+                removeStudentMutation.mutate({
+                  sessionId,
+                  studentId: studentToRemove.studentId,
+                })
+              }
+            }}
+            disabled={removeStudentMutation.isPending}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {removeStudentMutation.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            {t("remove_from_session")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }
