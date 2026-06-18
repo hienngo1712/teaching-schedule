@@ -99,21 +99,46 @@ export async function updateStudent(
       },
     })
 
-    // Đổi grade → đồng bộ snapshot grade của các buổi TƯƠNG LAI (sessionDate >=
-    // hôm nay). Buổi quá khứ giữ nguyên grade lịch sử để báo cáo đúng theo khối
-    // học sinh từng học. (Khớp triết lý "giữ lịch sử" ở softDeleteStudent.)
+    // Đổi grade → đồng bộ snapshot grade các buổi CHƯA kết thúc. Buổi đã dạy xong
+    // (kể cả sáng nay) giữ nguyên grade lịch sử — dùng đúng filter endTime-aware
+    // như softDeleteStudent để không ghi đè buổi đã qua trong ngày hôm nay.
     if (data.grade !== undefined && data.grade !== existing.grade) {
       const now = new Date()
       const todayUTC = new Date(
         Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
       )
-      await tx.sessionStudent.updateMany({
+      const links = await tx.sessionStudent.findMany({
         where: {
           studentId: id,
           session: { userId, sessionDate: { gte: todayUTC } },
         },
-        data: { grade: data.grade },
+        select: {
+          id: true,
+          session: { select: { sessionDate: true, endTime: true } },
+        },
       })
+      const nowMs = now.getTime()
+      const toSync = links
+        .filter(({ session }) => {
+          const sd = session.sessionDate
+          const et = session.endTime
+          const endMs = Date.UTC(
+            sd.getUTCFullYear(),
+            sd.getUTCMonth(),
+            sd.getUTCDate(),
+            et.getUTCHours(),
+            et.getUTCMinutes(),
+            et.getUTCSeconds()
+          )
+          return endMs > nowMs
+        })
+        .map((l) => l.id)
+      if (toSync.length > 0) {
+        await tx.sessionStudent.updateMany({
+          where: { id: { in: toSync } },
+          data: { grade: data.grade },
+        })
+      }
     }
 
     return updated
@@ -251,6 +276,7 @@ export async function getUpgradeLogThisYear(
   userId: number
 ): Promise<ClassUpgradeLog | null> {
   return db.classUpgradeLog.findUnique({
-    where: { userId_year: { userId, year: new Date().getFullYear() } },
+    // getUTCFullYear để khớp năm mà upgradeAllClasses ghi log (tránh lệch local/UTC ở ranh giới năm)
+    where: { userId_year: { userId, year: new Date().getUTCFullYear() } },
   })
 }

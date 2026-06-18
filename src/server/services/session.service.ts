@@ -418,7 +418,7 @@ export async function addStudentsToRecurringSessions(
   // 2. Lọc theo weekdays
   const matchingSessionIds = sessions
     .filter((s) => {
-      const VN_dayIndex = (new Date(s.sessionDate).getDay() + 6) % 7
+      const VN_dayIndex = (new Date(s.sessionDate).getUTCDay() + 6) % 7
       return params.weekdays.includes(VN_dayIndex)
     })
     .map((s) => s.id)
@@ -549,7 +549,7 @@ export async function checkBulkCreateConflicts(
   const conflicts: Array<{ date: string; conflict: string }> = []
   const currentDate = new Date(start)
   while (currentDate <= end) {
-    const VN_dayIndex = (currentDate.getDay() + 6) % 7
+    const VN_dayIndex = (currentDate.getUTCDay() + 6) % 7
 
     if (input.weekdays.includes(VN_dayIndex)) {
       const overlap = existingSessions.find((s) => {
@@ -572,7 +572,7 @@ export async function checkBulkCreateConflicts(
         })
       }
     }
-    currentDate.setDate(currentDate.getDate() + 1)
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1)
   }
 
   return conflicts
@@ -624,7 +624,7 @@ export async function bulkCreateSessions(
 
   const currentDate = new Date(start)
   while (currentDate <= end) {
-    const VN_dayIndex = (currentDate.getDay() + 6) % 7
+    const VN_dayIndex = (currentDate.getUTCDay() + 6) % 7
 
     if (input.weekdays.includes(VN_dayIndex)) {
       // Check overlap in-memory
@@ -652,7 +652,7 @@ export async function bulkCreateSessions(
         })
       }
     }
-    currentDate.setDate(currentDate.getDate() + 1)
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1)
   }
 
   if (toCreate.length > 0) {
