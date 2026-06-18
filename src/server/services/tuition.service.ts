@@ -162,6 +162,7 @@ export async function getMonthlyTuitionStatus(
         by: ["studentId"],
         where: {
           studentId: { in: sIds },
+          student: { userId }, // phòng vệ multi-tenant (sIds đã thuộc user, lọc tường minh)
           OR: [{ year: { lt: year } }, { year, month: { lt: month } }],
         },
         _sum: { paidAmount: true },

@@ -53,6 +53,19 @@ describe("student.upgradeAllClasses — manual", () => {
     expect(result.deactivatedCount).toBe(1)
   })
 
+  it("deactivates students with grade > 9 (dữ liệu ngoài [1,9] không bị kẹt)", async () => {
+    const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    // grade 10 không tạo được qua API (zod max 9) → chèn thẳng DB để mô phỏng dữ liệu lỗi.
+    const ghost = await db.student.create({
+      data: { userId: user.id, fullName: "HS Lop 10", grade: 10, tuitionFee: 0, isActive: true },
+    })
+    const caller = await getAuthedCaller("teacher")
+    const result = await caller.student.upgradeAllClasses()
+    const after = await db.student.findUnique({ where: { id: ghost.id } })
+    expect(after?.isActive).toBe(false)
+    expect(result.deactivatedCount).toBeGreaterThanOrEqual(1)
+  })
+
   it("does NOT touch inactive students", async () => {
     const caller = await getAuthedCaller("teacher")
     const s = await caller.student.create({ fullName: "HS inactive", grade: 3, tuitionFee: 0, isActive: false })
@@ -203,6 +216,42 @@ describe("SessionStudent.grade snapshot", () => {
     const studentAfter = await db.student.findUnique({ where: { id: student.id } })
     expect(studentAfter?.grade).toBe(4) // current grade upgraded
   })
+
+  it("updateStudent đổi grade → đồng bộ grade buổi tương lai, giữ buổi quá khứ", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const subject = (await caller.subject.list({}))[0]
+    const student = await caller.student.create({
+      fullName: "HS Sync Grade",
+      grade: 3,
+      tuitionFee: 0,
+      isActive: true,
+    })
+    const past = await caller.session.create({
+      sessionDate: "2020-01-15",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+    const future = await caller.session.create({
+      sessionDate: "2099-01-15",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+
+    await caller.student.update({ id: student.id, data: { grade: 7 } })
+
+    const pastSS = await db.sessionStudent.findFirst({
+      where: { sessionId: past.id, studentId: student.id },
+    })
+    const futureSS = await db.sessionStudent.findFirst({
+      where: { sessionId: future.id, studentId: student.id },
+    })
+    expect(pastSS?.grade).toBe(3) // lịch sử giữ nguyên
+    expect(futureSS?.grade).toBe(7) // buổi tương lai đồng bộ grade mới
+  }, 30_000)
 
   it("new session after upgrade uses NEW current grade", async () => {
     const caller = await getAuthedCaller("teacher")

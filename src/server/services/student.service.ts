@@ -81,22 +81,44 @@ export async function updateStudent(
   const existing = await db.student.findUnique({ where: { id } })
   assertOwnership(existing, userId)
 
-  const student = await db.student.update({
-    where: { id },
-    data: {
-      ...(data.fullName !== undefined && { fullName: data.fullName }),
-      ...(data.grade !== undefined && { grade: data.grade }),
-      ...(data.parentPhone !== undefined && {
-        parentPhone: data.parentPhone ?? null,
-      }),
-      ...(data.parentName !== undefined && {
-        parentName: data.parentName ?? null,
-      }),
-      ...(data.notes !== undefined && { notes: data.notes ?? null }),
-      ...(data.isActive !== undefined && { isActive: data.isActive }),
-      ...(data.tuitionFee !== undefined && { tuitionFee: data.tuitionFee }),
-    },
+  const student = await db.$transaction(async (tx) => {
+    const updated = await tx.student.update({
+      where: { id },
+      data: {
+        ...(data.fullName !== undefined && { fullName: data.fullName }),
+        ...(data.grade !== undefined && { grade: data.grade }),
+        ...(data.parentPhone !== undefined && {
+          parentPhone: data.parentPhone ?? null,
+        }),
+        ...(data.parentName !== undefined && {
+          parentName: data.parentName ?? null,
+        }),
+        ...(data.notes !== undefined && { notes: data.notes ?? null }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+        ...(data.tuitionFee !== undefined && { tuitionFee: data.tuitionFee }),
+      },
+    })
+
+    // Đổi grade → đồng bộ snapshot grade của các buổi TƯƠNG LAI (sessionDate >=
+    // hôm nay). Buổi quá khứ giữ nguyên grade lịch sử để báo cáo đúng theo khối
+    // học sinh từng học. (Khớp triết lý "giữ lịch sử" ở softDeleteStudent.)
+    if (data.grade !== undefined && data.grade !== existing.grade) {
+      const now = new Date()
+      const todayUTC = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+      )
+      await tx.sessionStudent.updateMany({
+        where: {
+          studentId: id,
+          session: { userId, sessionDate: { gte: todayUTC } },
+        },
+        data: { grade: data.grade },
+      })
+    }
+
+    return updated
   })
+
   return withLevel(student)
 }
 
@@ -162,7 +184,7 @@ export async function upgradeAllClasses(
   userId: number,
   trigger: "auto" | "manual"
 ): Promise<{ upgradedCount: number; deactivatedCount: number; year: number }> {
-  const year = new Date().getFullYear()
+  const year = new Date().getUTCFullYear()
   const conflictError = new TRPCError({
     code: "CONFLICT",
     message: `Bạn đã nâng lớp toàn bộ học sinh trong năm ${year} rồi.`,
@@ -178,21 +200,21 @@ export async function upgradeAllClasses(
       })
       if (existing) throw conflictError
 
-      // Collect grade-9 student IDs BEFORE any updates to avoid catching
-      // grade-8 students that were just incremented to 9
-      const grade9Students = await tx.student.findMany({
-        where: { userId, isActive: true, grade: 9 },
+      // Collect graduating student IDs (grade >= 9, gồm cả dữ liệu lỗi grade > 9)
+      // BEFORE any updates to avoid catching grade-8 students just incremented to 9.
+      const graduatingStudents = await tx.student.findMany({
+        where: { userId, isActive: true, grade: { gte: 9 } },
         select: { id: true },
       })
-      const grade9Ids = grade9Students.map((s) => s.id)
+      const graduatingIds = graduatingStudents.map((s) => s.id)
 
       const upgraded = await tx.student.updateMany({
         where: { userId, isActive: true, grade: { gte: 1, lte: 8 } },
         data: { grade: { increment: 1 } },
       })
-      const deactivated = grade9Ids.length > 0
+      const deactivated = graduatingIds.length > 0
         ? await tx.student.updateMany({
-            where: { id: { in: grade9Ids } },
+            where: { id: { in: graduatingIds } },
             data: { isActive: false },
           })
         : { count: 0 }

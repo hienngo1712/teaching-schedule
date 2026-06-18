@@ -406,6 +406,34 @@ describe("Session CRUD + overlap", () => {
       expect(dup.students[0].attendance).toBe("pending") // Reset về pending
     })
 
+    it("✗ duplicate targetDate sai định dạng → validation error", async () => {
+      const caller = await getAuthedCaller()
+      const s = await caller.session.create({
+        sessionDate: "2026-04-22",
+        startTime: "08:00",
+        endTime: "09:30",
+        subjectId,
+      })
+      await expect(
+        caller.session.duplicate({ id: s.id, targetDate: "khong-phai-ngay" })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    })
+
+    it("✗ addRecurringStudents thời gian/ngày sai định dạng → validation error", async () => {
+      const caller = await getAuthedCaller()
+      const st = await caller.student.create({ fullName: "RecVal", grade: 3 })
+      await expect(
+        caller.session.addRecurringStudents({
+          studentIds: [st.id],
+          startTime: "8h",
+          endTime: "9h",
+          startDate: "2026-01-01",
+          endDate: "2026-02-01",
+          weekdays: [1],
+        })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    })
+
     it("✗ duplicate vào ngày trùng giờ → CONFLICT", async () => {
       const caller = await getAuthedCaller()
       const s = await caller.session.create({
