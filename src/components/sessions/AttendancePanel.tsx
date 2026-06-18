@@ -26,6 +26,7 @@ import {
 import { trpc } from "@/lib/trpc"
 import { ATTENDANCE_LABEL, ATTENDANCE_STATUS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
+import { setAllAttendance } from "@/lib/attendance-state"
 import type { AttendanceStatus } from "@/lib/schemas/attendance"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
@@ -54,10 +55,15 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
     fullName: string
   } | null>(null)
 
+  const utils = trpc.useUtils()
+
   const removeStudentMutation = trpc.session.removeStudent.useMutation({
     onSuccess: () => {
       toast.success(t("remove_student_success"))
       setStudentToRemove(null)
+      // Refetch danh sách điểm danh để HS vừa gỡ biến mất ngay (tránh stale).
+      utils.attendance.get.invalidate({ sessionId })
+      onSaveSuccess?.()
     },
     onError: (err) => {
       toast.error(err.message || t("remove_student_error"))
@@ -112,19 +118,11 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
   }
 
   const handleMarkAllPresent = () => {
-    const newState = { ...attendances }
-    Object.keys(newState).forEach((key) => {
-      newState[Number(key)].attendance = "present"
-    })
-    setAttendances(newState)
+    setAttendances((prev) => setAllAttendance(prev, "present"))
   }
 
   const handleMarkAllAbsent = () => {
-    const newState = { ...attendances }
-    Object.keys(newState).forEach((key) => {
-      newState[Number(key)].attendance = "absent"
-    })
-    setAttendances(newState)
+    setAttendances((prev) => setAllAttendance(prev, "absent"))
   }
 
   const handleSave = () => {

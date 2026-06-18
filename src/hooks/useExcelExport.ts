@@ -94,7 +94,7 @@ export function useExcelExport() {
 
   // Chế độ 2: Lịch 1 học sinh
   const exportStudentSchedule = async (
-    student: { fullName: string; grade: number },
+    student: { id: number; fullName: string; grade: number },
     sessions: SessionDTO[],
     summary: { total: number; present: number; absent: number; late: number; rate: number },
     period: string,
@@ -181,7 +181,7 @@ export function useExcelExport() {
       })
 
       sessions.forEach((s, i) => {
-        const st = s.students.find(ss => ss.fullName === student.fullName)
+        const st = s.students.find(ss => ss.studentId === student.id)
         const row = sheet.getRow(headerRowIdx + 1 + i)
         row.values = [
           i + 1,

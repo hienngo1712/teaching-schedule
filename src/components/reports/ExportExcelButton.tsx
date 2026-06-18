@@ -68,7 +68,7 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
       : undefined
 
     exportStudentSchedule(
-      { fullName: studentInfo?.fullName || t("student"), grade: studentInfo?.grade || 0 },
+      { id: selectedStudentId, fullName: studentInfo?.fullName || t("student"), grade: studentInfo?.grade || 0 },
       studentSessions,
       { total, present, absent, late, rate },
       `${t("month")} ${month}/${year}`,

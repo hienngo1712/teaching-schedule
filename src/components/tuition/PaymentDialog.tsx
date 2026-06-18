@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { updatePaymentSchema, type UpdatePaymentInput } from "@/lib/schemas/tuition"
 import { formatCurrency, cn } from "@/lib/utils"
+import { mergeOverpaidNote } from "@/lib/payment-notes"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type TuitionStatus = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
@@ -63,6 +64,10 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
     },
   })
 
+  // Auto-note "trả dư" đã chèn lần gần nhất — để gỡ/thay idempotent (tránh nhân
+  // đôi khi đổi ngôn ngữ, và gỡ khi không còn trả dư).
+  const autoNoteRef = useRef<string>("")
+
   useEffect(() => {
     if (data && open) {
       form.reset({
@@ -73,6 +78,8 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
         isFullPaid: data.isFullPaid,
         notes: data.notes || "",
       })
+      // Ghi chú nạp từ data là của user — chưa có auto-note nào do form này chèn.
+      autoNoteRef.current = ""
     }
   }, [data, open, form])
 
@@ -83,21 +90,25 @@ export function PaymentDialog({ open, onOpenChange, data, onSuccess }: PaymentDi
   // Auto-fill note when overpaid (compared against total adjusted amount, not just this month's fee)
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
-      if (name === "paidAmount" && data) {
-        const paidAmount = value.paidAmount || 0
-        const adjustedAmount = Math.max(0, data.totalExpected + data.previousBalance)
-        const currentNotes = form.getValues("notes") || ""
-        const prefix = t("overpaid_note_prefix")
+      if (name !== "paidAmount" || !data) return
 
-        if (paidAmount > adjustedAmount) {
-          const excess = paidAmount - adjustedAmount
-          const overpaidNote = `${prefix} ${formatCurrency(excess)}, ${t("overpaid_note_suffix")} ${formatCurrency(excess)}`
+      const paidAmount = value.paidAmount || 0
+      const adjustedAmount = Math.max(0, data.totalExpected + data.previousBalance)
+      const excess = paidAmount - adjustedAmount
+      const autoNote =
+        excess > 0
+          ? `${t("overpaid_note_prefix")} ${formatCurrency(excess)}, ${t("overpaid_note_suffix")} ${formatCurrency(excess)}`
+          : ""
 
-          if (!currentNotes.includes(prefix)) {
-            form.setValue("notes", currentNotes ? `${currentNotes}\n${overpaidNote}` : overpaidNote)
-          }
-        }
-      }
+      if (autoNote === autoNoteRef.current) return
+
+      const merged = mergeOverpaidNote({
+        rawNotes: form.getValues("notes") || "",
+        prevAutoNote: autoNoteRef.current,
+        autoNote,
+      })
+      form.setValue("notes", merged)
+      autoNoteRef.current = autoNote
     })
     return () => subscription.unsubscribe()
   }, [form, data, t])
