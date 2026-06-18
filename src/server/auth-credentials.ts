@@ -8,6 +8,15 @@ import { db } from "@/server/db"
 export const BCRYPT_COST = process.env.NODE_ENV === "test" ? 4 : 10
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
 const RATE_LIMIT_MAX_FAILS = 5
+// Trần số lần sai TỪ MỘT IP (mọi username) — chặn brute-force/spray phân tán qua
+// nhiều username từ cùng một nguồn. Đặt cao hơn ngưỡng username để không khóa
+// nhầm khi nhiều giáo viên dùng chung IP (NAT).
+const RATE_LIMIT_MAX_IP_FAILS = 20
+// Trần số lần đăng ký từ một IP trong cửa sổ — chặn spam tạo tài khoản.
+const REGISTER_RATE_LIMIT_MAX = 5
+// Sentinel ghi log lần đăng ký vào loginAttempt. Chứa '@' (không hợp lệ cho
+// username thật theo regex [a-zA-Z0-9_]) nên không bao giờ đụng rate-limit login.
+const REGISTER_SENTINEL = "@register"
 
 export class RateLimitedError extends Error {
   constructor() {
@@ -16,15 +25,54 @@ export class RateLimitedError extends Error {
   }
 }
 
-export async function isRateLimited(username: string): Promise<boolean> {
-  const recentFails = await db.loginAttempt.count({
-    where: {
-      username,
-      success: false,
-      createdAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) },
-    },
+/**
+ * Giới hạn đăng nhập theo HAI tầng:
+ *  - Theo username: >= RATE_LIMIT_MAX_FAILS lần sai → chặn (bảo vệ 1 tài khoản).
+ *  - Theo IP: >= RATE_LIMIT_MAX_IP_FAILS lần sai từ cùng IP (mọi username) → chặn
+ *    (bảo vệ trước brute-force phân tán qua nhiều username). Bỏ qua khi IP null.
+ */
+export async function isRateLimited(username: string, ipAddress: string | null): Promise<boolean> {
+  const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS)
+
+  const userFails = await db.loginAttempt.count({
+    where: { username, success: false, createdAt: { gte: since } },
   })
-  return recentFails >= RATE_LIMIT_MAX_FAILS
+  if (userFails >= RATE_LIMIT_MAX_FAILS) return true
+
+  if (ipAddress) {
+    const ipFails = await db.loginAttempt.count({
+      where: {
+        ipAddress,
+        success: false,
+        createdAt: { gte: since },
+        // Loại log đăng ký để spam đăng ký không trộn vào giới hạn đăng nhập.
+        username: { not: REGISTER_SENTINEL },
+      },
+    })
+    if (ipFails >= RATE_LIMIT_MAX_IP_FAILS) return true
+  }
+
+  return false
+}
+
+/** True nếu IP đã đăng ký quá REGISTER_RATE_LIMIT_MAX lần trong cửa sổ. */
+export async function isRegisterRateLimited(ipAddress: string | null): Promise<boolean> {
+  if (!ipAddress) return false
+  const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS)
+  const recent = await db.loginAttempt.count({
+    where: { username: REGISTER_SENTINEL, ipAddress, createdAt: { gte: since } },
+  })
+  return recent >= REGISTER_RATE_LIMIT_MAX
+}
+
+/** Ghi log một lần thử đăng ký (để throttle theo IP). */
+export async function recordRegisterAttempt(
+  ipAddress: string | null,
+  success: boolean
+): Promise<void> {
+  await db.loginAttempt.create({
+    data: { username: REGISTER_SENTINEL, ipAddress, success, userId: null },
+  })
 }
 
 export type AuthorizedUser = {
@@ -42,7 +90,7 @@ export async function authorizeCredentials(
   password: string,
   ipAddress: string | null
 ): Promise<AuthorizedUser | null> {
-  if (await isRateLimited(username)) {
+  if (await isRateLimited(username, ipAddress)) {
     throw new RateLimitedError()
   }
 

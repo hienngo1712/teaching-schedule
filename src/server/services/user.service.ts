@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { TRPCError } from "@trpc/server"
 import type { RegisterInput } from "@/lib/schemas/auth"
+import { BCRYPT_COST } from "@/server/auth-credentials"
 import { seedSubjectsForUser } from "./subject-defaults"
 
 // Re-export để giữ tương thích cho code đang import từ module này.
@@ -18,7 +19,7 @@ export async function registerUser(db: PrismaClient, input: RegisterInput) {
     })
   }
 
-  const passwordHash = await bcrypt.hash(password, 12)
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST)
   const user = await db.user.create({
     data: {
       username,
