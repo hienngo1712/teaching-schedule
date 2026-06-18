@@ -362,7 +362,10 @@ export async function updateSession(
 
   // Cập nhật session và sync học sinh
   const updated = await db.$transaction(async (tx) => {
-    // Nếu có truyền studentIds, đồng bộ delta (giữ điểm danh HS còn lại)
+    // Nếu có truyền studentIds, đồng bộ delta (giữ điểm danh HS còn lại).
+    // studentIds: [] CHỦ ĐÍCH = gỡ hết HS (form sửa ca luôn gửi đúng roster hiện
+    // tại nên [] chỉ xảy ra khi user bỏ chọn hết). Đừng chặn ở đây — nếu cần
+    // tránh lỡ tay, thêm dialog xác nhận ở UI.
     if (data.studentIds !== undefined) {
       await syncSessionStudents(tx, id, studentFees)
     }

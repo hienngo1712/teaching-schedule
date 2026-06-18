@@ -25,6 +25,9 @@ export async function createTRPCContext(
 
   const userId = session?.user?.id ? Number(session.user.id) : null
 
+  // #3: x-forwarded-for client gửi được → spoofable. Phải deploy SAU reverse
+  // proxy tin cậy (Vercel/nginx) ghi đè header này; chuẩn hóa IP là việc của
+  // tầng hạ tầng, không nên tự xử lý trong app (dễ cấu hình sai, phản tác dụng).
   const fwd = opts.req.headers.get("x-forwarded-for")
   const ip = fwd?.split(",")[0]?.trim() ?? opts.req.headers.get("x-real-ip")
 

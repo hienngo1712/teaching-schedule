@@ -15,6 +15,38 @@ describe("Nhóm B — tài chính/báo cáo", () => {
     await cleanup()
   })
 
+  // ── Write-in-read-path: dashboard/report KHÔNG được ghi snapshot ────
+  it("✓ report.monthlySummary là READ-ONLY: không tạo/ghi snapshot MonthlyTuition", async () => {
+    const caller = await getAuthedCaller()
+    const subjectId = (await caller.subject.list({}))[0].id
+    const st = await caller.student.create({ fullName: "HS ReadOnly", grade: 3, tuitionFee: 100000 })
+    const s = await caller.session.create({
+      sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],
+    })
+    await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present", fee: 100000 }] })
+
+    await caller.report.monthlySummary({ year: 2026, month: 5 })
+    await caller.report.dashboard()
+
+    const snap = await db.monthlyTuition.findFirst({ where: { studentId: st.id, year: 2026, month: 5 } })
+    expect(snap).toBeNull() // đường đọc không được ghi DB
+  }, 30_000)
+
+  it("✓ tuition.getMonthlyStatus VẪN materialize snapshot (persist mặc định)", async () => {
+    const caller = await getAuthedCaller()
+    const subjectId = (await caller.subject.list({}))[0].id
+    const st = await caller.student.create({ fullName: "HS Persist", grade: 3, tuitionFee: 100000 })
+    const s = await caller.session.create({
+      sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],
+    })
+    await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present", fee: 100000 }] })
+
+    await caller.tuition.getMonthlyStatus({ year: 2026, month: 5 })
+
+    const snap = await db.monthlyTuition.findFirst({ where: { studentId: st.id, year: 2026, month: 5 } })
+    expect(snap).not.toBeNull()
+  }, 30_000)
+
   // ── #8: toMonth không kèm toYear → revenue & paid phải cùng kỳ ──────
   it("✓ monthlySummary: toMonth không kèm toYear cho cùng kết quả với bản chỉ rõ toYear", async () => {
     const caller = await getAuthedCaller()

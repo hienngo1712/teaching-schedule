@@ -65,7 +65,11 @@ function calcStudentTuition(
 export async function getMonthlyTuitionStatus(
   db: PrismaClient,
   userId: number,
-  filter: MonthlyTuitionFilterInput
+  filter: MonthlyTuitionFilterInput,
+  // persist=false cho các đường CHỈ ĐỌC (dashboard/report) để không ghi snapshot
+  // hàng loạt mỗi lần load — kết quả trả về vẫn tính trong bộ nhớ, không phụ thuộc
+  // snapshot đã ghi. Trang tuition giữ persist=true để materialize snapshot.
+  persist = true
 ): Promise<PaginatedResponse<TuitionStatusDTO>> {
   const { year, month, grade, search, studentId, status, page, limit } = filter
 
@@ -210,7 +214,7 @@ export async function getMonthlyTuitionStatus(
   })
 
   // 6. Upsert toàn bộ học sinh cần cập nhật (không chỉ trang hiện tại)
-  const toUpsert = results.filter(i => i.needsUpsert)
+  const toUpsert = persist ? results.filter(i => i.needsUpsert) : []
   if (toUpsert.length > 0) {
     await Promise.all(
       toUpsert.map(item =>
@@ -355,14 +359,24 @@ export async function getMonthlyOutstanding(
   userId: number,
   params: { year: number; month: number; grade?: number }
 ): Promise<{ totalOutstanding: number; totalDue: number; totalPaid: number; studentCount: number }> {
-  const { items } = await getMonthlyTuitionStatus(db, userId, {
-    year: params.year,
-    month: params.month,
-    grade: params.grade,
-    status: "all",
-    page: 1,
-    limit: 1_000_000,
-  })
+  // R4 (CHỦ ĐÍCH, đừng "sửa" thành grade-aware từng tháng): "Còn nợ" là TỔNG nợ
+  // lũy kế của HS đang thuộc khối lọc tại tháng cuối kỳ. Nợ là số dư chạy xuyên
+  // nhiều tháng/khối, không tách sạch theo khối được — tách ra sẽ GIẤU nợ thật,
+  // trái mục đích báo cáo "ai đang nợ". Khác cơ sở với totalPaid (dòng tiền trong
+  // kỳ) là bình thường vì hai số đo hai thứ khác nhau.
+  const { items } = await getMonthlyTuitionStatus(
+    db,
+    userId,
+    {
+      year: params.year,
+      month: params.month,
+      grade: params.grade,
+      status: "all",
+      page: 1,
+      limit: 1_000_000,
+    },
+    false // read-only: chỉ tổng hợp, không ghi snapshot
+  )
 
   let totalOutstanding = 0
   let totalDue = 0
