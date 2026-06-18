@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { formatDate, formatDayOfWeek, formatToday } from "@/lib/utils"
+import { formatDate, formatDayOfWeek, formatToday, removeVietnameseTones } from "@/lib/utils"
 
 // sessionDate lưu UTC midnight; calendar dựng lưới theo UTC. formatDate/
 // formatDayOfWeek phải đọc theo UTC để không lệch 1 ngày so với lưới lịch.
@@ -19,6 +19,13 @@ describe("formatDate / formatDayOfWeek — theo UTC", () => {
   it("string 'YYYY-MM-DD' → đúng thứ theo UTC", () => {
     expect(formatDayOfWeek("2026-06-18")).toBe("T5")
     expect(formatDate("2026-06-18")).toBe("18/06/2026")
+  })
+})
+
+describe("removeVietnameseTones — chuẩn hoá đủ ký tự", () => {
+  it("chuẩn hoá ấ (a mũ sắc) → 'a', không bỏ sót trong tên file", () => {
+    expect(removeVietnameseTones("ấ")).toBe("a")
+    expect(removeVietnameseTones("Nguyễn Tấn Anh")).toBe("Nguyen_Tan_Anh")
   })
 })
 

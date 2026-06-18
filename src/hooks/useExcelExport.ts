@@ -242,7 +242,7 @@ export function useExcelExport() {
       // Filter sessions that have students in this grade
       const gradeSessions = sessions
         .filter(s => s.students.some(st => st.grade === grade))
-        .sort((a, b) => a.sessionDate.getTime() - b.sessionDate.getTime() || a.startTime.localeCompare(b.startTime))
+        .sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime() || a.startTime.localeCompare(b.startTime))
 
       if (gradeStudents.length === 0) {
         toast.error(`Không có học sinh nào thuộc lớp ${grade} trong dữ liệu hiện tại.`)
