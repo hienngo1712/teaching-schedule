@@ -249,8 +249,18 @@ export async function getMonthlyTuitionStatus(
           return item.paidAmount >= adjustedAmount && adjustedAmount > 0
         case "paid_this_month":
           return item.paidAmount >= item.totalExpected && item.totalExpected > 0 && item.previousBalance > 0 && item.paidAmount < adjustedAmount
-        case "partial":
-          return item.paidAmount > 0 && item.paidAmount < item.totalExpected
+        case "partial": {
+          // Mirror đúng chuỗi badge phía client: 'partial' = đã trả > 0 nhưng CHƯA
+          // đủ tổng nợ thực tế (adjustedAmount) và KHÔNG thuộc nhóm 'đóng đủ tháng
+          // này'. Dùng adjustedAmount (gồm nợ cũ/credit), không dùng totalExpected,
+          // để khớp với badge — tránh HS có credit/trả dư bị xếp nhầm là 'partial'.
+          const isFullyPaidOrOver = item.paidAmount >= adjustedAmount && adjustedAmount > 0
+          const isPaidThisMonth =
+            item.paidAmount >= item.totalExpected &&
+            item.totalExpected > 0 &&
+            item.previousBalance > 0
+          return item.paidAmount > 0 && !isFullyPaidOrOver && !isPaidThisMonth
+        }
         case "unpaid":
           return item.paidAmount === 0 && adjustedAmount > 0
         default:
