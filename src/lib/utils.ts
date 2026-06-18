@@ -54,6 +54,15 @@ export function formatDate(date: Date | string): string {
   return `${day}/${month}/${year}`
 }
 
+// Ngày HÔM NAY theo giờ ĐỊA PHƯƠNG (dd/mm/yyyy). Dùng cho mốc "ngày xuất" —
+// đây là giá trị wall-clock của người dùng, KHÁC sessionDate (lưu UTC midnight).
+export function formatToday(): string {
+  const d = new Date()
+  const day = String(d.getDate()).padStart(2, "0")
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  return `${day}/${month}/${d.getFullYear()}`
+}
+
 // Format: "T2", "T3"... "CN" — đọc theo UTC (xem ghi chú formatDate).
 export function formatDayOfWeek(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date

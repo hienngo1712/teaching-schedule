@@ -3,7 +3,7 @@ import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
 import { toast } from "sonner"
 import { ATTENDANCE_LABEL, ATTENDANCE_STATUS, COLORS } from "@/lib/constants"
-import { formatDate, formatDayOfWeek, removeVietnameseTones, formatCurrency } from "@/lib/utils"
+import { formatDate, formatDayOfWeek, formatToday, removeVietnameseTones, formatCurrency } from "@/lib/utils"
 import type { SessionDTO, StudentDTO } from "@/lib/types/models"
 
 const toArgb = (hex: string) => `FF${hex.replace("#", "")}`
@@ -57,7 +57,7 @@ export function useExcelExport() {
 
       sheet.mergeCells("A2:H2")
       const infoCell = sheet.getCell("A2")
-      infoCell.value = `Giáo viên: ${teacherName} | Ngày xuất: ${formatDate(new Date())}`
+      infoCell.value = `Giáo viên: ${teacherName} | Ngày xuất: ${formatToday()}`
       infoCell.alignment = { horizontal: "center" }
 
       // Grid logic - simplified for Excel
@@ -122,7 +122,7 @@ export function useExcelExport() {
       sheet.getCell("A2").alignment = { horizontal: "center" }
 
       sheet.mergeCells("A3:G3")
-      sheet.getCell("A3").value = `Kỳ báo cáo: ${period} | Ngày xuất: ${formatDate(new Date())}`
+      sheet.getCell("A3").value = `Kỳ báo cáo: ${period} | Ngày xuất: ${formatToday()}`
       sheet.getCell("A3").alignment = { horizontal: "center" }
 
       // --- Tuition block (rows 5–9, only when tuitionInfo is provided) ---

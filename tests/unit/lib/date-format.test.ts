@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest"
-import { formatDate, formatDayOfWeek } from "@/lib/utils"
+import { describe, it, expect, vi } from "vitest"
+import { formatDate, formatDayOfWeek, formatToday } from "@/lib/utils"
 
 // sessionDate lưu UTC midnight; calendar dựng lưới theo UTC. formatDate/
 // formatDayOfWeek phải đọc theo UTC để không lệch 1 ngày so với lưới lịch.
@@ -19,5 +19,19 @@ describe("formatDate / formatDayOfWeek — theo UTC", () => {
   it("string 'YYYY-MM-DD' → đúng thứ theo UTC", () => {
     expect(formatDayOfWeek("2026-06-18")).toBe("T5")
     expect(formatDate("2026-06-18")).toBe("18/06/2026")
+  })
+})
+
+describe("formatToday — ngày xuất theo giờ LOCAL", () => {
+  it("trả ngày hôm nay theo giờ địa phương (không dùng UTC)", () => {
+    vi.useFakeTimers()
+    // Mốc 18:00Z: ở +7 đã sang 19/06 01:00 local. formatToday phải theo local.
+    vi.setSystemTime(new Date("2026-06-18T18:00:00Z"))
+    const now = new Date()
+    const expected = `${String(now.getDate()).padStart(2, "0")}/${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}/${now.getFullYear()}`
+    expect(formatToday()).toBe(expected)
+    vi.useRealTimers()
   })
 })
