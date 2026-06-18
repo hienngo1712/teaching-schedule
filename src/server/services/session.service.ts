@@ -733,6 +733,18 @@ export async function bulkUpdateFutureSessions(
     })
   }
 
+  // Validate quyền sở hữu môn học mới (nếu đổi) — tránh gán ca sang môn user khác
+  if (data.subjectId !== undefined) {
+    await assertSubjectOwned(db, userId, data.subjectId)
+  }
+
+  // Validate quyền sở hữu HS (nếu đổi). assertStudentsOwned ném NOT_FOUND nếu có
+  // ID không tồn tại / thuộc user khác (length không khớp).
+  let studentFees: Array<{ id: number; tuitionFee: number; grade: number }> | null = null
+  if (data.studentIds !== undefined) {
+    studentFees = await assertStudentsOwned(db, userId, data.studentIds)
+  }
+
   // 1. Tìm các ca dạy khớp pattern
   // Dùng raw query để lấy IDs trước
   const sessions = await db.$queryRaw<Array<{ id: number; session_date: Date }>>`
@@ -764,26 +776,12 @@ export async function bulkUpdateFutureSessions(
 
   // 3. Thực hiện update trong transaction
   await db.$transaction(async (tx) => {
-    // Nếu có đổi studentIds, cần update cho tất cả các ca
-    if (data.studentIds !== undefined) {
-      await tx.sessionStudent.deleteMany({
-        where: { sessionId: { in: sessionIds } },
-      })
-
-      if (data.studentIds.length > 0) {
-        // Cần fetch phí của các học sinh mới
-        const studentFees = await tx.student.findMany({
-          where: { id: { in: data.studentIds }, userId },
-          select: { id: true, tuitionFee: true, grade: true },
-        })
-
-        const toCreate: Array<{ sessionId: number; studentId: number; fee: number; grade: number }> = []
-        for (const sid of sessionIds) {
-          for (const s of studentFees) {
-            toCreate.push({ sessionId: sid, studentId: s.id, fee: s.tuitionFee, grade: s.grade })
-          }
-        }
-        await tx.sessionStudent.createMany({ data: toCreate })
+    // Nếu có đổi studentIds, đồng bộ DELTA cho TỪNG ca — chỉ thêm HS mới / gỡ HS
+    // bị bỏ, GIỮ NGUYÊN điểm danh/ghi chú/học phí của HS đã có. Tránh kiểu
+    // xóa-sạch-tạo-lại làm reset toàn bộ điểm danh của mọi ca tương lai.
+    if (studentFees !== null) {
+      for (const sid of sessionIds) {
+        await syncSessionStudents(tx, sid, studentFees)
       }
     }
 

@@ -429,5 +429,91 @@ describe("Session CRUD + overlap", () => {
   })
 })
 
+// ── updateFuture (bulk) — giữ điểm danh & multi-tenant ───────────────
+describe("updateFuture (bulk)", () => {
+  let subjectId: number
+
+  beforeAll(async () => {
+    await db.sessionStudent.deleteMany()
+    await db.teachingSession.deleteMany()
+    await db.student.deleteMany()
+    await db.subject.deleteMany()
+    const caller = await getAuthedCaller()
+    const subject = await caller.subject.create({ name: "Lý", color: "#0891B2" })
+    subjectId = subject.id
+  })
+
+  beforeEach(async () => {
+    await db.sessionStudent.deleteMany()
+    await db.teachingSession.deleteMany()
+  })
+
+  it("✓ updateFuture với studentIds (cùng danh sách) → KHÔNG reset điểm danh", async () => {
+    const caller = await getAuthedCaller()
+    const a = await caller.student.create({ fullName: "An", grade: 5 })
+    const b = await caller.student.create({ fullName: "Bình", grade: 5 })
+
+    const s = await caller.session.create({
+      sessionDate: "2026-09-07", // thứ 2
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId,
+      studentIds: [a.id, b.id],
+    })
+    await caller.attendance.update({
+      sessionId: s.id,
+      attendances: [
+        { studentId: a.id, attendance: "present" },
+        { studentId: b.id, attendance: "absent" },
+      ],
+    })
+
+    await caller.session.updateFuture({
+      id: s.id,
+      data: { title: "Đổi tiêu đề", studentIds: [a.id, b.id] },
+    })
+
+    const detail = await caller.session.getDetail({ id: s.id })
+    const byId = Object.fromEntries(detail.students.map((st) => [st.studentId, st.attendance]))
+    expect(detail.studentCount).toBe(2)
+    expect(byId[a.id]).toBe("present")
+    expect(byId[b.id]).toBe("absent")
+  })
+
+  it("✗ updateFuture đổi subjectId sang môn của user khác → NOT_FOUND", async () => {
+    const caller = await getAuthedCaller()
+    const callerB = await getAuthedCaller("teacher2")
+    const subjB = await callerB.subject.create({ name: "Hóa B", color: "#16A34A" })
+
+    const s = await caller.session.create({
+      sessionDate: "2026-09-08",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId,
+    })
+
+    await expect(
+      caller.session.updateFuture({ id: s.id, data: { subjectId: subjB.id } })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  })
+
+  it("✗ updateFuture với studentIds chứa HS của user khác → NOT_FOUND", async () => {
+    const caller = await getAuthedCaller()
+    const callerB = await getAuthedCaller("teacher2")
+    const stB = await callerB.student.create({ fullName: "HS của B", grade: 5 })
+
+    const s = await caller.session.create({
+      sessionDate: "2026-09-09",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId,
+    })
+
+    await expect(
+      caller.session.updateFuture({ id: s.id, data: { studentIds: [stB.id] } })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  })
+})
+
 // Tránh TRPCError import unused
 void TRPCError

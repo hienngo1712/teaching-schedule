@@ -114,20 +114,46 @@ export async function softDeleteStudent(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
   )
 
-  await db.$transaction([
-    // Gỡ HS khỏi các buổi học từ hôm nay trở đi; giữ nguyên buổi đã qua để bảo toàn
-    // lịch sử điểm danh & doanh thu. (Buổi đã qua giữ snapshot, dù HS đã bị xóa.)
-    db.sessionStudent.deleteMany({
+  await db.$transaction(async (tx) => {
+    // Ứng viên: các buổi từ hôm nay trở đi mà HS đang tham gia. (Buổi quá khứ
+    // không đụng tới để bảo toàn lịch sử điểm danh & doanh thu.)
+    const links = await tx.sessionStudent.findMany({
       where: {
         studentId: id,
         session: { userId, sessionDate: { gte: todayUTC } },
       },
-    }),
-    db.student.update({
-      where: { id },
-      data: { isActive: false },
-    }),
-  ])
+      select: {
+        id: true,
+        session: { select: { sessionDate: true, endTime: true } },
+      },
+    })
+
+    // Chỉ gỡ buổi CHƯA kết thúc (thời điểm kết thúc còn ở tương lai). Buổi hôm nay
+    // đã dạy xong vẫn được giữ — sessionDate là @db.Date nên phải kết hợp với
+    // endTime để xác định buổi đã qua, tránh xóa nhầm snapshot buổi đã dạy.
+    const nowMs = now.getTime()
+    const toRemove = links
+      .filter(({ session }) => {
+        const sd = session.sessionDate
+        const et = session.endTime
+        const endMs = Date.UTC(
+          sd.getUTCFullYear(),
+          sd.getUTCMonth(),
+          sd.getUTCDate(),
+          et.getUTCHours(),
+          et.getUTCMinutes(),
+          et.getUTCSeconds()
+        )
+        return endMs > nowMs
+      })
+      .map((l) => l.id)
+
+    if (toRemove.length > 0) {
+      await tx.sessionStudent.deleteMany({ where: { id: { in: toRemove } } })
+    }
+
+    await tx.student.update({ where: { id }, data: { isActive: false } })
+  })
   return { success: true }
 }
 

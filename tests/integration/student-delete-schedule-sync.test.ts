@@ -145,6 +145,36 @@ describe("Xóa học sinh ↔ đồng bộ lịch & giữ điểm danh", () => {
     expect(byId[c.id]).toBe("late")
   })
 
+  // ── Bug 5: buổi HÔM NAY đã kết thúc phải giữ (bảo toàn lịch sử) ──
+  it("✓ xóa HS → giữ buổi hôm nay đã kết thúc, gỡ buổi hôm nay chưa kết thúc", async () => {
+    const caller = await getAuthedCaller()
+    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
+
+    // Buổi hôm nay đã kết thúc (kết thúc lúc 00:01 UTC — gần như luôn đã qua)
+    const ended = await caller.session.create({
+      sessionDate: daysFromNow(0),
+      startTime: "00:00",
+      endTime: "00:01",
+      subjectId,
+      studentIds: [a.id],
+    })
+    // Buổi hôm nay chưa kết thúc (kết thúc lúc 23:59 UTC)
+    const upcoming = await caller.session.create({
+      sessionDate: daysFromNow(0),
+      startTime: "23:58",
+      endTime: "23:59",
+      subjectId,
+      studentIds: [a.id],
+    })
+
+    await caller.student.delete({ id: a.id })
+
+    const endedDetail = await caller.session.getDetail({ id: ended.id })
+    const upcomingDetail = await caller.session.getDetail({ id: upcoming.id })
+    expect(endedDetail.studentCount).toBe(1) // giữ buổi đã dạy
+    expect(upcomingDetail.studentCount).toBe(0) // gỡ buổi chưa dạy
+  })
+
   // ── Bug 2: thêm HS qua update phải giữ điểm danh HS cũ ───────────
   it("✓ update thêm HS mới → giữ điểm danh HS cũ, HS mới = pending", async () => {
     const caller = await getAuthedCaller()
