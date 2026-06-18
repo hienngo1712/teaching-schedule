@@ -70,10 +70,14 @@ export async function getMonthlySummary(
 ) {
   const { year, month, toYear, toMonth, grade } = params
 
+  // Mốc cuối kỳ hiệu dụng: cho phép truyền toMonth mà không kèm toYear (và ngược
+  // lại). Tính nhất quán cho startDate/endDate, bộ lọc năm và totalPaid bên dưới
+  // để doanh thu & tiền đã thu luôn cùng một khoảng thời gian.
+  const effToYear = toYear ?? year
+  const effToMonth = toMonth ?? month
+
   const startDate = new Date(Date.UTC(year, month - 1, 1))
-  const endDate = toYear && toMonth
-    ? new Date(Date.UTC(toYear, toMonth, 1))
-    : new Date(Date.UTC(year, month, 1))
+  const endDate = new Date(Date.UTC(effToYear, effToMonth, 1))
 
   // Historical filter: when `grade` is set, scope `monthlyTuitions` by
   // sessionStudent.grade WITHIN the report period — so past months keep
@@ -89,11 +93,11 @@ export async function getMonthlySummary(
             },
           },
         },
-        year: { gte: year, lte: toYear ?? year },
+        year: { gte: year, lte: effToYear },
       }
     : {
         student: { userId },
-        year: { gte: year, lte: toYear ?? year },
+        year: { gte: year, lte: effToYear },
       }
 
   const [sessions, monthlyTuitions] = await Promise.all([
@@ -160,12 +164,28 @@ export async function getMonthlySummary(
   })
 
   const startVal = year * 100 + month
-  const endVal = (toYear ?? year) * 100 + (toMonth ?? month)
-  
+  const endVal = effToYear * 100 + effToMonth
+
+  // Khi lọc theo grade: paidAmount (theo tháng, không lưu grade) chỉ được tính cho
+  // những tháng HS thực sự học đúng khối đó — đối chiếu qua snapshot grade của buổi.
+  // Tránh cộng nhầm tiền sang khối khác khi HS đổi khối giữa kỳ.
+  const gradeMonthKeys = grade ? new Set<string>() : null
+  if (gradeMonthKeys) {
+    for (const s of sessions) {
+      const y = s.sessionDate.getUTCFullYear()
+      const m = s.sessionDate.getUTCMonth() + 1
+      for (const ss of s.sessionStudents) {
+        if (ss.grade === grade) gradeMonthKeys.add(`${ss.studentId}-${y}-${m}`)
+      }
+    }
+  }
+
   const totalPaid = monthlyTuitions
     .filter(t => {
       const v = t.year * 100 + t.month
-      return v >= startVal && v <= endVal
+      if (v < startVal || v > endVal) return false
+      if (gradeMonthKeys && !gradeMonthKeys.has(`${t.studentId}-${t.year}-${t.month}`)) return false
+      return true
     })
     .reduce((sum, t) => sum + t.paidAmount, 0)
 
@@ -174,8 +194,8 @@ export async function getMonthlySummary(
   // Outstanding (còn nợ) must match the tuition page: per-student carry-over,
   // netted per student. Computed at the END month of the period.
   const { totalOutstanding } = await getMonthlyOutstanding(db, userId, {
-    year: toYear ?? year,
-    month: toMonth ?? month,
+    year: effToYear,
+    month: effToMonth,
     grade,
   })
 

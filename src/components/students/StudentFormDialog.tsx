@@ -140,7 +140,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
           <div className="space-y-2">
             <Label htmlFor="tuitionFee">
-              {t("tuition_fee_per_session")} <span className="text-red-500">*</span>
+              {t("tuition_fee_per_session")}
             </Label>
             <Controller
               control={form.control}

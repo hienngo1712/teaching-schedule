@@ -63,9 +63,7 @@ export function useExport() {
           }
         }
       })
-      
-      element.classList.remove("exporting")
-      
+
       const image = canvas.toDataURL("image/png")
       const link = document.createElement("a")
       link.href = image
@@ -75,6 +73,9 @@ export function useExport() {
       console.error("Lỗi khi chụp ảnh (html2canvas):", error)
       // Hiển thị thông báo lỗi cho người dùng nếu có thể (ở đây chỉ log)
     } finally {
+      // Luôn gỡ class "exporting" kể cả khi html2canvas throw — nếu không, layout
+      // thật của user sẽ kẹt ở trạng thái export cho tới khi reload.
+      element.classList.remove("exporting")
       setIsCapturing(false)
     }
   }

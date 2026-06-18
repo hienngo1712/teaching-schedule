@@ -3,6 +3,13 @@ import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
 import * as studentService from "@/server/services/student.service"
 
+function todayYmd(): string {
+  const d = new Date()
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    d.getUTCDate()
+  ).padStart(2, "0")}`
+}
+
 async function resetUserData(username: string) {
   const user = await db.user.findUnique({ where: { username } })
   if (!user) return
@@ -51,6 +58,19 @@ describe("student.upgradeAllClasses — manual", () => {
     expect(after9?.isActive).toBe(false)
     expect(result.upgradedCount).toBe(0)
     expect(result.deactivatedCount).toBe(1)
+  })
+
+  it("deactivates students with grade > 9 (dữ liệu ngoài [1,9] không bị kẹt)", async () => {
+    const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    // grade 10 không tạo được qua API (zod max 9) → chèn thẳng DB để mô phỏng dữ liệu lỗi.
+    const ghost = await db.student.create({
+      data: { userId: user.id, fullName: "HS Lop 10", grade: 10, tuitionFee: 0, isActive: true },
+    })
+    const caller = await getAuthedCaller("teacher")
+    const result = await caller.student.upgradeAllClasses()
+    const after = await db.student.findUnique({ where: { id: ghost.id } })
+    expect(after?.isActive).toBe(false)
+    expect(result.deactivatedCount).toBeGreaterThanOrEqual(1)
   })
 
   it("does NOT touch inactive students", async () => {
@@ -144,6 +164,21 @@ describe("student.getUpgradeLogThisYear", () => {
     expect(log?.year).toBe(new Date().getFullYear())
     expect(log?.trigger).toBe("manual")
   })
+
+  it("khớp năm UTC với upgradeAllClasses ở ranh giới năm (không lệch local/UTC)", async () => {
+    vi.useFakeTimers()
+    // 20:00Z 31/12/2026 = 03:00 01/01/2027 giờ +7. Writer ghi log năm UTC (2026);
+    // reader phải đọc cùng năm UTC, không dùng năm local (2027).
+    vi.setSystemTime(new Date("2026-12-31T20:00:00Z"))
+    const caller = await getAuthedCaller("teacher")
+    await caller.student.create({ fullName: "HS NY", grade: 2, tuitionFee: 0, isActive: true })
+    await caller.student.upgradeAllClasses()
+
+    const log = await caller.student.getUpgradeLogThisYear()
+    expect(log).not.toBeNull()
+    expect(log?.year).toBe(2026)
+    vi.useRealTimers()
+  }, 30_000)
 })
 
 describe("SessionStudent.grade snapshot", () => {
@@ -203,6 +238,79 @@ describe("SessionStudent.grade snapshot", () => {
     const studentAfter = await db.student.findUnique({ where: { id: student.id } })
     expect(studentAfter?.grade).toBe(4) // current grade upgraded
   })
+
+  it("updateStudent đổi grade → đồng bộ grade buổi tương lai, giữ buổi quá khứ", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const subject = (await caller.subject.list({}))[0]
+    const student = await caller.student.create({
+      fullName: "HS Sync Grade",
+      grade: 3,
+      tuitionFee: 0,
+      isActive: true,
+    })
+    const past = await caller.session.create({
+      sessionDate: "2020-01-15",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+    const future = await caller.session.create({
+      sessionDate: "2099-01-15",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+
+    await caller.student.update({ id: student.id, data: { grade: 7 } })
+
+    const pastSS = await db.sessionStudent.findFirst({
+      where: { sessionId: past.id, studentId: student.id },
+    })
+    const futureSS = await db.sessionStudent.findFirst({
+      where: { sessionId: future.id, studentId: student.id },
+    })
+    expect(pastSS?.grade).toBe(3) // lịch sử giữ nguyên
+    expect(futureSS?.grade).toBe(7) // buổi tương lai đồng bộ grade mới
+  }, 30_000)
+
+  it("updateStudent đổi grade → KHÔNG ghi đè grade buổi hôm nay ĐÃ kết thúc", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const subject = (await caller.subject.list({}))[0]
+    const student = await caller.student.create({
+      fullName: "HS Sync Today",
+      grade: 3,
+      tuitionFee: 0,
+      isActive: true,
+    })
+    // Buổi HÔM NAY đã kết thúc (00:01) — phải giữ grade lịch sử
+    const endedToday = await caller.session.create({
+      sessionDate: todayYmd(),
+      startTime: "00:00",
+      endTime: "00:01",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+    const future = await caller.session.create({
+      sessionDate: "2099-01-15",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: subject.id,
+      studentIds: [student.id],
+    })
+
+    await caller.student.update({ id: student.id, data: { grade: 7 } })
+
+    const endedSS = await db.sessionStudent.findFirst({
+      where: { sessionId: endedToday.id, studentId: student.id },
+    })
+    const futureSS = await db.sessionStudent.findFirst({
+      where: { sessionId: future.id, studentId: student.id },
+    })
+    expect(endedSS?.grade).toBe(3) // buổi đã dạy xong hôm nay → giữ lịch sử
+    expect(futureSS?.grade).toBe(7) // buổi tương lai → grade mới
+  }, 30_000)
 
   it("new session after upgrade uses NEW current grade", async () => {
     const caller = await getAuthedCaller("teacher")

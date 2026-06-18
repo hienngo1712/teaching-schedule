@@ -1,10 +1,12 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
 import {
+  addRecurringStudentsSchema,
   sessionBulkCreateSchema,
   sessionBulkDeleteFutureSchema,
   sessionBulkUpdateFutureSchema,
   sessionCreateSchema,
+  sessionDuplicateSchema,
   sessionFilterSchema,
   sessionUpdateSchema,
 } from "@/lib/schemas/session"
@@ -62,7 +64,7 @@ export const sessionRouter = createTRPCRouter({
     ),
 
   duplicate: protectedProcedure
-    .input(z.object({ id: z.number().int().positive(), targetDate: z.string() }))
+    .input(sessionDuplicateSchema)
     .mutation(({ ctx, input }) =>
       duplicateSession(ctx.db, ctx.userId, input.id, input.targetDate)
     ),
@@ -102,16 +104,7 @@ export const sessionRouter = createTRPCRouter({
     ),
 
   addRecurringStudents: protectedProcedure
-    .input(
-      z.object({
-        studentIds: z.array(z.number().int().positive()),
-        startTime: z.string(),
-        endTime: z.string(),
-        startDate: z.string(),
-        endDate: z.string(),
-        weekdays: z.array(z.number().min(0).max(6)),
-      })
-    )
+    .input(addRecurringStudentsSchema)
     .mutation(({ ctx, input }) =>
       addStudentsToRecurringSessions(ctx.db, ctx.userId, input)
     ),

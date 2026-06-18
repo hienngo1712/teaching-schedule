@@ -215,9 +215,9 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={new Date(field.value)}
+                            selected={field.value ? new Date(field.value) : undefined}
                             onSelect={(date) =>
-                              field.onChange(dayjs(date).format("YYYY-MM-DD"))
+                              field.onChange(date ? dayjs(date).format("YYYY-MM-DD") : "")
                             }
                             initialFocus
                           />
@@ -255,9 +255,9 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={new Date(field.value)}
+                            selected={field.value ? new Date(field.value) : undefined}
                             onSelect={(date) =>
-                              field.onChange(dayjs(date).format("YYYY-MM-DD"))
+                              field.onChange(date ? dayjs(date).format("YYYY-MM-DD") : "")
                             }
                             initialFocus
                           />
@@ -292,7 +292,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                                     checked={field.value?.includes(index)}
                                     onCheckedChange={(checked) => {
                                       return checked
-                                        ? field.onChange([...field.value, index])
+                                        ? field.onChange([...(field.value ?? []), index])
                                         : field.onChange(
                                             field.value?.filter(
                                               (value) => value !== index
@@ -436,7 +436,7 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
 
       <AlertDialog
         open={conflicts.length > 0}
-        onOpenChange={(open) => !open && setConflicts([])}
+        onOpenChange={(open) => { if (!open) { setConflicts([]); setPendingValues(null) } }}
       >
         <AlertDialogContent className="max-w-[500px]">
           <AlertDialogHeader>

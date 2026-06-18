@@ -95,6 +95,20 @@ export const sessionBulkUpdateFutureSchema = z.object({
     ),
 })
 
+export const sessionDuplicateSchema = z.object({
+  id: z.number().int().positive(),
+  targetDate: z.string().regex(dateRegex, "Ngày phải dạng YYYY-MM-DD"),
+})
+
+export const addRecurringStudentsSchema = z.object({
+  studentIds: z.array(z.number().int().positive()),
+  startTime: z.string().regex(timeRegex, "Giờ phải dạng HH:mm"),
+  endTime: z.string().regex(timeRegex, "Giờ phải dạng HH:mm"),
+  startDate: z.string().regex(dateRegex, "Ngày phải dạng YYYY-MM-DD"),
+  endDate: z.string().regex(dateRegex, "Ngày phải dạng YYYY-MM-DD"),
+  weekdays: z.array(z.number().int().min(0).max(6)),
+})
+
 export type SessionCreateInput = z.infer<typeof sessionCreateSchema>
 export type SessionUpdateInput = z.infer<typeof sessionUpdateSchema>
 export type SessionFilterInput = z.infer<typeof sessionFilterSchema>

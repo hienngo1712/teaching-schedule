@@ -107,7 +107,7 @@ export async function softDeleteSubject(
   assertOwnership(existing, userId)
 
   // Không cho xóa nếu đang có session dùng môn này
-  const inUse = await db.teachingSession.count({ where: { subjectId: id } })
+  const inUse = await db.teachingSession.count({ where: { subjectId: id, userId } })
   if (inUse > 0) {
     throw new TRPCError({
       code: "BAD_REQUEST",

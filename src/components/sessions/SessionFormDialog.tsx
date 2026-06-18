@@ -214,9 +214,9 @@ export function SessionFormDialog({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={new Date(field.value)}
+                          selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) =>
-                            field.onChange(dayjs(date).format("YYYY-MM-DD"))
+                            field.onChange(date ? dayjs(date).format("YYYY-MM-DD") : "")
                           }
                           disabled={(date) => date < new Date("1900-01-01")}
                           initialFocus

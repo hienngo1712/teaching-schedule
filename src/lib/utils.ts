@@ -44,19 +44,29 @@ export function formatDuration(minutes: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}p`
 }
 
-// Format: "10/04/2026"
+// Format: "10/04/2026" — đọc theo UTC để khớp sessionDate (lưu UTC midnight) và
+// lưới calendar (dựng theo UTC), tránh lệch 1 ngày ở các múi giờ ≠ UTC.
 export function formatDate(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date
-  const day = String(d.getDate()).padStart(2, "0")
-  const month = String(d.getMonth() + 1).padStart(2, "0")
-  const year = d.getFullYear()
+  const day = String(d.getUTCDate()).padStart(2, "0")
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0")
+  const year = d.getUTCFullYear()
   return `${day}/${month}/${year}`
 }
 
-// Format: "T2", "T3"... "CN"
+// Ngày HÔM NAY theo giờ ĐỊA PHƯƠNG (dd/mm/yyyy). Dùng cho mốc "ngày xuất" —
+// đây là giá trị wall-clock của người dùng, KHÁC sessionDate (lưu UTC midnight).
+export function formatToday(): string {
+  const d = new Date()
+  const day = String(d.getDate()).padStart(2, "0")
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  return `${day}/${month}/${d.getFullYear()}`
+}
+
+// Format: "T2", "T3"... "CN" — đọc theo UTC (xem ghi chú formatDate).
 export function formatDayOfWeek(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date
-  const day = d.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+  const day = d.getUTCDay() // 0=Sun, 1=Mon, ..., 6=Sat
   const names = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
   return names[day]
 }
@@ -69,7 +79,7 @@ export function formatCurrency(value: number | undefined | null): string {
 
 // Loại bỏ dấu tiếng Việt để dùng cho tên file export
 export function removeVietnameseTones(str: string): string {
-  str = str.replace(/à|á|ạ|ả|ã|â|ầ|á|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a")
+  str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a")
   str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e")
   str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i")
   str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o")

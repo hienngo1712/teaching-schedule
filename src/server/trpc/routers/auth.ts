@@ -2,7 +2,11 @@ import { TRPCError } from "@trpc/server"
 import bcrypt from "bcryptjs"
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/trpc"
 import { changePasswordSchema, registerSchema } from "@/lib/schemas/auth"
-import { BCRYPT_COST } from "@/server/auth-credentials"
+import {
+  BCRYPT_COST,
+  isRegisterRateLimited,
+  recordRegisterAttempt,
+} from "@/server/auth-credentials"
 import { registerUser } from "@/server/services/user.service"
 import { upgradeAllClasses } from "@/server/services/student.service"
 
@@ -36,7 +40,21 @@ export const authRouter = createTRPCRouter({
   register: publicProcedure
     .input(registerSchema)
     .mutation(async ({ ctx, input }) => {
-      return registerUser(ctx.db, input)
+      // Throttle theo IP để chặn spam tạo tài khoản (procedure công khai).
+      if (await isRegisterRateLimited(ctx.ip)) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Quá nhiều lần đăng ký từ địa chỉ này, vui lòng thử lại sau",
+        })
+      }
+      try {
+        const user = await registerUser(ctx.db, input)
+        await recordRegisterAttempt(ctx.ip, true)
+        return user
+      } catch (err) {
+        await recordRegisterAttempt(ctx.ip, false)
+        throw err
+      }
     }),
 
   changePassword: protectedProcedure
