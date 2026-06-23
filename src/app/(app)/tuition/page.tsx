@@ -46,6 +46,16 @@ function getStatusBadge(item: TuitionStatusItem, t: ReturnType<typeof useTransla
     )
   }
 
+  // Đã tất toán (GV đánh dấu) → xanh "đóng đủ" dù paidAmount chưa khớp tổng nợ
+  // (có thể miễn/giảm). Khớp StudentScheduleView, dashboard và carry-over backend.
+  if (item.isFullPaid) {
+    return (
+      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">
+        <CheckCircle2 className="size-3 mr-1" /> {t("fully_paid")}
+      </Badge>
+    )
+  }
+
   if (item.paidAmount >= adjustedAmount && adjustedAmount > 0) {
     return (
       <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">
