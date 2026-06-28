@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { sessionCreateSchema } from "@/lib/schemas/session"
+import { sessionCreateSchema, sessionCreateMakeupSchema } from "@/lib/schemas/session"
 
 describe("sessionCreateSchema", () => {
   it("✓ accept valid session với subjectId", () => {
@@ -66,5 +66,38 @@ describe("sessionCreateSchema", () => {
         studentIds: [1, 2, 3],
       })
     ).not.toThrow()
+  })
+})
+
+describe("sessionCreateMakeupSchema", () => {
+  it("✓ hợp lệ với id + ngày + giờ", () => {
+    const r = sessionCreateMakeupSchema.safeParse({
+      id: 1,
+      sessionDate: "2026-07-01",
+      startTime: "17:00",
+      endTime: "18:30",
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it("✗ endTime <= startTime → fail", () => {
+    const r = sessionCreateMakeupSchema.safeParse({
+      id: 1,
+      sessionDate: "2026-07-01",
+      startTime: "18:30",
+      endTime: "17:00",
+    })
+    expect(r.success).toBe(false)
+  })
+
+  it("✓ cancelReason tùy chọn", () => {
+    const r = sessionCreateMakeupSchema.safeParse({
+      id: 1,
+      sessionDate: "2026-07-01",
+      startTime: "17:00",
+      endTime: "18:30",
+      cancelReason: "Nghỉ lễ",
+    })
+    expect(r.success).toBe(true)
   })
 })
