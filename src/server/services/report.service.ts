@@ -29,7 +29,9 @@ export async function getStudentReport(
   })
 
   // Calculate summary
-  const studentSessions = sessions.filter(s => s.students.some(st => st.studentId === studentId))
+  const studentSessions = sessions
+    .filter(s => s.status !== "cancelled")
+    .filter(s => s.students.some(st => st.studentId === studentId))
   const total = studentSessions.length
   const present = studentSessions.filter(s => s.students.find(ss => ss.studentId === studentId)?.attendance === ATTENDANCE_STATUS.PRESENT).length
   const absent = studentSessions.filter(s => s.students.find(ss => ss.studentId === studentId)?.attendance === ATTENDANCE_STATUS.ABSENT).length
@@ -105,6 +107,7 @@ export async function getMonthlySummary(
       where: {
         userId,
         sessionDate: { gte: startDate, lt: endDate },
+        status: { not: "cancelled" },
         ...(grade ? { sessionStudents: { some: { grade } } } : {})
       },
       include: {
@@ -224,12 +227,12 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
 
     // 2. Sessions today
     db.teachingSession.count({
-      where: { userId, sessionDate: today }
+      where: { userId, sessionDate: today, status: { not: "cancelled" } }
     }),
 
     // 3. This month's sessions
     db.teachingSession.findMany({
-      where: { userId, sessionDate: { gte: startOfMonth, lt: endOfMonth } },
+      where: { userId, sessionDate: { gte: startOfMonth, lt: endOfMonth }, status: { not: "cancelled" } },
       include: { sessionStudents: true }
     }),
 

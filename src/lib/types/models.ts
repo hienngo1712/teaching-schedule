@@ -26,13 +26,16 @@ export interface SubjectDTO extends Pick<Subject, "id" | "name" | "color"> {
 /**
  * Teaching Session basic info for list view
  */
-export interface SessionListDTO extends Omit<TeachingSession, "startTime" | "endTime" | "createdAt" | "updatedAt"> {
+export interface SessionListDTO extends Omit<TeachingSession, "startTime" | "endTime" | "createdAt" | "updatedAt" | "cancelledAt"> {
   startTime: string
   endTime: string
   durationMins: number
   subject: SubjectDTO
   studentCount: number
   level: SchoolLevel | "mixed"
+  cancelledAt: Date | string | null
+  makeupInfo?: { id: number; sessionDate: Date | string } | null
+  originalInfo?: { id: number; sessionDate: Date | string } | null
 }
 
 /**

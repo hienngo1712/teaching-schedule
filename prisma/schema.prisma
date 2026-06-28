@@ -110,15 +110,21 @@ model TeachingSession {
   title           String?          @db.VarChar(200)
   notes           String?
   status          String           @default("scheduled") @db.VarChar(20)
+  cancelReason    String?          @map("cancel_reason")
+  cancelledAt     DateTime?        @map("cancelled_at")
+  makeupOfId      Int?             @map("makeup_of_id")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   sessionStudents SessionStudent[]
   subject         Subject          @relation(fields: [subjectId], references: [id])
   user            User             @relation(fields: [userId], references: [id])
+  makeupOf        TeachingSession?  @relation("Makeup", fields: [makeupOfId], references: [id], onDelete: SetNull)
+  makeupSessions  TeachingSession[] @relation("Makeup")
 
   @@index([userId, sessionDate])
   @@index([userId, sessionDate, startTime])
   @@index([subjectId])
+  @@index([makeupOfId])
   @@map("teaching_sessions")
 }
 

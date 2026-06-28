@@ -42,6 +42,7 @@ export async function checkOverlap(
     FROM teaching_sessions
     WHERE user_id      = ${userId}
       AND session_date = ${sessionDate}::date
+      AND status      != 'cancelled'
       AND id          != ${excludeId ?? 0}
       AND start_time   < ${endTime}::time
       AND end_time     > ${startTime}::time
@@ -72,6 +73,8 @@ type SessionWithSubjectAndStudents = Prisma.TeachingSessionGetPayload<{
   }
 }> & {
   _count?: { sessionStudents: number }
+  makeupSessions?: Array<{ id: number; sessionDate: Date }>
+  makeupOf?: { id: number; sessionDate: Date } | null
 }
 
 function deriveLevel(students: Array<{ grade: number }>): "tieu_hoc" | "thcs" | "mixed" {
@@ -112,6 +115,16 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
     studentCount: s._count?.sessionStudents ?? s.sessionStudents?.length ?? 0,
     level: deriveLevel(students),
     students,
+    makeupOfId: s.makeupOfId,
+    cancelReason: s.cancelReason,
+    cancelledAt: s.cancelledAt,
+    makeupInfo:
+      s.makeupSessions && s.makeupSessions.length > 0
+        ? { id: s.makeupSessions[0].id, sessionDate: s.makeupSessions[0].sessionDate }
+        : null,
+    originalInfo: s.makeupOf
+      ? { id: s.makeupOf.id, sessionDate: s.makeupOf.sessionDate }
+      : null,
   }
 }
 
@@ -157,6 +170,8 @@ export async function getMonthSessions(
         : { sessionStudents: { select: { id: true, studentId: true, grade: true, attendance: true, note: true, fee: true } } }
       ),
       _count: { select: { sessionStudents: true } },
+      makeupSessions: { select: { id: true, sessionDate: true } },
+      makeupOf: { select: { id: true, sessionDate: true } },
     },
 
     orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }],
@@ -179,6 +194,8 @@ export async function getSessionDetail(
         orderBy: { student: { fullName: "asc" } },
       },
       _count: { select: { sessionStudents: true } },
+      makeupSessions: { select: { id: true, sessionDate: true } },
+      makeupOf: { select: { id: true, sessionDate: true } },
     },
   })
 
@@ -855,6 +872,117 @@ export async function duplicateSession(
   })
 
   return toDTO(duplicated)
+}
+
+export async function createMakeupSession(
+  db: PrismaClient,
+  userId: number,
+  originalId: number,
+  input: { sessionDate: string; startTime: string; endTime: string; cancelReason?: string }
+): Promise<{ makeup: SessionDTO; cancelled: SessionDTO }> {
+  const original = await db.teachingSession.findUnique({
+    where: { id: originalId },
+    include: { sessionStudents: true, makeupSessions: { select: { id: true } } },
+  })
+  assertOwnership(original, userId)
+
+  if (original.status === "cancelled") {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Ca này đã bị hủy" })
+  }
+  if (original.makeupSessions.length > 0) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Ca này đã có ca bù" })
+  }
+
+  const sessionDate = parseSessionDate(input.sessionDate)
+  const startTime = parseTimeToDate(input.startTime)
+  const endTime = parseTimeToDate(input.endTime)
+
+  if (endTime <= startTime) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Giờ kết thúc phải sau giờ bắt đầu" })
+  }
+
+  await checkOverlap(db, { userId, sessionDate, startTime, endTime, excludeId: originalId })
+
+  const studentData = original.sessionStudents.map((ss) => ({
+    studentId: ss.studentId,
+    fee: ss.fee,
+    grade: ss.grade,
+  }))
+
+  const [cancelled, makeup] = await db.$transaction(async (tx) => {
+    const cancelledSession = await tx.teachingSession.update({
+      where: { id: originalId },
+      data: {
+        status: "cancelled",
+        cancelReason: input.cancelReason ?? null,
+        cancelledAt: new Date(),
+      },
+      include: { subject: true, sessionStudents: { include: { student: true } } },
+    })
+
+    const makeupSession = await tx.teachingSession.create({
+      data: {
+        userId,
+        sessionDate,
+        startTime,
+        endTime,
+        subjectId: original.subjectId,
+        title: original.title,
+        notes: original.notes,
+        makeupOfId: originalId,
+        ...(studentData.length > 0 ? { sessionStudents: { create: studentData } } : {}),
+      },
+      include: { subject: true, sessionStudents: { include: { student: true } } },
+    })
+
+    return [cancelledSession, makeupSession]
+  })
+
+  return { makeup: toDTO(makeup), cancelled: toDTO(cancelled) }
+}
+
+export async function restoreSession(
+  db: PrismaClient,
+  userId: number,
+  id: number
+): Promise<SessionDTO> {
+  const original = await db.teachingSession.findUnique({
+    where: { id },
+    include: { makeupSessions: { select: { id: true } } },
+  })
+  assertOwnership(original, userId)
+
+  if (original.status !== "cancelled") {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Ca này chưa bị hủy" })
+  }
+
+  // Slot cũ có thể đã bị ca khác chiếm — kiểm tra trước khi khôi phục.
+  await checkOverlap(db, {
+    userId,
+    sessionDate: original.sessionDate,
+    startTime: original.startTime,
+    endTime: original.endTime,
+    excludeId: id,
+  })
+
+  const restored = await db.$transaction(async (tx) => {
+    const makeupIds = original.makeupSessions.map((m) => m.id)
+    if (makeupIds.length > 0) {
+      await tx.teachingSession.deleteMany({ where: { id: { in: makeupIds } } })
+    }
+    return tx.teachingSession.update({
+      where: { id },
+      data: { status: "scheduled", cancelReason: null, cancelledAt: null },
+      include: {
+        subject: true,
+        sessionStudents: { include: { student: true } },
+        makeupSessions: { select: { id: true, sessionDate: true } },
+        makeupOf: { select: { id: true, sessionDate: true } },
+      },
+    })
+  })
+
+  return toDTO(restored as SessionWithSubjectAndStudents)
 }
 
 export { parseTimeToDate }

@@ -109,9 +109,23 @@ export const addRecurringStudentsSchema = z.object({
   weekdays: z.array(z.number().int().min(0).max(6)),
 })
 
+export const sessionCreateMakeupSchema = z
+  .object({
+    id: z.number().int().positive(),
+    sessionDate: z.string().regex(dateRegex, "Ngày phải dạng YYYY-MM-DD"),
+    startTime: z.string().regex(timeRegex, "Giờ phải dạng HH:mm"),
+    endTime: z.string().regex(timeRegex, "Giờ phải dạng HH:mm"),
+    cancelReason: z.string().max(500).optional(),
+  })
+  .refine((d) => d.endTime > d.startTime, {
+    message: "Giờ kết thúc phải sau giờ bắt đầu",
+    path: ["endTime"],
+  })
+
 export type SessionCreateInput = z.infer<typeof sessionCreateSchema>
 export type SessionUpdateInput = z.infer<typeof sessionUpdateSchema>
 export type SessionFilterInput = z.infer<typeof sessionFilterSchema>
 export type SessionBulkCreateInput = z.infer<typeof sessionBulkCreateSchema>
 export type SessionBulkDeleteFutureInput = z.infer<typeof sessionBulkDeleteFutureSchema>
 export type SessionBulkUpdateFutureInput = z.infer<typeof sessionBulkUpdateFutureSchema>
+export type SessionCreateMakeupInput = z.infer<typeof sessionCreateMakeupSchema>

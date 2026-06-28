@@ -5,6 +5,7 @@ import {
   sessionBulkCreateSchema,
   sessionBulkDeleteFutureSchema,
   sessionBulkUpdateFutureSchema,
+  sessionCreateMakeupSchema,
   sessionCreateSchema,
   sessionDuplicateSchema,
   sessionFilterSchema,
@@ -17,8 +18,10 @@ import {
   checkBulkCreateConflicts,
   bulkDeleteFutureSessions,
   bulkUpdateFutureSessions,
+  createMakeupSession,
   createSession,
   deleteSession,
+  restoreSession,
   duplicateSession,
   getMonthSessions,
   getSessionDetail,
@@ -68,6 +71,16 @@ export const sessionRouter = createTRPCRouter({
     .mutation(({ ctx, input }) =>
       duplicateSession(ctx.db, ctx.userId, input.id, input.targetDate)
     ),
+
+  createMakeup: protectedProcedure
+    .input(sessionCreateMakeupSchema)
+    .mutation(({ ctx, input }) =>
+      createMakeupSession(ctx.db, ctx.userId, input.id, input)
+    ),
+
+  restore: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(({ ctx, input }) => restoreSession(ctx.db, ctx.userId, input.id)),
 
   bulkCreate: protectedProcedure
     .input(sessionBulkCreateSchema)
