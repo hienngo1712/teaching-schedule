@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { CalendarDays, Clock, Copy, Edit2, Loader2, MoreVertical, Trash2, UserPlus } from "lucide-react"
+import { CalendarClock, CalendarDays, Clock, Copy, Edit2, Loader2, MoreVertical, RotateCcw, Trash2, UserPlus } from "lucide-react"
 import dayjs from "dayjs"
 import { toast } from "sonner"
 import {
@@ -70,6 +70,14 @@ export function SessionDetailDialog({
   )
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([])
   const [isDeleteFuture, setIsDeleteFuture] = useState(false)
+  const [isMakeupOpen, setIsMakeupOpen] = useState(false)
+  const [makeupDate, setMakeupDate] = useState<Date | undefined>(
+    dayjs(basicSession.sessionDate).add(2, "day").toDate()
+  )
+  const [makeupStart, setMakeupStart] = useState(basicSession.startTime)
+  const [makeupEnd, setMakeupEnd] = useState(basicSession.endTime)
+  const [makeupReason, setMakeupReason] = useState("")
+  const [isRestoreOpen, setIsRestoreOpen] = useState(false)
 
   // Fetch full details (Lazy load)
   const { data: session, isLoading } = trpc.session.getDetail.useQuery(
@@ -117,6 +125,28 @@ export function SessionDetailDialog({
     },
   })
 
+  const makeupMutation = trpc.session.createMakeup.useMutation({
+    onSuccess: () => {
+      toast.success(t("makeup_success"))
+      setIsMakeupOpen(false)
+      onOpenChange(false)
+    },
+    onError: (err) => {
+      toast.error(err.message || t("makeup_error"))
+    },
+  })
+
+  const restoreMutation = trpc.session.restore.useMutation({
+    onSuccess: () => {
+      toast.success(t("restore_success"))
+      setIsRestoreOpen(false)
+      onOpenChange(false)
+    },
+    onError: (err) => {
+      toast.error(err.message || t("restore_error"))
+    },
+  })
+
   const addRecurringMutation = trpc.session.addRecurringStudents.useMutation({
     onSuccess: (res) => {
       toast.success(t("add_recurring_students_success").replace("{count}", String(res.updatedSessions)))
@@ -140,6 +170,17 @@ export function SessionDetailDialog({
     duplicateMutation.mutate({
       id: basicSession.id,
       targetDate: dayjs(targetDate).format("YYYY-MM-DD"),
+    })
+  }
+
+  const handleCreateMakeup = () => {
+    if (!makeupDate) return
+    makeupMutation.mutate({
+      id: basicSession.id,
+      sessionDate: dayjs(makeupDate).format("YYYY-MM-DD"),
+      startTime: makeupStart,
+      endTime: makeupEnd,
+      cancelReason: makeupReason || undefined,
     })
   }
 
@@ -229,6 +270,12 @@ export function SessionDetailDialog({
                       <Copy className="mr-2 size-4" />
                       {t("duplicate_session")}
                     </DropdownMenuItem>
+                    {session.status !== "cancelled" && !session.makeupInfo && (
+                      <DropdownMenuItem onClick={() => setIsMakeupOpen(true)}>
+                        <CalendarClock className="mr-2 size-4" />
+                        {t("create_makeup_session")}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="text-red-600 focus:text-red-600"
                       onClick={() => setIsDeleteDialogOpen(true)}
@@ -239,6 +286,21 @@ export function SessionDetailDialog({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </DialogHeader>
+
+              {session.status === "cancelled" && (
+                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between gap-2">
+                  <span>
+                    {t("cancelled_label")}
+                    {session.makeupInfo
+                      ? ` — ${t("makeup_on").replace("{date}", dayjs(session.makeupInfo.sessionDate).format("DD/MM/YYYY"))}`
+                      : ""}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => setIsRestoreOpen(true)}>
+                    <RotateCcw className="mr-2 size-3.5" />
+                    {t("restore_session")}
+                  </Button>
+                </div>
+              )}
 
               {session.notes && (
                 <div className="bg-slate-50 p-3 rounded-md text-sm text-slate-600 whitespace-pre-wrap">
@@ -394,6 +456,75 @@ export function SessionDetailDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isMakeupOpen} onOpenChange={setIsMakeupOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t("create_makeup_session")}</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-4">
+            <p className="text-sm text-slate-500">{t("create_makeup_desc")}</p>
+            <Calendar mode="single" selected={makeupDate} onSelect={setMakeupDate} className="rounded-md border" />
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs">{t("start_time")}</Label>
+                <input
+                  type="time"
+                  value={makeupStart}
+                  onChange={(e) => setMakeupStart(e.target.value)}
+                  className="w-full h-9 rounded-md border px-2 text-sm"
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs">{t("end_time")}</Label>
+                <input
+                  type="time"
+                  value={makeupEnd}
+                  onChange={(e) => setMakeupEnd(e.target.value)}
+                  className="w-full h-9 rounded-md border px-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">{t("cancel_reason")}</Label>
+              <textarea
+                value={makeupReason}
+                onChange={(e) => setMakeupReason(e.target.value)}
+                rows={2}
+                className="w-full rounded-md border px-2 py-1 text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsMakeupOpen(false)} disabled={makeupMutation.isPending}>
+              {t("cancel")}
+            </Button>
+            <Button onClick={handleCreateMakeup} disabled={makeupMutation.isPending || !makeupDate}>
+              {makeupMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("create_makeup_session")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("restore_session")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("restore_confirm_desc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={restoreMutation.isPending}>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => restoreMutation.mutate({ id: basicSession.id })}
+              disabled={restoreMutation.isPending}
+            >
+              {restoreMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("restore_session")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
