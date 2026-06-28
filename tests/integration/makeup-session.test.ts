@@ -147,3 +147,50 @@ describe("DTO liên kết ca bù", () => {
     expect(makeup.originalInfo?.id).toBe(orig.id)
   })
 })
+
+describe("Loại ca cancelled khỏi doanh thu & học phí", () => {
+  let subjectId: number
+  let studentId: number
+  beforeAll(async () => {
+    await reset()
+    const caller = await getAuthedCaller()
+    const subject = await caller.subject.create({ name: "Toán", color: "#0891B2" })
+    subjectId = subject.id
+    const st = await caller.student.create({ fullName: "Bình", grade: 4 })
+    studentId = st.id
+    await db.student.update({ where: { id: studentId }, data: { tuitionFee: 200000 } })
+  })
+  beforeEach(async () => {
+    await db.sessionStudent.deleteMany()
+    await db.teachingSession.deleteMany()
+  })
+
+  it("✓ ca bù không làm tăng expectedRevenue (gốc hủy + bù = 1 ca tính tiền)", async () => {
+    const caller = await getAuthedCaller()
+    const orig = await caller.session.create({
+      sessionDate: "2026-09-07", startTime: "17:00", endTime: "18:30", subjectId, studentIds: [studentId],
+    })
+    const before = await caller.report.monthlySummary({ year: 2026, month: 9 })
+
+    await caller.session.createMakeup({
+      id: orig.id, sessionDate: "2026-09-09", startTime: "17:00", endTime: "18:30",
+    })
+    const after = await caller.report.monthlySummary({ year: 2026, month: 9 })
+
+    expect(after.expectedRevenue).toBe(before.expectedRevenue)
+    expect(after.totalSessions).toBe(before.totalSessions) // gốc bị loại, bù được tính → bằng nhau
+  }, 30_000)
+
+  it("✓ học phí tháng không tính ca cancelled", async () => {
+    const caller = await getAuthedCaller()
+    const orig = await caller.session.create({
+      sessionDate: "2026-10-05", startTime: "17:00", endTime: "18:30", subjectId, studentIds: [studentId],
+    })
+    await caller.session.createMakeup({
+      id: orig.id, sessionDate: "2026-10-07", startTime: "17:00", endTime: "18:30",
+    })
+    const tuition = await caller.tuition.getMonthlyStatus({ year: 2026, month: 10, page: 1, limit: 50, status: "all" })
+    const row = tuition.items.find((i) => i.studentId === studentId)!
+    expect(row.totalSessions).toBe(1) // chỉ ca bù
+  }, 30_000)
+})

@@ -136,7 +136,7 @@ export async function getMonthlyTuitionStatus(
     db.sessionStudent.findMany({
       where: {
         studentId: { in: studentIds },
-        session: { sessionDate: { gte: startDate, lt: endDate }, userId },
+        session: { sessionDate: { gte: startDate, lt: endDate }, userId, status: { not: "cancelled" } },
       },
       include: { session: true },
     }),
@@ -182,7 +182,7 @@ export async function getMonthlyTuitionStatus(
         by: ["studentId"],
         where: {
           studentId: { in: sIds },
-          session: { sessionDate: { lt: startDate }, userId },
+          session: { sessionDate: { lt: startDate }, userId, status: { not: "cancelled" } },
           attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] },
         },
         _sum: { fee: true },
