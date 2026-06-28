@@ -32,6 +32,7 @@ import {
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { TimeInput } from "@/components/ui/time-input"
 import {
   Popover,
   PopoverContent,
@@ -468,21 +469,11 @@ export function SessionDetailDialog({
             <div className="flex gap-3">
               <div className="flex-1 space-y-1">
                 <Label className="text-xs">{t("start_time")}</Label>
-                <input
-                  type="time"
-                  value={makeupStart}
-                  onChange={(e) => setMakeupStart(e.target.value)}
-                  className="w-full h-9 rounded-md border px-2 text-sm"
-                />
+                <TimeInput value={makeupStart} onValueChange={setMakeupStart} />
               </div>
               <div className="flex-1 space-y-1">
                 <Label className="text-xs">{t("end_time")}</Label>
-                <input
-                  type="time"
-                  value={makeupEnd}
-                  onChange={(e) => setMakeupEnd(e.target.value)}
-                  className="w-full h-9 rounded-md border px-2 text-sm"
-                />
+                <TimeInput value={makeupEnd} onValueChange={setMakeupEnd} />
               </div>
             </div>
             <div className="space-y-1">
