@@ -21,6 +21,7 @@ import {
   createMakeupSession,
   createSession,
   deleteSession,
+  restoreSession,
   duplicateSession,
   getMonthSessions,
   getSessionDetail,
@@ -76,6 +77,10 @@ export const sessionRouter = createTRPCRouter({
     .mutation(({ ctx, input }) =>
       createMakeupSession(ctx.db, ctx.userId, input.id, input)
     ),
+
+  restore: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(({ ctx, input }) => restoreSession(ctx.db, ctx.userId, input.id)),
 
   bulkCreate: protectedProcedure
     .input(sessionBulkCreateSchema)

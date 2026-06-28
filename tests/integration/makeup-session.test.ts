@@ -194,3 +194,48 @@ describe("Loại ca cancelled khỏi doanh thu & học phí", () => {
     expect(row.totalSessions).toBe(1) // chỉ ca bù
   }, 30_000)
 })
+
+describe("restore (khôi phục ca hủy)", () => {
+  let subjectId: number
+  beforeAll(async () => {
+    await reset()
+    const caller = await getAuthedCaller()
+    const subject = await caller.subject.create({ name: "Toán", color: "#0891B2" })
+    subjectId = subject.id
+  })
+  beforeEach(async () => {
+    await db.sessionStudent.deleteMany()
+    await db.teachingSession.deleteMany()
+  })
+
+  it("✓ khôi phục: xóa ca bù, ca gốc về scheduled", async () => {
+    const caller = await getAuthedCaller()
+    const orig = await caller.session.create({
+      sessionDate: "2026-11-02", startTime: "17:00", endTime: "18:30", subjectId,
+    })
+    const { makeup } = await caller.session.createMakeup({
+      id: orig.id, sessionDate: "2026-11-04", startTime: "17:00", endTime: "18:30",
+    })
+
+    const restored = await caller.session.restore({ id: orig.id })
+    expect(restored.status).toBe("scheduled")
+
+    const makeupGone = await db.teachingSession.findUnique({ where: { id: makeup.id } })
+    expect(makeupGone).toBeNull()
+  })
+
+  it("✗ khôi phục khi slot gốc đã bị chiếm → CONFLICT", async () => {
+    const caller = await getAuthedCaller()
+    const orig = await caller.session.create({
+      sessionDate: "2026-11-09", startTime: "17:00", endTime: "18:30", subjectId,
+    })
+    await caller.session.createMakeup({
+      id: orig.id, sessionDate: "2026-11-11", startTime: "17:00", endTime: "18:30",
+    })
+    // chiếm lại slot gốc
+    await caller.session.create({
+      sessionDate: "2026-11-09", startTime: "17:00", endTime: "18:30", subjectId, title: "Lớp mới",
+    })
+    await expect(caller.session.restore({ id: orig.id })).rejects.toMatchObject({ code: "CONFLICT" })
+  })
+})
