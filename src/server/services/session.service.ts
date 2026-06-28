@@ -42,6 +42,7 @@ export async function checkOverlap(
     FROM teaching_sessions
     WHERE user_id      = ${userId}
       AND session_date = ${sessionDate}::date
+      AND status      != 'cancelled'
       AND id          != ${excludeId ?? 0}
       AND start_time   < ${endTime}::time
       AND end_time     > ${startTime}::time
