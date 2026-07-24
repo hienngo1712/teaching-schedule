@@ -47,3 +47,9 @@ prisma/generated/
 .claude/
 .stitch/
 .aider*
+
+# IDE
+.idea/
+
+# test artifacts
+test-results/
