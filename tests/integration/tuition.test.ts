@@ -126,8 +126,11 @@ describe("Tuition Management", () => {
     const updatedStatus = await caller.tuition.getMonthlyStatus({ year: 2026, month: 5 })
     expect(updatedStatus.items[0].paidAmount).toBe(200000)
     expect(updatedStatus.items[0].isFullPaid).toBe(true)
-    expect(updatedStatus.items[0].notes).toBe("Đã đóng đủ")
-  })
+    // Sửa số tiền đã ghi nhận → service ghi thêm dòng vết vào notes (có chủ đích),
+    // nên ghi chú của user là PHẦN ĐẦU chứ không còn là toàn bộ chuỗi.
+    expect(updatedStatus.items[0].notes).toContain("Đã đóng đủ")
+    expect(updatedStatus.items[0].notes).toContain("Sửa số tiền đã đóng: 150.000 đ → 200.000 đ")
+  }, 30_000)
 
   it("✗ updatePayment student của user khác → NOT_FOUND", async () => {
     const callerA = await getAuthedCaller("teacher")

@@ -1,5 +1,6 @@
 import type { PrismaClient, MonthlyTuition, SessionStudent } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
+import { buildPaymentAuditNote } from "@/lib/payment-notes"
 import { assertOwnership } from "./_base.service"
 import type { MonthlyTuitionFilterInput, UpdatePaymentInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
@@ -318,6 +319,11 @@ export async function updateTuitionPayment(
   const student = await db.student.findUnique({ where: { id: studentId } })
   await assertOwnership(student, userId)
 
+  // Snapshot TRƯỚC khi ghi đè — dùng để so sánh và ghi vết lần sửa/hủy.
+  const existing = await db.monthlyTuition.findUnique({
+    where: { studentId_year_month: { studentId, year, month } },
+  })
+
   // Ensure the month's snapshot exists with correct computed fields
   // (previousBalance carry-over, currentMonthFee, totalAmountDue) BEFORE
   // recording payment. Otherwise paying for a not-yet-viewed month would
@@ -332,6 +338,15 @@ export async function updateTuitionPayment(
     limit: 1,
   })
 
+  const finalNotes = buildPaymentAuditNote({
+    notes: notes ?? existing?.notes ?? "",
+    prevPaidAmount: existing?.paidAmount ?? 0,
+    nextPaidAmount: paidAmount,
+    prevIsFullPaid: existing?.isFullPaid ?? false,
+    nextIsFullPaid: isFullPaid,
+    now: new Date(),
+  })
+
   return await db.monthlyTuition.upsert({
     where: {
       studentId_year_month: {
@@ -343,7 +358,7 @@ export async function updateTuitionPayment(
     update: {
       paidAmount,
       isFullPaid,
-      notes,
+      notes: finalNotes,
     },
     create: {
       studentId,
@@ -351,7 +366,7 @@ export async function updateTuitionPayment(
       month,
       paidAmount,
       isFullPaid,
-      notes,
+      notes: finalNotes,
     },
   })
 }
