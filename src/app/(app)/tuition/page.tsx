@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight, Search, Wallet, CheckCircle2, AlertCircle, Clock, CircleDollarSign } from "lucide-react"
+import { ChevronLeft, ChevronRight, Search, Wallet, CheckCircle2, AlertCircle, Clock, CircleDollarSign, BadgeCheck } from "lucide-react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
@@ -42,6 +42,16 @@ function getStatusBadge(item: TuitionStatusItem, t: ReturnType<typeof useTransla
     return (
       <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">
         <CircleDollarSign className="size-3 mr-1" /> {t("overpaid")}
+      </Badge>
+    )
+  }
+
+  // Tất toán nhưng số tiền thực đóng chưa đủ → là MIỄN/GIẢM, không phải "đóng đủ".
+  // Hiển thị riêng để danh sách không nói dối khi GV lỡ tick rồi sửa tiền xuống.
+  if (item.isFullPaid && item.paidAmount < adjustedAmount) {
+    return (
+      <Badge className="bg-teal-100 text-teal-700 hover:bg-teal-100 border-none">
+        <BadgeCheck className="size-3 mr-1" /> {t("settled_waived")}
       </Badge>
     )
   }
