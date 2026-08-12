@@ -181,10 +181,9 @@ export default function ReportsPage() {
             </Card>
           </div>
         ) : (
-          <StudentReport 
-            studentId={selectedStudentId} 
-            year={year} 
-            month={month} 
+          <StudentReport
+            studentId={selectedStudentId}
+            {...queryParams}
           />
         )}
     </div>

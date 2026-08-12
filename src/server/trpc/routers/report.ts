@@ -12,6 +12,8 @@ export const reportRouter = createTRPCRouter({
       studentId: z.number().int().positive(),
       year: z.number().int(),
       month: z.number().int().min(1).max(12),
+      toYear: z.number().int().optional(),
+      toMonth: z.number().int().min(1).max(12).optional(),
     }))
     .query(({ ctx, input }) => getStudentReport(ctx.db, ctx.userId, input)),
 
