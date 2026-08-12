@@ -12,18 +12,27 @@ export async function getStudentReport(
     studentId: number
     year: number
     month: number
+    toYear?: number
+    toMonth?: number
   }
 ) {
-  const { studentId, year, month } = params
+  const { studentId, year, month, toYear, toMonth } = params
 
   // Verify student ownership
   const student = await db.student.findUnique({ where: { id: studentId } })
   assertOwnership(student, userId)
 
+  // Như getMonthlySummary: cho phép truyền toMonth mà không kèm toYear (và
+  // ngược lại). getMonthSessions chỉ mở rộng khoảng khi có ĐỦ cả hai mốc, nên
+  // điền nốt mốc còn thiếu từ kỳ bắt đầu.
+  const hasRange = toYear !== undefined || toMonth !== undefined
+
   // Fetch sessions for this student in the period
   const sessions = await getMonthSessions(db, userId, {
     year,
     month,
+    toYear: hasRange ? (toYear ?? year) : undefined,
+    toMonth: hasRange ? (toMonth ?? month) : undefined,
     studentId,
     includeStudents: true,
   })

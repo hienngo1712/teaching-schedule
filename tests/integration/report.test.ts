@@ -136,6 +136,40 @@ describe("Report Router", () => {
     expect(report.summary.expectedRevenue).toBe(100000)
   }, 15000)
 
+  it("report.student → lọc khoảng tháng 5→7 gộp đủ buổi & tiền cả 3 tháng", async () => {
+    const studentRange = await caller.student.create({
+      fullName: "HS Khoảng Thời Gian",
+      grade: 8,
+      tuitionFee: 70000,
+    })
+
+    for (const date of ["2026-05-20", "2026-06-20", "2026-07-20"]) {
+      const sess = await caller.session.create({
+        sessionDate: date,
+        startTime: "16:00",
+        endTime: "17:30",
+        subjectId: subject.id,
+        studentIds: [studentRange.id],
+      })
+      await caller.attendance.update({
+        sessionId: sess.id,
+        attendances: [{ studentId: studentRange.id, attendance: "present" }],
+      })
+    }
+
+    const report = await caller.report.student({
+      studentId: studentRange.id,
+      year: 2026,
+      month: 5,
+      toYear: 2026,
+      toMonth: 7,
+    })
+
+    expect(report.summary.total).toBe(3)
+    expect(report.summary.expectedRevenue).toBe(210000)
+    expect(report.summary.totalRevenue).toBe(210000)
+  }, 20000)
+
   it("report.monthlySummary → expectedRevenue >= totalRevenue khi có học sinh vắng", async () => {
     const summary = await caller.report.monthlySummary({
       year: 2026,
