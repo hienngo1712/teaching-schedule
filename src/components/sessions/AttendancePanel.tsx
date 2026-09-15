@@ -7,13 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -24,7 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { trpc } from "@/lib/trpc"
-import { ATTENDANCE_LABEL, ATTENDANCE_STATUS } from "@/lib/constants"
+import { ATTENDANCE_LABEL } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import { setAllAttendance } from "@/lib/attendance-state"
 import type { AttendanceStatus } from "@/lib/schemas/attendance"
@@ -96,10 +89,14 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
     },
   })
 
-  const handleUpdateStatus = (studentId: number, status: AttendanceStatus) => {
+  // Bấm lại đúng trạng thái đang chọn -> trả về "chưa điểm danh" (để undo khi bấm nhầm).
+  const handleToggleStatus = (studentId: number, status: AttendanceStatus) => {
     setAttendances((prev) => ({
       ...prev,
-      [studentId]: { ...prev[studentId], attendance: status },
+      [studentId]: {
+        ...prev[studentId],
+        attendance: prev[studentId].attendance === status ? "pending" : status,
+      },
     }))
   }
 
@@ -152,9 +149,9 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
             <thead className="bg-slate-50 text-slate-500 text-xs border-b">
               <tr>
                 <th className="px-3 py-2 font-medium">{t("student")}</th>
-                <th className="px-3 py-2 font-medium w-[160px]">{t("attendance_col")}</th>
                 <th className="px-3 py-2 font-medium w-[120px]">{t("tuition_col")}</th>
                 <th className="px-3 py-2 font-medium">{t("notes")}</th>
+                <th className="px-3 py-2 font-medium w-[86px]">{t("attendance_col")}</th>
                 <th className="px-3 py-2 font-medium w-[40px]"><span className="sr-only">{t("remove_from_session")}</span></th>
               </tr>
             </thead>
@@ -170,33 +167,6 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
                       <div className="text-xs text-slate-500">{t("grade")} {student.grade}</div>
                     </td>
                     <td className="px-3 py-2">
-                      <Select
-                        value={state.attendance}
-                        onValueChange={(val) =>
-                          handleUpdateStatus(student.studentId, val as AttendanceStatus)
-                        }
-                      >
-                        <SelectTrigger
-                          className={cn(
-                            "w-full h-8 text-xs font-medium",
-                            state.attendance === "present" && "bg-green-50 text-green-700 border-green-200",
-                            state.attendance === "absent" && "bg-red-50 text-red-700 border-red-200",
-                            state.attendance === "late" && "bg-amber-50 text-amber-700 border-amber-200",
-                            state.attendance === "pending" && "bg-slate-50 text-slate-600 border-slate-200"
-                          )}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(ATTENDANCE_STATUS).map(([, value]) => (
-                            <SelectItem key={value} value={value}>
-                              {ATTENDANCE_LABEL[value]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="px-3 py-2">
                       <CurrencyInput
                         value={state.fee}
                         onChange={(val) => handleUpdateFee(student.studentId, val || 0)}
@@ -210,6 +180,40 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
                         onChange={(e) => handleUpdateNote(student.studentId, e.target.value)}
                         className="w-full h-8 text-xs"
                       />
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          aria-pressed={state.attendance === "present"}
+                          aria-label={ATTENDANCE_LABEL.present}
+                          title={ATTENDANCE_LABEL.present}
+                          onClick={() => handleToggleStatus(student.studentId, "present")}
+                          className={cn(
+                            "inline-flex size-8 items-center justify-center rounded-md border transition-colors",
+                            state.attendance === "present"
+                              ? "bg-green-600 border-green-600 text-white"
+                              : "border-slate-200 text-slate-400 hover:text-slate-600"
+                          )}
+                        >
+                          <Check className="size-4" strokeWidth={3} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={state.attendance === "absent"}
+                          aria-label={ATTENDANCE_LABEL.absent}
+                          title={ATTENDANCE_LABEL.absent}
+                          onClick={() => handleToggleStatus(student.studentId, "absent")}
+                          className={cn(
+                            "inline-flex size-8 items-center justify-center rounded-md border transition-colors",
+                            state.attendance === "absent"
+                              ? "bg-red-600 border-red-600 text-white"
+                              : "border-slate-200 text-slate-400 hover:text-slate-600"
+                          )}
+                        >
+                          <X className="size-4" strokeWidth={3} />
+                        </button>
+                      </div>
                     </td>
                     <td className="px-3 py-2 text-right">
                       <Button
