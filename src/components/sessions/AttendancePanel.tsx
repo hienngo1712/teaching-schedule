@@ -192,7 +192,7 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
                           className={cn(
                             "inline-flex size-8 items-center justify-center rounded-md border transition-colors",
                             state.attendance === "present"
-                              ? "bg-green-600 border-green-600 text-white"
+                              ? "bg-green-50 border-green-500 text-green-600"
                               : "border-slate-200 text-slate-400 hover:text-slate-600"
                           )}
                         >
@@ -207,7 +207,7 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
                           className={cn(
                             "inline-flex size-8 items-center justify-center rounded-md border transition-colors",
                             state.attendance === "absent"
-                              ? "bg-red-600 border-red-600 text-white"
+                              ? "bg-red-50 border-red-500 text-red-600"
                               : "border-slate-200 text-slate-400 hover:text-slate-600"
                           )}
                         >
