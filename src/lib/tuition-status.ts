@@ -46,3 +46,34 @@ export function getTuitionBadgeStatus(item: TuitionStatusInput): TuitionBadgeSta
   if (adjustedAmount > 0) return "unpaid"
   return "no_sessions"
 }
+
+export type TuitionStatusFilter =
+  | "all" | "fully_paid" | "paid_this_month" | "partial" | "unpaid"
+
+/**
+ * Ánh xạ lựa chọn trong dropdown "Trạng thái" sang trạng thái badge. Suy ra từ
+ * getTuitionBadgeStatus thay vì chép lại điều kiện — trước đây bản ở server xếp
+ * HS trả dư vào 'fully_paid' trong khi badge hiện "Trả dư", nên chọn "Đóng đủ"
+ * lại ra những dòng ghi là "Trả dư".
+ *
+ * 'fully_paid' CỐ Ý gộp cả trả dư và miễn/giảm: với giáo viên thì cả ba đều là
+ * "tháng này xong rồi".
+ */
+export function matchesTuitionStatusFilter(
+  item: TuitionStatusInput,
+  filter: TuitionStatusFilter | undefined
+): boolean {
+  if (!filter || filter === "all") return true
+
+  const status = getTuitionBadgeStatus(item)
+  switch (filter) {
+    case "fully_paid":
+      return status === "fully_paid" || status === "overpaid" || status === "settled_waived"
+    case "paid_this_month":
+      return status === "paid_this_month"
+    case "partial":
+      return status === "partial"
+    case "unpaid":
+      return status === "unpaid"
+  }
+}

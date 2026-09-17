@@ -1,6 +1,7 @@
 import type { PrismaClient, MonthlyTuition, SessionStudent } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { buildPaymentAuditNote } from "@/lib/payment-notes"
+import { matchesTuitionStatusFilter } from "@/lib/tuition-status"
 import { assertOwnership } from "./_base.service"
 import type { MonthlyTuitionFilterInput, UpdatePaymentInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
@@ -249,38 +250,12 @@ export async function getMonthlyTuitionStatus(
     )
   }
 
-  // 7. Lọc theo status
-  let filteredResults = results
-  if (status && status !== "all") {
-    filteredResults = results.filter(item => {
-      const adjustedAmount = Math.max(0, item.totalAmountDue)
-      // isFullPaid = đã tất toán → luôn xếp nhóm 'fully_paid', loại khỏi mọi nhóm
-      // còn-nợ (paid_this_month/partial/unpaid), khớp badge client.
-      switch (status) {
-        case "fully_paid":
-          return item.isFullPaid || (item.paidAmount >= adjustedAmount && adjustedAmount > 0)
-        case "paid_this_month":
-          return !item.isFullPaid && item.paidAmount >= item.totalExpected && item.totalExpected > 0 && item.previousBalance > 0 && item.paidAmount < adjustedAmount
-        case "partial": {
-          // Mirror đúng chuỗi badge phía client: 'partial' = đã trả > 0 nhưng CHƯA
-          // đủ tổng nợ thực tế (adjustedAmount) và KHÔNG thuộc nhóm 'đóng đủ tháng
-          // này'. Dùng adjustedAmount (gồm nợ cũ/credit), không dùng totalExpected,
-          // để khớp với badge — tránh HS có credit/trả dư bị xếp nhầm là 'partial'.
-          if (item.isFullPaid) return false
-          const isFullyPaidOrOver = item.paidAmount >= adjustedAmount && adjustedAmount > 0
-          const isPaidThisMonth =
-            item.paidAmount >= item.totalExpected &&
-            item.totalExpected > 0 &&
-            item.previousBalance > 0
-          return item.paidAmount > 0 && !isFullyPaidOrOver && !isPaidThisMonth
-        }
-        case "unpaid":
-          return !item.isFullPaid && item.paidAmount === 0 && adjustedAmount > 0
-        default:
-          return true
-      }
-    })
-  }
+  // 7. Lọc theo status — dùng CHUNG helper với badge phía client để hai bên
+  // không thể lệch nhau (xem lib/tuition-status).
+  const filteredResults =
+    status && status !== "all"
+      ? results.filter(item => matchesTuitionStatusFilter(item, status))
+      : results
 
   // 8. Phân trang
   const totalCount = filteredResults.length
