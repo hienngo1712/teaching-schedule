@@ -295,7 +295,9 @@ export default function TuitionPage() {
         open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
         data={selectedStudent}
-        onSuccess={() => query.refetch()}
+        // TRPCProvider đã invalidate toàn bộ query sau mọi mutation
+        // (MutationCache.onSuccess), không cần refetch thủ công ở đây.
+        onSuccess={() => {}}
       />
     </div>
   )

@@ -314,7 +314,7 @@ export async function updateTuitionPayment(
   const { studentId, year, month, paidAmount, isFullPaid, notes } = input
 
   const student = await db.student.findUnique({ where: { id: studentId } })
-  await assertOwnership(student, userId)
+  assertOwnership(student, userId)
 
   // Snapshot TRƯỚC khi ghi đè — dùng để so sánh và ghi vết lần sửa/hủy.
   const existing = await db.monthlyTuition.findUnique({

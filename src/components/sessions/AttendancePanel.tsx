@@ -48,14 +48,10 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
     fullName: string
   } | null>(null)
 
-  const utils = trpc.useUtils()
-
   const removeStudentMutation = trpc.session.removeStudent.useMutation({
     onSuccess: () => {
       toast.success(t("remove_student_success"))
       setStudentToRemove(null)
-      // Refetch danh sách điểm danh để HS vừa gỡ biến mất ngay (tránh stale).
-      utils.attendance.get.invalidate({ sessionId })
       onSaveSuccess?.()
     },
     onError: (err) => {
