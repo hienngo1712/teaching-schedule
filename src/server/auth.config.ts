@@ -31,7 +31,9 @@ export const authConfig = {
   providers: [],
   callbacks: {
     authorized({ auth }) {
-      return !!auth
+      // Phải kiểm tới `user`: khi cấu hình lỗi, `auth` là object chứa error nên
+      // vẫn truthy (GHSA-8fpg-xm3f-6cx3) → `!!auth` sẽ cho qua.
+      return !!auth?.user
     },
     async jwt({ token, user }) {
       const t = token as typeof token & AppJWT

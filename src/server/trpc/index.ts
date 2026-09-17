@@ -55,7 +55,9 @@ const loggerMiddleware = t.middleware(async ({ path, type, next }) => {
   const start = Date.now()
   const result = await next()
   const durationMs = Date.now() - start
-  console.log(`[tRPC] ${type} ${path} - ${durationMs}ms`)
+  if (durationMs > 100) { // Cùng ngưỡng với các log khác, tránh 1 dòng/request
+    console.log(`[tRPC] ${type} ${path} - ${durationMs}ms`)
+  }
   return result
 })
 
