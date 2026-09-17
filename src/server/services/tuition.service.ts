@@ -9,7 +9,6 @@ import type { TuitionStatusDTO } from "@/lib/types/models"
 type AttendanceRecord = SessionStudent & { session: { sessionDate: Date } }
 
 function calcStudentTuition(
-  studentId: number,
   attendance: AttendanceRecord[],
   snapshot: MonthlyTuition | undefined,
   prevSnapshot: MonthlyTuition | undefined,
@@ -201,7 +200,7 @@ export async function getMonthlyTuitionStatus(
     const snapshot = snapshotMap.get(student.id)
     const prevSnapshot = prevSnapshotMap.get(student.id)
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
-      calcStudentTuition(student.id, attendance, snapshot, prevSnapshot, historicalBalances[student.id] ?? 0)
+      calcStudentTuition(attendance, snapshot, prevSnapshot, historicalBalances[student.id] ?? 0)
 
     return {
       studentId: student.id,
@@ -381,7 +380,7 @@ export async function getMonthlyOutstanding(
   db: PrismaClient,
   userId: number,
   params: { year: number; month: number; grade?: number }
-): Promise<{ totalOutstanding: number; totalDue: number; totalPaid: number; studentCount: number }> {
+): Promise<{ totalOutstanding: number }> {
   // R4 (CHỦ ĐÍCH, đừng "sửa" thành grade-aware từng tháng): "Còn nợ" là TỔNG nợ
   // lũy kế của HS đang thuộc khối lọc tại tháng cuối kỳ. Nợ là số dư chạy xuyên
   // nhiều tháng/khối, không tách sạch theo khối được — tách ra sẽ GIẤU nợ thật,
@@ -402,14 +401,10 @@ export async function getMonthlyOutstanding(
   )
 
   let totalOutstanding = 0
-  let totalDue = 0
-  let totalPaid = 0
   for (const it of items) {
-    totalDue += Math.max(0, it.totalAmountDue)
-    totalPaid += it.paidAmount
     // isFullPaid = tất toán tháng cuối kỳ → không còn nợ dương (khớp carry-over)
     totalOutstanding += it.isFullPaid ? 0 : Math.max(0, it.totalAmountDue - it.paidAmount)
   }
 
-  return { totalOutstanding, totalDue, totalPaid, studentCount: items.length }
+  return { totalOutstanding }
 }
