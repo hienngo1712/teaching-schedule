@@ -49,9 +49,7 @@ export default function ReportsPage() {
   const { data: studentListData } = trpc.student.list.useQuery({
     grade: gradeFilter || undefined,
     limit: 1000, // For reports we want more students
-    // Gồm cả HS đã nghỉ / đã lên cấp 3: báo cáo là để xem LẠI kỳ đã qua, và
-    // monthlySummary.totalStudents cũng đếm những HS đó — nếu dropdown chỉ liệt kê
-    // HS đang học thì số tổng và danh sách không khớp nhau.
+    // Gồm cả HS đã nghỉ để khớp với monthlySummary.totalStudents.
     includeInactive: true,
   })
 

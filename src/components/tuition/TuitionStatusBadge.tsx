@@ -5,11 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { getTuitionBadgeStatus, type TuitionStatusInput } from "@/lib/tuition-status"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
-/**
- * Badge trạng thái học phí dùng CHUNG cho trang Học phí và thẻ tóm tắt trong
- * Báo cáo. Gộp về một chỗ để hai màn không thể trôi khỏi nhau nữa —
- * xem ghi chú ở lib/tuition-status.
- */
+// Badge dùng chung cho trang Học phí và thẻ tóm tắt ở Báo cáo.
 export function TuitionStatusBadge({ item }: { item: TuitionStatusInput }) {
   const { t } = useTranslation()
 

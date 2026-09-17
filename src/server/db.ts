@@ -23,9 +23,7 @@ function createPrismaClient(): PrismaClient {
   }) as unknown as PrismaClient
 }
 
-// $extends CHỈ áp một lần lúc tạo. Trước đây nó được gọi lại trên chính instance
-// đã cache ở global, nên mỗi lần HMR lại bọc thêm một lớp middleware và log
-// slow-query bị nhân lên.
+// $extends chỉ áp một lần lúc tạo, tránh bọc chồng lớp qua mỗi lần HMR.
 export const db = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db

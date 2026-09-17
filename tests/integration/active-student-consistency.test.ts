@@ -34,9 +34,8 @@ describe("Active/inactive student consistency", () => {
     // them — matching revenue, which is session-snapshot based.
     expect(summary.totalStudents).toBe(1)
 
-    // Same invariant seen through the grade filter (the surface the reports page
-    // actually uses): the graduated student still counts under the grade they
-    // attended as.
+    // Same invariant via the grade filter: graduated student still counts under
+    // the grade they attended as.
     const grade9 = await caller.report.monthlySummary({ year: 2026, month: 5, grade: 9 })
     expect(grade9.totalStudents).toBe(1)
   }, 30_000)

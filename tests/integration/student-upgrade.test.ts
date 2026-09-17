@@ -391,9 +391,7 @@ describe("Historical grade filtering after upgrade", () => {
 
     await caller.student.upgradeAllClasses()
 
-    // Buổi đã tạo phải ở lại khối 3 (grade snapshot lúc tạo), KHÔNG nhảy sang
-    // khối 4 sau khi nâng lớp. Kiểm qua bộ lọc grade — đúng surface mà trang
-    // Báo cáo gọi.
+    // Buổi đã tạo ở lại khối 3 (grade snapshot), không nhảy sang khối 4.
     const grade3 = await caller.report.monthlySummary({ year: 2099, month: 4, grade: 3 })
     const grade4 = await caller.report.monthlySummary({ year: 2099, month: 4, grade: 4 })
     expect(grade3.totalSessions).toBeGreaterThanOrEqual(1)

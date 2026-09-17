@@ -63,10 +63,7 @@ export function formatToday(): string {
   return `${day}/${month}/${d.getFullYear()}`
 }
 
-// Ngày "hôm nay" theo lịch VN (UTC+7), tách thành year/month/day.
-// Dùng cho code CHẠY TRÊN SERVER: Vercel chạy UTC nên giờ local của process từ
-// 00:00–07:00 giờ VN vẫn đang ở ngày hôm trước — lấy thẳng getDate() sẽ ra sai
-// ngày với giáo viên. Cùng quy ước với formatVnDate trong lib/payment-notes.
+// Ngày hôm nay theo lịch VN (UTC+7) — server chạy UTC nên getDate() lệch ngày.
 export function vnDateParts(now: Date = new Date()): {
   year: number
   month: number

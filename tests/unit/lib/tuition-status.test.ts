@@ -35,9 +35,7 @@ describe("getTuitionBadgeStatus", () => {
     ).toBe("partial")
   })
 
-  // Đây là nhánh mà bản chép ở StudentScheduleView bị THIẾU: HS đã trả đủ tổng nợ
-  // nhưng GV chưa tick "tất toán" → trang Học phí hiện "Đóng đủ", màn Báo cáo
-  // trước đây lại hiện "Đóng một phần".
+  // Nhánh mà bản chép ở StudentScheduleView từng thiếu.
   it("trả đủ tổng nợ nhưng CHƯA tick tất toán → vẫn là fully_paid", () => {
     expect(
       getTuitionBadgeStatus(

@@ -10,15 +10,8 @@ async function cleanup() {
   await db.student.deleteMany()
 }
 
-/**
- * Snapshot của tháng QUÁ KHỨ phải được ghi lại khi dữ liệu nguồn đổi.
- *
- * Trước đây `needsUpsert` chỉ đúng cho tháng hiện tại, nên sửa điểm danh / xóa
- * buổi ở tháng trước thì:
- *   - Màn học phí của CHÍNH tháng đó vẫn hiện đúng (số tính lại trong bộ nhớ), nhưng
- *   - row MonthlyTuition của tháng đó đông cứng ở giá trị cũ, mà carry-over của
- *     tháng KẾ TIẾP lại đọc chính row đó → nợ mang sang bị sai.
- */
+// Snapshot tháng quá khứ phải được ghi lại khi dữ liệu nguồn đổi,
+// vì carry-over của tháng kế tiếp đọc chính row đó.
 describe("Tuition — snapshot tháng quá khứ tự đồng bộ lại", () => {
   beforeEach(async () => {
     await cleanup()

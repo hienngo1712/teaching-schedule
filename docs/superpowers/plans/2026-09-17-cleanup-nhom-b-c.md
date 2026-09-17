@@ -21,6 +21,7 @@
 - **CẢNH BÁO:** integration test dùng CHUNG một database test và `tests/setup.ts` xóa sạch bảng trong `beforeAll`. **Không bao giờ chạy hai tiến trình vitest cùng lúc** — sẽ ra lỗi FK `P2003` giả. Chạy tuần tự.
 - Integration test có nhiều round-trip tới DB remote → truyền timeout cho `it(...)`, ví dụ `}, 60000)`. (Task 1 nâng trần chung lên 60s; các task sau Task 1 vẫn có thể ghi rõ cho dễ đọc.)
 - Nhánh làm việc: tạo nhánh mới từ `main`, KHÔNG commit thẳng lên `main`.
+- **Comment ngắn gọn.** Tối đa 1–2 dòng, chỉ giải thích *tại sao* khi không hiển nhiên. Không viết lại lịch sử bug, không JSDoc dài cho hàm nội bộ. Chỗ nào code tự nói được thì không comment.
 
 ---
 
@@ -87,7 +88,7 @@ Nhóm A (8 lỗi logic) đã được sửa ở nhánh `fix/group-a-logic-bugs`.
 
 ---
 
-### Task 1: Sửa cấu hình vitest — JSX + timeout
+### ✅ Task 1: Sửa cấu hình vitest — JSX + timeout
 
 **Files:**
 - Modify: `vitest.config.ts`
@@ -110,23 +111,22 @@ invalid JS syntax. If you use tsconfig.json, make sure to not set jsx to preserv
 File: src/components/providers/LanguageProvider.tsx
 ```
 
-- [ ] **Step 1: Chạy test để xác nhận nó đang hỏng**
+- [x] **Step 1: Chạy test để xác nhận nó đang hỏng**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/unit/hooks/useCalendar.test.ts`
 
 Expected: FAIL — `Test Files 1 failed`, `(0 test)`, thông báo "invalid JS syntax".
 
-- [ ] **Step 2: Thêm cấu hình JSX vào vitest.config.ts**
+- [x] **Step 2: Thêm cấu hình JSX vào vitest.config.ts**
 
-Thêm khối `esbuild` ở cấp cao nhất của `defineConfig` (ngang hàng với `test` và `resolve`):
+Thêm khối `oxc` ở cấp cao nhất của `defineConfig` (ngang hàng với `test` và `resolve`):
 
 ```ts
 export default defineConfig({
-  // Vitest dùng esbuild, mà tsconfig đặt jsx:"preserve" cho Next.js nên esbuild
-  // không parse được .tsx. Ghi đè ở đây để test import được component/provider
-  // (vd: useCalendar.ts import LanguageProvider.tsx).
-  esbuild: {
-    jsx: "automatic",
+  // tsconfig để jsx:"preserve" cho Next nên Vite không parse được .tsx.
+  // Vite 8 dùng oxc, không phải esbuild — đặt vào `esbuild` sẽ bị bỏ qua.
+  oxc: {
+    jsx: { runtime: "automatic" },
   },
   test: {
     // ... giữ nguyên toàn bộ cấu hình hiện có
@@ -137,62 +137,59 @@ export default defineConfig({
 })
 ```
 
-- [ ] **Step 3: Đổi environment sang jsdom cho nhánh unit**
+- [x] **Step 3: Giữ nguyên `environment: "node"`**
 
-`environment: "node"` hiện tại khiến `LanguageProvider` chạm `localStorage`/`document` sẽ nổ. Thêm `environmentMatchGlobs` vào trong khối `test`, ngay dưới dòng `environment: "node"`:
+KHÔNG thêm `environmentMatchGlobs` — nó đã bị gỡ khỏi type `InlineConfig` của
+vitest 4 (`tsc` sẽ đỏ: *'environmentMatchGlobs' does not exist*). Cũng không cần:
+các test unit hiện tại chỉ import hàm thuần từ module `.tsx`, không render
+component nên không đụng `document`/`localStorage`.
+
+Nếu về sau có test thực sự cần DOM, thêm dòng này ở **đầu chính file test đó**:
 
 ```ts
-    environment: "node",
-    // Test unit chạm tới component/hook React cần DOM; integration vẫn dùng node
-    // cho nhẹ và nhanh.
-    environmentMatchGlobs: [
-      ["tests/unit/**", "jsdom"],
-    ],
+// @vitest-environment jsdom
 ```
 
-- [ ] **Step 4: Chạy lại để xác nhận file test đã chạy**
+- [x] **Step 4: Chạy lại để xác nhận file test đã chạy**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/unit/hooks/useCalendar.test.ts`
 
 Expected: PASS, và số test **lớn hơn 0** (file này có sẵn các case về lưới lịch tháng 4/2026, tháng 2/2026).
 
-- [ ] **Step 5: Xác nhận lỗi timeout C1b tái hiện được**
+- [x] **Step 5: Xác nhận lỗi timeout C1b tái hiện được**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/integration/student-delete-schedule-sync.test.ts`
 
 Expected: FAIL — khoảng `4 failed | 2 passed`, mọi lỗi đều là `Test timed out in 5000ms`, **không có assertion nào sai**. Nếu thấy assertion sai (số liệu lệch) thì đó là lỗi khác — DỪNG và báo lại, đừng nới timeout để giấu nó.
 
-- [ ] **Step 6: Nâng `testTimeout` lên mức hợp với DB remote**
+- [x] **Step 6: Nâng `testTimeout` lên mức hợp với DB remote**
 
 Thêm vào trong khối `test` của `vitest.config.ts`, ngay dưới `environmentMatchGlobs`:
 
 ```ts
-    // DB test là Neon remote: một test integration có hàng chục round-trip nên
-    // 5s mặc định không đủ và gây đỏ chập chờn (vd
-    // student-delete-schedule-sync.test.ts). Nâng trần chung thay vì rải
-    // `}, 60000)` ở từng test.
+    // DB test là Neon remote nên 5s mặc định gây đỏ chập chờn.
     testTimeout: 60000,
     hookTimeout: 60000,
 ```
 
-- [ ] **Step 7: Chạy lại file integration đó để xác nhận xanh**
+- [x] **Step 7: Chạy lại file integration đó để xác nhận xanh**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/integration/student-delete-schedule-sync.test.ts`
 
 Expected: PASS cả 6 test.
 
-- [ ] **Step 8: Chạy toàn bộ unit để chắc jsdom không phá test cũ**
+- [x] **Step 8: Chạy toàn bộ unit để chắc jsdom không phá test cũ**
 
 Run: `pnpm test:unit`
 
 Expected: PASS toàn bộ, `Test Files` không còn dòng `failed` nào.
 
-- [ ] **Step 9: Typecheck + lint**
+- [x] **Step 9: Typecheck + lint**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add vitest.config.ts
@@ -201,7 +198,7 @@ git commit -m "fix(test): bật JSX transform + jsdom, nâng testTimeout cho DB 
 
 ---
 
-### Task 2: Xóa `PaymentDialog.tsx`
+### ✅ Task 2: Xóa `PaymentDialog.tsx`
 
 **Files:**
 - Delete: `src/components/tuition/PaymentDialog.tsx`
@@ -212,24 +209,24 @@ git commit -m "fix(test): bật JSX transform + jsdom, nâng testTimeout cho DB 
 
 **Vì sao xóa được:** `TuitionDetailSheet.tsx` đã thay thế hoàn toàn nó (trang Học phí chỉ import `TuitionDetailSheet`). `PaymentDialog` còn tự tính `Math.max(0, data.totalExpected + data.previousBalance)` trong khi DTO đã có sẵn `totalAmountDue` — giữ lại chỉ tạo rủi ro ai đó copy nhầm công thức cũ.
 
-- [ ] **Step 1: Xác nhận không file nào import**
+- [x] **Step 1: Xác nhận không file nào import**
 
 Run: `grep -rn "PaymentDialog" src tests --include=*.ts --include=*.tsx`
 
 Expected: chỉ ra các dòng nằm TRONG chính `src/components/tuition/PaymentDialog.tsx`. Nếu có bất kỳ file nào khác — **DỪNG**, báo lại, không xóa.
 
-- [ ] **Step 2: Xóa file**
+- [x] **Step 2: Xóa file**
 
 ```bash
 git rm src/components/tuition/PaymentDialog.tsx
 ```
 
-- [ ] **Step 3: Typecheck + lint**
+- [x] **Step 3: Typecheck + lint**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch (nếu đỏ, tức là có import ẩn — hoàn tác và báo lại).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "chore: xóa PaymentDialog.tsx (code chết, đã bị TuitionDetailSheet thay thế)"
@@ -237,7 +234,7 @@ git commit -m "chore: xóa PaymentDialog.tsx (code chết, đã bị TuitionDeta
 
 ---
 
-### Task 3: Gỡ export chết ở `constants.ts` và `trpc/index.ts`
+### ✅ Task 3: Gỡ export chết ở `constants.ts` và `trpc/index.ts`
 
 **Files:**
 - Modify: `src/lib/constants.ts` (xóa `LEVEL` ở `:3`, `SESSION_STATUS` ở `:24`, `NAV_ITEMS` ở `:40`)
@@ -247,7 +244,7 @@ git commit -m "chore: xóa PaymentDialog.tsx (code chết, đã bị TuitionDeta
 - Consumes: không có.
 - Produces: không có.
 
-- [ ] **Step 1: Xác nhận cả 4 đều không có nơi dùng**
+- [x] **Step 1: Xác nhận cả 4 đều không có nơi dùng**
 
 ```bash
 for s in LEVEL SESSION_STATUS NAV_ITEMS timingProcedure; do
@@ -264,7 +261,7 @@ Expected:
 
 Nếu khác — DỪNG, báo lại.
 
-- [ ] **Step 2: Xóa 3 hằng số trong `src/lib/constants.ts`**
+- [x] **Step 2: Xóa 3 hằng số trong `src/lib/constants.ts`**
 
 Xóa nguyên khối:
 
@@ -294,7 +291,7 @@ export const NAV_ITEMS = [
 
 Giữ nguyên `GRADES`, `ATTENDANCE_STATUS`, `ATTENDANCE_LABEL`, `DAY_NAMES`, `COLORS`.
 
-- [ ] **Step 3: Xóa `timingProcedure` trong `src/server/trpc/index.ts`**
+- [x] **Step 3: Xóa `timingProcedure` trong `src/server/trpc/index.ts`**
 
 Xóa dòng:
 
@@ -304,17 +301,17 @@ export const timingProcedure = t.procedure.use(loggerMiddleware)
 
 **Giữ lại** `const loggerMiddleware = ...` — `protectedProcedure` ở dòng 77 vẫn dùng nó.
 
-- [ ] **Step 4: Typecheck + lint**
+- [x] **Step 4: Typecheck + lint**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch.
 
-- [ ] **Step 5: Chạy unit test**
+- [x] **Step 5: Chạy unit test**
 
 Run: `pnpm test:unit`
 Expected: PASS toàn bộ.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/constants.ts src/server/trpc/index.ts
@@ -323,7 +320,7 @@ git commit -m "chore: gỡ LEVEL, SESSION_STATUS, NAV_ITEMS, timingProcedure (0 
 
 ---
 
-### Task 4: Thu gọn `report.service.ts` — bỏ `byGrade`, thu hẹp `student`
+### ✅ Task 4: Thu gọn `report.service.ts` — bỏ `byGrade`, thu hẹp `student`
 
 **Files:**
 - Modify: `src/server/services/report.service.ts`
@@ -347,7 +344,7 @@ git commit -m "chore: gỡ LEVEL, SESSION_STATUS, NAV_ITEMS, timingProcedure (0 
 
 **Quyết định & đánh đổi:** `byGrade` được test phủ (`report.test.ts:87-88`) nhưng **không client nào đọc** — đây là code chết có test, xóa cả hai. `summary` của `getStudentReport` **GIỮ NGUYÊN**: tuy UI hiện không dùng (StudentScheduleView tự tính lại), nó được 4 test phủ và là hợp đồng API hợp lệ; gộp hai bản tính trùng nhau là việc riêng, không nhét vào task dọn dẹp này.
 
-- [ ] **Step 1: Sửa test trước — bỏ assertion `byGrade`**
+- [x] **Step 1: Sửa test trước — bỏ assertion `byGrade`**
 
 Trong `tests/integration/report.test.ts`, ở test `"report.monthlySummary → trả tổng hợp"`, xóa 2 dòng:
 
@@ -363,30 +360,27 @@ Thay bằng assertion vào field thực sự có người dùng:
     expect(summary.overallAttendanceRate).toBeGreaterThanOrEqual(0)
 ```
 
-- [ ] **Step 2: Thêm assertion cho `student` đã thu hẹp**
+- [x] **Step 2: Thêm assertion cho `student` đã thu hẹp**
 
 Trong cùng file, ở test `"report.student → trả sessions + summary đúng"`, thêm ngay sau dòng `expect(report.student.fullName).toBe("HS Báo Cáo")`:
 
 ```ts
-    // student chỉ còn field UI cần — không rò userId / thông tin phụ huynh ra client
+    // student chỉ còn field UI cần
     expect(Object.keys(report.student).sort()).toEqual(["fullName", "grade", "id", "level"])
 ```
 
-- [ ] **Step 3: Chạy test để xác nhận nó fail**
+- [x] **Step 3: Chạy test để xác nhận nó fail**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/integration/report.test.ts`
 
 Expected: FAIL ở assertion `Object.keys(...)` (hiện `student` còn có `userId`, `parentPhone`, `parentName`, `notes`, `isActive`, `tuitionFee`, `createdAt`, `updatedAt`).
 
-- [ ] **Step 4: Thêm type `StudentReportInfo`**
+- [x] **Step 4: Thêm type `StudentReportInfo`**
 
 Trong `src/lib/types/models.ts`, thêm ngay dưới `export type SchoolLevel = ...`:
 
 ```ts
-/**
- * Thông tin học sinh tối thiểu cho màn Báo cáo. Cố ý KHÔNG trả nguyên record
- * Prisma: userId và thông tin phụ huynh không có lý do gì để đi ra client.
- */
+// Thông tin HS tối thiểu cho màn Báo cáo (không trả userId / phụ huynh).
 export type StudentReportInfo = {
   id: number
   fullName: string
@@ -395,7 +389,7 @@ export type StudentReportInfo = {
 }
 ```
 
-- [ ] **Step 5: Thu hẹp `student` trong `getStudentReport`**
+- [x] **Step 5: Thu hẹp `student` trong `getStudentReport`**
 
 Trong `src/server/services/report.service.ts`, sửa phần return của `getStudentReport` (khoảng dòng 64-68). Thay `student,` bằng:
 
@@ -414,7 +408,7 @@ Thêm import ở đầu file (gộp vào dòng import `@/lib/utils` đã có):
 import { calcAttendanceRate, getLevel, vnDateParts } from "@/lib/utils"
 ```
 
-- [ ] **Step 6: Xóa khối `byGrade`**
+- [x] **Step 6: Xóa khối `byGrade`**
 
 Trong `getMonthlySummary`, xóa nguyên khối tính (khoảng dòng 144-157):
 
@@ -440,17 +434,17 @@ Và xóa dòng `byGrade,` trong object return (khoảng dòng 221).
 
 Sửa luôn comment ở dòng ~132 đang nhắc tới `byGrade`: đổi cụm `"so it ties out with byGrade/revenue below"` thành `"so it ties out with revenue below"`.
 
-- [ ] **Step 7: Chạy test để xác nhận pass**
+- [x] **Step 7: Chạy test để xác nhận pass**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/integration/report.test.ts`
 Expected: PASS toàn bộ.
 
-- [ ] **Step 8: Typecheck + lint**
+- [x] **Step 8: Typecheck + lint**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch. `reports/page.tsx` không dùng `byGrade` nên không cần sửa.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/server/services/report.service.ts src/lib/types/models.ts tests/integration/report.test.ts
@@ -459,7 +453,7 @@ git commit -m "refactor(report): bỏ byGrade không ai dùng, thu hẹp student
 
 ---
 
-### Task 5: Thu gọn `getMonthlyOutstanding` + bỏ param chết `calcStudentTuition`
+### ✅ Task 5: Thu gọn `getMonthlyOutstanding` + bỏ param chết `calcStudentTuition`
 
 **Files:**
 - Modify: `src/server/services/tuition.service.ts`
@@ -475,13 +469,13 @@ git commit -m "refactor(report): bỏ byGrade không ai dùng, thu hẹp student
   ): Promise<{ totalOutstanding: number }>
   ```
 
-- [ ] **Step 1: Xác nhận không ai dùng 3 field kia**
+- [x] **Step 1: Xác nhận không ai dùng 3 field kia**
 
 Run: `grep -rn "totalDue\|studentCount" src/server tests --include=*.ts`
 
 Expected: `totalDue` và `studentCount` chỉ xuất hiện bên trong `getMonthlyOutstanding` (`tuition.service.ts` khoảng `:384`, `:405-414`). `studentCount` cũng có ở `SessionListDTO` (`models.ts`) và các component — **khác nhau, không đụng**. Nếu có caller nào destructure `totalDue`/`totalPaid`/`studentCount` từ `getMonthlyOutstanding` — DỪNG, báo lại.
 
-- [ ] **Step 2: Thu gọn kiểu trả về**
+- [x] **Step 2: Thu gọn kiểu trả về**
 
 Trong `src/server/services/tuition.service.ts`, sửa chữ ký (khoảng `:384`):
 
@@ -489,7 +483,7 @@ Trong `src/server/services/tuition.service.ts`, sửa chữ ký (khoảng `:384`
 ): Promise<{ totalOutstanding: number }> {
 ```
 
-- [ ] **Step 3: Bỏ phần tích lũy thừa**
+- [x] **Step 3: Bỏ phần tích lũy thừa**
 
 Thay vòng lặp cuối hàm:
 
@@ -519,7 +513,7 @@ bằng:
   return { totalOutstanding }
 ```
 
-- [ ] **Step 4: Bỏ param `studentId` không dùng của `calcStudentTuition`**
+- [x] **Step 4: Bỏ param `studentId` không dùng của `calcStudentTuition`**
 
 Ở đầu file (`:11-17`), xóa dòng `studentId: number,` khỏi danh sách tham số. Chữ ký còn:
 
@@ -538,12 +532,12 @@ Và sửa nơi gọi (trong `getMonthlyTuitionStatus`, khoảng `:201-204`), b�
       calcStudentTuition(attendance, snapshot, prevSnapshot, historicalBalances[student.id] ?? 0)
 ```
 
-- [ ] **Step 5: Typecheck + lint**
+- [x] **Step 5: Typecheck + lint**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch.
 
-- [ ] **Step 6: Chạy integration test học phí + dashboard**
+- [x] **Step 6: Chạy integration test học phí + dashboard**
 
 Run (tuần tự, KHÔNG song song):
 
@@ -553,7 +547,7 @@ npx cross-env NODE_ENV=test npx vitest run tests/integration/tuition.test.ts tes
 
 Expected: PASS toàn bộ.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/server/services/tuition.service.ts
@@ -562,7 +556,7 @@ git commit -m "refactor(tuition): getMonthlyOutstanding chỉ trả totalOutstan
 
 ---
 
-### Task 6: Xóa UI component & dependency không dùng
+### ✅ Task 6: Xóa UI component & dependency không dùng
 
 **Files:**
 - Delete: `src/components/ui/switch.tsx`, `src/components/ui/tooltip.tsx`
@@ -572,7 +566,7 @@ git commit -m "refactor(tuition): getMonthlyOutstanding chỉ trả totalOutstan
 - Consumes: không có.
 - Produces: không có.
 
-- [ ] **Step 1: Xác nhận 2 component không ai import**
+- [x] **Step 1: Xác nhận 2 component không ai import**
 
 ```bash
 grep -rn "components/ui/switch\|components/ui/tooltip" src tests --include=*.ts --include=*.tsx
@@ -580,7 +574,7 @@ grep -rn "components/ui/switch\|components/ui/tooltip" src tests --include=*.ts 
 
 Expected: rỗng. Nếu có — DỪNG.
 
-- [ ] **Step 2: Xác nhận 4 package không ai import**
+- [x] **Step 2: Xác nhận 4 package không ai import**
 
 ```bash
 for p in ws @neondatabase/serverless @prisma/adapter-neon shadcn; do
@@ -591,13 +585,13 @@ done
 
 Expected: rỗng cả 4. Lưu ý `src/server/db.ts` dùng `PrismaClient` thuần, không dùng Neon adapter. Nếu có kết quả — DỪNG, báo lại.
 
-- [ ] **Step 3: Xóa 2 file component**
+- [x] **Step 3: Xóa 2 file component**
 
 ```bash
 git rm src/components/ui/switch.tsx src/components/ui/tooltip.tsx
 ```
 
-- [ ] **Step 4: Gỡ dependency**
+- [x] **Step 4: Gỡ dependency**
 
 ```bash
 pnpm remove @radix-ui/react-switch @radix-ui/react-tooltip ws @neondatabase/serverless @prisma/adapter-neon shadcn @types/ws
@@ -605,21 +599,21 @@ pnpm remove @radix-ui/react-switch @radix-ui/react-tooltip ws @neondatabase/serv
 
 **Lưu ý:** `@types/ws` cũng gỡ theo vì chỉ tồn tại cho `ws`. Nếu `pnpm remove` báo package không có trong `dependencies`, bỏ tên đó ra khỏi lệnh rồi chạy lại phần còn lại.
 
-- [ ] **Step 5: Kiểm tra `pnpm.onlyBuiltDependencies` trong `package.json`**
+- [x] **Step 5: Kiểm tra `pnpm.onlyBuiltDependencies` trong `package.json`**
 
 Khối này hiện liệt kê `["@prisma/client", "@prisma/engines", "prisma", "bcrypt", "esbuild"]`. Giữ nguyên — không liên quan tới các package vừa gỡ. (`bcrypt` ở đây là dư thừa vì dự án dùng `bcryptjs`, nhưng đó là cấu hình build vô hại, **không đụng** trong task này.)
 
-- [ ] **Step 6: Build lại để chắc không gãy**
+- [x] **Step 6: Build lại để chắc không gãy**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch.
 
-- [ ] **Step 7: Chạy unit test**
+- [x] **Step 7: Chạy unit test**
 
 Run: `pnpm test:unit`
 Expected: PASS toàn bộ.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -A package.json pnpm-lock.yaml src/components/ui
@@ -628,7 +622,7 @@ git commit -m "chore: xóa ui/switch, ui/tooltip và 5 dependency không dùng (
 
 ---
 
-### Task 7: Gỡ 12 key i18n chết
+### ✅ Task 7: Gỡ 12 key i18n chết
 
 **Files:**
 - Modify: `src/language/vi.json`
@@ -640,7 +634,7 @@ git commit -m "chore: xóa ui/switch, ui/tooltip và 5 dependency không dùng (
 
 **Bất biến bắt buộc giữ:** hai file phải luôn có **cùng tập key** (hiện 296/296).
 
-- [ ] **Step 1: Xác nhận lại danh sách key chết**
+- [x] **Step 1: Xác nhận lại danh sách key chết**
 
 Chạy script quét (dò mọi lời gọi `t("...")` trong `src/`):
 
@@ -674,11 +668,11 @@ total_last_month
 
 Nếu danh sách khác (vd task khác vừa thêm/bớt key), dùng **kết quả thực tế của script**, không dùng danh sách cứng ở trên.
 
-- [ ] **Step 2: Xóa đúng 12 key đó khỏi cả hai file**
+- [x] **Step 2: Xóa đúng 12 key đó khỏi cả hai file**
 
 Xóa thủ công từng dòng trong `src/language/vi.json` và `src/language/en.json`. Giữ JSON hợp lệ (không để dấu phẩy thừa ở cuối object).
 
-- [ ] **Step 3: Xác nhận parity + JSON hợp lệ**
+- [x] **Step 3: Xác nhận parity + JSON hợp lệ**
 
 ```bash
 node -e "
@@ -692,7 +686,7 @@ console.log('thiếu ở vi:',ke.filter(k=>!(k in vi)));
 
 Expected: `vi 284 en 284`, cả hai mảng thiếu đều rỗng.
 
-- [ ] **Step 4: Xác nhận không key nào đang dùng bị xóa nhầm**
+- [x] **Step 4: Xác nhận không key nào đang dùng bị xóa nhầm**
 
 ```bash
 node -e "
@@ -710,12 +704,12 @@ if(missing.length) process.exit(1);
 
 Expected: mảng rỗng, exit 0.
 
-- [ ] **Step 5: Typecheck + lint**
+- [x] **Step 5: Typecheck + lint**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch (`Translations = typeof vi` nên key thiếu sẽ lộ ra ở đây).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/language/vi.json src/language/en.json
@@ -724,7 +718,7 @@ git commit -m "chore(i18n): gỡ 12 key không còn dùng, giữ parity vi/en"
 
 ---
 
-### Task 8: Vá vệ sinh lặt vặt (C2–C5)
+### ✅ Task 8: Vá vệ sinh lặt vặt (C2–C5)
 
 **Files:**
 - Modify: `src/server/db.ts`
@@ -737,7 +731,7 @@ git commit -m "chore(i18n): gỡ 12 key không còn dùng, giữ parity vi/en"
 - Consumes: không có.
 - Produces: không có (thuần nội bộ).
 
-- [ ] **Step 1: Sửa double-`$extends` trong `src/server/db.ts` (C2)**
+- [x] **Step 1: Sửa double-`$extends` trong `src/server/db.ts` (C2)**
 
 Hiện tại `$extends` được áp lên cả instance đã cache, nên mỗi lần HMR ở dev lại bọc thêm một lớp → log slow-query in ra nhiều lần. Thay toàn bộ thân file bằng:
 
@@ -767,15 +761,13 @@ function createPrismaClient(): PrismaClient {
   }) as unknown as PrismaClient
 }
 
-// $extends CHỈ áp một lần lúc tạo. Trước đây nó được gọi lại trên chính instance
-// đã cache ở global, nên mỗi lần HMR lại bọc thêm một lớp middleware và log
-// slow-query bị nhân lên.
+// $extends chỉ áp một lần lúc tạo, tránh bọc chồng lớp qua mỗi lần HMR.
 export const db = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
 ```
 
-- [ ] **Step 2: Bỏ `await` thừa trên `assertOwnership` (C4)**
+- [x] **Step 2: Bỏ `await` thừa trên `assertOwnership` (C4)**
 
 Trong `src/server/services/tuition.service.ts`, hàm `updateTuitionPayment`, sửa:
 
@@ -791,7 +783,7 @@ thành:
 
 `assertOwnership` là hàm đồng bộ dùng assertion signature (`asserts record is ...`); gọi qua `await` làm TypeScript mất khả năng thu hẹp kiểu.
 
-- [ ] **Step 3: Bỏ invalidate thủ công thừa trong `AttendancePanel.tsx` (C3)**
+- [x] **Step 3: Bỏ invalidate thủ công thừa trong `AttendancePanel.tsx` (C3)**
 
 Trong `removeStudentMutation.onSuccess`, xóa 2 dòng:
 
@@ -808,7 +800,7 @@ Sau khi xóa, nếu biến `utils` không còn chỗ dùng nào khác trong file
 
 Lý do: `TRPCProvider` đã cấu hình `MutationCache.onSuccess → client.invalidateQueries()` làm mới TOÀN BỘ query sau mọi mutation.
 
-- [ ] **Step 4: Bỏ refetch thủ công thừa ở trang Học phí (C3)**
+- [x] **Step 4: Bỏ refetch thủ công thừa ở trang Học phí (C3)**
 
 Trong `src/app/(app)/tuition/page.tsx`, ở phần render `<TuitionDetailSheet ... />`, đổi:
 
@@ -824,7 +816,7 @@ thành:
 
 **Lưu ý:** prop `onSuccess` là bắt buộc theo `TuitionDetailSheetProps` và vẫn được dùng để đóng sheet ở phía component — giữ prop, chỉ bỏ refetch.
 
-- [ ] **Step 5: Căn phải header cột "Học phí" (C5)**
+- [x] **Step 5: Căn phải header cột "Học phí" (C5)**
 
 Trong `src/components/students/StudentList.tsx`, đổi:
 
@@ -840,18 +832,18 @@ thành:
 
 (Cell tương ứng đã là `text-right`; `docs/coding-rule.md` §4 yêu cầu cột số căn phải.)
 
-- [ ] **Step 6: Typecheck + lint**
+- [x] **Step 6: Typecheck + lint**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch.
 
-- [ ] **Step 7: Chạy test**
+- [x] **Step 7: Chạy test**
 
 Run: `pnpm test:unit`, rồi (tuần tự) `npx cross-env NODE_ENV=test npx vitest run tests/integration/attendance.test.ts tests/integration/tuition.test.ts`
 
 Expected: PASS toàn bộ.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/server/db.ts src/server/services/tuition.service.ts src/components/sessions/AttendancePanel.tsx "src/app/(app)/tuition/page.tsx" src/components/students/StudentList.tsx
@@ -860,7 +852,7 @@ git commit -m "chore: sửa double-\$extends prisma, bỏ invalidate/await thừ
 
 ---
 
-### Task 9: Đồng bộ bộ lọc `status` phía server với badge phía client (C6)
+### ✅ Task 9: Đồng bộ bộ lọc `status` phía server với badge phía client (C6)
 
 **Files:**
 - Modify: `src/server/services/tuition.service.ts` (nhánh `status` trong `getMonthlyTuitionStatus`)
@@ -881,7 +873,7 @@ git commit -m "chore: sửa double-\$extends prisma, bỏ invalidate/await thừ
 
 **Quyết định:** giữ nguyên **ý nghĩa** các lựa chọn trong dropdown (`fully_paid` vẫn bao gồm cả HS trả dư và HS được miễn/giảm — vì với giáo viên thì cả ba đều là "xong tháng này"), nhưng suy ra từ một nguồn duy nhất.
 
-- [ ] **Step 1: Viết unit test cho mapping filter → trạng thái**
+- [x] **Step 1: Viết unit test cho mapping filter → trạng thái**
 
 Trước hết sửa dòng import có sẵn ở **đầu** `tests/unit/lib/tuition-status.test.ts` thành:
 
@@ -938,12 +930,12 @@ describe("matchesTuitionStatusFilter", () => {
 })
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận fail**
+- [x] **Step 2: Chạy test để xác nhận fail**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/unit/lib/tuition-status.test.ts`
 Expected: FAIL — `matchesTuitionStatusFilter` chưa tồn tại.
 
-- [ ] **Step 3: Thêm `matchesTuitionStatusFilter` vào `src/lib/tuition-status.ts`**
+- [x] **Step 3: Thêm `matchesTuitionStatusFilter` vào `src/lib/tuition-status.ts`**
 
 Thêm vào cuối file:
 
@@ -951,15 +943,8 @@ Thêm vào cuối file:
 export type TuitionStatusFilter =
   | "all" | "fully_paid" | "paid_this_month" | "partial" | "unpaid"
 
-/**
- * Ánh xạ lựa chọn trong dropdown "Trạng thái" sang trạng thái badge. Suy ra từ
- * getTuitionBadgeStatus thay vì chép lại điều kiện — trước đây bản ở server xếp
- * HS trả dư vào 'fully_paid' trong khi badge hiện "Trả dư", nên chọn "Đóng đủ"
- * lại ra những dòng ghi là "Trả dư".
- *
- * 'fully_paid' CỐ Ý gộp cả trả dư và miễn/giảm: với giáo viên thì cả ba đều là
- * "tháng này xong rồi".
- */
+// Bộ lọc suy ra từ badge, không chép lại điều kiện.
+// 'fully_paid' cố ý gộp cả trả dư và miễn/giảm.
 export function matchesTuitionStatusFilter(
   item: TuitionStatusInput,
   filter: TuitionStatusFilter | undefined
@@ -980,18 +965,17 @@ export function matchesTuitionStatusFilter(
 }
 ```
 
-- [ ] **Step 4: Chạy unit test để xác nhận pass**
+- [x] **Step 4: Chạy unit test để xác nhận pass**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/unit/lib/tuition-status.test.ts`
 Expected: PASS toàn bộ.
 
-- [ ] **Step 5: Thay khối lọc chép tay ở service**
+- [x] **Step 5: Thay khối lọc chép tay ở service**
 
 Trong `src/server/services/tuition.service.ts`, `getMonthlyTuitionStatus`, thay toàn bộ khối bắt đầu bằng `// 7. Lọc theo status` (từ `let filteredResults = results` tới hết `}` đóng của `if (status && status !== "all") {`) bằng:
 
 ```ts
-  // 7. Lọc theo status — dùng CHUNG helper với badge phía client để hai bên
-  // không thể lệch nhau (xem lib/tuition-status).
+  // 7. Lọc theo status — dùng chung helper với badge client.
   const filteredResults =
     status && status !== "all"
       ? results.filter(item => matchesTuitionStatusFilter(item, status))
@@ -1004,7 +988,7 @@ Thêm import ở đầu file:
 import { matchesTuitionStatusFilter } from "@/lib/tuition-status"
 ```
 
-- [ ] **Step 6: Viết integration test cho bộ lọc**
+- [x] **Step 6: Viết integration test cho bộ lọc**
 
 Tạo `tests/integration/tuition-status-filter.test.ts`:
 
@@ -1021,11 +1005,7 @@ async function cleanup() {
   await db.student.deleteMany()
 }
 
-/**
- * Bộ lọc "Trạng thái" phải trả về đúng những dòng mà badge hiển thị cùng nhóm.
- * Trước đây filter server là bản chép tay, xếp HS trả dư vào 'fully_paid' trong
- * khi badge ghi "Trả dư".
- */
+// Bộ lọc "Trạng thái" phải khớp nhóm mà badge hiển thị.
 describe("Tuition — bộ lọc trạng thái khớp badge", () => {
   beforeEach(async () => {
     await cleanup()
@@ -1091,22 +1071,22 @@ describe("Tuition — bộ lọc trạng thái khớp badge", () => {
 })
 ```
 
-- [ ] **Step 7: Chạy integration test**
+- [x] **Step 7: Chạy integration test**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/integration/tuition-status-filter.test.ts`
 Expected: PASS cả 2 test.
 
-- [ ] **Step 8: Chạy lại các test học phí cũ để chắc không đổi hành vi ngoài ý muốn**
+- [x] **Step 8: Chạy lại các test học phí cũ để chắc không đổi hành vi ngoài ý muốn**
 
 Run (tuần tự): `npx cross-env NODE_ENV=test npx vitest run tests/integration/tuition.test.ts tests/integration/tuition-fullpaid-settlement.test.ts tests/integration/tuition-payment-cancel.test.ts`
 Expected: PASS toàn bộ.
 
-- [ ] **Step 9: Typecheck + lint**
+- [x] **Step 9: Typecheck + lint**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add src/lib/tuition-status.ts src/server/services/tuition.service.ts tests/unit/lib/tuition-status.test.ts tests/integration/tuition-status-filter.test.ts
@@ -1115,7 +1095,7 @@ git commit -m "fix(tuition): bộ lọc trạng thái dùng chung logic với ba
 
 ---
 
-### Task 10: Đường chỉ-đọc không ghi snapshot (C7)
+### ✅ Task 10: Đường chỉ-đọc không ghi snapshot (C7)
 
 **Files:**
 - Modify: `src/server/trpc/routers/tuition.ts`
@@ -1127,20 +1107,18 @@ git commit -m "fix(tuition): bộ lọc trạng thái dùng chung logic với ba
 
 **Vấn đề:** `TuitionStatusCard` trong màn Báo cáo chỉ hiển thị, nhưng gọi `tuition.getMonthlyStatus` (persist mặc định `true`) nên mỗi lần xem báo cáo lại ghi/cập nhật hàng loạt row `MonthlyTuition`. Service đã có sẵn cờ `persist` cho đúng trường hợp này (`getMonthlyOutstanding` dùng `false`), chỉ là router chưa expose ra.
 
-- [ ] **Step 1: Thêm procedure chỉ-đọc**
+- [x] **Step 1: Thêm procedure chỉ-đọc**
 
 Trong `src/server/trpc/routers/tuition.ts`, thêm vào trong `createTRPCRouter({...})`, ngay dưới `getMonthlyStatus`:
 
 ```ts
-  // Bản CHỈ ĐỌC cho màn báo cáo / thẻ tóm tắt: tính đủ trong bộ nhớ nhưng không
-  // materialize snapshot. Tránh việc chỉ mở xem báo cáo cũng ghi hàng loạt row
-  // MonthlyTuition.
+  // Bản chỉ đọc cho màn Báo cáo: tính trong bộ nhớ, không ghi snapshot.
   getMonthlyStatusReadOnly: protectedProcedure
     .input(monthlyTuitionFilterSchema)
     .query(({ ctx, input }) => getMonthlyTuitionStatus(ctx.db, ctx.userId, input, false)),
 ```
 
-- [ ] **Step 2: Đổi `TuitionStatusCard` sang procedure mới**
+- [x] **Step 2: Đổi `TuitionStatusCard` sang procedure mới**
 
 Trong `src/components/students/StudentScheduleView.tsx`, trong component `TuitionStatusCard`, đổi:
 
@@ -1154,7 +1132,7 @@ thành:
   const { data: statusList, isLoading } = trpc.tuition.getMonthlyStatusReadOnly.useQuery({
 ```
 
-- [ ] **Step 3: Thu hẹp luôn query cho đúng HS đang xem**
+- [x] **Step 3: Thu hẹp luôn query cho đúng HS đang xem**
 
 Cùng chỗ đó, hiện query lấy `limit: 1000` rồi `.find()` ở client. Truyền thẳng `studentId` để server chỉ trả 1 dòng:
 
@@ -1171,7 +1149,7 @@ Cùng chỗ đó, hiện query lấy `limit: 1000` rồi `.find()` ở client. T
 
 Xóa dòng cũ `const status = statusList?.items.find(s => s.studentId === studentId)`.
 
-- [ ] **Step 4: Viết integration test xác nhận không ghi snapshot**
+- [x] **Step 4: Viết integration test xác nhận không ghi snapshot**
 
 Tạo `tests/integration/tuition-readonly-no-write.test.ts`:
 
@@ -1248,17 +1226,17 @@ describe("tuition.getMonthlyStatusReadOnly", () => {
 })
 ```
 
-- [ ] **Step 5: Chạy test**
+- [x] **Step 5: Chạy test**
 
 Run: `npx cross-env NODE_ENV=test npx vitest run tests/integration/tuition-readonly-no-write.test.ts`
 Expected: PASS cả 2 test.
 
-- [ ] **Step 6: Typecheck + lint**
+- [x] **Step 6: Typecheck + lint**
 
 Run: `npx tsc --noEmit && npx next lint`
 Expected: cả hai sạch.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/server/trpc/routers/tuition.ts src/components/students/StudentScheduleView.tsx tests/integration/tuition-readonly-no-write.test.ts
@@ -1269,7 +1247,7 @@ git commit -m "perf(tuition): thẻ học phí ở Báo cáo dùng procedure ch�
 
 ## Kiểm tra cuối cùng (chạy sau khi TẤT CẢ task xong)
 
-- [ ] **Step 1: Chạy toàn bộ test suite MỘT LẦN, tuần tự**
+- [x] **Step 1: Chạy toàn bộ test suite MỘT LẦN, tuần tự**
 
 Run: `pnpm test`
 
@@ -1277,13 +1255,13 @@ Expected: `Test Files` không có dòng `failed`. Mốc so sánh trước khi b�
 
 Nếu gặp lỗi Prisma `P2003` trên `monthly_tuition_student_id_fkey` — gần như chắc chắn là do có tiến trình vitest khác đang chạy song song trên cùng DB test; dừng hết rồi chạy lại.
 
-- [ ] **Step 2: Build production**
+- [x] **Step 2: Build production**
 
 Run: `npx next build`
 
 Expected: build thành công. (Lưu ý script `pnpm build` có kèm `prisma migrate deploy` — chỉ chạy `npx next build` nếu không muốn đụng DB.)
 
-- [ ] **Step 3: Xác nhận không còn code chết nào sót**
+- [x] **Step 3: Xác nhận không còn code chết nào sót**
 
 ```bash
 npx next lint
@@ -1306,3 +1284,35 @@ Ghi lại để lần review sau không đề xuất lại:
 | `NAV_ITEMS` local trong `AppSidebar.tsx` | Là bản đang hoạt động (có `/tuition`, có i18n). Chỉ xóa bản chết trong `constants.ts`. |
 | `formatToday()` dùng giờ local | Đúng — đây là mốc "ngày xuất file" chạy ở client, khác với mốc nghiệp vụ phía server (đã xử lý bằng `vnDateParts` ở nhánh nhóm A). |
 | `src/components/ui/*` còn lại | Đều có ít nhất 1 nơi import. |
+
+---
+
+## Nhật ký thực thi (17/09/2026)
+
+Thực thi trên nhánh `chore/cleanup-nhom-b-c`, nhánh từ `fix/group-a-logic-bugs`
+(KHÔNG từ `main` như plan ghi ban đầu — Task 9/10 phụ thuộc
+`src/lib/tuition-status.ts` do nhóm A tạo ra, nhóm A lúc đó chưa merge).
+
+**Ba chỗ plan viết sai, đã sửa lại trong chính plan này:**
+
+1. **Task 1 Step 2 — `esbuild` → `oxc`.** Vite 8 dùng oxc, không phải esbuild.
+   Đặt vào `esbuild` bị bỏ qua kèm cảnh báo *"Both esbuild and oxc options were
+   set. oxc options will be used and esbuild options will be ignored."* và test
+   vẫn đỏ y nguyên.
+2. **Task 1 Step 3 — bỏ `environmentMatchGlobs`.** Option này đã bị gỡ khỏi type
+   `InlineConfig` của vitest 4 (`tsc` báo *'environmentMatchGlobs' does not exist*).
+   Cũng không cần: test unit hiện tại chỉ import hàm thuần từ module `.tsx`.
+3. **Task 4 — `byGrade` còn 2 file test khác dùng.** Bước xác minh của plan chỉ
+   grep `src`, sót `tests/`. `active-student-consistency.test.ts` và
+   `student-upgrade.test.ts` dùng `byGrade` làm **đầu dò** cho bất biến "report
+   dựa trên snapshot grade" (nâng lớp không kéo buổi cũ sang khối mới). Không
+   xóa suông được — đã chuyển hai test đó sang kiểm qua bộ lọc `grade`, đúng
+   surface mà trang Báo cáo gọi, nên coverage giữ nguyên.
+
+**Một chỗ số liệu lệch (đúng như plan đã dặn):** Task 7 quét ra **16** key i18n
+chết chứ không phải 12 — 4 key kia (`payment_update_success`, `previous_balance`,
+`pay_full`, `pay_adjusted`) trở thành chết sau khi Task 2 xóa `PaymentDialog`.
+Plan đã dặn dùng output thực tế của script thay vì danh sách cứng.
+
+**Commit:** `4e5a45d` (T1) · `178329b` (T2+T3) · `6083345` (T4) · `6cb0807` (T5)
+· `9ae5822` (T6) · `f06cacc` (T7) · `3c11a85` (T8) · `17d122e` (T9) · `9e29087` (T10)

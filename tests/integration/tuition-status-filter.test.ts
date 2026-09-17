@@ -10,11 +10,7 @@ async function cleanup() {
   await db.student.deleteMany()
 }
 
-/**
- * Bộ lọc "Trạng thái" phải trả về đúng những dòng mà badge hiển thị cùng nhóm.
- * Trước đây filter server là bản chép tay, xếp HS trả dư vào 'fully_paid' trong
- * khi badge ghi "Trả dư".
- */
+// Bộ lọc "Trạng thái" phải khớp nhóm mà badge hiển thị.
 describe("Tuition — bộ lọc trạng thái khớp badge", () => {
   beforeEach(async () => {
     await cleanup()

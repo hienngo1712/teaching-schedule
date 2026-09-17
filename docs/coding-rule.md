@@ -8,6 +8,7 @@ File này quy định các tiêu chuẩn code cho dự án **Teaching Schedule M
 - **Ngôn ngữ:** 
     - Code (Biến, Function, Class, File): **Tiếng Anh**.
     - Comment, Message (UI, Toast, Log): **Tiếng Việt**.
+- **Comment ngắn gọn:** tối đa 1–2 dòng, chỉ giải thích *tại sao* khi không hiển nhiên. Không kể lại lịch sử bug, không JSDoc dài cho hàm nội bộ. Code tự nói được thì không cần comment.
 - **Tính nhất quán:** Tuân thủ cấu trúc thư mục và kiến trúc hiện tại (tRPC + Prisma + Services).
 - **An toàn:** KHÔNG bao giờ commit secrets, file `.env`, hoặc file `.env.test` vào repo.
 

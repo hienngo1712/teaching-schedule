@@ -212,9 +212,7 @@ export async function getMonthlySummary(
 }
 
 export async function getDashboardStats(db: PrismaClient, userId: number) {
-  // Mốc thời gian theo lịch VN, KHÔNG theo giờ local của process: server chạy UTC
-  // nên từ 00:00–07:00 giờ VN, getDate() vẫn trả ngày hôm trước → "Số ca hôm nay"
-  // và "tháng này" hiển thị sai cho giáo viên vào sáng sớm / đầu tháng.
+  // Mốc thời gian theo lịch VN, không theo giờ local của process (server chạy UTC).
   const { year: vnYear, month: vnMonth, day: vnDay } = vnDateParts()
   const today = new Date(Date.UTC(vnYear, vnMonth - 1, vnDay))
   const startOfMonth = new Date(Date.UTC(vnYear, vnMonth - 1, 1))

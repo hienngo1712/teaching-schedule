@@ -7,9 +7,7 @@ export const tuitionRouter = createTRPCRouter({
     .input(monthlyTuitionFilterSchema)
     .query(({ ctx, input }) => getMonthlyTuitionStatus(ctx.db, ctx.userId, input)),
 
-  // Bản CHỈ ĐỌC cho màn báo cáo / thẻ tóm tắt: tính đủ trong bộ nhớ nhưng không
-  // materialize snapshot. Tránh việc chỉ mở xem báo cáo cũng ghi hàng loạt row
-  // MonthlyTuition.
+  // Bản chỉ đọc cho màn Báo cáo: tính trong bộ nhớ, không ghi snapshot.
   getMonthlyStatusReadOnly: protectedProcedure
     .input(monthlyTuitionFilterSchema)
     .query(({ ctx, input }) => getMonthlyTuitionStatus(ctx.db, ctx.userId, input, false)),

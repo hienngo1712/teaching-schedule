@@ -7,10 +7,7 @@ export type { Student, Subject, TeachingSession, SessionStudent }
  */
 export type SchoolLevel = "tieu_hoc" | "thcs"
 
-/**
- * Thông tin học sinh tối thiểu cho màn Báo cáo. Cố ý KHÔNG trả nguyên record
- * Prisma: userId và thông tin phụ huynh không có lý do gì để đi ra client.
- */
+// Thông tin HS tối thiểu cho màn Báo cáo (không trả userId / phụ huynh).
 export type StudentReportInfo = {
   id: number
   fullName: string

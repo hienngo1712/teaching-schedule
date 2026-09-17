@@ -51,12 +51,8 @@ function calcStudentTuition(
 
   const totalAmountDue = previousBalance + currentMonthFee
 
-  // Ghi lại snapshot mỗi khi số tính ra lệch với số đã lưu — KỂ CẢ tháng quá khứ.
-  // Trước đây chỉ ghi cho tháng hiện tại: màn học phí vẫn hiện đúng (số được tính
-  // lại trong bộ nhớ), nhưng row DB của tháng cũ đông cứng, mà carry-over của
-  // tháng KẾ TIẾP lại đọc chính row đó → sửa điểm danh / xóa buổi ở tháng trước
-  // thì tháng sau vẫn cộng nợ theo số cũ. Chỉ ghi khi thực sự lệch nên không phát
-  // sinh write thừa ở đường đọc bình thường.
+  // Ghi lại snapshot khi số tính ra lệch số đã lưu, kể cả tháng quá khứ —
+  // carry-over của tháng kế tiếp đọc chính row này.
   const needsUpsert =
     !snapshot ||
     snapshot.totalSessions !== totalSessions ||
@@ -72,9 +68,7 @@ export async function getMonthlyTuitionStatus(
   db: PrismaClient,
   userId: number,
   filter: MonthlyTuitionFilterInput,
-  // persist=false cho các đường CHỈ ĐỌC (dashboard/report) để không ghi snapshot
-  // hàng loạt mỗi lần load — kết quả trả về vẫn tính trong bộ nhớ, không phụ thuộc
-  // snapshot đã ghi. Trang tuition giữ persist=true để materialize snapshot.
+  // persist=false cho đường chỉ đọc (dashboard/report): kết quả vẫn đúng, chỉ không ghi.
   persist = true
 ): Promise<PaginatedResponse<TuitionStatusDTO>> {
   const { year, month, grade, search, studentId, status, page, limit } = filter
@@ -250,8 +244,7 @@ export async function getMonthlyTuitionStatus(
     )
   }
 
-  // 7. Lọc theo status — dùng CHUNG helper với badge phía client để hai bên
-  // không thể lệch nhau (xem lib/tuition-status).
+  // 7. Lọc theo status — dùng chung helper với badge client.
   const filteredResults =
     status && status !== "all"
       ? results.filter(item => matchesTuitionStatusFilter(item, status))
