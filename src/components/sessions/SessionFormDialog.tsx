@@ -84,14 +84,14 @@ export function SessionFormDialog({
     },
   })
 
+  // Reset MỖI LẦN mở dialog. Trước đây chỉ reset khi có editingSession/initialDate,
+  // nên luồng "sửa ca A → đóng → bấm Tạo ca dạy" (cả hai đều undefined) không chạy
+  // nhánh nào và form giữ nguyên môn/giờ/HS của ca A.
+  // KHÔNG phụ thuộc `subjects`: danh sách môn về muộn sẽ reset đè lên thứ user vừa
+  // nhập. Môn mặc định do effect bên dưới điền vào khi ô còn trống.
   useEffect(() => {
-    if (!isEdit && subjects.length > 0 && !form.getValues("subjectId")) {
-      const defaultSubject = subjects.find((s) => s.isDefault) || subjects[0]
-      form.setValue("subjectId", defaultSubject.id)
-    }
-  }, [subjects, isEdit, form])
+    if (!open) return
 
-  useEffect(() => {
     if (editingSession) {
       form.reset({
         sessionDate: dayjs(editingSession.sessionDate).format("YYYY-MM-DD"),
@@ -102,12 +102,28 @@ export function SessionFormDialog({
         notes: editingSession.notes || "",
         studentIds: editingSession.students.map((s) => s.studentId),
       })
-      setIsUpdateFuture(false)
-    } else if (initialDate) {
-      form.setValue("sessionDate", initialDate)
-      setIsUpdateFuture(false)
+    } else {
+      form.reset({
+        sessionDate: initialDate || dayjs().format("YYYY-MM-DD"),
+        startTime: "08:00",
+        endTime: "09:30",
+        subjectId: undefined,
+        title: "",
+        notes: "",
+        studentIds: [],
+      })
     }
-  }, [editingSession, initialDate, form])
+    setIsUpdateFuture(false)
+  }, [open, editingSession, initialDate, form])
+
+  // Điền môn mặc định cho ca mới — chạy SAU effect reset ở trên (thứ tự khai báo),
+  // và cả khi danh sách môn về muộn hơn lúc mở dialog.
+  useEffect(() => {
+    if (!open || isEdit || subjects.length === 0) return
+    if (form.getValues("subjectId")) return
+    const defaultSubject = subjects.find((s) => s.isDefault) || subjects[0]
+    form.setValue("subjectId", defaultSubject.id)
+  }, [open, subjects, isEdit, form])
 
   const createMutation = trpc.session.create.useMutation({
     onSuccess: () => {
@@ -197,6 +213,10 @@ export function SessionFormDialog({
                         <FormControl>
                           <Button
                             variant="outline"
+                            // Chuỗi ca lặp được xác định bởi THỨ trong tuần, nên
+                            // updateFuture không nhận sessionDate. Khóa ô ngày lại
+                            // thay vì để user đổi rồi thay đổi bị bỏ qua im lặng.
+                            disabled={isUpdateFuture}
                             className={cn(
                               "pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
@@ -342,15 +362,34 @@ export function SessionFormDialog({
             />
 
             {isEdit && (
-              <div className="flex items-center space-x-2 pt-2 border-t">
-                <Checkbox
-                  id="update-future"
-                  checked={isUpdateFuture}
-                  onCheckedChange={(val) => setIsUpdateFuture(!!val)}
-                />
-                <Label htmlFor="update-future" className="text-sm font-medium cursor-pointer">
-                  {t("apply_to_recurring")}
-                </Label>
+              <div className="pt-2 border-t space-y-1">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="update-future"
+                    checked={isUpdateFuture}
+                    onCheckedChange={(val) => {
+                      const checked = !!val
+                      setIsUpdateFuture(checked)
+                      // Nếu user đã lỡ đổi ngày trước khi tick, trả về ngày gốc —
+                      // updateFuture không nhận sessionDate nên giữ lại giá trị đã
+                      // đổi chỉ tạo cảm giác sai là nó sẽ được lưu.
+                      if (checked && editingSession) {
+                        form.setValue(
+                          "sessionDate",
+                          dayjs(editingSession.sessionDate).format("YYYY-MM-DD")
+                        )
+                      }
+                    }}
+                  />
+                  <Label htmlFor="update-future" className="text-sm font-medium cursor-pointer">
+                    {t("apply_to_recurring")}
+                  </Label>
+                </div>
+                {isUpdateFuture && (
+                  <p className="text-xs text-slate-500 pl-6">
+                    {t("apply_to_recurring_date_locked")}
+                  </p>
+                )}
               </div>
             )}
 

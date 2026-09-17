@@ -98,6 +98,7 @@
   "students_count": "{count} students",
   "manage_session_students": "Manage session students",
   "apply_to_recurring": "Apply to all sessions with same time & weekday",
+  "apply_to_recurring_date_locked": "A recurring series is defined by its weekday, so the date cannot be changed. Untick to move only this session.",
   "until_date": "Until date:",
   "pick_date": "Pick date",
   "recurring_note": "System will search for matching sessions between {start} and {end}.",
