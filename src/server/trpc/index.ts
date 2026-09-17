@@ -59,8 +59,6 @@ const loggerMiddleware = t.middleware(async ({ path, type, next }) => {
   return result
 })
 
-export const timingProcedure = t.procedure.use(loggerMiddleware)
-
 const enforceAuth = t.middleware(({ ctx, next }) => {
   if (!ctx.session || !ctx.userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" })
