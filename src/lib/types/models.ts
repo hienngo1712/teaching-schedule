@@ -8,6 +8,17 @@ export type { Student, Subject, TeachingSession, SessionStudent }
 export type SchoolLevel = "tieu_hoc" | "thcs"
 
 /**
+ * Thông tin học sinh tối thiểu cho màn Báo cáo. Cố ý KHÔNG trả nguyên record
+ * Prisma: userId và thông tin phụ huynh không có lý do gì để đi ra client.
+ */
+export type StudentReportInfo = {
+  id: number
+  fullName: string
+  grade: number
+  level: SchoolLevel
+}
+
+/**
  * Student with enhanced UI fields
  */
 export interface StudentDTO extends Omit<Student, "createdAt" | "updatedAt"> {

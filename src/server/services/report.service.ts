@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
-import { calcAttendanceRate, vnDateParts } from "@/lib/utils"
+import { calcAttendanceRate, getLevel, vnDateParts } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
 import { getMonthSessions } from "./session.service"
 import { getMonthlyOutstanding } from "./tuition.service"
@@ -62,7 +62,12 @@ export async function getStudentReport(
   })
 
   return {
-    student,
+    student: {
+      id: student.id,
+      fullName: student.fullName,
+      grade: student.grade,
+      level: getLevel(student.grade),
+    },
     sessions: studentSessions,
     summary: { total, present, absent, late, pending, rate, totalRevenue, expectedRevenue }
   }
@@ -129,7 +134,7 @@ export async function getMonthlySummary(
   const totalSessions = sessions.length
 
   // Headcount = distinct students actually taught in the period (snapshot
-  // grade-aware), so it ties out with byGrade/revenue below and includes
+  // grade-aware), so it ties out with revenue below and includes
   // students who have since graduated / gone inactive.
   const studentIdsInPeriod = new Set<number>()
   for (const s of sessions) {
@@ -139,22 +144,6 @@ export async function getMonthlySummary(
     }
   }
   const totalStudents = studentIdsInPeriod.size
-
-  // By Grade
-  const byGrade = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(g => {
-    const gradeSessions = sessions.filter(s => s.sessionStudents.some(st => st.grade === g))
-    const gradeStudentIds = new Set<number>()
-    for (const s of sessions) {
-      for (const st of s.sessionStudents) {
-        if (st.grade === g) gradeStudentIds.add(st.studentId)
-      }
-    }
-    return {
-      grade: g,
-      sessionCount: gradeSessions.length,
-      studentCount: gradeStudentIds.size,
-    }
-  })
 
   let totalRevenue = 0
   let expectedRevenue = 0
@@ -218,7 +207,6 @@ export async function getMonthlySummary(
     expectedRevenue,
     totalPaid,
     totalOutstanding,
-    byGrade,
     overallAttendanceRate: Math.round(overallAttendanceRate * 10) / 10
   }
 }
