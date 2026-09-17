@@ -1,10 +1,5 @@
 export const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 
-export const LEVEL = {
-  TIEU_HOC: "tieu_hoc",
-  THCS: "thcs",
-} as const
-
 export const ATTENDANCE_STATUS = {
   PENDING: "pending",
   PRESENT: "present",
@@ -21,12 +16,6 @@ export const ATTENDANCE_LABEL: Record<string, string> = {
 
 export const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"] as const
 
-export const SESSION_STATUS = {
-  SCHEDULED: "scheduled",
-  COMPLETED: "completed",
-  CANCELLED: "cancelled",
-} as const
-
 export const COLORS = {
   primary: "#4F46E5",
   tieuHoc: "#3B82F6",
@@ -36,10 +25,3 @@ export const COLORS = {
   late: "#F59E0B",
   pending: "#9CA3AF",
 } as const
-
-export const NAV_ITEMS = [
-  { href: "/dashboard", label: "Tổng quan", icon: "LayoutDashboard" },
-  { href: "/calendar", label: "Lịch dạy", icon: "CalendarDays" },
-  { href: "/students", label: "Học sinh", icon: "Users" },
-  { href: "/reports", label: "Báo cáo", icon: "BarChart3" },
-] as const

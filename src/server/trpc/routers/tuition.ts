@@ -7,6 +7,11 @@ export const tuitionRouter = createTRPCRouter({
     .input(monthlyTuitionFilterSchema)
     .query(({ ctx, input }) => getMonthlyTuitionStatus(ctx.db, ctx.userId, input)),
 
+  // Bản chỉ đọc cho màn Báo cáo: tính trong bộ nhớ, không ghi snapshot.
+  getMonthlyStatusReadOnly: protectedProcedure
+    .input(monthlyTuitionFilterSchema)
+    .query(({ ctx, input }) => getMonthlyTuitionStatus(ctx.db, ctx.userId, input, false)),
+
   updatePayment: protectedProcedure
     .input(updatePaymentSchema)
     .mutation(({ ctx, input }) => updateTuitionPayment(ctx.db, ctx.userId, input)),

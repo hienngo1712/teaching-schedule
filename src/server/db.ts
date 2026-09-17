@@ -4,12 +4,11 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-export const db =
-  (globalForPrisma.prisma ??
-  new PrismaClient({
+function createPrismaClient(): PrismaClient {
+  return new PrismaClient({
     // Bỏ "query" log để tránh I/O stdout chậm 5–20ms mỗi query.
     log: ["error", "warn"],
-  })).$extends({
+  }).$extends({
     query: {
       async $allOperations({ operation, model, args, query }) {
         const start = Date.now()
@@ -22,5 +21,9 @@ export const db =
       },
     },
   }) as unknown as PrismaClient
+}
+
+// $extends chỉ áp một lần lúc tạo, tránh bọc chồng lớp qua mỗi lần HMR.
+export const db = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db

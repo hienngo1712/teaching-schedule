@@ -2,9 +2,18 @@ import { defineConfig } from "vitest/config"
 import path from "path"
 
 export default defineConfig({
+  // tsconfig để jsx:"preserve" cho Next nên Vite không parse được .tsx.
+  // Vite 8 dùng oxc, không phải esbuild — đặt vào `esbuild` sẽ bị bỏ qua.
+  oxc: {
+    jsx: { runtime: "automatic" },
+  },
   test: {
     globals: true,
     environment: "node",
+    // Giữ "node"; file nào cần DOM thì thêm `// @vitest-environment jsdom`.
+    // DB test là Neon remote nên 5s mặc định gây đỏ chập chờn.
+    testTimeout: 60000,
+    hookTimeout: 60000,
     // ORDER MATTERS: env-setup.ts MUST run before setup.ts. It pins
     // DATABASE_URL to .env.test BEFORE any module imports src/server/db.ts.
     setupFiles: ["./tests/env-setup.ts", "./tests/setup.ts"],

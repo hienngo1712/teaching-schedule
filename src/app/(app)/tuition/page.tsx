@@ -295,7 +295,8 @@ export default function TuitionPage() {
         open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
         data={selectedStudent}
-        onSuccess={() => query.refetch()}
+        // TRPCProvider tự invalidate sau mutation
+        onSuccess={() => {}}
       />
     </div>
   )

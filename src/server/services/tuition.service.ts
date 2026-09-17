@@ -1,6 +1,7 @@
 import type { PrismaClient, MonthlyTuition, SessionStudent } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { buildPaymentAuditNote } from "@/lib/payment-notes"
+import { matchesTuitionStatusFilter } from "@/lib/tuition-status"
 import { assertOwnership } from "./_base.service"
 import type { MonthlyTuitionFilterInput, UpdatePaymentInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
@@ -9,7 +10,6 @@ import type { TuitionStatusDTO } from "@/lib/types/models"
 type AttendanceRecord = SessionStudent & { session: { sessionDate: Date } }
 
 function calcStudentTuition(
-  studentId: number,
   attendance: AttendanceRecord[],
   snapshot: MonthlyTuition | undefined,
   prevSnapshot: MonthlyTuition | undefined,
@@ -51,12 +51,8 @@ function calcStudentTuition(
 
   const totalAmountDue = previousBalance + currentMonthFee
 
-  // Ghi lại snapshot mỗi khi số tính ra lệch với số đã lưu — KỂ CẢ tháng quá khứ.
-  // Trước đây chỉ ghi cho tháng hiện tại: màn học phí vẫn hiện đúng (số được tính
-  // lại trong bộ nhớ), nhưng row DB của tháng cũ đông cứng, mà carry-over của
-  // tháng KẾ TIẾP lại đọc chính row đó → sửa điểm danh / xóa buổi ở tháng trước
-  // thì tháng sau vẫn cộng nợ theo số cũ. Chỉ ghi khi thực sự lệch nên không phát
-  // sinh write thừa ở đường đọc bình thường.
+  // Ghi lại snapshot khi số tính ra lệch số đã lưu, kể cả tháng quá khứ —
+  // carry-over của tháng kế tiếp đọc chính row này.
   const needsUpsert =
     !snapshot ||
     snapshot.totalSessions !== totalSessions ||
@@ -72,9 +68,7 @@ export async function getMonthlyTuitionStatus(
   db: PrismaClient,
   userId: number,
   filter: MonthlyTuitionFilterInput,
-  // persist=false cho các đường CHỈ ĐỌC (dashboard/report) để không ghi snapshot
-  // hàng loạt mỗi lần load — kết quả trả về vẫn tính trong bộ nhớ, không phụ thuộc
-  // snapshot đã ghi. Trang tuition giữ persist=true để materialize snapshot.
+  // persist=false cho đường chỉ đọc (dashboard/report): kết quả vẫn đúng, chỉ không ghi.
   persist = true
 ): Promise<PaginatedResponse<TuitionStatusDTO>> {
   const { year, month, grade, search, studentId, status, page, limit } = filter
@@ -201,7 +195,7 @@ export async function getMonthlyTuitionStatus(
     const snapshot = snapshotMap.get(student.id)
     const prevSnapshot = prevSnapshotMap.get(student.id)
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
-      calcStudentTuition(student.id, attendance, snapshot, prevSnapshot, historicalBalances[student.id] ?? 0)
+      calcStudentTuition(attendance, snapshot, prevSnapshot, historicalBalances[student.id] ?? 0)
 
     return {
       studentId: student.id,
@@ -250,38 +244,11 @@ export async function getMonthlyTuitionStatus(
     )
   }
 
-  // 7. Lọc theo status
-  let filteredResults = results
-  if (status && status !== "all") {
-    filteredResults = results.filter(item => {
-      const adjustedAmount = Math.max(0, item.totalAmountDue)
-      // isFullPaid = đã tất toán → luôn xếp nhóm 'fully_paid', loại khỏi mọi nhóm
-      // còn-nợ (paid_this_month/partial/unpaid), khớp badge client.
-      switch (status) {
-        case "fully_paid":
-          return item.isFullPaid || (item.paidAmount >= adjustedAmount && adjustedAmount > 0)
-        case "paid_this_month":
-          return !item.isFullPaid && item.paidAmount >= item.totalExpected && item.totalExpected > 0 && item.previousBalance > 0 && item.paidAmount < adjustedAmount
-        case "partial": {
-          // Mirror đúng chuỗi badge phía client: 'partial' = đã trả > 0 nhưng CHƯA
-          // đủ tổng nợ thực tế (adjustedAmount) và KHÔNG thuộc nhóm 'đóng đủ tháng
-          // này'. Dùng adjustedAmount (gồm nợ cũ/credit), không dùng totalExpected,
-          // để khớp với badge — tránh HS có credit/trả dư bị xếp nhầm là 'partial'.
-          if (item.isFullPaid) return false
-          const isFullyPaidOrOver = item.paidAmount >= adjustedAmount && adjustedAmount > 0
-          const isPaidThisMonth =
-            item.paidAmount >= item.totalExpected &&
-            item.totalExpected > 0 &&
-            item.previousBalance > 0
-          return item.paidAmount > 0 && !isFullyPaidOrOver && !isPaidThisMonth
-        }
-        case "unpaid":
-          return !item.isFullPaid && item.paidAmount === 0 && adjustedAmount > 0
-        default:
-          return true
-      }
-    })
-  }
+  // 7. Lọc theo status — dùng chung helper với badge client.
+  const filteredResults =
+    status && status !== "all"
+      ? results.filter(item => matchesTuitionStatusFilter(item, status))
+      : results
 
   // 8. Phân trang
   const totalCount = filteredResults.length
@@ -315,7 +282,7 @@ export async function updateTuitionPayment(
   const { studentId, year, month, paidAmount, isFullPaid, notes } = input
 
   const student = await db.student.findUnique({ where: { id: studentId } })
-  await assertOwnership(student, userId)
+  assertOwnership(student, userId)
 
   // Snapshot TRƯỚC khi ghi đè — dùng để so sánh và ghi vết lần sửa/hủy.
   const existing = await db.monthlyTuition.findUnique({
@@ -381,7 +348,7 @@ export async function getMonthlyOutstanding(
   db: PrismaClient,
   userId: number,
   params: { year: number; month: number; grade?: number }
-): Promise<{ totalOutstanding: number; totalDue: number; totalPaid: number; studentCount: number }> {
+): Promise<{ totalOutstanding: number }> {
   // R4 (CHỦ ĐÍCH, đừng "sửa" thành grade-aware từng tháng): "Còn nợ" là TỔNG nợ
   // lũy kế của HS đang thuộc khối lọc tại tháng cuối kỳ. Nợ là số dư chạy xuyên
   // nhiều tháng/khối, không tách sạch theo khối được — tách ra sẽ GIẤU nợ thật,
@@ -402,14 +369,10 @@ export async function getMonthlyOutstanding(
   )
 
   let totalOutstanding = 0
-  let totalDue = 0
-  let totalPaid = 0
   for (const it of items) {
-    totalDue += Math.max(0, it.totalAmountDue)
-    totalPaid += it.paidAmount
     // isFullPaid = tất toán tháng cuối kỳ → không còn nợ dương (khớp carry-over)
     totalOutstanding += it.isFullPaid ? 0 : Math.max(0, it.totalAmountDue - it.paidAmount)
   }
 
-  return { totalOutstanding, totalDue, totalPaid, studentCount: items.length }
+  return { totalOutstanding }
 }

@@ -7,6 +7,14 @@ export type { Student, Subject, TeachingSession, SessionStudent }
  */
 export type SchoolLevel = "tieu_hoc" | "thcs"
 
+// Thông tin HS tối thiểu cho màn Báo cáo (không trả userId / phụ huynh).
+export type StudentReportInfo = {
+  id: number
+  fullName: string
+  grade: number
+  level: SchoolLevel
+}
+
 /**
  * Student with enhanced UI fields
  */

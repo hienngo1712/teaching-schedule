@@ -180,7 +180,7 @@ export function StudentList() {
                 <TableHead className="min-w-[140px] max-w-[200px]">{t("full_name")}</TableHead>
                 <TableHead className="w-16">{t("grade")}</TableHead>
                 <TableHead className="w-32">{t("level")}</TableHead>
-                <TableHead className="w-32">{t("tuition_fee")}</TableHead>
+                <TableHead className="w-32 text-right">{t("tuition_fee")}</TableHead>
                 <TableHead className="w-28">{t("status")}</TableHead>
                 <TableHead className="hidden md:table-cell">{t("parent_phone")}</TableHead>
                 <TableHead className="hidden lg:table-cell">{t("parent_name")}</TableHead>

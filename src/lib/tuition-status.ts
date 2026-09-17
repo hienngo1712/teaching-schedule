@@ -1,15 +1,5 @@
-/**
- * Nguồn sự thật DUY NHẤT cho trạng thái học phí hiển thị của một học sinh trong
- * một tháng. Trước đây logic này được chép ở hai nơi (trang Học phí và thẻ tóm
- * tắt trong Báo cáo) và đã trôi khỏi nhau: bản ở Báo cáo thiếu nhánh "đã trả đủ
- * tổng nợ nhưng GV chưa tick tất toán", nên cùng một HS hiện "Đóng đủ" ở màn này
- * và "Đóng một phần" ở màn kia.
- *
- * Thứ tự nhánh là CÓ Ý và không được đảo:
- *  - overpaid trước fully_paid: trả dư là một trạng thái riêng cần thấy rõ.
- *  - settled_waived trước fully_paid: đã tất toán nhưng tiền thực đóng chưa đủ
- *    nghĩa là MIỄN/GIẢM — gọi là "đóng đủ" thì danh sách nói dối.
- */
+// Nguồn sự thật duy nhất cho trạng thái học phí (badge + bộ lọc).
+// Thứ tự nhánh trong getTuitionBadgeStatus là có ý, không đảo.
 export type TuitionBadgeStatus =
   | "overpaid"
   | "settled_waived"
@@ -28,7 +18,7 @@ export type TuitionStatusInput = {
 }
 
 export function getTuitionBadgeStatus(item: TuitionStatusInput): TuitionBadgeStatus {
-  // Nợ âm (trả dư từ tháng trước) không phải là "phải đóng" → kẹp về 0.
+  // Nợ âm (credit tháng trước) không phải "phải đóng" → kẹp về 0.
   const adjustedAmount = Math.max(0, item.totalAmountDue)
 
   if (item.paidAmount > adjustedAmount && adjustedAmount > 0) return "overpaid"
@@ -45,4 +35,28 @@ export function getTuitionBadgeStatus(item: TuitionStatusInput): TuitionBadgeSta
   if (item.paidAmount > 0) return "partial"
   if (adjustedAmount > 0) return "unpaid"
   return "no_sessions"
+}
+
+export type TuitionStatusFilter =
+  | "all" | "fully_paid" | "paid_this_month" | "partial" | "unpaid"
+
+// Bộ lọc suy ra từ badge, không chép lại điều kiện.
+// 'fully_paid' cố ý gộp cả trả dư và miễn/giảm.
+export function matchesTuitionStatusFilter(
+  item: TuitionStatusInput,
+  filter: TuitionStatusFilter | undefined
+): boolean {
+  if (!filter || filter === "all") return true
+
+  const status = getTuitionBadgeStatus(item)
+  switch (filter) {
+    case "fully_paid":
+      return status === "fully_paid" || status === "overpaid" || status === "settled_waived"
+    case "paid_this_month":
+      return status === "paid_this_month"
+    case "partial":
+      return status === "partial"
+    case "unpaid":
+      return status === "unpaid"
+  }
 }

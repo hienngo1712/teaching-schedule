@@ -391,11 +391,11 @@ describe("Historical grade filtering after upgrade", () => {
 
     await caller.student.upgradeAllClasses()
 
-    const summary = await caller.report.monthlySummary({ year: 2099, month: 4 })
-    const grade3Bucket = summary.byGrade.find((g) => g.grade === 3)
-    const grade4Bucket = summary.byGrade.find((g) => g.grade === 4)
-    expect(grade3Bucket?.sessionCount ?? 0).toBeGreaterThanOrEqual(1)
-    expect(grade4Bucket?.sessionCount ?? 0).toBe(0)
+    // Buổi đã tạo ở lại khối 3 (grade snapshot), không nhảy sang khối 4.
+    const grade3 = await caller.report.monthlySummary({ year: 2099, month: 4, grade: 3 })
+    const grade4 = await caller.report.monthlySummary({ year: 2099, month: 4, grade: 4 })
+    expect(grade3.totalSessions).toBeGreaterThanOrEqual(1)
+    expect(grade4.totalSessions).toBe(0)
   }, 30_000)
 })
 

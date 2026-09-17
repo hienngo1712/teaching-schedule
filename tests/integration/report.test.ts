@@ -32,6 +32,8 @@ describe("Report Router", () => {
     })
 
     expect(report.student.fullName).toBe("HS Báo Cáo")
+    // student chỉ còn field UI cần — không rò userId / thông tin phụ huynh ra client
+    expect(Object.keys(report.student).sort()).toEqual(["fullName", "grade", "id", "level"])
     expect(report.sessions).toHaveLength(1)
     expect(report.summary.total).toBe(1)
     expect(report.summary.pending).toBe(1) // Default is pending
@@ -84,8 +86,8 @@ describe("Report Router", () => {
     })
 
     expect(summary.totalSessions).toBeGreaterThanOrEqual(2)
-    expect(summary.byGrade).toHaveLength(9)
-    expect(summary.byGrade.find((g: any) => g.grade === 3).sessionCount).toBeGreaterThanOrEqual(2)
+    expect(summary.totalStudents).toBeGreaterThanOrEqual(1)
+    expect(summary.overallAttendanceRate).toBeGreaterThanOrEqual(0)
   })
 
   it("report.student id không tồn tại → NOT_FOUND", async () => {

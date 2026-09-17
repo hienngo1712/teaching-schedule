@@ -84,11 +84,8 @@ export function SessionFormDialog({
     },
   })
 
-  // Reset MỖI LẦN mở dialog. Trước đây chỉ reset khi có editingSession/initialDate,
-  // nên luồng "sửa ca A → đóng → bấm Tạo ca dạy" (cả hai đều undefined) không chạy
-  // nhánh nào và form giữ nguyên môn/giờ/HS của ca A.
-  // KHÔNG phụ thuộc `subjects`: danh sách môn về muộn sẽ reset đè lên thứ user vừa
-  // nhập. Môn mặc định do effect bên dưới điền vào khi ô còn trống.
+  // Reset mỗi lần mở dialog, kể cả khi tạo ca mới (tránh giữ dữ liệu ca vừa sửa).
+  // Không phụ thuộc `subjects` — môn về muộn sẽ reset đè lên thứ user vừa nhập.
   useEffect(() => {
     if (!open) return
 
@@ -116,8 +113,7 @@ export function SessionFormDialog({
     setIsUpdateFuture(false)
   }, [open, editingSession, initialDate, form])
 
-  // Điền môn mặc định cho ca mới — chạy SAU effect reset ở trên (thứ tự khai báo),
-  // và cả khi danh sách môn về muộn hơn lúc mở dialog.
+  // Điền môn mặc định cho ca mới, chạy sau effect reset ở trên.
   useEffect(() => {
     if (!open || isEdit || subjects.length === 0) return
     if (form.getValues("subjectId")) return
@@ -213,9 +209,7 @@ export function SessionFormDialog({
                         <FormControl>
                           <Button
                             variant="outline"
-                            // Chuỗi ca lặp được xác định bởi THỨ trong tuần, nên
-                            // updateFuture không nhận sessionDate. Khóa ô ngày lại
-                            // thay vì để user đổi rồi thay đổi bị bỏ qua im lặng.
+                            // updateFuture không nhận sessionDate → khóa ô ngày.
                             disabled={isUpdateFuture}
                             className={cn(
                               "pl-3 text-left font-normal",
@@ -370,9 +364,7 @@ export function SessionFormDialog({
                     onCheckedChange={(val) => {
                       const checked = !!val
                       setIsUpdateFuture(checked)
-                      // Nếu user đã lỡ đổi ngày trước khi tick, trả về ngày gốc —
-                      // updateFuture không nhận sessionDate nên giữ lại giá trị đã
-                      // đổi chỉ tạo cảm giác sai là nó sẽ được lưu.
+                      // Trả lại ngày gốc nếu user đã lỡ đổi trước khi tick.
                       if (checked && editingSession) {
                         form.setValue(
                           "sessionDate",

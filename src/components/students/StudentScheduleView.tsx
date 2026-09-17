@@ -65,10 +65,7 @@ export function StudentScheduleView({
 
   const studentSessions = useMemo(() => {
     return sessions
-      // Loại ca đã hủy: report.student đã lọc sẵn ở server, nhưng màn Lịch dạy
-      // truyền thẳng session.getMonth (KHÔNG lọc) vào đây → cùng một HS mà hai
-      // màn ra hai con số học phí khác nhau. Lọc ở đây để thống nhất, và khớp
-      // luôn với cách tuition.service bỏ ca hủy khi tính tiền.
+      // Bỏ ca hủy cho khớp với server (report.student và tuition.service).
       .filter(s => s.status !== "cancelled")
       .filter(s => s.students.some(st => st.studentId === studentId))
       .sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime())
@@ -214,9 +211,7 @@ export function StudentScheduleView({
               <span>{t("total_sessions")} <span className="font-bold text-slate-800">{summary.total}</span></span>
               <span>{t("present")} <span className="text-green-600 font-bold">{summary.present}</span></span>
               <span>{t("absent")} <span className="text-red-600 font-bold">{summary.absent}</span></span>
-              {/* Panel điểm danh chỉ còn 2 nút Có mặt/Vắng nên không tạo được bản
-                  ghi "muộn" mới. Chỉ hiện ô này khi thực sự có dữ liệu cũ, thay vì
-                  luôn hiển thị một con số 0 vô nghĩa. */}
+              {/* "Muộn" chỉ còn ở dữ liệu cũ — ẩn khi bằng 0 */}
               {summary.late > 0 && (
                 <span>{t("late")} <span className="text-amber-600 font-bold">{summary.late}</span></span>
               )}
@@ -259,13 +254,15 @@ export function StudentScheduleView({
 }
 function TuitionStatusCard({ studentId, year, month }: { studentId: number, year: number, month: number }) {
   const { t } = useTranslation()
-  const { data: statusList, isLoading } = trpc.tuition.getMonthlyStatus.useQuery({
+  // Bản chỉ-đọc: xem báo cáo không được ghi snapshot.
+  const { data: statusList, isLoading } = trpc.tuition.getMonthlyStatusReadOnly.useQuery({
     year,
     month,
-    limit: 1000,
+    studentId,
+    limit: 1,
   })
 
-  const status = statusList?.items.find(s => s.studentId === studentId)
+  const status = statusList?.items[0]
 
   if (isLoading) return <Skeleton className="h-20 w-full" />
   if (!status) return null
