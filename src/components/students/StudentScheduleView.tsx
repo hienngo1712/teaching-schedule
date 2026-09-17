@@ -28,7 +28,7 @@ interface StudentScheduleViewProps {
   sessions: SessionDTO[]
   year: number
   month: number
-  exportRef?: React.RefObject<HTMLDivElement>
+  exportRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export function StudentScheduleView({
