@@ -98,6 +98,7 @@
   "students_count": "{count} học sinh",
   "manage_session_students": "Quản lý học sinh trong ca",
   "apply_to_recurring": "Áp dụng cho tất cả các buổi cùng khung giờ & thứ này",
+  "apply_to_recurring_date_locked": "Chuỗi ca lặp xác định theo thứ trong tuần nên không đổi được ngày. Bỏ tick nếu chỉ muốn dời riêng buổi này.",
   "until_date": "Đến ngày:",
   "pick_date": "Chọn ngày",
   "recurring_note": "Hệ thống sẽ tìm các ca dạy khớp giờ vào các ngày cùng thứ trong khoảng từ {start} đến {end}.",

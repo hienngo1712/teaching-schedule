@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight, Search, Wallet, CheckCircle2, AlertCircle, Clock, CircleDollarSign, BadgeCheck } from "lucide-react"
+import { ChevronLeft, ChevronRight, Search, Wallet } from "lucide-react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
@@ -28,82 +28,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
+import { TuitionStatusBadge } from "@/components/tuition/TuitionStatusBadge"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import type { MonthlyTuitionFilterInput } from "@/lib/schemas/tuition"
 
 
 type TuitionStatusItem = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
-
-function getStatusBadge(item: TuitionStatusItem, t: ReturnType<typeof useTranslation>["t"]) {
-  const adjustedAmount = Math.max(0, item.totalAmountDue)
-
-  if (item.paidAmount > adjustedAmount && adjustedAmount > 0) {
-    return (
-      <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">
-        <CircleDollarSign className="size-3 mr-1" /> {t("overpaid")}
-      </Badge>
-    )
-  }
-
-  // Tất toán nhưng số tiền thực đóng chưa đủ → là MIỄN/GIẢM, không phải "đóng đủ".
-  // Hiển thị riêng để danh sách không nói dối khi GV lỡ tick rồi sửa tiền xuống.
-  if (item.isFullPaid && item.paidAmount < adjustedAmount) {
-    return (
-      <Badge className="bg-teal-100 text-teal-700 hover:bg-teal-100 border-none">
-        <BadgeCheck className="size-3 mr-1" /> {t("settled_waived")}
-      </Badge>
-    )
-  }
-
-  // Đã tất toán (GV đánh dấu) → xanh "đóng đủ" dù paidAmount chưa khớp tổng nợ
-  // (có thể miễn/giảm). Khớp StudentScheduleView, dashboard và carry-over backend.
-  if (item.isFullPaid) {
-    return (
-      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">
-        <CheckCircle2 className="size-3 mr-1" /> {t("fully_paid")}
-      </Badge>
-    )
-  }
-
-  if (item.paidAmount >= adjustedAmount && adjustedAmount > 0) {
-    return (
-      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">
-        <CheckCircle2 className="size-3 mr-1" /> {t("fully_paid")}
-      </Badge>
-    )
-  }
-
-  if (item.paidAmount >= item.totalExpected && item.totalExpected > 0 && item.previousBalance > 0) {
-    return (
-      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">
-        <CheckCircle2 className="size-3 mr-1" /> {t("paid_this_month")}
-      </Badge>
-    )
-  }
-
-  if (item.paidAmount > 0) {
-    return (
-      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">
-        <Clock className="size-3 mr-1" /> {t("partial_paid")}
-      </Badge>
-    )
-  }
-
-  if (adjustedAmount > 0) {
-    return (
-      <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">
-        <AlertCircle className="size-3 mr-1" /> {t("unpaid")}
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge variant="outline" className="text-slate-400 border-slate-200 font-normal">
-      {t("no_sessions")}
-    </Badge>
-  )
-}
 
 export default function TuitionPage() {
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
@@ -248,7 +179,7 @@ export default function TuitionPage() {
                         </Badge>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        {getStatusBadge(item, t)}
+                        <TuitionStatusBadge item={item} />
                         <span className="text-[10px] text-slate-400 font-medium">
                           {item.presentSessions}/{item.totalSessions} {t("sessions")}
                         </span>
@@ -326,7 +257,7 @@ export default function TuitionPage() {
                             {formatCurrency(item.totalAmountDue)}
                           </TableCell>
                           <TableCell className="text-center">
-                            {getStatusBadge(item, t)}
+                            <TuitionStatusBadge item={item} />
                           </TableCell>
                           <TableCell className="text-right">
                             <Button

@@ -20,6 +20,7 @@ import { trpc } from "@/lib/trpc"
 import { ExportButton } from "../reports/ExportButton"
 import { usePagination } from "@/hooks/usePagination"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { TuitionStatusBadge } from "@/components/tuition/TuitionStatusBadge"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 interface StudentScheduleViewProps {
@@ -64,6 +65,11 @@ export function StudentScheduleView({
 
   const studentSessions = useMemo(() => {
     return sessions
+      // Loại ca đã hủy: report.student đã lọc sẵn ở server, nhưng màn Lịch dạy
+      // truyền thẳng session.getMonth (KHÔNG lọc) vào đây → cùng một HS mà hai
+      // màn ra hai con số học phí khác nhau. Lọc ở đây để thống nhất, và khớp
+      // luôn với cách tuition.service bỏ ca hủy khi tính tiền.
+      .filter(s => s.status !== "cancelled")
       .filter(s => s.students.some(st => st.studentId === studentId))
       .sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime())
   }, [sessions, studentId])
@@ -208,7 +214,12 @@ export function StudentScheduleView({
               <span>{t("total_sessions")} <span className="font-bold text-slate-800">{summary.total}</span></span>
               <span>{t("present")} <span className="text-green-600 font-bold">{summary.present}</span></span>
               <span>{t("absent")} <span className="text-red-600 font-bold">{summary.absent}</span></span>
-              <span>{t("late")} <span className="text-amber-600 font-bold">{summary.late}</span></span>
+              {/* Panel điểm danh chỉ còn 2 nút Có mặt/Vắng nên không tạo được bản
+                  ghi "muộn" mới. Chỉ hiện ô này khi thực sự có dữ liệu cũ, thay vì
+                  luôn hiển thị một con số 0 vô nghĩa. */}
+              {summary.late > 0 && (
+                <span>{t("late")} <span className="text-amber-600 font-bold">{summary.late}</span></span>
+              )}
               <span>{t("expected_revenue")}: <span className="text-indigo-600 font-bold">{formatCurrency(summary.expectedFee)}</span></span>
               <span>{t("actual_revenue")}: <span className="text-emerald-600 font-bold">{formatCurrency(summary.totalFee)}</span></span>
             </div>
@@ -277,13 +288,7 @@ function TuitionStatusCard({ studentId, year, month }: { studentId: number, year
       <div className="p-4 rounded-lg bg-slate-50 border border-slate-100">
         <p className="text-sm text-slate-500 font-medium">{t("status")}</p>
         <div className="mt-1">
-          {status.isFullPaid ? (
-            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">{t("fully_paid")}</Badge>
-          ) : status.paidAmount > 0 ? (
-            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">{t("partial_paid")}</Badge>
-          ) : (
-            <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">{t("unpaid")}</Badge>
-          )}
+          <TuitionStatusBadge item={status} />
         </div>
       </div>
     </div>

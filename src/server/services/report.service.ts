@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
-import { calcAttendanceRate } from "@/lib/utils"
+import { calcAttendanceRate, vnDateParts } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
 import { getMonthSessions } from "./session.service"
 import { getMonthlyOutstanding } from "./tuition.service"
@@ -224,10 +224,13 @@ export async function getMonthlySummary(
 }
 
 export async function getDashboardStats(db: PrismaClient, userId: number) {
-  const now = new Date()
-  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
-  const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1))
-  const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1))
+  // Mốc thời gian theo lịch VN, KHÔNG theo giờ local của process: server chạy UTC
+  // nên từ 00:00–07:00 giờ VN, getDate() vẫn trả ngày hôm trước → "Số ca hôm nay"
+  // và "tháng này" hiển thị sai cho giáo viên vào sáng sớm / đầu tháng.
+  const { year: vnYear, month: vnMonth, day: vnDay } = vnDateParts()
+  const today = new Date(Date.UTC(vnYear, vnMonth - 1, vnDay))
+  const startOfMonth = new Date(Date.UTC(vnYear, vnMonth - 1, 1))
+  const endOfMonth = new Date(Date.UTC(vnYear, vnMonth, 1))
 
   // Chạy các query song song để giảm latency tổng (đặc biệt quan trọng với serverless DB)
   const [totalStudents, sessionsToday, sessionsThisMonth, outstanding] = await Promise.all([
@@ -247,8 +250,8 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
 
     // 5. Outstanding tuition — same per-student carry-over math as the tuition page
     getMonthlyOutstanding(db, userId, {
-      year: now.getFullYear(),
-      month: now.getMonth() + 1,
+      year: vnYear,
+      month: vnMonth,
     })
   ])
 

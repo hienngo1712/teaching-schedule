@@ -14,8 +14,6 @@ function calcStudentTuition(
   snapshot: MonthlyTuition | undefined,
   prevSnapshot: MonthlyTuition | undefined,
   historicalBalance: number,
-  year: number,
-  month: number,
 ): {
   totalSessions: number
   presentSessions: number
@@ -53,19 +51,19 @@ function calcStudentTuition(
 
   const totalAmountDue = previousBalance + currentMonthFee
 
-  const now = new Date()
-  const isCurrentMonth =
-    now.getFullYear() === year &&
-    now.getMonth() + 1 === month
-
+  // Ghi lại snapshot mỗi khi số tính ra lệch với số đã lưu — KỂ CẢ tháng quá khứ.
+  // Trước đây chỉ ghi cho tháng hiện tại: màn học phí vẫn hiện đúng (số được tính
+  // lại trong bộ nhớ), nhưng row DB của tháng cũ đông cứng, mà carry-over của
+  // tháng KẾ TIẾP lại đọc chính row đó → sửa điểm danh / xóa buổi ở tháng trước
+  // thì tháng sau vẫn cộng nợ theo số cũ. Chỉ ghi khi thực sự lệch nên không phát
+  // sinh write thừa ở đường đọc bình thường.
   const needsUpsert =
     !snapshot ||
-    (isCurrentMonth && (
-      snapshot.totalSessions !== totalSessions ||
-      snapshot.presentSessions !== presentSessions ||
-      snapshot.currentMonthFee !== currentMonthFee ||
-      snapshot.totalAmountDue !== totalAmountDue
-    ))
+    snapshot.totalSessions !== totalSessions ||
+    snapshot.presentSessions !== presentSessions ||
+    snapshot.currentMonthFee !== currentMonthFee ||
+    snapshot.totalAmountDue !== totalAmountDue ||
+    snapshot.previousBalance !== previousBalance
 
   return { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert }
 }
@@ -203,7 +201,7 @@ export async function getMonthlyTuitionStatus(
     const snapshot = snapshotMap.get(student.id)
     const prevSnapshot = prevSnapshotMap.get(student.id)
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
-      calcStudentTuition(student.id, attendance, snapshot, prevSnapshot, historicalBalances[student.id] ?? 0, year, month)
+      calcStudentTuition(student.id, attendance, snapshot, prevSnapshot, historicalBalances[student.id] ?? 0)
 
     return {
       studentId: student.id,
