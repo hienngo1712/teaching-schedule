@@ -259,13 +259,16 @@ export function StudentScheduleView({
 }
 function TuitionStatusCard({ studentId, year, month }: { studentId: number, year: number, month: number }) {
   const { t } = useTranslation()
-  const { data: statusList, isLoading } = trpc.tuition.getMonthlyStatus.useQuery({
+  // Chỉ-đọc: màn Báo cáo không được ghi snapshot chỉ vì mở ra xem.
+  // Truyền studentId để server trả đúng 1 dòng thay vì kéo 1000 rồi .find() ở client.
+  const { data: statusList, isLoading } = trpc.tuition.getMonthlyStatusReadOnly.useQuery({
     year,
     month,
-    limit: 1000,
+    studentId,
+    limit: 1,
   })
 
-  const status = statusList?.items.find(s => s.studentId === studentId)
+  const status = statusList?.items[0]
 
   if (isLoading) return <Skeleton className="h-20 w-full" />
   if (!status) return null
