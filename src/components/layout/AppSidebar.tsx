@@ -62,6 +62,13 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
           )
         })}
       </nav>
+
+      <div className="mt-auto border-t border-slate-200 px-4 py-3 text-[11px] leading-tight text-slate-400">
+        <div>
+          v{process.env.NEXT_PUBLIC_APP_VERSION} · {process.env.NEXT_PUBLIC_BUILD_SHA}
+        </div>
+        <div>{process.env.NEXT_PUBLIC_BUILD_TIME}</div>
+      </div>
     </aside>
   )
 }
