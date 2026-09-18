@@ -24,26 +24,36 @@ describe("Hợp đồng Next 15", () => {
     expect(src).not.toMatch(/[^t]\bheaders\(\)\.get/)
   })
 
-  it("không page/layout nào nhận prop params hoặc searchParams", () => {
-    // Prop này thành Promise ở Next 15. Dự án không dùng — nếu ai đó thêm vào
-    // mà quên await, test này bắt được.
-    const files = [
-      "src/app/layout.tsx",
-      "src/app/page.tsx",
-      "src/app/login/page.tsx",
-      "src/app/register/page.tsx",
-      "src/app/(app)/layout.tsx",
-      "src/app/(app)/calendar/page.tsx",
-      "src/app/(app)/dashboard/page.tsx",
-      "src/app/(app)/reports/page.tsx",
-      "src/app/(app)/students/page.tsx",
-      "src/app/(app)/tuition/page.tsx",
-    ]
-    for (const f of files) {
-      const src = readFileSync(f, "utf8")
-      expect(src, `${f} nhận prop params/searchParams mà chưa xử lý async`)
-        .not.toMatch(/export default (async )?function \w+\(\s*\{[^}]*\b(params|searchParams)\b/)
+  it("không page/layout nào dính tới params hoặc searchParams", () => {
+    // Prop này thành Promise ở Next 15. Dự án không dùng — quét đệ quy mọi
+    // page.tsx/layout.tsx (không whitelist danh sách cứng, vì file MỚI thêm
+    // sau này cũng phải bị bắt) và tìm định danh params/searchParams bằng
+    // word-boundary, để bắt cả kiểu destructure ở thân hàm (`const { params } = props`)
+    // chứ không chỉ destructure ngay ở tham số.
+    const identifierPattern = /\b(params|searchParams)\b/
+    // Ngoại lệ duy nhất: reports/page.tsx có biến local tên `params` (input tRPC),
+    // không liên quan gì tới prop route của Next.
+    const ALLOWED = new Set(["src/app/(app)/reports/page.tsx"])
+
+    const offenders: string[] = []
+    function walk(dir: string): void {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name)
+        if (entry.isDirectory()) {
+          walk(full)
+        } else if (entry.name === "page.tsx" || entry.name === "layout.tsx") {
+          const normalized = full.split("\\").join("/")
+          if (ALLOWED.has(normalized)) continue
+          const src = readFileSync(full, "utf8")
+          if (identifierPattern.test(src)) {
+            offenders.push(normalized)
+          }
+        }
+      }
     }
+    walk("src/app")
+
+    expect(offenders, `Các file dính params/searchParams chưa xử lý async: ${offenders.join(", ")}`).toEqual([])
   })
 
   it("không dùng fetch() ở bất kỳ đâu trong src/ — nếu thêm phải tự khai báo cache", () => {
