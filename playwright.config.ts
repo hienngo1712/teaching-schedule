@@ -18,7 +18,9 @@ export default defineConfig({
   },
   timeout: 30000,
   expect: {
-    timeout: 10000,
+    // 30s: lượt đầu tiên phải chờ next dev biên dịch nguội (Server Action + cold
+    // Neon connection); reuseExistingServer: false nên lần nào cũng gặp trạng thái nguội.
+    timeout: 30000,
   },
   projects: [
     {
