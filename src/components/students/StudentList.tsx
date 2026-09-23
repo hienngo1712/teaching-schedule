@@ -72,7 +72,6 @@ export function StudentList() {
 
   useEffect(() => {
     setLocalSearch(searchStudentName)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchStudentName])
 
   useEffect(() => {

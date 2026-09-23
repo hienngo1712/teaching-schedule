@@ -13,28 +13,27 @@ test.describe('Calendar', () => {
   test('create and delete a session', async ({ page }) => {
     const sessionTitle = `Ca E2E ${Math.floor(Math.random() * 10000)}`;
     const startHour = Math.floor(Math.random() * 5) + 13; // 13:00 to 17:00
-    await page.goto('/calendar');
-    await page.click('text=Tạo ca dạy');
-    
-    await page.fill('input[placeholder*="Nhóm nâng cao"]', sessionTitle);
-    await page.fill('input[type="time"]', `${startHour}:00`);
-    await page.locator('input[type="time"]').last().fill(`${startHour + 1}:00`);
-    
-    // Wait for the dialog to be stable
-    await page.locator('button:has-text("Tạo ca dạy")').last().click();
-    
-    await expect(page.locator('text=Tạo ca dạy thành công')).toBeVisible();
-    
-    // Verify it appeared in the calendar (might be in mobile list or grid)
-    await expect(page.locator(`text=${sessionTitle}`).first()).toBeVisible();
 
-    // Open detail and delete
-    await page.click(`text=${sessionTitle}`);
-    await page.click('button[aria-label="Menu hành động"]');
-    await page.click('text=Xóa ca dạy');
-    await page.click('button:has-text("Xóa ca dạy")');
-    
-    await expect(page.locator('text=Đã xóa ca dạy')).toBeVisible();
-    await expect(page.locator(`text=${sessionTitle}`)).not.toBeVisible();
+    await page.getByRole('button', { name: 'Tạo ca dạy' }).first().click();
+    const form = page.getByRole('dialog');
+
+    // TimeInput là ô text tự chèn dấu ":" nên gõ số liền.
+    await form.getByLabel('Bắt đầu (HH:mm)').fill(`${startHour}00`);
+    await form.getByLabel('Kết thúc (HH:mm)').fill(`${startHour + 1}00`);
+    await form.getByLabel('Môn học').click();
+    await page.getByRole('option').first().click();
+    await form.getByPlaceholder('Nhóm nâng cao').fill(sessionTitle);
+    await form.getByRole('button', { name: 'Tạo ca dạy' }).click();
+
+    await expect(page.getByText('Tạo ca dạy thành công')).toBeVisible();
+    await expect(page.getByText(sessionTitle).first()).toBeVisible();
+
+    await page.getByText(sessionTitle).first().click();
+    await page.getByRole('button', { name: 'Menu hành động' }).click();
+    await page.getByRole('menuitem', { name: 'Xóa ca dạy' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa ca dạy' }).click();
+
+    await expect(page.getByText('Đã xóa ca dạy')).toBeVisible();
+    await expect(page.getByText(sessionTitle)).toHaveCount(0);
   });
 });

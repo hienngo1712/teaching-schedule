@@ -18,12 +18,12 @@ describe("useFilters", () => {
   
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(useRouter as any).mockReturnValue({ push: mockPush })
-    ;(usePathname as any).mockReturnValue(mockPathname)
+    ;vi.mocked(useRouter).mockReturnValue({ push: mockPush } as unknown as ReturnType<typeof useRouter>)
+    ;vi.mocked(usePathname).mockReturnValue(mockPathname)
   })
 
   it("should initialize with null/empty values", () => {
-    ;(useSearchParams as any).mockReturnValue(new URLSearchParams(""))
+    ;vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("") as ReturnType<typeof useSearchParams>)
     const { result } = renderHook(() => useFilters())
     
     expect(result.current.selectedGrade).toBeNull()
@@ -33,7 +33,7 @@ describe("useFilters", () => {
   })
 
   it("should get values from search params", () => {
-    ;(useSearchParams as any).mockReturnValue(new URLSearchParams("grade=3&studentName=An&studentId=123"))
+    ;vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("grade=3&studentName=An&studentId=123") as ReturnType<typeof useSearchParams>)
     const { result } = renderHook(() => useFilters())
     
     expect(result.current.selectedGrade).toBe(3)
@@ -43,7 +43,7 @@ describe("useFilters", () => {
   })
 
   it("should set grade and clear studentId", () => {
-    ;(useSearchParams as any).mockReturnValue(new URLSearchParams("studentId=123"))
+    ;vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("studentId=123") as ReturnType<typeof useSearchParams>)
     const { result } = renderHook(() => useFilters())
     
     act(() => {
@@ -54,7 +54,7 @@ describe("useFilters", () => {
   })
 
   it("should set student name and clear studentId", () => {
-    ;(useSearchParams as any).mockReturnValue(new URLSearchParams("studentId=123"))
+    ;vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("studentId=123") as ReturnType<typeof useSearchParams>)
     const { result } = renderHook(() => useFilters())
     
     act(() => {
@@ -65,7 +65,7 @@ describe("useFilters", () => {
   })
 
   it("should set studentId", () => {
-    ;(useSearchParams as any).mockReturnValue(new URLSearchParams("grade=3"))
+    ;vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("grade=3") as ReturnType<typeof useSearchParams>)
     const { result } = renderHook(() => useFilters())
     
     act(() => {
@@ -76,7 +76,7 @@ describe("useFilters", () => {
   })
 
   it("should reset filters", () => {
-    ;(useSearchParams as any).mockReturnValue(new URLSearchParams("grade=3&studentName=An"))
+    ;vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("grade=3&studentName=An") as ReturnType<typeof useSearchParams>)
     const { result } = renderHook(() => useFilters())
     
     act(() => {

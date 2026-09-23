@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from "vitest"
+import { describe, it, expect, beforeAll } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
 

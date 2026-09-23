@@ -127,12 +127,12 @@ describe("Nhóm B — tài chính/báo cáo", () => {
     await caller.tuition.updatePayment({ studentId: st.id, year: 2026, month: 5, paidAmount: 60000, isFullPaid: false })
 
     const all = await caller.tuition.getMonthlyStatus({ year: 2026, month: 5 })
-    const item = all.items.find((i: any) => i.studentId === st.id)
+    const item = all.items.find((i) => i.studentId === st.id)
     expect(item).toBeDefined()
     expect(item!.previousBalance).toBe(-50000)
     expect(item!.totalAmountDue).toBe(50000)
 
     const partial = await caller.tuition.getMonthlyStatus({ year: 2026, month: 5, status: "partial" })
-    expect(partial.items.find((i: any) => i.studentId === st.id)).toBeUndefined()
+    expect(partial.items.find((i) => i.studentId === st.id)).toBeUndefined()
   }, 30_000)
 })
