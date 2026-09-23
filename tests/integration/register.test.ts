@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from "vitest"
-import { publicCaller, getAuthedCaller } from "../helpers/trpc"
+import { describe, it, expect } from "vitest"
+import { publicCaller } from "../helpers/trpc"
 import { db } from "@/server/db"
 
 describe("User Registration", () => {

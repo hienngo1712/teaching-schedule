@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll } from "vitest"
 import { getAuthedCaller } from "../helpers/trpc"
-import type { Student } from "@prisma/client"
+type Caller = Awaited<ReturnType<typeof getAuthedCaller>>
 
 describe("Multi-tenant isolation", () => {
-  let callerA: any
-  let callerB: any
-  let studentA: Student
-  let sessionA: any
+  let callerA: Caller
+  let callerB: Caller
+  let studentA: Awaited<ReturnType<Caller["student"]["create"]>>
+  let sessionA: Awaited<ReturnType<Caller["session"]["create"]>>
 
   beforeAll(async () => {
     // Setup 2 users separately: teacher (userA) and teacher2 (userB)
@@ -31,7 +31,7 @@ describe("Multi-tenant isolation", () => {
   // ── Student isolation ─────────────────────────────────────────
   it("UserB không thấy student của UserA", async () => {
     const students = await callerB.student.list({})
-    const ids = students.items.map((s: any) => s.id)
+    const ids = students.items.map((s) => s.id)
     expect(ids).not.toContain(studentA.id)
   })
 
@@ -50,7 +50,7 @@ describe("Multi-tenant isolation", () => {
   // ── Session isolation ─────────────────────────────────────────
   it("UserB không thấy session của UserA trong getMonth", async () => {
     const sessions = await callerB.session.getMonth({ year: 2026, month: 5 })
-    const ids = sessions.map((s: any) => s.id)
+    const ids = sessions.map((s) => s.id)
     expect(ids).not.toContain(sessionA.id)
   })
 
@@ -82,8 +82,8 @@ describe("Multi-tenant isolation", () => {
   it("UserB không thấy subject của UserA", async () => {
     const subjectsA = await callerA.subject.list({})
     const subjectsB = await callerB.subject.list({})
-    const idsA = subjectsA.map((s: any) => s.id)
-    const idsB = subjectsB.map((s: any) => s.id)
+    const idsA = subjectsA.map((s) => s.id)
+    const idsB = subjectsB.map((s) => s.id)
     // Check if there is any intersection
     const intersection = idsA.filter((id: number) => idsB.includes(id))
     expect(intersection).toHaveLength(0)
@@ -113,7 +113,7 @@ describe("Multi-tenant isolation", () => {
   // ── Report isolation ──────────────────────────────────────────
   it("UserB không thể xem report student của UserA → NOT_FOUND", async () => {
     await expect(
-      callerB.report.student({ studentId: studentA.id, period: "month", year: 2026, month: 5 })
+      callerB.report.student({ studentId: studentA.id, year: 2026, month: 5 })
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
 
@@ -128,7 +128,7 @@ describe("Multi-tenant isolation", () => {
     // student.list is paginated ({ items }) and isolated per user
     const studentsA = await callerA.student.list({})
     const studentsB = await callerB.student.list({})
-    expect(studentsA.items.map((s: any) => s.id)).toContain(studentA.id)
-    expect(studentsB.items.map((s: any) => s.id)).not.toContain(studentA.id)
+    expect(studentsA.items.map((s) => s.id)).toContain(studentA.id)
+    expect(studentsB.items.map((s) => s.id)).not.toContain(studentA.id)
   })
 })

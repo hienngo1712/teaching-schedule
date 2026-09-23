@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeAll } from "vitest"
 import { getAuthedCaller } from "../helpers/trpc"
 
+type Caller = Awaited<ReturnType<typeof getAuthedCaller>>
+
 describe("Report Router", () => {
-  let caller: any
-  let student: any
-  let subject: any
+  let caller: Caller
+  let student: Awaited<ReturnType<Caller["student"]["create"]>>
+  let subject: Awaited<ReturnType<Caller["subject"]["list"]>>[number]
 
   beforeAll(async () => {
     caller = await getAuthedCaller("teacher")
@@ -60,7 +62,7 @@ describe("Report Router", () => {
     })
     
     const sessionsAll = await caller.session.getMonth({ year: 2026, month: 5, studentName: student.fullName })
-    const session2Id = sessionsAll.find((s: any) => s.startTime === "10:00").id
+    const session2Id = sessionsAll.find((s) => s.startTime === "10:00")!.id
 
     await caller.attendance.update({
       sessionId: session2Id,

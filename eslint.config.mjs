@@ -6,7 +6,7 @@ const compat = new FlatCompat({
   baseDirectory: dirname(fileURLToPath(import.meta.url)),
 })
 
-export default [
+const config = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     ignores: [
@@ -14,15 +14,10 @@ export default [
       "node_modules/**",
       "coverage/**",
       "playwright-report/**",
+      "test-results/**",
       "next-env.d.ts",
     ],
   },
-  {
-    files: ["tests/**"],
-    rules: {
-      // Nợ cũ: next lint trước đây không lint tests/ nên các chỗ `any` này chưa từng bị soi.
-      // Để warn thay vì tắt hẳn, sẽ dọn ở một đợt riêng.
-      "@typescript-eslint/no-explicit-any": "warn",
-    },
-  },
 ]
+
+export default config

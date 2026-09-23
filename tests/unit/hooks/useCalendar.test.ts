@@ -35,7 +35,7 @@ describe("useCalendar grid", () => {
   })
 
   it("monthLabel đúng format với localization (EN)", () => {
-    const t = (key: any) => {
+    const t = (key: string) => {
       if (key === "month_year_label") return "Month {month} / {year}"
       return key
     }
