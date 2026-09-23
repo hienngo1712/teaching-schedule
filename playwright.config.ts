@@ -1,4 +1,19 @@
+// Nạp .env.test + toàn bộ guard chống chạy nhầm production TRƯỚC mọi thứ khác.
+// File config này được đánh giá trước khi webServer spawn, nên tiến trình con
+// kế thừa DATABASE_URL đã được thay bằng endpoint test.
+import './tests/env-setup';
+
 import { defineConfig, devices } from '@playwright/test';
+
+// Chuỗi rỗng vẫn là giá trị "đã định nghĩa" nên @next/env sẽ không ghi đè —
+// fallback '' sẽ khiến lỗi thiếu biến bị che thành lỗi Prisma khó hiểu.
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Thiếu ${name} sau khi nạp .env.test — kiểm tra lại file đó.`);
+  }
+  return value;
+}
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -11,9 +26,14 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
   },
-  timeout: 30000,
+  // test-timeout phải LỚN HƠN expect.timeout: nếu bằng hoặc nhỏ hơn, assertion
+  // không bao giờ kịp tự báo lỗi — test luôn chết trước bằng "Test timeout exceeded"
+  // chung chung, mất thông tin chẩn đoán của chính assertion đó.
+  timeout: 90000,
   expect: {
-    timeout: 10000,
+    // 30s: lượt đầu tiên phải chờ next dev biên dịch nguội (Server Action + cold
+    // Neon connection); reuseExistingServer: false nên lần nào cũng gặp trạng thái nguội.
+    timeout: 30000,
   },
   projects: [
     {
@@ -24,7 +44,17 @@ export default defineConfig({
   webServer: {
     command: 'pnpm dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: true,
+    // Truyền env TƯỜNG MINH thay vì dựa vào kế thừa ngầm — đọc config là thấy
+    // ngay server chạy DB nào.
+    env: {
+      DATABASE_URL: requireEnv('DATABASE_URL'),
+      DIRECT_URL: requireEnv('DIRECT_URL'),
+      NODE_ENV: 'development',
+    },
+    // PHẢI là false. `true` sẽ tái dùng server đang chạy sẵn ở cổng 3000 —
+    // mà server đó nhiều khả năng do `pnpm dev` thường ngày khởi, đang trỏ
+    // vào .env (production). Bản vá env sẽ vô nghĩa nếu vẫn reuse.
+    reuseExistingServer: false,
     timeout: 120000,
   },
 });
