@@ -45,6 +45,13 @@ test.describe('Mobile 390px', () => {
     }
   });
 
+  // Mobile không có thẻ ca tô màu cấp học (chỉ có sọc màu môn) → chú thích màu cấp học sẽ gây hiểu nhầm.
+  test('màn Lịch không hiện chú thích màu cấp học trên mobile', async ({ page }) => {
+    await page.goto('/calendar');
+    await expect(page.getByRole('button', { name: 'Tạo ca dạy' }).first()).toBeVisible();
+    await expect(page.getByText('Hỗn hợp')).toBeHidden();
+  });
+
   // Seed không có học sinh → test tự tạo HS (tên dài để thử truncate), tạo ca gắn HS đó, rồi tự dọn.
   // Bảng desktop và lưới lịch vẫn nằm trong DOM (chỉ bị ẩn bằng CSS) nên phải lọc phần tử đang hiện.
   test('thẻ học sinh + điểm danh một ca trên mobile', async ({ page }) => {

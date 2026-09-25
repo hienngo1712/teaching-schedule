@@ -134,7 +134,7 @@ Mẫu thẻ/bảng hiện có ở `tuition/page.tsx:143` và `:206` là nguồn 
 
 ### 5.6 Lịch (`calendar/page.tsx`, `MonthCalendar`, `SessionCard`, `FilterBar` cũ)
 - Sửa bug: `session.title ?? session.subject.name` → `session.title || session.subject.name` (cả chỗ `title` tooltip nếu cần).
-- Chú thích màu phía trên lưới (desktop) / dưới thanh công cụ (mobile): Tiểu học, THCS, Hỗn hợp, Đã hủy.
+- Chú thích màu phía trên lưới, chỉ ở desktop: Tiểu học, THCS, Hỗn hợp, Đã hủy. Mobile không hiện vì danh sách ca mobile dùng sọc màu môn, không có màu cấp học.
 - Thanh công cụ mobile: nút lịch lặp có chữ "Lịch lặp"; nút tạo ca hiện đủ chữ "Tạo ca dạy" trên mobile.
 - Giữ nguyên bố cục lịch mobile.
 

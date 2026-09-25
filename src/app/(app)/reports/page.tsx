@@ -127,7 +127,7 @@ export default function ReportsPage() {
 
       {!selectedStudentId ? (
         <>
-          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
             <StatCard label={t("student")} value={monthlySummary?.totalStudents} />
             <StatCard
               label={t("attendance_rate")}

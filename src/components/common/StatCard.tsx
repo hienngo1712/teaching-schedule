@@ -14,7 +14,7 @@ type Props = {
 
 export function StatCard({ label, value, hint, icon, loading, valueClassName }: Props) {
   return (
-    <Card className="border-slate-200 bg-white">
+    <Card data-testid="stat-card" className="border-slate-200 bg-white">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium text-slate-600">{label}</p>
@@ -24,7 +24,7 @@ export function StatCard({ label, value, hint, icon, loading, valueClassName }: 
           <Skeleton className="mt-2 h-7 w-24" />
         ) : (
           // nowrap: số tiền 9 chữ số không được gãy "100.000.000 / đ" ở thẻ 2 cột 390px
-          <p className={cn("mt-1 whitespace-nowrap text-lg font-bold text-slate-900 md:text-2xl", valueClassName)}>
+          <p data-testid="stat-value" className={cn("mt-1 whitespace-nowrap text-lg font-bold text-slate-900 xl:text-2xl", valueClassName)}>
             {value}
           </p>
         )}
