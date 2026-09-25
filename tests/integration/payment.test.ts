@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
 import { findPaidAmountMismatches } from "../helpers/payment"
@@ -185,6 +185,27 @@ describe("payment.* — lịch sử thu tiền", () => {
     expect(list).toHaveLength(1)
     expect(list[0].amount).toBe(100000)
   })
+
+  it("✗ lần thu bị xoá xen giữa lúc kiểm quyền và lúc ghi → NOT_FOUND, không phải 500", async () => {
+    const caller = await getAuthedCaller()
+    const st = await seedStudent(caller, [])
+    const a = await caller.payment.create({ studentId: st.id, ...may, amount: 100000, paidAt: "2026-05-12", method: "cash" })
+    const b = await caller.payment.create({ studentId: st.id, ...may, amount: 200000, paidAt: "2026-05-12", method: "cash" })
+
+    // Giả lập request khác xoá đúng lúc: findOwnedPayment thấy dòng, rồi dòng biến mất trước transaction.
+    const realFind = db.payment.findUnique.bind(db.payment)
+    const spy = vi.spyOn(db.payment, "findUnique").mockImplementation((async (args: Parameters<typeof realFind>[0]) => {
+      const found = await realFind(args)
+      await db.payment.deleteMany({ where: { id: args.where.id } })
+      return found
+    }) as unknown as typeof db.payment.findUnique)
+    try {
+      await expect(caller.payment.update({ id: a.id, data: { amount: 1 } })).rejects.toMatchObject({ code: "NOT_FOUND" })
+      await expect(caller.payment.delete({ id: b.id })).rejects.toMatchObject({ code: "NOT_FOUND" })
+    } finally {
+      spy.mockRestore()
+    }
+  }, 60_000)
 
   it("✗ input sai → BAD_REQUEST, không ghi gì", async () => {
     const caller = await getAuthedCaller()

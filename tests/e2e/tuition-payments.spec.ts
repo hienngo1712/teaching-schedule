@@ -103,6 +103,9 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await expect(card.getByText('Đã đóng đủ')).toBeVisible();
     await card.getByRole('button', { name: 'Ghi nhận', exact: true }).click();
 
+    // Chưa sửa tất toán/ghi chú → nút Lưu tắt
+    await expect(sheet.getByRole('button', { name: 'Lưu', exact: true })).toBeDisabled();
+
     // 6. Sửa lần 1 (tiền mặt) thành 50.000
     const cashRow = sheet.getByTestId('payment-row').filter({ hasText: 'Tiền mặt' });
     await cashRow.getByRole('button', { name: 'Menu hành động' }).click();
@@ -117,6 +120,7 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await transferRow.getByRole('button', { name: 'Menu hành động' }).click();
     await page.getByRole('menuitem', { name: 'Xóa' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa' }).click();
+    await expect(page.getByText('Đã xoá lần thu')).toBeVisible();
     await expect(sheet.getByTestId('payment-row')).toHaveCount(1);
     await expect(sheet.getByTestId('paid-total')).toHaveText(/50\.000/);
     await expectNoHorizontalScroll(page);

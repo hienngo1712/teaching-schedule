@@ -304,6 +304,7 @@
   "waived": "Miễn giảm",
   "no_payments": "Chưa có lần thu nào",
   "payment_saved": "Đã lưu lần thu",
+  "payment_deleted": "Đã xoá lần thu",
   "delete_payment_confirm": "Xoá lần thu {amount} ngày {date}? Số đã trả của tháng sẽ giảm tương ứng.",
   "settlement_saved": "Đã lưu tất toán và ghi chú"
 }

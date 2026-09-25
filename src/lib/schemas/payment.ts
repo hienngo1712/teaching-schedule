@@ -27,7 +27,8 @@ const monthKey = {
   month: z.number().int().min(1).max(12),
 }
 
-const amountSchema = z.number().int().min(1, "Số tiền phải lớn hơn 0")
+// Chặn trên để không tràn INTEGER Postgres (2,147,483,647) → 500.
+const amountSchema = z.number().int().min(1, "Số tiền phải lớn hơn 0").max(1_000_000_000, "Số tiền tối đa 1.000.000.000")
 
 export const paymentCreateSchema = z.object({
   ...monthKey,

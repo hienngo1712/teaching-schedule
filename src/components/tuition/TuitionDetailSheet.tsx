@@ -62,7 +62,7 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
 
   if (!data) return null
 
-  // DialogContent/SheetContent chỉ mount khi mở → state tất toán khởi tạo lại từ data mỗi lần mở.
+  // DialogContent/SheetContent chỉ mount khi mở → phần sửa dở của form tất toán bị bỏ mỗi lần mở lại.
   const body = (
     <TuitionDetailBody
       data={data}
@@ -108,8 +108,10 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
   const paymentsQuery = trpc.payment.list.useQuery({ studentId, year, month })
   const payments = paymentsQuery.data ?? []
 
-  const [isFullPaid, setIsFullPaid] = useState(data.isFullPaid)
-  const [notes, setNotes] = useState(data.notes ?? "")
+  // Chỉ giữ phần người dùng đã sửa; phần chưa sửa theo `row` mới nhất để `dirty` không sáng sai.
+  const [edits, setEdits] = useState<{ isFullPaid?: boolean; notes?: string }>({})
+  const isFullPaid = edits.isFullPaid ?? row.isFullPaid
+  const notes = edits.notes ?? row.notes ?? ""
   const [form, setForm] = useState<{ open: false } | { open: true; payment?: PaymentDTO }>({ open: false })
   const [deleteTarget, setDeleteTarget] = useState<PaymentDTO | null>(null)
 
@@ -120,7 +122,10 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
     },
     onError: (e) => toast.error(e.message),
   })
-  const deleteMut = trpc.payment.delete.useMutation({ onError: (e) => toast.error(e.message) })
+  const deleteMut = trpc.payment.delete.useMutation({
+    onSuccess: () => toast.success(t("payment_deleted")),
+    onError: (e) => toast.error(e.message),
+  })
 
   const summary = paymentSummaryLine(row)
   const summaryLabel = { remaining: t("remaining"), overpaid: t("overpaid_amount"), waived: t("waived") }[summary.kind]
@@ -278,7 +283,7 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
               <Checkbox
                 id="tuition-full-paid"
                 checked={isFullPaid}
-                onCheckedChange={(v) => setIsFullPaid(v === true)}
+                onCheckedChange={(v) => setEdits((e) => ({ ...e, isFullPaid: v === true }))}
               />
               <Label htmlFor="tuition-full-paid" className="text-sm font-medium">
                 {t("mark_fully_paid")}
@@ -303,7 +308,7 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
                 placeholder={t("notes_placeholder")}
                 className="min-h-[80px] text-sm"
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(ev) => setEdits((e) => ({ ...e, notes: ev.target.value }))}
               />
             </div>
           </div>

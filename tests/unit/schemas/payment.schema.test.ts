@@ -21,6 +21,12 @@ describe("paymentCreateSchema", () => {
     expect(paymentCreateSchema.safeParse({ ...base, amount: 1 }).success).toBe(true)
   })
 
+  it("✗ amount vượt 1 tỷ (tránh tràn INTEGER Postgres → 500)", () => {
+    expect(paymentCreateSchema.safeParse({ ...base, amount: 1_000_000_000 }).success).toBe(true)
+    expect(paymentCreateSchema.safeParse({ ...base, amount: 1_000_000_001 }).success).toBe(false)
+    expect(paymentCreateSchema.safeParse({ ...base, amount: 3_000_000_000 }).success).toBe(false)
+  })
+
   it("✗ ngày sai dạng hoặc không có thật", () => {
     for (const paidAt of ["2026-5-12", "12/05/2026", "2026-13-01", "2026-02-30", ""]) {
       expect(paymentCreateSchema.safeParse({ ...base, paidAt }).success).toBe(false)
@@ -46,6 +52,10 @@ describe("paymentCreateSchema", () => {
 describe("paymentUpdateSchema", () => {
   it("không gửi note → undefined (không được xoá ghi chú cũ)", () => {
     expect(paymentUpdateSchema.parse({ id: 1, data: { amount: 5000 } }).data.note).toBeUndefined()
+  })
+
+  it("✗ amount vượt 1 tỷ", () => {
+    expect(paymentUpdateSchema.safeParse({ id: 1, data: { amount: 1_000_000_001 } }).success).toBe(false)
   })
 
   it("note rỗng → null (xoá ghi chú)", () => {

@@ -1,4 +1,4 @@
-import type { Payment, Prisma, PrismaClient } from "@prisma/client"
+import { Prisma, type Payment, type PrismaClient } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { assertOwnership } from "./_base.service"
 import { ensureMonthlyTuition } from "./tuition.service"
@@ -34,6 +34,17 @@ export async function syncPaidAmount(tx: Prisma.TransactionClient, monthlyTuitio
 // Khoá dòng tháng: 2 lần ghi cùng lúc phải chờ nhau, nếu không SUM sẽ đọc thiếu lần kia.
 async function lockMonth(tx: Prisma.TransactionClient, monthlyTuitionId: number) {
   await tx.$queryRaw`SELECT id FROM monthly_tuition WHERE id = ${monthlyTuitionId} FOR UPDATE`
+}
+
+// Request thứ 2 phải chờ transaction trước (khoá FOR UPDATE / pool ít kết nối); mặc định maxWait 2s, timeout 5s dễ quá hạn trên DB chậm.
+const TX_OPTIONS = { maxWait: 10_000, timeout: 10_000 }
+
+// Lần thu bị xoá sau findOwnedPayment (request khác) → update/delete ném P2025; trả NOT_FOUND như không tìm thấy.
+function rethrowNotFound(e: unknown): never {
+  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
+    throw new TRPCError({ code: "NOT_FOUND" })
+  }
+  throw e
 }
 
 async function findOwnedPayment(db: PrismaClient, userId: number, id: number) {
@@ -81,7 +92,7 @@ export async function createPayment(
     })
     await syncPaidAmount(tx, mt.id)
     return p
-  })
+  }, TX_OPTIONS)
   return toDTO(created)
 }
 
@@ -106,7 +117,7 @@ export async function updatePayment(
     })
     await syncPaidAmount(tx, existing.monthlyTuitionId)
     return p
-  })
+  }, TX_OPTIONS).catch(rethrowNotFound)
   return toDTO(updated)
 }
 
@@ -116,6 +127,6 @@ export async function deletePayment(db: PrismaClient, userId: number, id: number
     await lockMonth(tx, existing.monthlyTuitionId)
     await tx.payment.delete({ where: { id } })
     await syncPaidAmount(tx, existing.monthlyTuitionId)
-  })
+  }, TX_OPTIONS).catch(rethrowNotFound)
   return { id }
 }

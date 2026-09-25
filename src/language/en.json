@@ -304,6 +304,7 @@
   "waived": "Waived",
   "no_payments": "No payments yet",
   "payment_saved": "Payment saved",
+  "payment_deleted": "Payment deleted",
   "delete_payment_confirm": "Delete the {amount} payment on {date}? The month's paid total will decrease.",
   "settlement_saved": "Settlement and notes saved"
 }
