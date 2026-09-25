@@ -94,10 +94,27 @@ model MonthlyTuition {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  payments Payment[]
 
   @@unique([studentId, year, month])
   @@index([year, month])
   @@map("monthly_tuition")
+}
+
+model Payment {
+  id               Int            @id @default(autoincrement())
+  monthlyTuitionId Int            @map("monthly_tuition_id")
+  amount           Int
+  paidAt           DateTime       @map("paid_at") @db.Date
+  method           String         @default("cash") @db.VarChar(10)
+  note             String?        @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  monthlyTuition   MonthlyTuition @relation(fields: [monthlyTuitionId], references: [id], onDelete: Cascade)
+
+  @@index([monthlyTuitionId])
+  @@index([paidAt])
+  @@map("payments")
 }
 
 model TeachingSession {
