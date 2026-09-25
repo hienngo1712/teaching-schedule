@@ -9,12 +9,13 @@ export const subjectCreateSchema = z.object({
     .regex(hexColorRegex, "Màu phải dạng hex 6 ký tự")
     .default("#4F46E5"),
   isDefault: z.boolean().default(false),
-  sortOrder: z.number().int().min(0).default(0),
+  // Bỏ trống → service xếp cuối (max + 1)
+  sortOrder: z.number().int().min(0).optional(),
 })
 
 export const subjectUpdateSchema = z.object({
   id: z.number().int().positive(),
-  data: subjectCreateSchema.partial(),
+  data: subjectCreateSchema.partial().extend({ isActive: z.boolean().optional() }),
 })
 
 export const subjectFilterSchema = z.object({
@@ -24,3 +25,4 @@ export const subjectFilterSchema = z.object({
 export type SubjectCreateInput = z.infer<typeof subjectCreateSchema>
 export type SubjectUpdateInput = z.infer<typeof subjectUpdateSchema>
 export type SubjectFilterInput = z.infer<typeof subjectFilterSchema>
+export type SubjectUpdateData = SubjectUpdateInput["data"]

@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { KeyRound, LogOut, Languages } from "lucide-react"
+import { BookOpen, KeyRound, LogOut, Languages } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
@@ -66,6 +67,12 @@ export function AppHeader() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem asChild>
+              <Link href="/subjects">
+                <BookOpen className="size-4 mr-2" />
+                {t("subject")}
+              </Link>
+            </DropdownMenuItem>
             <ChangePasswordDialog
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

@@ -289,5 +289,20 @@
   "hint_taught_fees": "Present and late sessions, not money received",
   "hint_collected": "Payments recorded this month",
   "hint_outstanding": "Includes previous months",
-  "hint_not_yet_counted": "Absent sessions plus sessions not held or not marked yet"
+  "hint_not_yet_counted": "Absent sessions plus sessions not held or not marked yet",
+  "subjects_desc": "Subject colors appear in the session list",
+  "add_subject": "Add subject",
+  "edit_subject": "Edit subject",
+  "subject_name": "Subject name",
+  "subject_color": "Color",
+  "subject_default_hint": "Default subject for new sessions",
+  "subjects_active": "Active",
+  "subjects_hidden": "Hidden",
+  "set_default": "Set as default",
+  "hide": "Hide",
+  "unhide": "Show again",
+  "default_badge": "Default",
+  "hide_subject_confirm": "Hide {name}? It won't appear when creating new sessions. Existing sessions stay unchanged.",
+  "subject_saved": "Subject saved",
+  "hidden_suffix": "(hidden)"
 }
