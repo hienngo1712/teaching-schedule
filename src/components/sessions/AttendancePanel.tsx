@@ -139,133 +139,114 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
   return (
     <>
     <div className="space-y-4">
-      <div className="border rounded-md overflow-hidden flex flex-col bg-white">
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-slate-500 text-xs border-b">
-              <tr>
-                <th className="px-3 py-2 font-medium">{t("student")}</th>
-                <th className="px-3 py-2 font-medium w-[120px]">{t("tuition_col")}</th>
-                <th className="px-3 py-2 font-medium">{t("notes")}</th>
-                <th className="px-3 py-2 font-medium w-[86px]">{t("attendance_col")}</th>
-                <th className="px-3 py-2 font-medium w-[40px]"><span className="sr-only">{t("remove_from_session")}</span></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {attendanceData.map((student) => {
-                const state = attendances[student.studentId]
-                if (!state) return null
+      <div className="overflow-hidden rounded-md border bg-white">
+        {/* Một markup cho cả 2 cỡ: mobile 2 dòng (tên + nút | học phí, ghi chú, xóa), desktop 1 hàng như bảng cũ */}
+        <div className="hidden grid-cols-[minmax(0,1fr)_120px_minmax(0,1fr)_auto_auto] gap-x-3 border-b bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500 md:grid">
+          <span>{t("student")}</span>
+          <span>{t("tuition_col")}</span>
+          <span>{t("notes")}</span>
+          <span>{t("attendance_col")}</span>
+          <span className="w-8"><span className="sr-only">{t("remove_from_session")}</span></span>
+        </div>
 
-                return (
-                  <tr key={student.studentId} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-3 py-2">
-                      <div className="font-medium text-slate-900">{student.fullName}</div>
-                      <div className="text-xs text-slate-500">{t("grade")} {student.grade}</div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <CurrencyInput
-                        value={state.fee}
-                        onChange={(val) => handleUpdateFee(student.studentId, val || 0)}
-                        className="w-full h-8 text-xs"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Input
-                        placeholder={t("note")}
-                        value={state.note}
-                        onChange={(e) => handleUpdateNote(student.studentId, e.target.value)}
-                        className="w-full h-8 text-xs"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button"
-                          aria-pressed={state.attendance === "present"}
-                          aria-label={ATTENDANCE_LABEL.present}
-                          title={ATTENDANCE_LABEL.present}
-                          onClick={() => handleToggleStatus(student.studentId, "present")}
-                          className={cn(
-                            "inline-flex size-8 items-center justify-center rounded-md border transition-colors",
-                            state.attendance === "present"
-                              ? "bg-green-50 border-green-500 text-green-600"
-                              : "border-slate-200 text-slate-400 hover:text-slate-600"
-                          )}
-                        >
-                          <Check className="size-4" strokeWidth={3} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-pressed={state.attendance === "absent"}
-                          aria-label={ATTENDANCE_LABEL.absent}
-                          title={ATTENDANCE_LABEL.absent}
-                          onClick={() => handleToggleStatus(student.studentId, "absent")}
-                          className={cn(
-                            "inline-flex size-8 items-center justify-center rounded-md border transition-colors",
-                            state.attendance === "absent"
-                              ? "bg-red-50 border-red-500 text-red-600"
-                              : "border-slate-200 text-slate-400 hover:text-slate-600"
-                          )}
-                        >
-                          <X className="size-4" strokeWidth={3} />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-slate-400 hover:text-red-600"
-                        aria-label={t("remove_from_session")}
-                        title={t("remove_from_session")}
-                        onClick={() =>
-                          setStudentToRemove({
-                            studentId: student.studentId,
-                            fullName: student.fullName,
-                          })
-                        }
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="divide-y">
+          {attendanceData.map((student) => {
+            const state = attendances[student.studentId]
+            if (!state) return null
+
+            return (
+              <div
+                key={student.studentId}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-3 md:grid-cols-[minmax(0,1fr)_120px_minmax(0,1fr)_auto_auto] md:py-2"
+              >
+                <div className="order-1 min-w-0">
+                  <div className="truncate font-medium text-slate-900">{student.fullName}</div>
+                  <div className="text-xs text-slate-500">{t("grade")} {student.grade}</div>
+                </div>
+
+                <div className="order-2 flex gap-2 md:order-4 md:gap-1.5">
+                  <button
+                    type="button"
+                    aria-pressed={state.attendance === "present"}
+                    aria-label={ATTENDANCE_LABEL.present}
+                    title={ATTENDANCE_LABEL.present}
+                    onClick={() => handleToggleStatus(student.studentId, "present")}
+                    className={cn(
+                      "inline-flex size-11 items-center justify-center rounded-md border transition-colors md:size-8",
+                      state.attendance === "present"
+                        ? "border-green-500 bg-green-50 text-green-600"
+                        : "border-slate-200 text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    <Check className="size-5 md:size-4" strokeWidth={3} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={state.attendance === "absent"}
+                    aria-label={ATTENDANCE_LABEL.absent}
+                    title={ATTENDANCE_LABEL.absent}
+                    onClick={() => handleToggleStatus(student.studentId, "absent")}
+                    className={cn(
+                      "inline-flex size-11 items-center justify-center rounded-md border transition-colors md:size-8",
+                      state.attendance === "absent"
+                        ? "border-red-500 bg-red-50 text-red-600"
+                        : "border-slate-200 text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    <X className="size-5 md:size-4" strokeWidth={3} />
+                  </button>
+                </div>
+
+                {/* md:contents: ở desktop 3 phần tử con thành ô grid riêng, sắp lại bằng order */}
+                <div className="order-3 col-span-2 flex items-center gap-2 md:contents">
+                  <CurrencyInput
+                    value={state.fee}
+                    onChange={(val) => handleUpdateFee(student.studentId, val || 0)}
+                    className="h-10 w-28 shrink-0 text-sm md:order-2 md:h-8 md:w-full md:text-xs"
+                  />
+                  <Input
+                    placeholder={t("note")}
+                    value={state.note}
+                    onChange={(e) => handleUpdateNote(student.studentId, e.target.value)}
+                    className="h-10 min-w-0 flex-1 text-sm md:order-3 md:h-8 md:text-xs"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-10 shrink-0 text-slate-400 hover:text-red-600 md:order-5 md:size-8"
+                    aria-label={t("remove_from_session")}
+                    title={t("remove_from_session")}
+                    onClick={() =>
+                      setStudentToRemove({
+                        studentId: student.studentId,
+                        fullName: student.fullName,
+                      })
+                    }
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-2">
+      {/* Dính đáy vùng cuộn của dialog; -mx-6/px-6 khớp padding p-6 của DialogContent */}
+      <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-2 border-t bg-white px-6 py-3">
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMarkAllPresent}
-            className="text-xs text-slate-600"
-          >
+          <Button variant="outline" onClick={handleMarkAllPresent} className="h-11 text-xs text-slate-600 md:h-9">
             <Check className="mr-1 size-3" />
             {t("mark_all_present")}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMarkAllAbsent}
-            className="text-xs text-slate-600"
-          >
+          <Button variant="outline" onClick={handleMarkAllAbsent} className="h-11 text-xs text-slate-600 md:h-9">
             <X className="mr-1 size-3" />
             {t("mark_all_absent")}
           </Button>
         </div>
 
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={updateMutation.isPending}
-        >
-          {updateMutation.isPending && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
+        <Button onClick={handleSave} disabled={updateMutation.isPending} className="h-11 w-full sm:w-auto md:h-9">
+          {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {t("save_attendance")}
         </Button>
       </div>
