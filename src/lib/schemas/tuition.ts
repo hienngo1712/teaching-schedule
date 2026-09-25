@@ -12,13 +12,12 @@ export const monthlyTuitionFilterSchema = z.object({
 
 export type MonthlyTuitionFilterInput = z.infer<typeof monthlyTuitionFilterSchema>
 
-export const updatePaymentSchema = z.object({
+export const updateSettlementSchema = z.object({
   studentId: z.number().int().positive(),
   year: z.number().int(),
   month: z.number().int().min(1).max(12),
-  paidAmount: z.number().int().min(0),
   isFullPaid: z.boolean(),
   notes: z.string().optional().nullable(),
 })
 
-export type UpdatePaymentInput = z.infer<typeof updatePaymentSchema>
+export type UpdateSettlementInput = z.infer<typeof updateSettlementSchema>

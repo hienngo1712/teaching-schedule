@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
+import { recordPayment } from "../helpers/payment"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 
 async function cleanup() {
@@ -50,9 +51,7 @@ describe("Tuition payment snapshot — carry-over not lost", () => {
     })
 
     // Record a May payment WITHOUT viewing May first (the bug trigger).
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 5, paidAmount: 200000, isFullPaid: false,
-    })
+    await recordPayment(caller, { studentId: student.id, year: 2026, month: 5, amount: 200000, isFullPaid: false })
 
     const status = await caller.tuition.getMonthlyStatus({ year: 2026, month: 5, studentId: student.id })
 

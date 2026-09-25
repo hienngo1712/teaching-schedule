@@ -1,9 +1,8 @@
-import type { PrismaClient, MonthlyTuition, SessionStudent } from "@prisma/client"
+import { Prisma, type PrismaClient, type MonthlyTuition, type SessionStudent } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
-import { buildPaymentAuditNote } from "@/lib/payment-notes"
 import { matchesTuitionStatusFilter } from "@/lib/tuition-status"
 import { assertOwnership } from "./_base.service"
-import type { MonthlyTuitionFilterInput, UpdatePaymentInput } from "@/lib/schemas/tuition"
+import type { MonthlyTuitionFilterInput, UpdateSettlementInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
 import type { TuitionStatusDTO } from "@/lib/types/models"
 
@@ -274,64 +273,47 @@ export async function getMonthlyTuitionStatus(
   }
 }
 
-export async function updateTuitionPayment(
+/**
+ * Đảm bảo có dòng MonthlyTuition (kèm carry-over đúng) trước khi ghi tiền/tất toán.
+ * Tạo dòng trần sẽ đông cứng previousBalance = 0 và làm mất nợ tháng trước
+ * (xem tests/integration/tuition-payment-snapshot.test.ts).
+ */
+export async function ensureMonthlyTuition(
   db: PrismaClient,
   userId: number,
-  input: UpdatePaymentInput
-) {
-  const { studentId, year, month, paidAmount, isFullPaid, notes } = input
-
+  studentId: number,
+  year: number,
+  month: number
+): Promise<MonthlyTuition> {
   const student = await db.student.findUnique({ where: { id: studentId } })
   assertOwnership(student, userId)
 
-  // Snapshot TRƯỚC khi ghi đè — dùng để so sánh và ghi vết lần sửa/hủy.
-  const existing = await db.monthlyTuition.findUnique({
+  try {
+    await getMonthlyTuitionStatus(db, userId, { studentId, year, month, status: "all", page: 1, limit: 1 })
+  } catch (e) {
+    // 2 request cùng mở tháng mới: upsert snapshot không nguyên tử, bên thua gặp P2002 nhưng dòng đã có.
+    if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e
+  }
+
+  return db.monthlyTuition.upsert({
     where: { studentId_year_month: { studentId, year, month } },
+    update: {},
+    create: { studentId, year, month },
   })
+}
 
-  // Ensure the month's snapshot exists with correct computed fields
-  // (previousBalance carry-over, currentMonthFee, totalAmountDue) BEFORE
-  // recording payment. Otherwise paying for a not-yet-viewed month would
-  // create a bare snapshot with previousBalance=0 and silently drop the
-  // student's prior-month debt.
-  await getMonthlyTuitionStatus(db, userId, {
-    studentId,
-    year,
-    month,
-    status: "all",
-    page: 1,
-    limit: 1,
-  })
-
-  const finalNotes = buildPaymentAuditNote({
-    notes: notes ?? existing?.notes ?? "",
-    prevPaidAmount: existing?.paidAmount ?? 0,
-    nextPaidAmount: paidAmount,
-    prevIsFullPaid: existing?.isFullPaid ?? false,
-    nextIsFullPaid: isFullPaid,
-    now: new Date(),
-  })
-
-  return await db.monthlyTuition.upsert({
-    where: {
-      studentId_year_month: {
-        studentId,
-        year,
-        month,
-      },
-    },
-    update: {
-      paidAmount,
-      isFullPaid,
-      notes: finalNotes,
-    },
-    create: {
-      studentId,
-      year,
-      month,
-      paidAmount,
-      isFullPaid,
-      notes: finalNotes,
+// Tất toán (miễn phần còn lại) + ghi chú tháng; không đụng paidAmount, không ghi vết.
+export async function updateSettlement(
+  db: PrismaClient,
+  userId: number,
+  input: UpdateSettlementInput
+): Promise<MonthlyTuition> {
+  const mt = await ensureMonthlyTuition(db, userId, input.studentId, input.year, input.month)
+  return db.monthlyTuition.update({
+    where: { id: mt.id },
+    data: {
+      isFullPaid: input.isFullPaid,
+      ...(input.notes !== undefined && { notes: input.notes }),
     },
   })
 }

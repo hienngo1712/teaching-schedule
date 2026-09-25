@@ -95,56 +95,39 @@ describe("Tuition Management", () => {
     expect(status.items[0].isFullPaid).toBe(false)
   }, 30_000)
 
-  it("✓ updatePayment → lưu thông tin đóng tiền", async () => {
+  it("✓ payment.create + updateSettlement → lưu thông tin đóng tiền", async () => {
     const caller = await getAuthedCaller()
     const student = await caller.student.create({ fullName: "An", grade: 3 })
+    const key = { studentId: student.id, year: 2026, month: 5 }
 
-    await caller.tuition.updatePayment({
-      studentId: student.id,
-      year: 2026,
-      month: 5,
-      paidAmount: 150000,
-      isFullPaid: false,
-      notes: "Mới đóng một nửa",
-    })
+    await caller.payment.create({ ...key, amount: 150000, paidAt: "2026-05-15", method: "cash" })
+    await caller.tuition.updateSettlement({ ...key, isFullPaid: false, notes: "Mới đóng một nửa" })
 
     const status = await caller.tuition.getMonthlyStatus({ year: 2026, month: 5 })
     expect(status.items[0].paidAmount).toBe(150000)
     expect(status.items[0].isFullPaid).toBe(false)
     expect(status.items[0].notes).toBe("Mới đóng một nửa")
 
-    // Update again (upsert test)
-    await caller.tuition.updatePayment({
-      studentId: student.id,
-      year: 2026,
-      month: 5,
-      paidAmount: 200000,
-      isFullPaid: true,
-      notes: "Đã đóng đủ",
-    })
+    // Lần thu thứ 2 cộng dồn; tất toán + ghi chú lưu riêng, không còn dòng ghi vết tự chèn.
+    await caller.payment.create({ ...key, amount: 50000, paidAt: "2026-05-20", method: "transfer" })
+    await caller.tuition.updateSettlement({ ...key, isFullPaid: true, notes: "Đã đóng đủ" })
 
     const updatedStatus = await caller.tuition.getMonthlyStatus({ year: 2026, month: 5 })
     expect(updatedStatus.items[0].paidAmount).toBe(200000)
     expect(updatedStatus.items[0].isFullPaid).toBe(true)
-    // Sửa số tiền đã ghi nhận → service ghi thêm dòng vết vào notes (có chủ đích),
-    // nên ghi chú của user là PHẦN ĐẦU chứ không còn là toàn bộ chuỗi.
-    expect(updatedStatus.items[0].notes).toContain("Đã đóng đủ")
-    expect(updatedStatus.items[0].notes).toContain("Sửa số tiền đã đóng: 150.000 đ → 200.000 đ")
+    expect(updatedStatus.items[0].notes).toBe("Đã đóng đủ")
   }, 30_000)
 
-  it("✗ updatePayment student của user khác → NOT_FOUND", async () => {
+  it("✗ payment.create / updateSettlement student của user khác → NOT_FOUND", async () => {
     const callerA = await getAuthedCaller("teacher")
     const callerB = await getAuthedCaller("teacher2")
     const sA = await callerA.student.create({ fullName: "HS của A", grade: 3 })
 
     await expect(
-      callerB.tuition.updatePayment({
-        studentId: sA.id,
-        year: 2026,
-        month: 5,
-        paidAmount: 100000,
-        isFullPaid: true,
-      })
+      callerB.payment.create({ studentId: sA.id, year: 2026, month: 5, amount: 100000, paidAt: "2026-05-15", method: "cash" })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" })
+    await expect(
+      callerB.tuition.updateSettlement({ studentId: sA.id, year: 2026, month: 5, isFullPaid: true })
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
 

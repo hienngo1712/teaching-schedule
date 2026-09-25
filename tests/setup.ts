@@ -38,6 +38,7 @@ beforeAll(async () => {
   try {
     await db.sessionStudent.deleteMany()
     await db.teachingSession.deleteMany()
+    await db.payment.deleteMany() // cascade từ student đã đủ; ghi rõ cho thứ tự FK
     await db.student.deleteMany()
     await db.classUpgradeLog.deleteMany()
     await db.subject.deleteMany()

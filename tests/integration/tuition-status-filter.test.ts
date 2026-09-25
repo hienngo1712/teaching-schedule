@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
+import { recordPayment } from "../helpers/payment"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 
 async function cleanup() {
@@ -35,9 +36,7 @@ describe("Tuition — bộ lọc trạng thái khớp badge", () => {
         { studentId: owing.id, attendance: ATTENDANCE_STATUS.PRESENT, fee: 100000 },
       ],
     })
-    await caller.tuition.updatePayment({
-      studentId: paid.id, year: 2026, month: 5, paidAmount: 40000, isFullPaid: false,
-    })
+    await recordPayment(caller, { studentId: paid.id, year: 2026, month: 5, amount: 40000, isFullPaid: false })
 
     const res = await caller.tuition.getMonthlyStatus({
       year: 2026, month: 5, status: "unpaid", limit: 100,
@@ -63,9 +62,7 @@ describe("Tuition — bộ lọc trạng thái khớp badge", () => {
       sessionId: s.id,
       attendances: [{ studentId: over.id, attendance: ATTENDANCE_STATUS.PRESENT, fee: 100000 }],
     })
-    await caller.tuition.updatePayment({
-      studentId: over.id, year: 2026, month: 5, paidAmount: 150000, isFullPaid: false,
-    })
+    await recordPayment(caller, { studentId: over.id, year: 2026, month: 5, amount: 150000, isFullPaid: false })
 
     const res = await caller.tuition.getMonthlyStatus({
       year: 2026, month: 5, status: "fully_paid", limit: 100,

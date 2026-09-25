@@ -1,4 +1,5 @@
 import type { Student, Subject, TeachingSession, SessionStudent } from "@prisma/client"
+import type { PaymentMethod } from "@/lib/schemas/payment"
 
 export type { Student, Subject, TeachingSession, SessionStudent }
 
@@ -90,4 +91,15 @@ export interface AttendanceDTO {
   attendance: string
   note: string | null
   fee: number
+}
+
+/**
+ * Một lần thu tiền của 1 tháng học phí (spec B §11). paidAt dạng "YYYY-MM-DD".
+ */
+export interface PaymentDTO {
+  id: number
+  amount: number
+  paidAt: string
+  method: PaymentMethod
+  note: string | null
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
+import { recordPayment } from "../helpers/payment"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 
 async function cleanup() {
@@ -37,7 +38,7 @@ describe("Tuition ↔ Report money consistency", () => {
       sessionId: mayX.id,
       attendances: [{ studentId: x.id, attendance: ATTENDANCE_STATUS.PRESENT, fee: 100000 }],
     })
-    await caller.tuition.updatePayment({ studentId: x.id, year: 2026, month: 5, paidAmount: 50000, isFullPaid: false })
+    await recordPayment(caller, { studentId: x.id, year: 2026, month: 5, amount: 50000, isFullPaid: false })
 
     // Student Y: 100k in May, OVERPAYS 300k → owes 0 (must NOT offset X's debt)
     const y = await caller.student.create({ fullName: "HS Trả Dư", grade: 3, tuitionFee: 100000 })
@@ -49,7 +50,7 @@ describe("Tuition ↔ Report money consistency", () => {
       sessionId: mayY.id,
       attendances: [{ studentId: y.id, attendance: ATTENDANCE_STATUS.PRESENT, fee: 100000 }],
     })
-    await caller.tuition.updatePayment({ studentId: y.id, year: 2026, month: 5, paidAmount: 300000, isFullPaid: true })
+    await recordPayment(caller, { studentId: y.id, year: 2026, month: 5, amount: 300000, isFullPaid: true })
 
     const summary = await caller.report.monthlySummary({ year: 2026, month: 5 })
 
