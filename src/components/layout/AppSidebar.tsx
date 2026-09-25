@@ -2,36 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  LayoutDashboard,
-  CalendarDays,
-  Users,
-  BarChart3,
-  Wallet,
-  GraduationCap,
-} from "lucide-react"
+import { GraduationCap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { NAV_ITEMS, isNavActive } from "./nav-items"
 
-const ICONS = {
-  LayoutDashboard,
-  CalendarDays,
-  Users,
-  BarChart3,
-  Wallet,
-} as const
-
-export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function AppSidebar() {
   const pathname = usePathname()
   const { t } = useTranslation()
-
-  const NAV_ITEMS = [
-    { href: "/dashboard", label: t("dashboard"), icon: "LayoutDashboard" as const },
-    { href: "/calendar", label: t("calendar"), icon: "CalendarDays" as const },
-    { href: "/students", label: t("students"), icon: "Users" as const },
-    { href: "/tuition", label: t("tuition"), icon: "Wallet" as const },
-    { href: "/reports", label: t("reports"), icon: "BarChart3" as const },
-  ]
 
   return (
     <aside className="h-full w-60 shrink-0 border-r border-slate-200 bg-white flex flex-col">
@@ -41,14 +19,12 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
       <nav className="p-2 flex flex-col gap-1">
         {NAV_ITEMS.map((item) => {
-          const Icon = ICONS[item.icon]
-          const active =
-            pathname === item.href || pathname.startsWith(item.href + "/")
+          const Icon = item.icon
+          const active = isNavActive(pathname, item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
-              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 active
@@ -57,7 +33,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
               )}
             >
               <Icon className="size-4" />
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </Link>
           )
         })}

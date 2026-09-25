@@ -1,44 +1,26 @@
 "use client"
 
-import { useState } from "react"
 import { AppSidebar } from "./AppSidebar"
 import { AppHeader } from "./AppHeader"
-import { cn } from "@/lib/utils"
+import { BottomTabBar } from "./BottomTabBar"
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false)
-
   return (
-    <div className="h-screen bg-slate-50 flex overflow-hidden">
-      {/* Desktop sidebar */}
-      <div className="hidden md:flex h-full bg-white">
+    // 100dvh: thanh địa chỉ iOS Safari co giãn không làm nhảy layout như h-screen
+    <div className="flex h-[100dvh] overflow-hidden bg-slate-50">
+      <div className="hidden h-full bg-white md:flex">
         <AppSidebar />
       </div>
 
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <>
-          <div
-            className="md:hidden fixed inset-0 z-40 bg-black/40"
-            onClick={() => setMobileOpen(false)}
-          />
-          <div
-            className={cn(
-              "md:hidden fixed inset-y-0 left-0 z-50",
-              "transition-transform"
-            )}
-          >
-            <AppSidebar onNavigate={() => setMobileOpen(false)} />
-          </div>
-        </>
-      )}
-
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <AppHeader onToggleSidebar={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-24 relative">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <AppHeader />
+        {/* Mobile chừa chỗ cho tab bar (56px) + thanh phân trang (~44px) + safe-area */}
+        <main className="relative flex-1 overflow-y-auto p-4 pb-[calc(7rem+env(safe-area-inset-bottom))] md:p-6 md:pb-24">
           {children}
         </main>
       </div>
+
+      <BottomTabBar />
     </div>
   )
 }

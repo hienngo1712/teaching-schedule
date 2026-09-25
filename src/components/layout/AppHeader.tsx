@@ -9,13 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { KeyRound, LogOut, Menu, Languages } from "lucide-react"
+import { KeyRound, LogOut, Languages } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-
-type Props = {
-  onToggleSidebar?: () => void
-}
 
 function getInitials(name?: string | null) {
   if (!name) return "GV"
@@ -25,28 +21,17 @@ function getInitials(name?: string | null) {
   return (first + last).toUpperCase() || "GV"
 }
 
-export function AppHeader({ onToggleSidebar }: Props) {
+export function AppHeader() {
   const { data: session } = useSession()
   const { t, language, setLanguage } = useTranslation()
   const fullName = session?.user?.fullName ?? session?.user?.username ?? t("teacher_fallback")
 
   return (
     <header className="h-14 border-b border-slate-200 bg-white px-4 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={onToggleSidebar}
-          aria-label={t("open_menu")}
-        >
-          <Menu className="size-5" />
-        </Button>
-        <span className="text-sm text-slate-600 hidden sm:inline">
-          {t("hello")},{" "}
-          <span className="font-medium text-slate-900">{fullName}</span>
-        </span>
-      </div>
+      <span className="truncate text-sm text-slate-600">
+        {t("hello")},{" "}
+        <span className="font-medium text-slate-900">{fullName}</span>
+      </span>
 
       <div className="flex items-center gap-2">
         <DropdownMenu>

@@ -43,7 +43,7 @@ export function DataTablePagination({
 
   return (
     <div className={cn(
-      "fixed bottom-0 left-0 right-0 md:left-60 z-30 flex items-center justify-between px-4 md:px-6 py-1.5 md:py-2 bg-white/95 backdrop-blur-sm border-t border-slate-200 gap-4 md:gap-12",
+      "fixed left-0 right-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-0 md:left-60 z-30 flex items-center justify-between px-4 md:px-6 py-1.5 md:py-2 bg-white/95 backdrop-blur-sm border-t border-slate-200 gap-4 md:gap-12",
       className
     )}>
       <div className="text-xs md:text-sm text-slate-500 font-medium truncate">
