@@ -80,14 +80,15 @@ Màn Lịch mobile (lưới chấm + danh sách ca ngày chọn) đang tốt →
   - Mobile (< `md`): bỏ drawer + state `mobileOpen`; render `<BottomTabBar />` cố định đáy; `main` thêm padding đáy = chiều cao tab bar + `env(safe-area-inset-bottom)`.
   - Desktop (≥ `md`): giữ `AppSidebar` như cũ.
 - `BottomTabBar.tsx` (mới): 5 tab (icon + nhãn) dùng **cùng mảng nav với `AppSidebar`** (tách mảng ra hằng dùng chung để không lệch). Tab active tô màu nhấn hiện tại. Mỗi tab cao ≥ 56px, vùng chạm ≥ 44px.
-- `AppHeader.tsx`: bỏ nút ☰ (`onToggleSidebar`); mobile hiện tên màn hiện tại + nút ngôn ngữ + avatar.
+- `AppHeader.tsx`: bỏ nút ☰ (`onToggleSidebar`); hiện lời chào (cả mobile) + nút ngôn ngữ + avatar; tên màn nằm ở `PageHeader`.
+- `DataTablePagination` (đang `fixed bottom-0`): trên mobile đặt ngay trên tab bar.
 - `AppSidebar.tsx`: bỏ prop `onNavigate` nếu không còn ai dùng.
 
 ### 4.2 Khối dùng chung (`src/components/common/`, mới)
 
 | Khối | Props chính | Hành vi |
 |---|---|---|
-| `PageHeader` | `title`, `description?`, `actions?: ReactNode`, `menu?: ReactNode` | Tiêu đề trái, thao tác phải. Mobile: nút chính cạnh tiêu đề, thao tác phụ vào menu ⋯ |
+| `PageHeader` | `title`, `description?`, `actions?: ReactNode` | Tiêu đề trái, thao tác phải; mobile thao tác xuống dòng dưới tiêu đề |
 | `FilterBar` | `search: {value, onChange, placeholder}`, `filters?: ReactNode`, `activeCount?: number`, `trailing?: ReactNode` | Desktop: ô tìm + các filter một hàng. Mobile: ô tìm + nút "Lọc (n)" mở `Sheet` đáy chứa `filters` |
 | `ResponsiveList<T>` | `items: T[]`, `columns` (header + cell), `renderCard(item)`, `getKey`, `isLoading`, `isError`, `emptyText`, `onRetry?` | ≥ `md`: `Table`; < `md`: danh sách thẻ. Skeleton đúng hình khi loading, trạng thái rỗng, lỗi có nút thử lại |
 | `StatCard` | `label`, `value`, `hint?`, `icon?`, `tone?` | Số tiền `whitespace-nowrap`, cỡ chữ co theo breakpoint; không gãy dòng ở 390px |
@@ -108,13 +109,13 @@ Mẫu thẻ/bảng hiện có ở `tuition/page.tsx:143` và `:206` là nguồn 
 - Mobile: mỗi học sinh là **một thẻ**
   - Dòng 1: tên + lớp; phải là 2 nút lớn **Có mặt** / **Vắng** (≥ 44px).
   - Dòng 2: học phí (`currency-input`) + ghi chú (full width).
-  - Xóa học sinh khỏi ca: vào menu ⋯ của thẻ (tránh bấm nhầm).
+  - Xóa học sinh khỏi ca: giữ nút thùng rác cuối hàng (đã có hộp xác nhận).
 - Thanh hành động **sticky đáy**: "Tất cả có mặt", "Không học", "Lưu điểm danh".
 - Desktop: giữ bảng, chỉ sửa header.
 - Hành vi lưu/điểm danh không đổi.
 
 ### 5.2 Học sinh (`StudentList`, `students/page.tsx`)
-- `PageHeader`: nút "Thêm học sinh"; "Nâng lớp hàng loạt" vào menu ⋯.
+- `PageHeader`: nút "Thêm học sinh"; "Nâng lớp hàng loạt" trên mobile chỉ hiện icon (có `aria-label`), desktop hiện chữ.
 - `FilterBar`: tìm tên; filter lớp + trạng thái nằm trong sheet (mobile).
 - `ResponsiveList`: thẻ gồm tên, lớp + cấp, học phí/buổi, SĐT phụ huynh (link `tel:`), menu ⋯ (sửa, ngừng học…).
 
@@ -134,7 +135,7 @@ Mẫu thẻ/bảng hiện có ở `tuition/page.tsx:143` và `:206` là nguồn 
 ### 5.6 Lịch (`calendar/page.tsx`, `MonthCalendar`, `SessionCard`, `FilterBar` cũ)
 - Sửa bug: `session.title ?? session.subject.name` → `session.title || session.subject.name` (cả chỗ `title` tooltip nếu cần).
 - Chú thích màu phía trên lưới (desktop) / dưới thanh công cụ (mobile): Tiểu học, THCS, Hỗn hợp, Đã hủy.
-- Thanh công cụ mobile: nút lịch lặp có chữ "Lịch lặp"; nút "+" → "+ Tạo ca".
+- Thanh công cụ mobile: nút lịch lặp có chữ "Lịch lặp"; nút tạo ca hiện đủ chữ "Tạo ca dạy" trên mobile.
 - Giữ nguyên bố cục lịch mobile.
 
 > `src/components/filters/FilterBar.tsx` hiện là thanh công cụ riêng của Lịch (tìm, lớp, tháng, Xuất Excel, Lịch lặp, Tạo ca), chỉ `MonthCalendar.tsx` import. Đổi tên thành `src/components/calendar/CalendarToolbar.tsx` để không trùng với khối chung `common/FilterBar.tsx`. Lịch **không** chuyển sang `FilterBar` chung.
@@ -169,7 +170,7 @@ Bản tiếng Anh: Expected fees / Taught fees / Collected / Outstanding / Not y
   - Mở một ca → điểm danh → `document.documentElement.scrollWidth <= 390`, nút "Lưu điểm danh" visible.
   - Học sinh hiện thẻ, không hiện `table`.
   - Mỗi màn: `scrollWidth <= 390`.
-- Rà `auth/calendar/students/upgrade-class.spec.ts`: sửa selector phụ thuộc nút ☰, "Lối tắt nhanh", nút "Nâng lớp hàng loạt" (đã vào menu ⋯).
+- Rà `auth/calendar/students/upgrade-class.spec.ts`: sửa selector phụ thuộc nút ☰, "Lối tắt nhanh", nút "Nâng lớp hàng loạt" (mobile chỉ còn icon).
 - **Kiểm tra bằng mắt**: chụp 5 màn ở 390px và 1440px trên bản preview Vercel; người dùng duyệt trước khi merge.
 
 ## 9. Tiêu chí hoàn thành
@@ -186,5 +187,5 @@ Bản tiếng Anh: Expected fees / Taught fees / Collected / Outstanding / Not y
 |---|---|
 | E2E cũ gãy do đổi layout | Rà và sửa selector trong cùng nhánh; ưu tiên `getByRole` |
 | `ResponsiveList` generic phình to | Chỉ hỗ trợ đúng nhu cầu 2 màn (Học sinh, Học phí); không sort/select |
-| Người dùng quen nút "Nâng lớp hàng loạt" ở ngoài | Nằm trong menu ⋯ của header, nhãn giữ nguyên |
+| Người dùng quen nút "Nâng lớp hàng loạt" ở ngoài | Vẫn ở chỗ cũ; mobile chỉ còn icon, có `aria-label` |
 | Nội dung dài bị che bởi tab bar | Padding đáy `main` + safe-area; kiểm tra trong e2e |
