@@ -103,3 +103,34 @@ export interface PaymentDTO {
   method: PaymentMethod
   note: string | null
 }
+
+/**
+ * Phiếu báo học phí 1 HS/tháng (spec C §7.4). G dùng lại y nguyên.
+ */
+export interface TuitionNoticeDTO {
+  studentId: number
+  fullName: string
+  grade: number
+  year: number
+  month: number
+  presentSessions: number
+  currentMonthFee: number
+  previousBalance: number
+  totalAmountDue: number
+  paidAmount: number
+  isFullPaid: boolean
+  presentDates: { date: string; fee: number }[]
+  payments: PaymentDTO[]
+  remaining: number
+  overpaid: number
+  teacherName: string
+  bankConfigured: boolean
+  qr: {
+    payload: string
+    bankShortName: string
+    accountNumber: string
+    accountName: string
+    amount: number
+    content: string
+  } | null
+}
