@@ -219,7 +219,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
   const endOfMonth = new Date(Date.UTC(vnYear, vnMonth, 1))
 
   // Chạy các query song song để giảm latency tổng (đặc biệt quan trọng với serverless DB)
-  const [totalStudents, sessionsToday, sessionsThisMonth, outstanding] = await Promise.all([
+  const [totalStudents, sessionsToday, sessionsThisMonth, outstanding, paidAgg] = await Promise.all([
     // 1. Total active students
     db.student.count({ where: { userId, isActive: true } }),
 
@@ -238,7 +238,13 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
     getMonthlyOutstanding(db, userId, {
       year: vnYear,
       month: vnMonth,
-    })
+    }),
+
+    // Tiền đã ghi nhận trong tháng — cùng nguồn monthlyTuition.paidAmount với Báo cáo
+    db.monthlyTuition.aggregate({
+      where: { student: { userId }, year: vnYear, month: vnMonth },
+      _sum: { paidAmount: true },
+    }),
   ])
 
   const totalSessionsMonth = sessionsThisMonth.length
@@ -274,5 +280,6 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
     totalRevenueMonth,
     expectedRevenueMonth,
     totalUnpaidMonth,
+    totalPaidMonth: paidAgg._sum.paidAmount ?? 0,
   }
 }

@@ -54,10 +54,11 @@ export function UpgradeAllClassesButton() {
             ? t("upgrade_all_already_done").replace("{year}", String(currentYear))
             : undefined
         }
-        className="w-full sm:w-auto"
+        aria-label={t("upgrade_all_button")}
+        className="h-11 px-3 md:h-10 md:px-4"
       >
-        <ArrowUpCircle className="size-4 mr-2" />
-        {t("upgrade_all_button")}
+        <ArrowUpCircle className="size-4 sm:mr-2" />
+        <span className="hidden sm:inline">{t("upgrade_all_button")}</span>
       </Button>
 
       <AlertDialog open={open} onOpenChange={setOpen}>

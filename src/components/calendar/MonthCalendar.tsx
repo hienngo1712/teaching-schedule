@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useRef, useEffect } from "react"
 import dayjs from "dayjs"
-import { Clock } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DAY_NAMES } from "@/lib/constants"
 import { cn } from "@/lib/utils"
@@ -12,14 +11,14 @@ import {
   useCalendar,
 } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
-import { FilterBar } from "../filters/FilterBar"
+import { CalendarToolbar } from "./CalendarToolbar"
 import { StudentScheduleView } from "../students/StudentScheduleView"
 import type { SessionListDTO, SessionDTO } from "@/lib/types/models"
 import { CalendarDayCell } from "./CalendarDayCell"
+import { SessionListItem } from "./SessionListItem"
 import { SessionFormDialog } from "../sessions/SessionFormDialog"
 import { BulkCreateDialog } from "../sessions/BulkCreateDialog"
 import { SessionDetailDialog } from "../sessions/SessionDetailDialog"
-import { Badge } from "@/components/ui/badge"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type SessionWithDate = Omit<RouterOutputs["session"]["getMonth"][number], "sessionDate"> & { sessionDate: Date }
@@ -108,12 +107,21 @@ export function MonthCalendar() {
 
   return (
     <div className="space-y-6">
-      <FilterBar 
+      <CalendarToolbar 
         onCreateClick={handleCreateClick}
         onBulkCreateClick={() => setIsBulkDialogOpen(true)}
         sessions={sessions}
         students={students}
       />
+
+      {/* Màu viền thẻ ca là cấp học (session-card--tieu-hoc/thcs trong globals.css), không phải màu môn.
+          Chỉ hiện ở desktop: danh sách ca mobile dùng sọc màu môn, không có màu cấp học. */}
+      <div className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 md:flex">
+        <LegendItem className="border-blue-500 bg-blue-50" label={t("primary_school")} />
+        <LegendItem className="border-emerald-500 bg-emerald-50" label={t("secondary_school")} />
+        <LegendItem className="border-indigo-500 bg-indigo-50" label={t("level_mixed")} />
+        <LegendItem className="border-red-300 bg-red-50" label={t("cancelled_label")} />
+      </div>
 
       {/* Desktop Grid View */}
       <div className="hidden md:grid border rounded-lg overflow-hidden bg-slate-200 grid-cols-7 gap-px shadow-sm">
@@ -219,32 +227,7 @@ export function MonthCalendar() {
               </div>
             ) : (
               selectedDateSessions.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => handleSessionClick(s)}
-                  className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl text-left shadow-sm active:scale-[0.98] transition-all"
-                >
-                  <div
-                    className="w-1.5 h-12 rounded-full shrink-0"
-                    style={{ backgroundColor: s.subject.color }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-slate-900 truncate">
-                      {s.title || s.subject.name}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
-                      <div className="flex items-center gap-1 font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
-                        <Clock className="size-3" />
-                        {s.startTime} – {s.endTime}
-                      </div>
-                      <span className="text-slate-300">|</span>
-                      <span className="font-medium">{s.studentCount} {t("students")}</span>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="shrink-0 text-[10px] font-bold">
-                    {t("details")}
-                  </Badge>
-                </button>
+                <SessionListItem key={s.id} session={s} onClick={handleSessionClick} />
               ))
             )}
           </div>
@@ -282,5 +265,14 @@ export function MonthCalendar() {
         />
       )}
     </div>
+  )
+}
+
+function LegendItem({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn("h-3 w-3 rounded-sm border-l-[3px]", className)} />
+      {label}
+    </span>
   )
 }

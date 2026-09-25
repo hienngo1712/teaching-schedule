@@ -19,19 +19,19 @@ import { ExportExcelButton } from "../reports/ExportExcelButton"
 import type { SessionDTO, StudentDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
-interface FilterBarProps {
+interface CalendarToolbarProps {
   onCreateClick: () => void
   onBulkCreateClick: () => void
   sessions: SessionDTO[]
   students?: StudentDTO[]
 }
 
-export function FilterBar({
+export function CalendarToolbar({
   onCreateClick,
   onBulkCreateClick,
   sessions,
   students = []
-}: FilterBarProps) {
+}: CalendarToolbarProps) {
   const { t } = useTranslation()
   const {
     selectedGrade,
@@ -125,7 +125,7 @@ export function FilterBar({
         </div>
 
         {/* Bottom/Right: Actions */}
-        <div className="flex items-center gap-2 pt-1 md:pt-0 border-t border-slate-100 md:border-t-0 justify-between md:justify-end">
+        <div className="flex flex-wrap items-center gap-2 pt-1 md:pt-0 border-t border-slate-100 md:border-t-0 justify-between md:justify-end">
           <div className="flex items-center gap-2">
             <ExportExcelButton sessions={sessions} students={students} />
 
@@ -135,13 +135,13 @@ export function FilterBar({
               className="gap-2 h-11 md:h-10 border-slate-200 text-slate-600 hover:bg-slate-50"
             >
               <Repeat className="size-4" />
-              <span className="hidden sm:inline">{t("bulk_schedule")}</span>
+              <span>{t("bulk_schedule")}</span>
             </Button>
           </div>
           
           <Button onClick={onCreateClick} className="gap-2 h-11 md:h-10 bg-slate-900 hover:bg-slate-800 shadow-md shadow-slate-200 px-4 md:px-6">
             <Plus className="size-4 md:size-5" />
-            <span className="hidden sm:inline">{t("create_session")}</span>
+            <span>{t("create_session")}</span>
           </Button>
         </div>
       </div>
