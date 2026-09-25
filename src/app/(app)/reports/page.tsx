@@ -11,7 +11,9 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { PageHeader } from "@/components/common/PageHeader"
+import { FilterBar } from "@/components/common/FilterBar"
+import { StatCard } from "@/components/common/StatCard"
 import { StudentReport } from "./StudentReport"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
@@ -72,122 +74,108 @@ export default function ReportsPage() {
     sessionDate: new Date(s.sessionDate),
   })) as SessionItem[]
 
+  const money = (v?: number) => (v === undefined ? undefined : formatCurrency(v))
+  const activeFilterCount = (gradeFilter ? 1 : 0) + (selectedStudentId ? 1 : 0)
+
   return (
     <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h1 className="text-2xl font-bold text-slate-900">{t("reports")}</h1>
-          
-          <div className="flex flex-wrap gap-2 items-center">
+      <PageHeader
+        title={t("reports")}
+        actions={
+          <>
             <ExportExcelButton sessions={sessions} students={students} />
-            
             <ReportPeriodPicker />
-            
-            <Select 
-              value={gradeFilter?.toString() || "all"} 
-              onValueChange={(v) => {
-                setGradeFilter(v === "all" ? null : parseInt(v))
-              }}
+          </>
+        }
+      />
+
+      <FilterBar
+        activeCount={activeFilterCount}
+        filters={
+          <>
+            <Select
+              value={gradeFilter?.toString() || "all"}
+              onValueChange={(v) => setGradeFilter(v === "all" ? null : parseInt(v))}
             >
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder={t("grade")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("all_grades")}</SelectItem>
-                {GRADES.map(g => (
+                {GRADES.map((g) => (
                   <SelectItem key={g} value={g.toString()}>{t("grade")} {g}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-
-            <Select 
-              value={selectedStudentId?.toString() || "none"} 
+            <Select
+              value={selectedStudentId?.toString() || "none"}
               onValueChange={(v) => setSelectedStudentId(v === "none" ? null : parseInt(v))}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder={t("student")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t("select_student")}</SelectItem>
-                {students.map(s => (
+                {students.map((s) => (
                   <SelectItem key={s.id} value={s.id.toString()}>{s.fullName}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {!selectedStudentId ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            <Card className="bg-white border-slate-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("student")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold">{monthlySummary?.totalStudents ?? 0}</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("attendance_rate")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-slate-700">
-                  {monthlySummary ? `${monthlySummary.overallAttendanceRate}%` : "0%"}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("expected_revenue")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-indigo-600">
-                  {monthlySummary ? formatCurrency(monthlySummary.expectedRevenue) : "0 đ"}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("actual_revenue")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-emerald-600">
-                  {monthlySummary ? formatCurrency(monthlySummary.totalRevenue) : "0 đ"}
-                </div>
-                {gap > 0 && (
-                  <p className="text-xs text-orange-500 mt-1">
-                    {t("revenue_shortfall")} {formatCurrency(gap)}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("collected_amount")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-green-600">
-                  {monthlySummary ? formatCurrency(monthlySummary.totalPaid) : "0 đ"}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-slate-500 uppercase">{t("uncollected_amount")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-orange-600">
-                  {monthlySummary ? formatCurrency(monthlySummary.totalOutstanding) : "0 đ"}
-                </div>
-              </CardContent>
-            </Card>
+      {!selectedStudentId ? (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+            <StatCard label={t("student")} value={monthlySummary?.totalStudents} />
+            <StatCard
+              label={t("attendance_rate")}
+              value={monthlySummary ? `${monthlySummary.overallAttendanceRate}%` : undefined}
+            />
+            <StatCard
+              label={t("expected_revenue")}
+              value={money(monthlySummary?.expectedRevenue)}
+              hint={t("hint_expected_fees")}
+              valueClassName="text-indigo-600"
+            />
+            <StatCard
+              label={t("actual_revenue")}
+              value={money(monthlySummary?.totalRevenue)}
+              valueClassName="text-emerald-600"
+              hint={
+                <>
+                  <p>{t("hint_taught_fees")}</p>
+                  {gap > 0 && (
+                    <p className="mt-1 text-orange-600">
+                      {t("revenue_shortfall")} {formatCurrency(gap)}
+                      <span className="block text-slate-500">{t("hint_not_yet_counted")}</span>
+                    </p>
+                  )}
+                </>
+              }
+            />
+            <StatCard
+              label={t("collected_amount")}
+              value={money(monthlySummary?.totalPaid)}
+              hint={t("hint_collected")}
+              valueClassName="text-green-600"
+            />
+            <StatCard
+              label={t("uncollected_amount")}
+              value={money(monthlySummary?.totalOutstanding)}
+              hint={t("hint_outstanding")}
+              valueClassName="text-orange-600"
+            />
           </div>
-        ) : (
-          <StudentReport
-            studentId={selectedStudentId}
-            {...queryParams}
-          />
-        )}
+
+          <div className="rounded-lg border border-dashed border-slate-200 bg-white py-10 text-center text-sm text-slate-500">
+            {t("select_student_hint")}
+          </div>
+        </>
+      ) : (
+        <StudentReport studentId={selectedStudentId} {...queryParams} />
+      )}
     </div>
   )
 }
