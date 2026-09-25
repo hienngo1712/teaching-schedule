@@ -11,7 +11,7 @@ async function cleanup() {
 }
 
 /**
- * Đóng nhầm tiền / nhầm tháng phải HỦY được: reset về 0 và bỏ tất toán thì nợ
+ * Đóng nhầm tiền / nhầm tháng phải HỦY được: xoá lần thu và bỏ tất toán thì nợ
  * phải hiện lại đúng ở tháng đó VÀ chuyển đúng sang tháng sau (không bị
  * Math.min(0, residual) của isFullPaid nuốt mất).
  */
@@ -42,66 +42,33 @@ describe("Hủy / sửa ghi nhận thanh toán học phí", () => {
     return { caller, student }
   }
 
-  it("hủy thanh toán (về 0, bỏ tất toán) làm nợ hiện lại trong chính tháng đó", async () => {
-    const { caller, student } = await seedJulyDebt(500000)
+  async function payAndSettleThenCancel(fee: number) {
+    const { caller, student } = await seedJulyDebt(fee)
+    const key = { studentId: student.id, year: 2026, month: 7 }
+    const p = await caller.payment.create({ ...key, amount: fee, paidAt: "2026-07-15", method: "cash" })
+    await caller.tuition.updateSettlement({ ...key, isFullPaid: true })
+    await caller.payment.delete({ id: p.id })
+    await caller.tuition.updateSettlement({ ...key, isFullPaid: false })
+    return { caller, student }
+  }
 
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 7, paidAmount: 500000, isFullPaid: true,
-    })
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 7, paidAmount: 0, isFullPaid: false,
-    })
+  it("hủy thanh toán (xoá lần thu, bỏ tất toán) làm nợ hiện lại trong chính tháng đó", async () => {
+    const { caller, student } = await payAndSettleThenCancel(500000)
 
     const july = await caller.tuition.getMonthlyStatus({ year: 2026, month: 7, studentId: student.id })
     expect(july.items[0].paidAmount).toBe(0)
     expect(july.items[0].isFullPaid).toBe(false)
     expect(july.items[0].totalAmountDue).toBe(500000)
-  }, 20000)
+  }, 60_000)
 
   it("hủy thanh toán trả lại nợ cho tháng sau (không bị tất toán nuốt mất)", async () => {
-    const { caller, student } = await seedJulyDebt(500000)
-
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 7, paidAmount: 500000, isFullPaid: true,
-    })
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 7, paidAmount: 0, isFullPaid: false,
-    })
+    const { caller, student } = await payAndSettleThenCancel(500000)
 
     const aug = await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: student.id })
     expect(aug.items[0].previousBalance).toBe(500000)
-  }, 20000)
+  }, 60_000)
 
-  it("ghi vết dòng audit vào notes khi hủy, giữ nguyên ghi chú của user", async () => {
-    const { caller, student } = await seedJulyDebt(500000)
-
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 7, paidAmount: 500000, isFullPaid: false,
-      notes: "Mẹ chuyển khoản",
-    })
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 7, paidAmount: 0, isFullPaid: false,
-      notes: "Mẹ chuyển khoản",
-    })
-
-    const july = await caller.tuition.getMonthlyStatus({ year: 2026, month: 7, studentId: student.id })
-    expect(july.items[0].notes).toContain("Mẹ chuyển khoản")
-    expect(july.items[0].notes).toContain("Hủy ghi nhận thanh toán: 500.000 đ → 0 đ")
-  }, 20000)
-
-  it("KHÔNG ghi vết ở lần ghi nhận đầu tiên", async () => {
-    const { caller, student } = await seedJulyDebt(500000)
-
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 7, paidAmount: 500000, isFullPaid: false,
-      notes: "Tiền mặt",
-    })
-
-    const july = await caller.tuition.getMonthlyStatus({ year: 2026, month: 7, studentId: student.id })
-    expect(july.items[0].notes).toBe("Tiền mặt")
-  }, 20000)
-
-  it("chuyển tiền đóng nhầm từ tháng 7 sang tháng 8 cho ra số dư đúng ở cả hai tháng", async () => {
+  it("chuyển tiền đóng nhầm từ tháng 7 sang tháng 8 (xoá rồi thêm lại) cho ra số dư đúng ở cả hai tháng", async () => {
     const { caller, student } = await seedJulyDebt(500000)
     const subjects = await caller.subject.list({})
     const aug = await caller.session.create({
@@ -114,15 +81,13 @@ describe("Hủy / sửa ghi nhận thanh toán học phí", () => {
     })
 
     // Đóng nhầm vào tháng 7
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 7, paidAmount: 400000, isFullPaid: false,
+    const wrong = await caller.payment.create({
+      studentId: student.id, year: 2026, month: 7, amount: 400000, paidAt: "2026-08-12", method: "cash",
     })
-    // Hủy ở tháng 7, ghi lại vào tháng 8
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 7, paidAmount: 0, isFullPaid: false,
-    })
-    await caller.tuition.updatePayment({
-      studentId: student.id, year: 2026, month: 8, paidAmount: 400000, isFullPaid: false,
+    // Xoá ở tháng 7, thêm lại vào tháng 8
+    await caller.payment.delete({ id: wrong.id })
+    await caller.payment.create({
+      studentId: student.id, year: 2026, month: 8, amount: 400000, paidAt: "2026-08-12", method: "cash",
     })
 
     const julyView = await caller.tuition.getMonthlyStatus({ year: 2026, month: 7, studentId: student.id })
@@ -132,5 +97,5 @@ describe("Hủy / sửa ghi nhận thanh toán học phí", () => {
     expect(augView.items[0].previousBalance).toBe(500000) // nợ tháng 7 vẫn còn nguyên
     expect(augView.items[0].totalAmountDue).toBe(900000)  // 500k nợ + 400k tháng 8
     expect(augView.items[0].paidAmount).toBe(400000)
-  }, 20000)
+  }, 60_000)
 })

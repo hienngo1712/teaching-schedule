@@ -1,9 +1,8 @@
 import { Prisma, type PrismaClient, type MonthlyTuition, type SessionStudent } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
-import { buildPaymentAuditNote } from "@/lib/payment-notes"
 import { matchesTuitionStatusFilter } from "@/lib/tuition-status"
 import { assertOwnership } from "./_base.service"
-import type { MonthlyTuitionFilterInput, UpdatePaymentInput, UpdateSettlementInput } from "@/lib/schemas/tuition"
+import type { MonthlyTuitionFilterInput, UpdateSettlementInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
 import type { TuitionStatusDTO } from "@/lib/types/models"
 
@@ -315,68 +314,6 @@ export async function updateSettlement(
     data: {
       isFullPaid: input.isFullPaid,
       ...(input.notes !== undefined && { notes: input.notes }),
-    },
-  })
-}
-
-export async function updateTuitionPayment(
-  db: PrismaClient,
-  userId: number,
-  input: UpdatePaymentInput
-) {
-  const { studentId, year, month, paidAmount, isFullPaid, notes } = input
-
-  const student = await db.student.findUnique({ where: { id: studentId } })
-  assertOwnership(student, userId)
-
-  // Snapshot TRƯỚC khi ghi đè — dùng để so sánh và ghi vết lần sửa/hủy.
-  const existing = await db.monthlyTuition.findUnique({
-    where: { studentId_year_month: { studentId, year, month } },
-  })
-
-  // Ensure the month's snapshot exists with correct computed fields
-  // (previousBalance carry-over, currentMonthFee, totalAmountDue) BEFORE
-  // recording payment. Otherwise paying for a not-yet-viewed month would
-  // create a bare snapshot with previousBalance=0 and silently drop the
-  // student's prior-month debt.
-  await getMonthlyTuitionStatus(db, userId, {
-    studentId,
-    year,
-    month,
-    status: "all",
-    page: 1,
-    limit: 1,
-  })
-
-  const finalNotes = buildPaymentAuditNote({
-    notes: notes ?? existing?.notes ?? "",
-    prevPaidAmount: existing?.paidAmount ?? 0,
-    nextPaidAmount: paidAmount,
-    prevIsFullPaid: existing?.isFullPaid ?? false,
-    nextIsFullPaid: isFullPaid,
-    now: new Date(),
-  })
-
-  return await db.monthlyTuition.upsert({
-    where: {
-      studentId_year_month: {
-        studentId,
-        year,
-        month,
-      },
-    },
-    update: {
-      paidAmount,
-      isFullPaid,
-      notes: finalNotes,
-    },
-    create: {
-      studentId,
-      year,
-      month,
-      paidAmount,
-      isFullPaid,
-      notes: finalNotes,
     },
   })
 }
