@@ -1066,7 +1066,7 @@ test.describe('Quản lý môn học (390px)', () => {
 });
 ```
 
-Ghi chú: seed tài khoản có sẵn môn ẩn (Vật Lý, Hóa Học) nên nhóm "Đã ẩn" luôn hiện; test kiểm tra môn nằm trong nhóm nào qua `data-testid`, không dựa vào tiêu đề nhóm.
+Ghi chú: DB test có thể còn môn ẩn từ lần chạy e2e trước (môn không xóa được), nên nhóm "Đã ẩn" có thể luôn hiện; test kiểm tra môn nằm trong nhóm nào qua `data-testid`, không dựa vào tiêu đề nhóm.
 
 - [ ] **Step 2: Chạy e2e toàn bộ**
 
