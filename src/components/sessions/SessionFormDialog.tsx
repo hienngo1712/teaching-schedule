@@ -45,6 +45,7 @@ import {
   sessionCreateSchema,
   type SessionCreateInput,
 } from "@/lib/schemas/session"
+import { withCurrentSubject } from "@/lib/subject-options"
 import { trpc } from "@/lib/trpc"
 import type { SessionDTO } from "@/lib/types/models"
 import { StudentPicker } from "./StudentPicker"
@@ -70,6 +71,12 @@ export function SessionFormDialog({
   const [isUpdateFuture, setIsUpdateFuture] = useState(false)
 
   const { data: subjects = [] } = trpc.subject.list.useQuery({ isActive: true })
+  const subjectOptions = withCurrentSubject(
+    subjects,
+    editingSession
+      ? { id: editingSession.subjectId, name: editingSession.subject.name, color: editingSession.subject.color }
+      : undefined
+  )
 
   const form = useForm<SessionCreateInput>({
     resolver: zodResolver(sessionCreateSchema),
@@ -258,7 +265,7 @@ export function SessionFormDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {subjects.map((s) => (
+                        {subjectOptions.map((s) => (
                           <SelectItem key={s.id} value={String(s.id)}>
                             <div className="flex items-center gap-2">
                               <div
@@ -266,6 +273,7 @@ export function SessionFormDialog({
                                 style={{ backgroundColor: s.color }}
                               />
                               {s.name}
+                              {s.hidden && <span className="text-slate-400">{t("hidden_suffix")}</span>}
                             </div>
                           </SelectItem>
                         ))}
