@@ -3,6 +3,7 @@
 import dayjs from "dayjs"
 import type { SessionListDTO } from "@/lib/types/models"
 import { cn } from "@/lib/utils"
+import { getSessionLabel } from "@/lib/session-label"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
@@ -13,7 +14,7 @@ type Props = {
 export function SessionCard({ session, onClick }: Props) {
   const { t } = useTranslation()
   const level = session.level
-  const label = session.title ?? session.subject.name
+  const label = getSessionLabel(session)
   const studentCountText =
     session.studentCount > 0 ? `· ${session.studentCount} ${t("student_abbrev")}` : ""
   const isCancelled = session.status === "cancelled"
