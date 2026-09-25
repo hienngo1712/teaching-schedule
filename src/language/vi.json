@@ -289,5 +289,20 @@
   "hint_taught_fees": "Buổi có mặt và muộn, chưa phải tiền đã nhận",
   "hint_collected": "Tiền đã ghi nhận trong tháng",
   "hint_outstanding": "Cộng dồn cả các tháng trước",
-  "hint_not_yet_counted": "Gồm buổi vắng và buổi chưa diễn ra hoặc chưa điểm danh"
+  "hint_not_yet_counted": "Gồm buổi vắng và buổi chưa diễn ra hoặc chưa điểm danh",
+  "subjects_desc": "Màu môn hiện ở danh sách ca dạy",
+  "add_subject": "Thêm môn",
+  "edit_subject": "Sửa môn",
+  "subject_name": "Tên môn",
+  "subject_color": "Màu",
+  "subject_default_hint": "Môn mặc định khi tạo ca",
+  "subjects_active": "Đang dạy",
+  "subjects_hidden": "Đã ẩn",
+  "set_default": "Đặt làm mặc định",
+  "hide": "Ẩn",
+  "unhide": "Hiện lại",
+  "default_badge": "Mặc định",
+  "hide_subject_confirm": "Ẩn môn {name}? Môn sẽ không hiện khi tạo ca mới. Các ca đã có vẫn giữ nguyên.",
+  "subject_saved": "Đã lưu môn học",
+  "hidden_suffix": "(đã ẩn)"
 }
