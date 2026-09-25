@@ -22,4 +22,9 @@ describe("withCurrentSubject", () => {
     expect(result).toHaveLength(3)
     expect(result[2]).toEqual({ ...hoa, hidden: true })
   })
+
+  it("danh sách chưa tải xong → vẫn hiện môn hiện tại, không gắn nhãn đã ẩn", () => {
+    expect(withCurrentSubject(undefined, toan)).toEqual([{ ...toan, hidden: false }])
+    expect(withCurrentSubject(undefined)).toEqual([])
+  })
 })

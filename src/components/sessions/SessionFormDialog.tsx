@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CalendarIcon, Loader2 } from "lucide-react"
@@ -70,9 +70,10 @@ export function SessionFormDialog({
   const isEdit = !!editingSession
   const [isUpdateFuture, setIsUpdateFuture] = useState(false)
 
-  const { data: subjects = [] } = trpc.subject.list.useQuery({ isActive: true })
+  const { data: subjectsData } = trpc.subject.list.useQuery({ isActive: true })
+  const subjects = useMemo(() => subjectsData ?? [], [subjectsData])
   const subjectOptions = withCurrentSubject(
-    subjects,
+    subjectsData,
     editingSession
       ? { id: editingSession.subjectId, name: editingSession.subject.name, color: editingSession.subject.color }
       : undefined

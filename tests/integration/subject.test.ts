@@ -164,6 +164,15 @@ describe("Subject CRUD", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("đã ẩn") })
   })
 
+  it("✗ bỏ mặc định ở môn đang mặc định → BAD_REQUEST", async () => {
+    const caller = await getAuthedCaller()
+    const def = await caller.subject.create({ name: "Mặc định", isDefault: true })
+    await caller.subject.create({ name: "Khác" })
+    await expect(
+      caller.subject.update({ id: def.id, data: { isDefault: false } })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("mặc định khác") })
+  })
+
   it("✓ create không truyền sortOrder → xếp cuối danh sách", async () => {
     const caller = await getAuthedCaller()
     await caller.subject.create({ name: "A", sortOrder: 5 })

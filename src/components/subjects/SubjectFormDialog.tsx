@@ -106,6 +106,7 @@ export function SubjectFormDialog({ subject, usedColors, onClose }: Props) {
               <Checkbox
                 id="subject-default"
                 checked={isDefault}
+                disabled={subject?.isDefault}
                 onCheckedChange={(v) => setIsDefault(v === true)}
               />
               <Label htmlFor="subject-default">{t("subject_default_hint")}</Label>

@@ -88,6 +88,10 @@ export async function updateSubject(
     })
     if (remaining === 0) throw badRequest("Không thể ẩn môn cuối cùng")
   }
+  // Luôn phải có một môn mặc định: chỉ đổi được bằng cách đặt môn khác làm mặc định.
+  if (data.isDefault === false && existing.isDefault) {
+    throw badRequest("Không thể bỏ môn mặc định. Hãy chọn môn mặc định khác trước.")
+  }
   const willBeActive = data.isActive ?? existing.isActive
   if (data.isDefault === true && !willBeActive) {
     throw badRequest("Không thể đặt môn đã ẩn làm mặc định")
