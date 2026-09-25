@@ -22,3 +22,13 @@ export const updatePaymentSchema = z.object({
 })
 
 export type UpdatePaymentInput = z.infer<typeof updatePaymentSchema>
+
+export const updateSettlementSchema = z.object({
+  studentId: z.number().int().positive(),
+  year: z.number().int(),
+  month: z.number().int().min(1).max(12),
+  isFullPaid: z.boolean(),
+  notes: z.string().optional().nullable(),
+})
+
+export type UpdateSettlementInput = z.infer<typeof updateSettlementSchema>

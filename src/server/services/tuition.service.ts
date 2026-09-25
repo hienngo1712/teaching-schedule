@@ -1,9 +1,9 @@
-import type { PrismaClient, MonthlyTuition, SessionStudent } from "@prisma/client"
+import { Prisma, type PrismaClient, type MonthlyTuition, type SessionStudent } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { buildPaymentAuditNote } from "@/lib/payment-notes"
 import { matchesTuitionStatusFilter } from "@/lib/tuition-status"
 import { assertOwnership } from "./_base.service"
-import type { MonthlyTuitionFilterInput, UpdatePaymentInput } from "@/lib/schemas/tuition"
+import type { MonthlyTuitionFilterInput, UpdatePaymentInput, UpdateSettlementInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
 import type { TuitionStatusDTO } from "@/lib/types/models"
 
@@ -272,6 +272,51 @@ export async function getMonthlyTuitionStatus(
     totalCount,
     totalPages: Math.ceil(totalCount / limit),
   }
+}
+
+/**
+ * Đảm bảo có dòng MonthlyTuition (kèm carry-over đúng) trước khi ghi tiền/tất toán.
+ * Tạo dòng trần sẽ đông cứng previousBalance = 0 và làm mất nợ tháng trước
+ * (xem tests/integration/tuition-payment-snapshot.test.ts).
+ */
+export async function ensureMonthlyTuition(
+  db: PrismaClient,
+  userId: number,
+  studentId: number,
+  year: number,
+  month: number
+): Promise<MonthlyTuition> {
+  const student = await db.student.findUnique({ where: { id: studentId } })
+  assertOwnership(student, userId)
+
+  try {
+    await getMonthlyTuitionStatus(db, userId, { studentId, year, month, status: "all", page: 1, limit: 1 })
+  } catch (e) {
+    // 2 request cùng mở tháng mới: upsert snapshot không nguyên tử, bên thua gặp P2002 nhưng dòng đã có.
+    if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e
+  }
+
+  return db.monthlyTuition.upsert({
+    where: { studentId_year_month: { studentId, year, month } },
+    update: {},
+    create: { studentId, year, month },
+  })
+}
+
+// Tất toán (miễn phần còn lại) + ghi chú tháng; không đụng paidAmount, không ghi vết.
+export async function updateSettlement(
+  db: PrismaClient,
+  userId: number,
+  input: UpdateSettlementInput
+): Promise<MonthlyTuition> {
+  const mt = await ensureMonthlyTuition(db, userId, input.studentId, input.year, input.month)
+  return db.monthlyTuition.update({
+    where: { id: mt.id },
+    data: {
+      isFullPaid: input.isFullPaid,
+      ...(input.notes !== undefined && { notes: input.notes }),
+    },
+  })
 }
 
 export async function updateTuitionPayment(

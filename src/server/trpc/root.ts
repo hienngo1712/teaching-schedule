@@ -7,6 +7,7 @@ import { sessionRouter } from "@/server/trpc/routers/session"
 import { attendanceRouter } from "@/server/trpc/routers/attendance"
 import { reportRouter } from "@/server/trpc/routers/report"
 import { tuitionRouter } from "@/server/trpc/routers/tuition"
+import { paymentRouter } from "@/server/trpc/routers/payment"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   attendance: attendanceRouter,
   report: reportRouter,
   tuition: tuitionRouter,
+  payment: paymentRouter,
 })
 
 export type AppRouter = typeof appRouter
