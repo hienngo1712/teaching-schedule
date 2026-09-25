@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest"
 import { getAuthedCaller } from "../helpers/trpc"
+import { vnDateParts } from "@/lib/utils"
 
 type Caller = Awaited<ReturnType<typeof getAuthedCaller>>
 
@@ -185,5 +186,24 @@ describe("Report Router", () => {
     expect(summary.expectedRevenue).toBeGreaterThan(summary.totalRevenue)
     expect(summary.expectedRevenue).toBe(100000)
     expect(summary.totalRevenue).toBe(50000)
+  })
+
+  it("dashboard.totalPaidMonth khớp monthlySummary.totalPaid của tháng hiện tại", async () => {
+    const { year, month } = vnDateParts()
+    await caller.tuition.updatePayment({
+      studentId: student.id,
+      year,
+      month,
+      paidAmount: 123000,
+      isFullPaid: false,
+    })
+
+    const [dash, summary] = await Promise.all([
+      caller.report.dashboard(),
+      caller.report.monthlySummary({ year, month }),
+    ])
+
+    expect(dash.totalPaidMonth).toBeGreaterThanOrEqual(123000)
+    expect(dash.totalPaidMonth).toBe(summary.totalPaid)
   })
 })
