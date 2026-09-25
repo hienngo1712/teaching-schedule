@@ -11,7 +11,7 @@ import {
   useCalendar,
 } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
-import { FilterBar } from "../filters/FilterBar"
+import { CalendarToolbar } from "./CalendarToolbar"
 import { StudentScheduleView } from "../students/StudentScheduleView"
 import type { SessionListDTO, SessionDTO } from "@/lib/types/models"
 import { CalendarDayCell } from "./CalendarDayCell"
@@ -107,12 +107,20 @@ export function MonthCalendar() {
 
   return (
     <div className="space-y-6">
-      <FilterBar 
+      <CalendarToolbar 
         onCreateClick={handleCreateClick}
         onBulkCreateClick={() => setIsBulkDialogOpen(true)}
         sessions={sessions}
         students={students}
       />
+
+      {/* Màu viền thẻ ca là cấp học (session-card--tieu-hoc/thcs trong globals.css), không phải màu môn */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+        <LegendItem className="border-blue-500 bg-blue-50" label={t("primary_school")} />
+        <LegendItem className="border-emerald-500 bg-emerald-50" label={t("secondary_school")} />
+        <LegendItem className="border-indigo-500 bg-indigo-50" label={t("level_mixed")} />
+        <LegendItem className="border-red-300 bg-red-50" label={t("cancelled_label")} />
+      </div>
 
       {/* Desktop Grid View */}
       <div className="hidden md:grid border rounded-lg overflow-hidden bg-slate-200 grid-cols-7 gap-px shadow-sm">
@@ -256,5 +264,14 @@ export function MonthCalendar() {
         />
       )}
     </div>
+  )
+}
+
+function LegendItem({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn("h-3 w-3 rounded-sm border-l-[3px]", className)} />
+      {label}
+    </span>
   )
 }
