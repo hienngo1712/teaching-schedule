@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { BookOpen, KeyRound, LogOut, Languages } from "lucide-react"
+import { BookOpen, KeyRound, LogOut, Languages, Settings } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
@@ -71,6 +71,12 @@ export function AppHeader() {
               <Link href="/subjects">
                 <BookOpen className="size-4 mr-2" />
                 {t("subject")}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <Settings className="size-4 mr-2" />
+                {t("settings")}
               </Link>
             </DropdownMenuItem>
             <ChangePasswordDialog
