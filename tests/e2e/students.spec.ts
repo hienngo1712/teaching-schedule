@@ -22,7 +22,8 @@ test.describe('Student management', () => {
     await page.locator('button:has-text("Thêm")').last().click();
     
     await expect(page.locator('text=Đã thêm học sinh')).toBeVisible();
-    await expect(page.locator('text=Học sinh E2E')).toBeVisible();
+    // Tên có cả trong bảng (desktop) và thẻ mobile ẩn bằng CSS → chỉ kiểm tra ô bảng
+    await expect(page.getByRole('cell', { name: 'Học sinh E2E' })).toBeVisible();
 
     // Delete
     await page.click('tr:has-text("Học sinh E2E") button:has(svg)');
@@ -30,6 +31,6 @@ test.describe('Student management', () => {
     await page.click('button:has-text("Xóa")'); // Confirm in AlertDialog
     
     await expect(page.locator('text=Đã xóa học sinh')).toBeVisible();
-    await expect(page.locator('text=Học sinh E2E')).not.toBeVisible();
+    await expect(page.getByText('Học sinh E2E')).toHaveCount(0);
   });
 });
