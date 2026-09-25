@@ -4,6 +4,7 @@ import { assertOwnership } from "./_base.service"
 import type {
   SubjectCreateInput,
   SubjectFilterInput,
+  SubjectUpdateData,
 } from "@/lib/schemas/subject"
 
 export async function listSubjects(
@@ -20,6 +21,12 @@ export async function listSubjects(
   })
 }
 
+const DUPLICATE_NAME = "Tên môn học đã tồn tại"
+
+function badRequest(message: string) {
+  return new TRPCError({ code: "BAD_REQUEST", message })
+}
+
 export async function createSubject(
   db: PrismaClient,
   userId: number,
@@ -33,25 +40,30 @@ export async function createSubject(
           data: { isDefault: false },
         })
       }
+      const sortOrder =
+        input.sortOrder ??
+        ((await tx.subject.aggregate({ where: { userId }, _max: { sortOrder: true } }))._max
+          .sortOrder ?? -1) + 1
       return tx.subject.create({
         data: {
           userId,
           name: input.name,
           color: input.color,
           isDefault: input.isDefault,
-          sortOrder: input.sortOrder,
+          sortOrder,
         },
       })
     })
   } catch (e) {
-    if (
-      e instanceof Prisma.PrismaClientKnownRequestError &&
-      e.code === "P2002"
-    ) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Tên môn học đã tồn tại",
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      // Trùng với môn đã ẩn thì người dùng không thấy môn đó ở đâu → chỉ cách bật lại
+      const clash = await db.subject.findUnique({
+        where: { userId_name: { userId, name: input.name } },
       })
+      if (clash && !clash.isActive) {
+        throw badRequest("Môn này đang bị ẩn. Hãy bấm Hiện lại trong danh sách môn đã ẩn.")
+      }
+      throw badRequest(DUPLICATE_NAME)
     }
     throw e
   }
@@ -61,10 +73,25 @@ export async function updateSubject(
   db: PrismaClient,
   userId: number,
   id: number,
-  data: Partial<SubjectCreateInput>
+  data: SubjectUpdateData
 ): Promise<Subject> {
   const existing = await db.subject.findUnique({ where: { id } })
   assertOwnership(existing, userId)
+
+  // Ẩn qua update được phép cả khi môn đã có ca (khác delete): ca cũ vẫn trỏ tới môn.
+  if (data.isActive === false && existing.isActive) {
+    if (existing.isDefault) {
+      throw badRequest("Không thể ẩn môn mặc định. Hãy chọn môn mặc định khác trước.")
+    }
+    const remaining = await db.subject.count({
+      where: { userId, isActive: true, NOT: { id } },
+    })
+    if (remaining === 0) throw badRequest("Không thể ẩn môn cuối cùng")
+  }
+  const willBeActive = data.isActive ?? existing.isActive
+  if (data.isDefault === true && !willBeActive) {
+    throw badRequest("Không thể đặt môn đã ẩn làm mặc định")
+  }
 
   try {
     return await db.$transaction(async (tx) => {
@@ -81,6 +108,7 @@ export async function updateSubject(
           ...(data.color !== undefined && { color: data.color }),
           ...(data.isDefault !== undefined && { isDefault: data.isDefault }),
           ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+          ...(data.isActive !== undefined && { isActive: data.isActive }),
         },
       })
     })
@@ -89,10 +117,7 @@ export async function updateSubject(
       e instanceof Prisma.PrismaClientKnownRequestError &&
       e.code === "P2002"
     ) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Tên môn học đã tồn tại",
-      })
+      throw badRequest(DUPLICATE_NAME)
     }
     throw e
   }

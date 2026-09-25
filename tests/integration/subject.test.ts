@@ -8,6 +8,19 @@ async function resetSubjects() {
   await db.subject.deleteMany()
 }
 
+async function createSessionFor(subjectId: number) {
+  const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+  await db.teachingSession.create({
+    data: {
+      userId: user.id,
+      sessionDate: new Date("2026-05-01"),
+      startTime: new Date("1970-01-01T08:00:00Z"),
+      endTime: new Date("1970-01-01T09:30:00Z"),
+      subjectId,
+    },
+  })
+}
+
 describe("Subject CRUD", () => {
   beforeEach(async () => {
     await resetSubjects()
@@ -99,5 +112,81 @@ describe("Subject CRUD", () => {
     await expect(
       caller.subject.delete({ id: target.id })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  })
+
+  it("✓ update isActive=false → ẩn được môn đã có ca, ca cũ giữ subjectId", async () => {
+    const caller = await getAuthedCaller()
+    await caller.subject.create({ name: "Giữ lại", isDefault: true })
+    const target = await caller.subject.create({ name: "Đã dạy" })
+    await createSessionFor(target.id)
+
+    const updated = await caller.subject.update({ id: target.id, data: { isActive: false } })
+    expect(updated.isActive).toBe(false)
+    const active = await caller.subject.list({ isActive: true })
+    expect(active.find((s) => s.id === target.id)).toBeUndefined()
+    expect(await db.teachingSession.count({ where: { subjectId: target.id } })).toBe(1)
+  })
+
+  it("✗ ẩn môn mặc định → BAD_REQUEST", async () => {
+    const caller = await getAuthedCaller()
+    const def = await caller.subject.create({ name: "Mặc định", isDefault: true })
+    await caller.subject.create({ name: "Khác" })
+    await expect(
+      caller.subject.update({ id: def.id, data: { isActive: false } })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("mặc định") })
+  })
+
+  it("✗ ẩn môn đang dạy cuối cùng → BAD_REQUEST", async () => {
+    const caller = await getAuthedCaller()
+    const only = await caller.subject.create({ name: "Duy nhất" })
+    await expect(
+      caller.subject.update({ id: only.id, data: { isActive: false } })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("cuối cùng") })
+  })
+
+  it("✓ update isActive=true → hiện lại môn đã ẩn", async () => {
+    const caller = await getAuthedCaller()
+    await caller.subject.create({ name: "Giữ lại", isDefault: true })
+    const target = await caller.subject.create({ name: "Tạm ẩn" })
+    await caller.subject.update({ id: target.id, data: { isActive: false } })
+    await caller.subject.update({ id: target.id, data: { isActive: true } })
+    const active = await caller.subject.list({ isActive: true })
+    expect(active.find((s) => s.id === target.id)).toBeDefined()
+  })
+
+  it("✗ đặt môn đã ẩn làm mặc định → BAD_REQUEST", async () => {
+    const caller = await getAuthedCaller()
+    await caller.subject.create({ name: "Giữ lại", isDefault: true })
+    const target = await caller.subject.create({ name: "Đang ẩn" })
+    await caller.subject.update({ id: target.id, data: { isActive: false } })
+    await expect(
+      caller.subject.update({ id: target.id, data: { isDefault: true } })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("đã ẩn") })
+  })
+
+  it("✓ create không truyền sortOrder → xếp cuối danh sách", async () => {
+    const caller = await getAuthedCaller()
+    await caller.subject.create({ name: "A", sortOrder: 5 })
+    await caller.subject.create({ name: "B", sortOrder: 2 })
+    const created = await caller.subject.create({ name: "Mới" })
+    expect(created.sortOrder).toBe(6)
+    const list = await caller.subject.list({})
+    expect(list[list.length - 1].id).toBe(created.id)
+  })
+
+  it("✗ create trùng tên môn đã ẩn → báo đang bị ẩn; trùng môn đang dạy → đã tồn tại", async () => {
+    const caller = await getAuthedCaller()
+    await caller.subject.create({ name: "Giữ lại", isDefault: true })
+    const hidden = await caller.subject.create({ name: "Hóa" })
+    await caller.subject.update({ id: hidden.id, data: { isActive: false } })
+
+    await expect(caller.subject.create({ name: "Hóa" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: expect.stringContaining("đang bị ẩn"),
+    })
+    await expect(caller.subject.create({ name: "Giữ lại" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Tên môn học đã tồn tại",
+    })
   })
 })
