@@ -50,6 +50,11 @@ export default defineConfig({
       DATABASE_URL: requireEnv('DATABASE_URL'),
       DIRECT_URL: requireEnv('DIRECT_URL'),
       NODE_ENV: 'development',
+      // Env phân gói cho DB test: admin_test là admin, TK ngân hàng giả để trang Gói có QR.
+      ADMIN_USERNAMES: 'admin_test',
+      PLAN_BANK_BIN: '970436',
+      PLAN_BANK_ACCOUNT_NUMBER: '0123456789',
+      PLAN_BANK_ACCOUNT_NAME: 'CHU APP TEST',
     },
     // PHẢI là false. `true` sẽ tái dùng server đang chạy sẵn ở cổng 3000 —
     // mà server đó nhiều khả năng do `pnpm dev` thường ngày khởi, đang trỏ

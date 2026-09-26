@@ -4,6 +4,8 @@ import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react
 import { httpBatchLink } from "@trpc/client"
 import { useState } from "react"
 import { trpc } from "@/lib/trpc"
+import { planRequiredOf } from "@/lib/plans"
+import { openUpgrade } from "@/components/plan/upgrade-store"
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => {
@@ -13,6 +15,11 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       mutationCache: new MutationCache({
         onSuccess: () => {
           client.invalidateQueries()
+        },
+        // D15: lỗi thiếu gói lọt qua UI → mở popup nâng cấp dùng chung.
+        onError: (error) => {
+          const plan = planRequiredOf(error)
+          if (plan) openUpgrade({ plan })
         },
       }),
       defaultOptions: {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
@@ -19,6 +19,12 @@ import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import { ExportExcelButton } from "@/components/reports/ExportExcelButton"
 import { ReportPeriodPicker } from "@/components/reports/ReportPeriodPicker"
+import { Button } from "@/components/ui/button"
+import { useFeatureGate } from "@/hooks/useFeatureGate"
+import { LockBadge } from "@/components/plan/LockBadge"
+import { LockedSection } from "@/components/plan/LockedSection"
+import { openUpgrade } from "@/components/plan/upgrade-store"
+import { PLAN_LABEL } from "@/lib/plans"
 type SessionItem = Omit<RouterOutputs["session"]["getMonth"][number], "sessionDate"> & { sessionDate: Date }
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
@@ -34,38 +40,52 @@ export default function ReportsPage() {
     toMonth: filterToMonth,
     filterType,
   } = useFilters()
+  const reportGate = useFeatureGate("monthlyReport")
+  const multiGate = useFeatureGate("multiMonthReport")
+  // Chưa Pro: ép 1 tháng + bỏ lọc lớp dù URL còn type=year/grade (link cũ) để không gọi query bị chặn.
+  const reportType = multiGate.allowed ? filterType : "month"
+  const grade = multiGate.allowed ? gradeFilter : null
 
   const queryParams = useMemo(() => {
     const params: { year: number; month: number; toYear?: number; toMonth?: number } = { year, month }
-    if (filterType === 'year') {
+    if (reportType === 'year') {
       params.month = 1
       params.toYear = year
       params.toMonth = 12
-    } else if (filterType === 'range') {
+    } else if (reportType === 'range') {
       params.toYear = filterToYear || year
       params.toMonth = filterToMonth || month
     }
     return params
-  }, [year, month, filterType, filterToYear, filterToMonth])
+  }, [year, month, reportType, filterToYear, filterToMonth])
 
-  const { data: studentListData } = trpc.student.list.useQuery({
-    grade: gradeFilter || undefined,
-    limit: 1000, // For reports we want more students
-    // Gồm cả HS đã nghỉ để khớp với monthlySummary.totalStudents.
-    includeInactive: true,
-  })
+  const { data: studentListData } = trpc.student.list.useQuery(
+    {
+      grade: grade || undefined,
+      limit: 1000, // For reports we want more students
+      // Gồm cả HS đã nghỉ để khớp với monthlySummary.totalStudents.
+      includeInactive: true,
+    },
+    { enabled: reportGate.allowed }
+  )
 
-  const { data: monthSessionsData = [] } = trpc.session.getMonth.useQuery({
-    ...queryParams,
-    grade: gradeFilter || undefined,
-    studentId: selectedStudentId || undefined,
-    includeStudents: true,
-  })
+  const { data: monthSessionsData = [] } = trpc.session.getMonth.useQuery(
+    {
+      ...queryParams,
+      grade: grade || undefined,
+      studentId: selectedStudentId || undefined,
+      includeStudents: true,
+    },
+    { enabled: reportGate.allowed }
+  )
 
-  const { data: monthlySummary } = trpc.report.monthlySummary.useQuery({
-    ...queryParams,
-    grade: gradeFilter || undefined,
-  })
+  const { data: monthlySummary } = trpc.report.monthlySummary.useQuery(
+    {
+      ...queryParams,
+      grade: grade || undefined,
+    },
+    { enabled: reportGate.allowed }
+  )
 
   const students = studentListData?.items ?? []
   const gap = (monthlySummary?.expectedRevenue ?? 0) - (monthlySummary?.totalRevenue ?? 0)
@@ -75,7 +95,40 @@ export default function ReportsPage() {
   })) as SessionItem[]
 
   const money = (v?: number) => (v === undefined ? undefined : formatCurrency(v))
-  const activeFilterCount = (gradeFilter ? 1 : 0) + (selectedStudentId ? 1 : 0)
+  const activeFilterCount = (grade ? 1 : 0) + (selectedStudentId ? 1 : 0)
+
+  const reportLocked = reportGate.locked
+  const reportPlan = reportGate.requiredPlan
+  // Vào thẳng /reports khi chưa đủ gói: khung báo cáo mờ + mở popup nâng cấp 1 lần.
+  useEffect(() => {
+    if (reportLocked) openUpgrade({ plan: reportPlan })
+  }, [reportLocked, reportPlan])
+
+  if (reportLocked) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t("reports")} />
+        <LockedSection
+          plan={reportPlan}
+          label={t("plan_available_in").replace("{plan}", PLAN_LABEL[reportPlan])}
+          testId="reports-locked"
+        >
+          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
+            {[
+              t("student"),
+              t("attendance_rate"),
+              t("expected_revenue"),
+              t("actual_revenue"),
+              t("collected_amount"),
+              t("uncollected_amount"),
+            ].map((label) => (
+              <StatCard key={label} label={label} value="0" />
+            ))}
+          </div>
+        </LockedSection>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -84,7 +137,7 @@ export default function ReportsPage() {
         actions={
           <>
             <ExportExcelButton sessions={sessions} students={students} />
-            <ReportPeriodPicker />
+            <ReportPeriodPicker multiMonthLocked={multiGate.locked} onLockedClick={multiGate.openUpgrade} />
           </>
         }
       />
@@ -93,20 +146,27 @@ export default function ReportsPage() {
         activeCount={activeFilterCount}
         filters={
           <>
-            <Select
-              value={gradeFilter?.toString() || "all"}
-              onValueChange={(v) => setGradeFilter(v === "all" ? null : parseInt(v))}
-            >
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder={t("grade")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("all_grades")}</SelectItem>
-                {GRADES.map((g) => (
-                  <SelectItem key={g} value={g.toString()}>{t("grade")} {g}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {multiGate.locked ? (
+              <Button type="button" variant="outline" className="h-10 gap-2" onClick={multiGate.openUpgrade}>
+                {t("all_grades")}
+                <LockBadge plan={multiGate.requiredPlan} />
+              </Button>
+            ) : (
+              <Select
+                value={gradeFilter?.toString() || "all"}
+                onValueChange={(v) => setGradeFilter(v === "all" ? null : parseInt(v))}
+              >
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder={t("grade")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all_grades")}</SelectItem>
+                  {GRADES.map((g) => (
+                    <SelectItem key={g} value={g.toString()}>{t("grade")} {g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Select
               value={selectedStudentId?.toString() || "none"}
               onValueChange={(v) => setSelectedStudentId(v === "none" ? null : parseInt(v))}
@@ -171,9 +231,10 @@ export default function ReportsPage() {
             {t("select_student_hint")}
           </div>
         </>
-      ) : (
+      ) : reportGate.allowed ? (
+        // Chờ biết gói rồi mới render: StudentReport gọi report.student ngay khi mount.
         <StudentReport studentId={selectedStudentId} {...queryParams} />
-      )}
+      ) : null}
     </div>
   )
 }

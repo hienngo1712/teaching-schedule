@@ -2,6 +2,7 @@ import { Prisma, type PrismaClient, type ClassUpgradeLog } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { getLevel } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
+import { assertCanActivateStudents } from "./plan.service"
 import type {
   StudentCreateInput,
   StudentFilterInput,
@@ -60,6 +61,7 @@ export async function createStudent(
   userId: number,
   input: StudentCreateInput
 ): Promise<StudentDTO> {
+  if (input.isActive) await assertCanActivateStudents(db, userId, 1)
   const student = await db.student.create({
     data: {
       userId,
@@ -113,6 +115,7 @@ export async function importStudents(
     // Khóa theo userId trong transaction: 2 request cùng lúc phải kiểm tra trùng tuần tự,
     // không thì cả 2 đều SELECT thấy "chưa có" ở READ COMMITTED rồi cùng insert ra bản sao.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
+    await assertCanActivateStudents(tx, userId, rows.length)
     // Kiểm tra trùng lại lúc ghi: bấm 2 lần / thử lại sau lỗi mạng không sinh bản sao.
     const existing = await findExistingByKey(tx, userId, rows)
     const seen = new Set<string>()
@@ -150,6 +153,7 @@ export async function updateStudent(
 ): Promise<StudentDTO> {
   const existing = await db.student.findUnique({ where: { id } })
   assertOwnership(existing, userId)
+  if (data.isActive === true && !existing.isActive) await assertCanActivateStudents(db, userId, 1)
 
   const student = await db.$transaction(async (tx) => {
     const updated = await tx.student.update({

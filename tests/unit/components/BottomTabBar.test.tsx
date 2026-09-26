@@ -22,6 +22,9 @@ vi.mock("next/link", () => ({
     />
   ),
 }))
+vi.mock("@/hooks/usePlan", () => ({
+  usePlan: () => ({ me: undefined, ready: true, fields: null, has: () => true }),
+}))
 
 function renderBar() {
   return render(
@@ -63,15 +66,16 @@ describe("BottomTabBar", () => {
     expect(moreButton().getAttribute("aria-current")).toBe("page")
   })
 
-  it("bấm Thêm → dialog 'Thêm' có 3 mục kèm mô tả; bấm mục thì sheet đóng", async () => {
+  it("bấm Thêm → dialog 'Thêm' có 4 mục kèm mô tả; bấm mục thì sheet đóng", async () => {
     renderBar()
     fireEvent.click(moreButton())
     const dialog = await screen.findByRole("dialog", { name: "Thêm" })
     const links = within(dialog).getAllByRole("link")
-    expect(links.map((l) => l.getAttribute("href"))).toEqual(["/reports", "/subjects", "/settings"])
+    expect(links.map((l) => l.getAttribute("href"))).toEqual(["/reports", "/subjects", "/settings", "/plan"])
     expect(within(dialog).getByText("Doanh thu, công nợ theo tháng và năm")).toBeTruthy()
     expect(within(dialog).getByText("Thêm, đổi màu, ẩn môn")).toBeTruthy()
     expect(within(dialog).getByText("Tài khoản ngân hàng nhận học phí")).toBeTruthy()
+    expect(within(dialog).getByText("Gói hiện tại, nâng cấp, gia hạn")).toBeTruthy()
 
     fireEvent.click(within(dialog).getByRole("link", { name: /Cài đặt/ }))
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())

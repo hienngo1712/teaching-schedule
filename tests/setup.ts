@@ -43,6 +43,7 @@ beforeAll(async () => {
     await db.classUpgradeLog.deleteMany()
     await db.subject.deleteMany()
     await db.loginAttempt.deleteMany()
+    await db.planOrder.deleteMany()
     await db.user.deleteMany()
   } catch (error) {
     console.error("\n❌ [DATABASE ERROR]: Không thể reset database test.")
@@ -52,11 +53,16 @@ beforeAll(async () => {
   }
 
   // Seed data cho tests
+  // Test cũ dùng teacher/teacher2 cho mọi tính năng → cho Pro dài hạn để phân gói không làm vỡ.
+  const PRO_UNTIL_2099 = new Date("2099-12-31T17:00:00.000Z")
+
   const user1 = await db.user.create({
     data: {
       username: "teacher",
       passwordHash: await bcrypt.hash("teacher123", 4),
       fullName: "Giáo viên Test",
+      plan: "pro",
+      planExpiresAt: PRO_UNTIL_2099,
     },
   })
 
@@ -65,6 +71,24 @@ beforeAll(async () => {
       username: "teacher2",
       passwordHash: await bcrypt.hash("teacher123", 4),
       fullName: "Giáo viên Test 2",
+      plan: "pro",
+      planExpiresAt: PRO_UNTIL_2099,
+    },
+  })
+
+  const userStd = await db.user.create({
+    data: {
+      username: "teacher_std",
+      passwordHash: await bcrypt.hash("teacher123", 4),
+      fullName: "Giáo viên Standard",
+    },
+  })
+
+  await db.user.create({
+    data: {
+      username: "admin_test",
+      passwordHash: await bcrypt.hash("teacher123", 4),
+      fullName: "Quản trị Test",
     },
   })
 
@@ -83,6 +107,15 @@ beforeAll(async () => {
       color: "#4F46E5",
       isDefault: true,
       userId: user2.id,
+    },
+  })
+
+  await db.subject.create({
+    data: {
+      name: "Tiếng Anh",
+      color: "#4F46E5",
+      isDefault: true,
+      userId: userStd.id,
     },
   })
 })

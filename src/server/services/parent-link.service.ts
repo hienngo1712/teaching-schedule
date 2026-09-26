@@ -3,6 +3,7 @@ import { Prisma, type PrismaClient } from "@prisma/client"
 import { assertOwnership } from "./_base.service"
 import { getTuitionNotice } from "./tuition-notice.service"
 import { formatTime, vnDateParts } from "@/lib/utils"
+import { effectivePlan, hasFeature } from "@/lib/plans"
 import type { ParentSessionDTO, ParentViewDTO } from "@/lib/types/models"
 
 // 32 byte base64url = 43 ký tự. Kiểm dạng trước khi truy vấn để token rác không chạm DB.
@@ -98,10 +99,12 @@ export async function getParentView(
       fullName: true,
       grade: true,
       createdAt: true,
-      user: { select: { isActive: true, fullName: true } },
+      user: { select: { isActive: true, fullName: true, plan: true, planExpiresAt: true, trialEndsAt: true } },
     },
   })
   if (!student || !student.user.isActive) return null
+  // D9: chủ TK hết Pro thì link tạm 404 như token sai; token giữ nguyên để gia hạn là sống lại.
+  if (!hasFeature(effectivePlan(student.user, new Date()).plan, "parentLink")) return null
 
   const now = vnDateParts()
   const maxIdx = toMonthIndex(now.year, now.month)

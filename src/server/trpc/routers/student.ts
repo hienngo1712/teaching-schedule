@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
+import { createTRPCRouter, planProcedure, protectedProcedure } from "@/server/trpc"
 import {
   studentCreateSchema,
   studentFilterSchema,
@@ -50,15 +50,15 @@ export const studentRouter = createTRPCRouter({
     .query(({ ctx }) => getUpgradeLogThisYear(ctx.db, ctx.userId)),
 
   // mutation để 500 dòng đi trong body POST, không nhét vào URL GET
-  importCheck: protectedProcedure
+  importCheck: planProcedure("studentImport")
     .input(studentImportCheckSchema)
     .mutation(({ ctx, input }) => checkImportDuplicates(ctx.db, ctx.userId, input.rows)),
 
-  importMany: protectedProcedure
+  importMany: planProcedure("studentImport")
     .input(studentImportSchema)
     .mutation(({ ctx, input }) => importStudents(ctx.db, ctx.userId, input.rows)),
 
-  generateParentLink: protectedProcedure
+  generateParentLink: planProcedure("parentLink")
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(({ ctx, input }) => generateParentLink(ctx.db, ctx.userId, input.id)),
 

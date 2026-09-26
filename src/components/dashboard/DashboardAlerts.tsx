@@ -11,6 +11,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { SessionDetailDialog } from "@/components/sessions/SessionDetailDialog"
 import { SessionFormDialog } from "@/components/sessions/SessionFormDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { useFeatureGate } from "@/hooks/useFeatureGate"
+import { LockBadge } from "@/components/plan/LockBadge"
+import { LockedSection } from "@/components/plan/LockedSection"
+import { PLAN_LABEL } from "@/lib/plans"
 import { formatCurrency, formatDate, formatDayOfWeek } from "@/lib/utils"
 import type { SessionDTO, SessionListDTO } from "@/lib/types/models"
 
@@ -64,7 +68,8 @@ function AlertGroup<T>({ testId, icon, title, description, items, getKey, render
 
 export function DashboardAlerts() {
   const { t } = useTranslation()
-  const query = trpc.report.alerts.useQuery()
+  const gate = useFeatureGate("dashboardAlerts")
+  const query = trpc.report.alerts.useQuery(undefined, { enabled: gate.allowed })
 
   const [selected, setSelected] = useState<SessionListDTO | undefined>()
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -76,6 +81,35 @@ export function DashboardAlerts() {
     [query.data]
   )
 
+  // P12: khung vẫn hiện như gói Pro, nội dung mờ + ổ khóa; không gọi report.alerts.
+  if (gate.locked) {
+    return (
+      <section className="space-y-3">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+          {t("alerts_title")}
+          <LockBadge plan={gate.requiredPlan} />
+        </h2>
+        <LockedSection
+          plan={gate.requiredPlan}
+          label={t("plan_available_in").replace("{plan}", PLAN_LABEL[gate.requiredPlan])}
+          testId="alerts-locked"
+        >
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {[t("alert_debt_title"), t("alert_idle_title"), t("alert_unrescheduled_title")].map((title) => (
+              <Card key={title} className="p-4">
+                <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+                <div className="mt-3 space-y-2">
+                  <div className="h-3 w-3/4 rounded bg-slate-200" />
+                  <div className="h-3 w-1/2 rounded bg-slate-200" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        </LockedSection>
+      </section>
+    )
+  }
+  if (!gate.allowed) return <Skeleton className="h-24 w-full rounded-lg" />
   if (query.isPending) return <Skeleton className="h-24 w-full rounded-lg" />
 
   // Lỗi hoặc không có gì cần xử lý → ẩn cả khối (spec S10).

@@ -15,6 +15,9 @@ vi.mock("next/navigation", () => ({
   usePathname: vi.fn(),
   useSearchParams: vi.fn(),
 }))
+vi.mock("@/hooks/usePlan", () => ({
+  usePlan: () => ({ me: undefined, ready: true, fields: null, has: () => true }),
+}))
 
 const item = {
   studentId: 1,
