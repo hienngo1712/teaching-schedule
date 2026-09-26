@@ -33,6 +33,21 @@ export const studentFilterSchema = z.object({
   includeInactive: z.boolean().optional(),
 }).merge(paginationSchema)
 
+// Giới hạn 500 dòng (spec E D2); không import MAX_IMPORT_ROWS vì student-import.ts import file này.
+export const studentImportCheckSchema = z.object({
+  rows: z.array(z.object({ fullName: z.string().max(100), grade: z.number().int() })).max(500),
+})
+
+// 1 dòng sai → Zod từ chối cả request: đúng "tất cả hoặc không".
+export const studentImportSchema = z.object({
+  rows: z
+    .array(studentCreateSchema.omit({ isActive: true }).extend({ allowDuplicate: z.boolean().default(false) }))
+    .min(1)
+    .max(500),
+})
+
 export type StudentCreateInput = z.infer<typeof studentCreateSchema>
 export type StudentUpdateInput = z.infer<typeof studentUpdateSchema>
 export type StudentFilterInput = z.infer<typeof studentFilterSchema>
+export type StudentImportCheckInput = z.infer<typeof studentImportCheckSchema>
+export type StudentImportInput = z.infer<typeof studentImportSchema>

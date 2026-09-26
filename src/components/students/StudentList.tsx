@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { StudentFormDialog } from "./StudentFormDialog"
 import { UpgradeAllClassesButton } from "./UpgradeAllClassesButton"
+import { ImportStudentsButton } from "./ImportStudentsDialog"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -176,6 +177,7 @@ export function StudentList() {
         actions={
           <>
             <UpgradeAllClassesButton />
+            <ImportStudentsButton />
             <Button onClick={() => setFormState({ open: true, mode: "create" })} className="h-11 md:h-10">
               <UserPlus className="mr-2 size-4" />
               {t("add_student")}
