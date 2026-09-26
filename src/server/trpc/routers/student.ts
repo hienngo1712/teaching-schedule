@@ -17,6 +17,10 @@ import {
   upgradeAllClasses,
   getUpgradeLogThisYear,
 } from "@/server/services/student.service"
+import {
+  disableParentLink,
+  generateParentLink,
+} from "@/server/services/parent-link.service"
 
 export const studentRouter = createTRPCRouter({
   list: protectedProcedure
@@ -53,4 +57,12 @@ export const studentRouter = createTRPCRouter({
   importMany: protectedProcedure
     .input(studentImportSchema)
     .mutation(({ ctx, input }) => importStudents(ctx.db, ctx.userId, input.rows)),
+
+  generateParentLink: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(({ ctx, input }) => generateParentLink(ctx.db, ctx.userId, input.id)),
+
+  disableParentLink: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(({ ctx, input }) => disableParentLink(ctx.db, ctx.userId, input.id)),
 })
