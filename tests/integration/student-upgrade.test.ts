@@ -27,49 +27,62 @@ describe("student.upgradeAllClasses — manual", () => {
     vi.useRealTimers()
   })
 
-  it("upgrades grade 1-8 active students by +1", async () => {
+  it("upgrades grade 1-11 active students by +1 (lớp 9 → 10, lớp 11 → 12)", async () => {
     const caller = await getAuthedCaller("teacher")
     const s1 = await caller.student.create({ fullName: "HS Lop 1", grade: 1, tuitionFee: 0, isActive: true })
     const s5 = await caller.student.create({ fullName: "HS Lop 5", grade: 5, tuitionFee: 0, isActive: true })
     const s8 = await caller.student.create({ fullName: "HS Lop 8", grade: 8, tuitionFee: 0, isActive: true })
+    const s9 = await caller.student.create({ fullName: "HS Lop 9", grade: 9, tuitionFee: 0, isActive: true })
+    const s11 = await caller.student.create({ fullName: "HS Lop 11", grade: 11, tuitionFee: 0, isActive: true })
 
     const result = await caller.student.upgradeAllClasses()
 
-    const after1 = await db.student.findUnique({ where: { id: s1.id } })
-    const after5 = await db.student.findUnique({ where: { id: s5.id } })
-    const after8 = await db.student.findUnique({ where: { id: s8.id } })
-
-    expect(after1?.grade).toBe(2)
-    expect(after5?.grade).toBe(6)
-    expect(after8?.grade).toBe(9)
-    expect(result.upgradedCount).toBe(3)
+    const after = await Promise.all(
+      [s1, s5, s8, s9, s11].map((s) => db.student.findUniqueOrThrow({ where: { id: s.id } }))
+    )
+    expect(after.map((s) => s.grade)).toEqual([2, 6, 9, 10, 12])
+    expect(after.every((s) => s.isActive)).toBe(true)
+    expect(result.upgradedCount).toBe(5)
     expect(result.deactivatedCount).toBe(0)
     expect(result.year).toBe(new Date().getFullYear())
   })
 
-  it("deactivates grade-9 active students and keeps their grade=9", async () => {
+  it("lớp 9 KHÔNG bị cho nghỉ: lên lớp 10, vẫn đang học", async () => {
     const caller = await getAuthedCaller("teacher")
     const s9 = await caller.student.create({ fullName: "HS Lop 9", grade: 9, tuitionFee: 0, isActive: true })
 
     const result = await caller.student.upgradeAllClasses()
 
-    const after9 = await db.student.findUnique({ where: { id: s9.id } })
-    expect(after9?.grade).toBe(9)
-    expect(after9?.isActive).toBe(false)
+    const after9 = await db.student.findUniqueOrThrow({ where: { id: s9.id } })
+    expect(after9.grade).toBe(10)
+    expect(after9.isActive).toBe(true)
+    expect(result.deactivatedCount).toBe(0)
+  })
+
+  it("deactivates grade-12 active students and keeps their grade=12", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const s12 = await caller.student.create({ fullName: "HS Lop 12", grade: 12, tuitionFee: 0, isActive: true })
+
+    const result = await caller.student.upgradeAllClasses()
+
+    const after12 = await db.student.findUnique({ where: { id: s12.id } })
+    expect(after12?.grade).toBe(12)
+    expect(after12?.isActive).toBe(false)
     expect(result.upgradedCount).toBe(0)
     expect(result.deactivatedCount).toBe(1)
   })
 
-  it("deactivates students with grade > 9 (dữ liệu ngoài [1,9] không bị kẹt)", async () => {
+  it("deactivates students with grade > 12 (dữ liệu ngoài [1,12] không bị kẹt)", async () => {
     const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
-    // grade 10 không tạo được qua API (zod max 9) → chèn thẳng DB để mô phỏng dữ liệu lỗi.
+    // grade 13 không tạo được qua API (zod max 12) → chèn thẳng DB để mô phỏng dữ liệu lỗi.
     const ghost = await db.student.create({
-      data: { userId: user.id, fullName: "HS Lop 10", grade: 10, tuitionFee: 0, isActive: true },
+      data: { userId: user.id, fullName: "HS Lop 13", grade: 13, tuitionFee: 0, isActive: true },
     })
     const caller = await getAuthedCaller("teacher")
     const result = await caller.student.upgradeAllClasses()
     const after = await db.student.findUnique({ where: { id: ghost.id } })
     expect(after?.isActive).toBe(false)
+    expect(after?.grade).toBe(13)
     expect(result.deactivatedCount).toBeGreaterThanOrEqual(1)
   })
 
@@ -87,7 +100,7 @@ describe("student.upgradeAllClasses — manual", () => {
   it("creates ClassUpgradeLog with trigger='manual' and correct counts", async () => {
     const caller = await getAuthedCaller("teacher")
     await caller.student.create({ fullName: "AA", grade: 2, tuitionFee: 0, isActive: true })
-    await caller.student.create({ fullName: "BB", grade: 9, tuitionFee: 0, isActive: true })
+    await caller.student.create({ fullName: "BB", grade: 12, tuitionFee: 0, isActive: true })
 
     await caller.student.upgradeAllClasses()
 
