@@ -9,8 +9,15 @@ import { useFilters } from "@/hooks/useFilters"
 import { useMemo } from "react"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { LockBadge } from "@/components/plan/LockBadge"
 
-export function ReportPeriodPicker() {
+export function ReportPeriodPicker({
+  multiMonthLocked = false,
+  onLockedClick,
+}: {
+  multiMonthLocked?: boolean
+  onLockedClick?: () => void
+}) {
   const { t } = useTranslation()
   const { year, month } = useCalendar()
   const {
@@ -19,17 +26,19 @@ export function ReportPeriodPicker() {
     filterType,
     setRange
   } = useFilters()
+  // Chưa Pro: luôn hiện như kỳ 1 tháng dù URL còn type=year/range.
+  const type = multiMonthLocked ? "month" : filterType
 
   const label = useMemo(() => {
-    if (filterType === 'month') return `${t("month")} ${month}/${year}`
-    if (filterType === 'year') return `${t("year")} ${year}`
-    if (filterType === 'range') {
+    if (type === 'month') return `${t("month")} ${month}/${year}`
+    if (type === 'year') return `${t("year")} ${year}`
+    if (type === 'range') {
         const start = `${t("from_month")} ${month}/${year}`
         const end = `${t("to_month")} ${toMonth || month}/${toYear || year}`
         return `${start} - ${end}`
     }
     return t("select_report_period")
-  }, [filterType, year, month, toYear, toMonth, t])
+  }, [type, year, month, toYear, toMonth, t])
 
   const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
   const YEARS = Array.from({ length: 7 }, (_, i) => 2024 + i)
@@ -54,33 +63,33 @@ export function ReportPeriodPicker() {
                     onClick={() => setRange({ type: 'month' })}
                     className={cn(
                         "text-xs py-1.5 rounded-md transition-all font-bold",
-                        filterType === 'month' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
+                        type === 'month' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
                     )}
                 >{t("month")}</button>
                 <button
-                    onClick={() => setRange({ type: 'year' })}
+                    onClick={() => (multiMonthLocked ? onLockedClick?.() : setRange({ type: 'year' }))}
                     className={cn(
-                        "text-xs py-1.5 rounded-md transition-all font-bold",
-                        filterType === 'year' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
+                        "inline-flex items-center justify-center gap-1 text-xs py-1.5 rounded-md transition-all font-bold",
+                        type === 'year' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
                     )}
-                >{t("year")}</button>
+                >{t("year")}{multiMonthLocked && <LockBadge plan="pro" />}</button>
                 <button
-                    onClick={() => setRange({ type: 'range' })}
+                    onClick={() => (multiMonthLocked ? onLockedClick?.() : setRange({ type: 'range' }))}
                     className={cn(
-                        "text-xs py-1.5 rounded-md transition-all font-bold",
-                        filterType === 'range' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
+                        "inline-flex items-center justify-center gap-1 text-xs py-1.5 rounded-md transition-all font-bold",
+                        type === 'range' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
                     )}
-                >{t("range")}</button>
+                >{t("range")}{multiMonthLocked && <LockBadge plan="pro" />}</button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
              <div className="space-y-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    {filterType === 'range' ? t("from_month") : t("month")}
+                    {type === 'range' ? t("from_month") : t("month")}
                 </label>
                 <Select
-                    disabled={filterType === 'year'}
+                    disabled={type === 'year'}
                     value={month.toString()}
                     onValueChange={(v) => setRange({ month: parseInt(v) })}
                 >
@@ -112,7 +121,7 @@ export function ReportPeriodPicker() {
              </div>
           </div>
 
-          {filterType === 'range' && (
+          {type === 'range' && (
              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("to_month")}</label>

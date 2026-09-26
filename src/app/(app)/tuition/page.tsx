@@ -20,6 +20,8 @@ import { getTuitionBadgeStatus, type TuitionBadgeStatus } from "@/lib/tuition-st
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
 import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
 import { TuitionStatusBadge } from "@/components/tuition/TuitionStatusBadge"
+import { useFeatureGate } from "@/hooks/useFeatureGate"
+import { LockBadge } from "@/components/plan/LockBadge"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -46,6 +48,8 @@ export default function TuitionPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [noticeStudentId, setNoticeStudentId] = useState<number | null>(null)
   const { t } = useTranslation()
+  const paymentsGate = useFeatureGate("payments")
+  const noticeGate = useFeatureGate("tuitionNotice")
 
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -98,11 +102,13 @@ export default function TuitionPage() {
       className={className}
       onClick={(e) => {
         e.stopPropagation()
-        handleOpenDetail(item)
+        if (paymentsGate.locked) paymentsGate.openUpgrade()
+        else handleOpenDetail(item)
       }}
     >
       <Wallet className="mr-1.5 size-4" />
       {t("record_payment")}
+      {paymentsGate.locked && <LockBadge plan={paymentsGate.requiredPlan} className="ml-1.5" />}
     </Button>
   )
 
@@ -110,14 +116,18 @@ export default function TuitionPage() {
     <Button
       size="icon"
       variant="outline"
-      className={className}
+      className={cn("relative", className)}
       aria-label={t("tuition_notice")}
       onClick={(e) => {
         e.stopPropagation()
-        setNoticeStudentId(item.studentId)
+        if (noticeGate.locked) noticeGate.openUpgrade()
+        else setNoticeStudentId(item.studentId)
       }}
     >
       <Receipt className="size-4" />
+      {noticeGate.locked && (
+        <LockBadge plan={noticeGate.requiredPlan} className="absolute -right-2 -top-2 rounded-full bg-white px-0.5" />
+      )}
     </Button>
   )
 
@@ -278,6 +288,7 @@ export default function TuitionPage() {
         data={selectedStudent}
         // TRPCProvider tự invalidate sau mutation
         onSuccess={() => {}}
+        paymentsLocked={paymentsGate.locked}
       />
 
       {noticeStudentId !== null && (

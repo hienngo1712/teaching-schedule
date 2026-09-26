@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
+import { UpgradeDialog } from "@/components/plan/UpgradeDialog"
 
 const row = {
   studentId: 1,
@@ -22,6 +23,8 @@ const row = {
   totalAmountDue: 400000,
 }
 
+const mockCalls = vi.hoisted(() => ({ list: [] as unknown[] }))
+
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     tuition: {
@@ -29,7 +32,12 @@ vi.mock("@/lib/trpc", () => ({
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     payment: {
-      list: { useQuery: () => ({ data: [], isPending: false }) },
+      list: {
+        useQuery: (...args: unknown[]) => {
+          mockCalls.list.push(args[1])
+          return { data: [], isPending: false }
+        },
+      },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
@@ -71,5 +79,23 @@ describe("TuitionDetailSheet - màu nợ", () => {
   it("còn phải trả > 0 → dòng còn lại dùng đỏ nợ", () => {
     renderSheet()
     expect(screen.getByTestId("remaining-line").className).toContain("text-debt")
+  })
+})
+
+describe("TuitionDetailSheet - Standard (paymentsLocked)", () => {
+  it("vẫn xem phần tính tiền; lịch sử thu + tất toán khóa; bấm Phiếu báo mở popup Plus; không gọi payment.list", async () => {
+    mockCalls.list.length = 0
+    render(
+      <LanguageProvider>
+        <TuitionDetailSheet open paymentsLocked data={{ ...row, year: 2026, month: 5 }} onOpenChange={() => {}} onSuccess={() => {}} />
+        <UpgradeDialog />
+      </LanguageProvider>
+    )
+    expect(screen.getByText("Tổng tiền cần đóng")).toBeTruthy()
+    expect(screen.getByTestId("payments-locked")).toBeTruthy()
+    expect(screen.getByTestId("settlement-locked")).toBeTruthy()
+    expect(mockCalls.list.every((opts) => (opts as { enabled?: boolean })?.enabled === false)).toBe(true)
+    fireEvent.click(screen.getByRole("button", { name: /Phiếu báo/ }))
+    expect(await screen.findByText("Nâng lên gói Plus hoặc Pro để sử dụng tính năng này.")).toBeTruthy()
   })
 })

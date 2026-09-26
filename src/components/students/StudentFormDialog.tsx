@@ -28,6 +28,10 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { usePlan } from "@/hooks/usePlan"
+import { openUpgrade } from "@/components/plan/upgrade-store"
+import { studentLimitMessage } from "@/components/plan/limit-message"
+import { minPlanForStudents, planRequiredOf } from "@/lib/plans"
 
 type StudentRecord = RouterOutputs["student"]["list"]["items"][number]
 
@@ -40,6 +44,7 @@ type Props = {
 
 export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) {
   const { t } = useTranslation()
+  const { me } = usePlan()
 
   const form = useForm<z.input<typeof studentCreateSchema>>({
     resolver: zodResolver(studentCreateSchema),
@@ -73,7 +78,10 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
       toast.success(t("student_added_success"))
       onOpenChange(false)
     },
-    onError: (e) => toast.error(e.message),
+    // Lỗi thiếu gói đã mở popup ở TRPCProvider, không toast thêm.
+    onError: (e) => {
+      if (!planRequiredOf(e)) toast.error(e.message)
+    },
   })
 
   const updateMut = trpc.student.update.useMutation({
@@ -81,13 +89,22 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
       toast.success(t("student_updated_success"))
       onOpenChange(false)
     },
-    onError: (e) => toast.error(e.message),
+    // Lỗi thiếu gói đã mở popup ở TRPCProvider, không toast thêm.
+    onError: (e) => {
+      if (!planRequiredOf(e)) toast.error(e.message)
+    },
   })
 
   const isPending = createMut.isPending || updateMut.isPending
 
   function onSubmit(values: z.input<typeof studentCreateSchema>) {
     const data = values as StudentCreateInput;
+    // Bật HS thành đang học khi đã đủ giới hạn: mở popup nâng cấp thay vì gửi rồi nhận lỗi.
+    const activating = data.isActive && (mode === "create" || student?.isActive === false)
+    if (activating && me && me.studentLimit !== null && me.activeStudents >= me.studentLimit) {
+      openUpgrade({ plan: minPlanForStudents(me.activeStudents + 1), message: studentLimitMessage(t, me.plan, me.studentLimit) })
+      return
+    }
     if (mode === "create") {
       createMut.mutate(data)
     } else if (student) {

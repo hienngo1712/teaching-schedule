@@ -46,6 +46,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { PaymentFormDialog } from "./PaymentFormDialog"
 import { TuitionNoticeDialog } from "./TuitionNoticeDialog"
+import { LockBadge } from "@/components/plan/LockBadge"
+import { LockedSection } from "@/components/plan/LockedSection"
+import { openUpgrade } from "@/components/plan/upgrade-store"
 
 type TuitionStatus = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
 type SheetData = TuitionStatus & { year: number; month: number }
@@ -55,9 +58,16 @@ interface TuitionDetailSheetProps {
   onOpenChange: (open: boolean) => void
   data: SheetData | null
   onSuccess: () => void
+  paymentsLocked?: boolean
 }
 
-export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: TuitionDetailSheetProps) {
+export function TuitionDetailSheet({
+  open,
+  onOpenChange,
+  data,
+  onSuccess,
+  paymentsLocked = false,
+}: TuitionDetailSheetProps) {
   const { t } = useTranslation()
   const isDesktop = useMediaQuery("(min-width: 768px)")
 
@@ -67,6 +77,7 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
   const body = (
     <TuitionDetailBody
       data={data}
+      paymentsLocked={paymentsLocked}
       onSaved={() => {
         onSuccess()
         onOpenChange(false)
@@ -99,14 +110,25 @@ export function TuitionDetailSheet({ open, onOpenChange, data, onSuccess }: Tuit
   )
 }
 
-function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => void }) {
+function TuitionDetailBody({
+  data,
+  onSaved,
+  paymentsLocked,
+}: {
+  data: SheetData
+  onSaved: () => void
+  paymentsLocked: boolean
+}) {
   const { t } = useTranslation()
   const { studentId, year, month } = data
 
   // `data` là bản chụp lúc mở; sheet vẫn mở sau mỗi lần thu nên đọc lại dòng tháng (TRPCProvider tự invalidate).
   const statusQuery = trpc.tuition.getMonthlyStatus.useQuery({ year, month, studentId, page: 1, limit: 1 })
   const row = statusQuery.data?.items[0] ?? data
-  const paymentsQuery = trpc.payment.list.useQuery({ studentId, year, month })
+  const paymentsQuery = trpc.payment.list.useQuery({ studentId, year, month }, { enabled: !paymentsLocked })
+  // Ghi nhận thu, tất toán và phiếu báo cùng gói Plus (P3, P7).
+  const lockPlus = () => openUpgrade({ plan: "plus" })
+  const lockedLabel = t("plan_available_in").replace("{plan}", "Plus")
   const payments = paymentsQuery.data ?? []
 
   // Chỉ giữ phần người dùng đã sửa; phần chưa sửa theo `row` mới nhất để `dirty` không sáng sai.
@@ -134,6 +156,43 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
   const shortfall = Math.max(0, row.totalAmountDue) - row.paidAmount
   const showWaivedWarning = isFullPaid && shortfall > 0
   const dirty = isFullPaid !== row.isFullPaid || notes !== (row.notes ?? "")
+
+  const settlementBlock = (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
+        <Checkbox
+          id="tuition-full-paid"
+          checked={isFullPaid}
+          onCheckedChange={(v) => setEdits((e) => ({ ...e, isFullPaid: v === true }))}
+        />
+        <Label htmlFor="tuition-full-paid" className="text-sm font-medium">
+          {t("mark_fully_paid")}
+        </Label>
+      </div>
+
+      {showWaivedWarning && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+          <p className="text-xs leading-relaxed text-amber-800">
+            {t("settled_waived_warning")} {formatCurrency(shortfall)}. {t("settled_waived_warning_suffix")}
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="tuition-notes" className="text-xs font-bold text-slate-400">
+          {t("notes")}
+        </Label>
+        <Textarea
+          id="tuition-notes"
+          placeholder={t("notes_placeholder")}
+          className="min-h-[80px] text-sm"
+          value={notes}
+          onChange={(ev) => setEdits((e) => ({ ...e, notes: ev.target.value }))}
+        />
+      </div>
+    </div>
+  )
 
   return (
     <>
@@ -218,13 +277,25 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
                 <History className="size-4" />
                 {t("payment_history")}
               </h3>
-              <Button type="button" onClick={() => setForm({ open: true })} className="h-11 md:h-10">
+              <Button
+                type="button"
+                onClick={() => (paymentsLocked ? lockPlus() : setForm({ open: true }))}
+                className="h-11 md:h-10"
+              >
                 <Plus className="mr-1.5 size-4" />
                 {t("add_payment")}
+                {paymentsLocked && <LockBadge plan="plus" className="ml-1.5" />}
               </Button>
             </div>
 
-            {paymentsQuery.isPending ? (
+            {paymentsLocked ? (
+              <LockedSection plan="plus" label={lockedLabel} testId="payments-locked">
+                <div className="space-y-2">
+                  <div className="h-16 rounded-lg border border-slate-200 bg-white" />
+                  <div className="h-16 rounded-lg border border-slate-200 bg-white" />
+                </div>
+              </LockedSection>
+            ) : paymentsQuery.isPending ? (
               <div className="space-y-2">
                 <Skeleton className="h-16 w-full rounded-lg" />
                 <Skeleton className="h-16 w-full rounded-lg" />
@@ -280,40 +351,13 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
           </div>
 
           {/* Tất toán & ghi chú tháng */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
-              <Checkbox
-                id="tuition-full-paid"
-                checked={isFullPaid}
-                onCheckedChange={(v) => setEdits((e) => ({ ...e, isFullPaid: v === true }))}
-              />
-              <Label htmlFor="tuition-full-paid" className="text-sm font-medium">
-                {t("mark_fully_paid")}
-              </Label>
-            </div>
-
-            {showWaivedWarning && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
-                <p className="text-xs leading-relaxed text-amber-800">
-                  {t("settled_waived_warning")} {formatCurrency(shortfall)}. {t("settled_waived_warning_suffix")}
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="tuition-notes" className="text-xs font-bold text-slate-400">
-                {t("notes")}
-              </Label>
-              <Textarea
-                id="tuition-notes"
-                placeholder={t("notes_placeholder")}
-                className="min-h-[80px] text-sm"
-                value={notes}
-                onChange={(ev) => setEdits((e) => ({ ...e, notes: ev.target.value }))}
-              />
-            </div>
-          </div>
+          {paymentsLocked ? (
+            <LockedSection plan="plus" label={lockedLabel} testId="settlement-locked">
+              {settlementBlock}
+            </LockedSection>
+          ) : (
+            settlementBlock
+          )}
         </div>
       </div>
 
@@ -327,19 +371,23 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
             type="button"
             variant="outline"
             className="h-12 rounded-xl"
-            disabled={dirty}
-            onClick={() => setNoticeOpen(true)}
+            disabled={!paymentsLocked && dirty}
+            onClick={() => (paymentsLocked ? lockPlus() : setNoticeOpen(true))}
           >
             <Receipt className="mr-2 size-4" />
             {t("tuition_notice")}
+            {paymentsLocked && <LockBadge plan="plus" className="ml-1.5" />}
           </Button>
           <Button
             type="button"
             className="h-12 flex-1 rounded-xl font-bold"
-            disabled={!dirty || settlementMut.isPending}
-            onClick={() => settlementMut.mutate({ studentId, year, month, isFullPaid, notes })}
+            disabled={!paymentsLocked && (!dirty || settlementMut.isPending)}
+            onClick={() =>
+              paymentsLocked ? lockPlus() : settlementMut.mutate({ studentId, year, month, isFullPaid, notes })
+            }
           >
             {settlementMut.isPending ? t("saving") : t("save")}
+            {paymentsLocked && <LockBadge plan="plus" className="ml-1.5" />}
           </Button>
         </div>
       </div>

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { CalendarDays, Link2, MoreHorizontal, Pencil, Phone, Trash2, UserPlus } from "lucide-react"
+import { CalendarDays, FileSpreadsheet, Link2, MoreHorizontal, Pencil, Phone, Trash2, UserPlus } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { GRADES } from "@/lib/constants"
@@ -44,6 +45,12 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FilterBar } from "@/components/common/FilterBar"
 import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
+import { usePlan } from "@/hooks/usePlan"
+import { useFeatureGate } from "@/hooks/useFeatureGate"
+import { LockBadge } from "@/components/plan/LockBadge"
+import { openUpgrade } from "@/components/plan/upgrade-store"
+import { studentLimitMessage } from "@/components/plan/limit-message"
+import { PLAN_LABEL, minPlanForStudents } from "@/lib/plans"
 
 type StudentRow = RouterOutputs["student"]["list"]["items"][number]
 
@@ -59,6 +66,15 @@ export function StudentList() {
   const router = useRouter()
   const { t } = useTranslation()
   const { selectedGrade, searchStudentName, setGrade, setSearch } = useFilters()
+  const { me } = usePlan()
+  const importGate = useFeatureGate("studentImport")
+  const linkGate = useFeatureGate("parentLink")
+  const limit = me?.studentLimit ?? null
+  const atLimit = !!me && limit !== null && me.activeStudents >= limit
+  const openLimit = () => {
+    if (!me || limit === null) return
+    openUpgrade({ plan: minPlanForStudents(me.activeStudents + 1), message: studentLimitMessage(t, me.plan, limit) })
+  }
 
   const [localSearch, setLocalSearch] = useState(searchStudentName)
   const debouncedSearch = useDebounce(localSearch, 400)
@@ -150,9 +166,13 @@ export function StudentList() {
           <CalendarDays className="mr-2 size-4" />
           {t("view_schedule")}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => setParentLinkTarget(s)}>
+        {/* HS đã có link vẫn mở được dialog để tắt link (D9). */}
+        <DropdownMenuItem
+          onSelect={() => (linkGate.locked && !s.parentLinkToken ? linkGate.openUpgrade() : setParentLinkTarget(s))}
+        >
           <Link2 className="mr-2 size-4" />
           {t("parent_link")}
+          {linkGate.locked && <LockBadge plan={linkGate.requiredPlan} className="ml-auto pl-2" />}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setFormState({ open: true, mode: "edit", student: s })}>
           <Pencil className="mr-2 size-4" />
@@ -188,14 +208,48 @@ export function StudentList() {
         actions={
           <>
             <UpgradeAllClassesButton />
-            <ImportStudentsButton />
-            <Button onClick={() => setFormState({ open: true, mode: "create" })} className="h-11 md:h-10">
+            {importGate.locked ? (
+              <Button
+                variant="outline"
+                onClick={importGate.openUpgrade}
+                aria-label={t("import_excel")}
+                className="h-11 gap-1.5 px-3 md:h-10 md:px-4"
+              >
+                <FileSpreadsheet className="size-4 text-green-600" />
+                <span className="hidden sm:inline">{t("import_excel")}</span>
+                <LockBadge plan={importGate.requiredPlan} />
+              </Button>
+            ) : (
+              <ImportStudentsButton />
+            )}
+            <Button
+              onClick={() => (atLimit ? openLimit() : setFormState({ open: true, mode: "create" }))}
+              className="h-11 md:h-10"
+            >
               <UserPlus className="mr-2 size-4" />
               {t("add_student")}
+              {atLimit && me && <LockBadge plan={minPlanForStudents(me.activeStudents + 1)} className="ml-1.5" />}
             </Button>
           </>
         }
       />
+
+      {atLimit && me && limit !== null && (
+        <div
+          data-testid="plan-limit-strip"
+          className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+        >
+          <p className="min-w-0 flex-1">
+            {t("plan_over_limit")
+              .replace("{count}", String(me.activeStudents))
+              .replace("{limit}", String(limit))
+              .replace("{plan}", PLAN_LABEL[me.plan])}
+          </p>
+          <Link href="/plan" className="inline-flex min-h-11 items-center font-medium underline">
+            {t("plan_view_plans")}
+          </Link>
+        </div>
+      )}
 
       <FilterBar
         search={{ value: localSearch, onChange: setLocalSearch, placeholder: t("search_student") }}
@@ -306,6 +360,7 @@ export function StudentList() {
           key={parentLinkTarget.id}
           student={parentLinkTarget}
           onOpenChange={(open) => !open && setParentLinkTarget(null)}
+          canGenerate={!linkGate.locked}
         />
       )}
 

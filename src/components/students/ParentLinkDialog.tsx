@@ -7,6 +7,8 @@ import { trpc } from "@/lib/trpc"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { LockBadge } from "@/components/plan/LockBadge"
+import { openUpgrade } from "@/components/plan/upgrade-store"
 import {
   Dialog,
   DialogContent,
@@ -28,10 +30,12 @@ import {
 type Props = {
   student: { id: number; fullName: string; parentLinkToken: string | null }
   onOpenChange: (open: boolean) => void
+  canGenerate?: boolean
 }
 
-export function ParentLinkDialog({ student, onOpenChange }: Props) {
+export function ParentLinkDialog({ student, onOpenChange, canGenerate = true }: Props) {
   const { t } = useTranslation()
+  const lockPro = () => openUpgrade({ plan: "pro" })
   // Prop `student` là bản chụp lúc mở menu, không tự đổi sau mutation → giữ token cục bộ.
   const [token, setToken] = useState(student.parentLinkToken)
   const [confirm, setConfirm] = useState<"regenerate" | "disable" | null>(null)
@@ -111,9 +115,10 @@ export function ParentLinkDialog({ student, onOpenChange }: Props) {
                     {t("share")}
                   </Button>
                 )}
-                <Button variant="outline" className={btn} disabled={busy} onClick={() => setConfirm("regenerate")}>
+                <Button variant="outline" className={btn} disabled={busy} onClick={() => (canGenerate ? setConfirm("regenerate") : lockPro())}>
                   <RefreshCw className="mr-2 size-4" />
                   {t("regenerate_link")}
+                  {!canGenerate && <LockBadge plan="pro" className="ml-1.5" />}
                 </Button>
                 <Button
                   variant="outline"
@@ -130,9 +135,10 @@ export function ParentLinkDialog({ student, onOpenChange }: Props) {
             <Button
               className={`${btn} w-full sm:w-auto`}
               disabled={busy}
-              onClick={() => generate.mutate({ id: student.id })}
+              onClick={() => (canGenerate ? generate.mutate({ id: student.id }) : lockPro())}
             >
               {t("create_link")}
+              {!canGenerate && <LockBadge plan="pro" className="ml-1.5" />}
             </Button>
           )}
         </DialogContent>
