@@ -28,6 +28,14 @@ describe("Student CRUD", () => {
     expect(s.level).toBe("thcs")
   })
 
+  it("✓ create grade=11 → level=thpt", async () => {
+    const caller = await getAuthedCaller()
+    const s = await caller.student.create({ fullName: "Lê Khoa", grade: 11 })
+    expect(s.level).toBe("thpt")
+    const list = await caller.student.list({ grade: 11 })
+    expect(list.items[0].level).toBe("thpt")
+  })
+
   it("✓ list → trả tất cả HS active của user, sort grade+name ASC", async () => {
     const caller = await getAuthedCaller()
     await caller.student.create({ fullName: "Hùng", grade: 5 })

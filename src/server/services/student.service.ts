@@ -9,10 +9,10 @@ import type {
   StudentImportInput,
 } from "@/lib/schemas/student"
 import type { PaginatedResponse } from "@/lib/schemas/common"
-import type { StudentDTO } from "@/lib/types/models"
+import type { SchoolLevel, StudentDTO } from "@/lib/types/models"
 import { nameKey, type ExistingMatch } from "@/lib/student-import"
 
-function withLevel<T extends { grade: number }>(s: T): T & { level: "tieu_hoc" | "thcs" } {
+function withLevel<T extends { grade: number }>(s: T): T & { level: SchoolLevel } {
   return { ...s, level: getLevel(s.grade) }
 }
 
