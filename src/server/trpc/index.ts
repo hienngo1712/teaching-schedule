@@ -4,7 +4,7 @@ import { ZodError } from "zod"
 import type { Session } from "next-auth"
 import { db } from "@/server/db"
 import type { Feature } from "@/lib/plans"
-import { PlanRequiredError, assertFeature } from "@/server/services/plan.service"
+import { PlanRequiredError, assertFeature, isAdminUsername } from "@/server/services/plan.service"
 
 export type Context = {
   db: typeof db
@@ -85,3 +85,9 @@ export const planProcedure = (feature: Feature) =>
     await assertFeature(ctx.db, ctx.userId, feature)
     return next()
   })
+
+// Admin theo env ADMIN_USERNAMES (spec I D11); kiểm ở server, không dựa vào việc ẩn link.
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (!isAdminUsername(ctx.session.user.username)) throw new TRPCError({ code: "FORBIDDEN" })
+  return next()
+})
