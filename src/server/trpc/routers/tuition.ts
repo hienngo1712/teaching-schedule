@@ -1,6 +1,7 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
-import { monthlyTuitionFilterSchema, updateSettlementSchema } from "@/lib/schemas/tuition"
+import { monthlyTuitionFilterSchema, updateSettlementSchema, tuitionNoticeSchema } from "@/lib/schemas/tuition"
 import { getMonthlyTuitionStatus, updateSettlement } from "@/server/services/tuition.service"
+import { getTuitionNotice } from "@/server/services/tuition-notice.service"
 
 export const tuitionRouter = createTRPCRouter({
   getMonthlyStatus: protectedProcedure
@@ -15,4 +16,9 @@ export const tuitionRouter = createTRPCRouter({
   updateSettlement: protectedProcedure
     .input(updateSettlementSchema)
     .mutation(({ ctx, input }) => updateSettlement(ctx.db, ctx.userId, input)),
+
+  // Phiếu báo: chỉ đọc, không ghi snapshot.
+  getNotice: protectedProcedure
+    .input(tuitionNoticeSchema)
+    .query(({ ctx, input }) => getTuitionNotice(ctx.db, ctx.userId, input)),
 })

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight, Wallet } from "lucide-react"
+import { ChevronLeft, ChevronRight, Receipt, Wallet } from "lucide-react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
+import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
 import { TuitionStatusBadge } from "@/components/tuition/TuitionStatusBadge"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -34,6 +35,7 @@ export default function TuitionPage() {
 
   const [selectedStudent, setSelectedStudent] = useState<(TuitionStatusItem & { year: number; month: number }) | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [noticeStudentId, setNoticeStudentId] = useState<number | null>(null)
   const { t } = useTranslation()
 
   const [currentPage, setCurrentPage] = useState(1)
@@ -79,6 +81,21 @@ export default function TuitionPage() {
     </Button>
   )
 
+  const noticeButton = (item: TuitionStatusItem, className?: string) => (
+    <Button
+      size="icon"
+      variant="outline"
+      className={className}
+      aria-label={t("tuition_notice")}
+      onClick={(e) => {
+        e.stopPropagation()
+        setNoticeStudentId(item.studentId)
+      }}
+    >
+      <Receipt className="size-4" />
+    </Button>
+  )
+
   const columns: Column<TuitionStatusItem>[] = [
     { header: t("stt"), cell: (_, i) => offset + i + 1, className: "w-[60px] text-center text-slate-400" },
     { header: t("full_name"), cell: (item) => <span className="font-medium text-slate-900">{item.fullName}</span> },
@@ -94,7 +111,16 @@ export default function TuitionPage() {
     { header: t("sessions_count"), cell: (item) => `${item.presentSessions}/${item.totalSessions}`, className: "w-[120px] text-center text-slate-600" },
     { header: t("amount_to_pay"), cell: (item) => formatCurrency(item.totalAmountDue), className: "w-[160px] whitespace-nowrap text-right font-medium text-slate-900" },
     { header: t("status"), cell: (item) => <TuitionStatusBadge item={item} />, className: "w-[160px] text-center" },
-    { header: <span className="sr-only">{t("action")}</span>, cell: (item) => payButton(item), className: "w-[130px] text-right" },
+    {
+      header: <span className="sr-only">{t("action")}</span>,
+      cell: (item) => (
+        <div className="flex justify-end gap-2">
+          {noticeButton(item, "size-9")}
+          {payButton(item)}
+        </div>
+      ),
+      className: "w-[180px] text-right",
+    },
   ]
 
   const activeFilterCount = (selectedGrade ? 1 : 0) + (selectedStatus && selectedStatus !== "all" ? 1 : 0)
@@ -170,7 +196,7 @@ export default function TuitionPage() {
             role="button"
             tabIndex={0}
             onClick={() => handleOpenDetail(item)}
-            onKeyDown={(e) => e.key === "Enter" && handleOpenDetail(item)}
+            onKeyDown={(e) => e.target === e.currentTarget && e.key === "Enter" && handleOpenDetail(item)}
             className="rounded-lg border border-slate-200 bg-white p-4 transition-transform active:scale-[0.98]"
           >
             <div className="flex items-start justify-between gap-2">
@@ -194,7 +220,10 @@ export default function TuitionPage() {
                   {formatCurrency(item.totalAmountDue)}
                 </div>
               </div>
-              {payButton(item, "h-11")}
+              <div className="flex gap-2">
+                {noticeButton(item, "size-11")}
+                {payButton(item, "h-11")}
+              </div>
             </div>
           </div>
         )}
@@ -216,6 +245,15 @@ export default function TuitionPage() {
         // TRPCProvider tự invalidate sau mutation
         onSuccess={() => {}}
       />
+
+      {noticeStudentId !== null && (
+        <TuitionNoticeDialog
+          studentId={noticeStudentId}
+          year={year}
+          month={month}
+          onClose={() => setNoticeStudentId(null)}
+        />
+      )}
     </div>
   )
 }

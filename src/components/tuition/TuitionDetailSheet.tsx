@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { PaymentFormDialog } from "./PaymentFormDialog"
+import { TuitionNoticeDialog } from "./TuitionNoticeDialog"
 
 type TuitionStatus = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
 type SheetData = TuitionStatus & { year: number; month: number }
@@ -114,6 +115,7 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
   const notes = edits.notes ?? row.notes ?? ""
   const [form, setForm] = useState<{ open: false } | { open: true; payment?: PaymentDTO }>({ open: false })
   const [deleteTarget, setDeleteTarget] = useState<PaymentDTO | null>(null)
+  const [noticeOpen, setNoticeOpen] = useState(false)
 
   const settlementMut = trpc.tuition.updateSettlement.useMutation({
     onSuccess: () => {
@@ -320,15 +322,36 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
           <Info className="mt-0.5 size-4 shrink-0 text-amber-600" />
           <p className="text-xs leading-relaxed text-amber-700">{t("payment_tip_snapshot")}</p>
         </div>
-        <Button
-          type="button"
-          className="h-12 w-full rounded-xl font-bold"
-          disabled={!dirty || settlementMut.isPending}
-          onClick={() => settlementMut.mutate({ studentId, year, month, isFullPaid, notes })}
-        >
-          {settlementMut.isPending ? t("saving") : t("save")}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 rounded-xl"
+            disabled={dirty}
+            onClick={() => setNoticeOpen(true)}
+          >
+            <Receipt className="mr-2 size-4" />
+            {t("tuition_notice")}
+          </Button>
+          <Button
+            type="button"
+            className="h-12 flex-1 rounded-xl font-bold"
+            disabled={!dirty || settlementMut.isPending}
+            onClick={() => settlementMut.mutate({ studentId, year, month, isFullPaid, notes })}
+          >
+            {settlementMut.isPending ? t("saving") : t("save")}
+          </Button>
+        </div>
       </div>
+
+      {noticeOpen && (
+        <TuitionNoticeDialog
+          studentId={studentId}
+          year={year}
+          month={month}
+          onClose={() => setNoticeOpen(false)}
+        />
+      )}
 
       {form.open && (
         <PaymentFormDialog

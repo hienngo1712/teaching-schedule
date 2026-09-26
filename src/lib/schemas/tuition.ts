@@ -21,3 +21,11 @@ export const updateSettlementSchema = z.object({
 })
 
 export type UpdateSettlementInput = z.infer<typeof updateSettlementSchema>
+
+export const tuitionNoticeSchema = z.object({
+  studentId: z.number().int().positive(),
+  year: z.number().int(),
+  month: z.number().int().min(1).max(12),
+})
+
+export type TuitionNoticeInput = z.infer<typeof tuitionNoticeSchema>
