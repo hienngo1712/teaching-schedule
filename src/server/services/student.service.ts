@@ -110,6 +110,9 @@ export async function importStudents(
   rows: StudentImportInput["rows"]
 ): Promise<{ created: number }> {
   return db.$transaction(async (tx) => {
+    // Khóa theo userId trong transaction: 2 request cùng lúc phải kiểm tra trùng tuần tự,
+    // không thì cả 2 đều SELECT thấy "chưa có" ở READ COMMITTED rồi cùng insert ra bản sao.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
     // Kiểm tra trùng lại lúc ghi: bấm 2 lần / thử lại sau lỗi mạng không sinh bản sao.
     const existing = await findExistingByKey(tx, userId, rows)
     const seen = new Set<string>()

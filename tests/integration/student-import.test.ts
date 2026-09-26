@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
+import type { PrismaClient } from "@prisma/client"
 import { db } from "@/server/db"
+import { importStudents } from "@/server/services/student.service"
 import { getAuthedCaller } from "../helpers/trpc"
 
 async function resetStudents() {
@@ -116,6 +118,41 @@ describe("Nhập học sinh từ Excel", () => {
     await caller.student.importMany({ rows })
     await expect(caller.student.importMany({ rows })).rejects.toMatchObject({ code: "CONFLICT" })
     expect(await countStudents()).toBe(2)
+  })
+
+  it("✗/✓ 2 importMany cùng dữ liệu chạy đồng thời → đúng 1 thành công, 1 CONFLICT, không có bản sao", async () => {
+    const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    const rows = [{ fullName: "Nguyễn An", grade: 5, tuitionFee: 0, allowDuplicate: false }]
+    // Chèn độ trễ vào bước SELECT kiểm trùng để buộc 2 transaction chồng lấn thời gian
+    // (Postgres local quá nhanh nên race tự nhiên gần như không bao giờ xảy ra khi chạy tuần tự sát nhau).
+    // Chặn cả 2 lệnh SELECT kiểm trùng ở cùng 1 rào chắn rồi thả cùng lúc, để đảm bảo
+    // chúng thực sự chồng lấn (Postgres local quá nhanh nên chênh vài ms là chạy tuần tự thật).
+    let releaseBarrier = () => {}
+    const barrier = new Promise<void>((resolve) => {
+      releaseBarrier = resolve
+    })
+    const slowDb = db.$extends({
+      query: {
+        student: {
+          async findMany({ args, query }) {
+            await barrier
+            return query(args)
+          },
+        },
+      },
+    }) as unknown as PrismaClient
+
+    const p1 = importStudents(slowDb, user.id, rows)
+    const p2 = importStudents(slowDb, user.id, rows)
+    await new Promise((r) => setTimeout(r, 50))
+    releaseBarrier()
+    const results = await Promise.allSettled([p1, p2])
+    const fulfilled = results.filter((r) => r.status === "fulfilled")
+    const rejected = results.filter((r) => r.status === "rejected")
+    expect(fulfilled).toHaveLength(1)
+    expect(rejected).toHaveLength(1)
+    expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({ code: "CONFLICT" })
+    expect(await countStudents()).toBe(1)
   })
 
   it("✓ multi-tenant: HS của user khác cùng tên + lớp không tính là trùng", async () => {

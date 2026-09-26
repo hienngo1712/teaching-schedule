@@ -115,6 +115,26 @@ describe("parseImportRows", () => {
     expect(out[3].errors).toEqual(["tuitionFee"])
   })
 
+  it("học phí: chuỗi mập mờ ('150k', số âm, 'triệu', số lẻ dấu) → lỗi, không âm thầm nhận", () => {
+    const out = parseImportRows([
+      row(2, "An An", 5, null, null, "150k"),
+      row(3, "Bình An", 5, null, null, -150000),
+      row(4, "Chi An", 5, null, null, "1,5 triệu"),
+      row(5, "Dũng An", 5, null, null, "150.000,5"),
+      row(6, "Em An", 5, null, null, "abc1"),
+      row(7, "Giang An", 5, null, null, "150.000 VND"),
+    ])
+    expect(out.map((r) => r.errors)).toEqual([
+      ["tuitionFee"],
+      ["tuitionFee"],
+      ["tuitionFee"],
+      ["tuitionFee"],
+      ["tuitionFee"],
+      [],
+    ])
+    expect(out[5].input.tuitionFee).toBe(150000)
+  })
+
   it("lớp 10, lớp 5.5, lớp rỗng → lỗi grade", () => {
     const out = parseImportRows([row(2, "An An", 10), row(3, "Bình An", 5.5), row(4, "Chi An", null, "x")])
     expect(out.map((r) => r.errors)).toEqual([["grade"], ["grade"], ["grade"]])

@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { trpc } from "@/lib/trpc"
 import { cn, formatCurrency } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-import { buildPreview, toImportPayload, type PreviewRow } from "@/lib/student-import"
+import { buildPreview, toImportPayload, MAX_IMPORT_FILE_BYTES, type PreviewRow } from "@/lib/student-import"
 import { buildImportTemplate, readImportWorkbook, type ImportReadError } from "@/lib/student-import-excel"
 
 export function ImportStudentsButton() {
@@ -74,6 +74,11 @@ function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
     setReadError(null)
     setReading(true)
     try {
+      // Kiểm kích thước trước khi đọc: tránh nạp cả file lớn vào bộ nhớ chỉ để rồi báo lỗi.
+      if (file.size > MAX_IMPORT_FILE_BYTES) {
+        setReadError("size")
+        return
+      }
       const result = await readImportWorkbook(await file.arrayBuffer())
       if (!result.ok) {
         setReadError(result.error)

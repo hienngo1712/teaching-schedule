@@ -75,12 +75,14 @@ function parsePhone(raw: unknown): string | undefined {
 }
 
 function parseFee(raw: unknown): number {
-  if (typeof raw === "number") return raw
+  // Ô số: chỉ nhận nguyên >=0, số âm/lẻ là lỗi (trước đây lọt qua rồi ghi thẳng vào DB).
+  if (typeof raw === "number") return Number.isInteger(raw) && raw >= 0 ? raw : NaN
   const text = cellToText(raw)
   if (!text) return 0
-  const digits = text.replace(/\D/g, "")
-  // Chữ không có số nào → NaN để Zod báo lỗi ô, không âm thầm thành 0.
-  return digits ? Number(digits) : NaN
+  // Bỏ khoảng trắng + hậu tố tiền tệ, rồi chỉ nhận số nguyên hoặc số có nhóm nghìn (.,): "150k", "1,5 triệu" v.v phải lỗi, không đoán mò.
+  const cleaned = text.replace(/\s+/g, "").toLowerCase().replace(/(đ|₫|vnd)$/, "")
+  if (!/^\d{1,3}([.,]\d{3})+$|^\d+$/.test(cleaned)) return NaN
+  return Number(cleaned.replace(/[.,]/g, ""))
 }
 
 function optionalText(raw: unknown): string | undefined {
