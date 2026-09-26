@@ -64,7 +64,7 @@ describe("Hợp đồng Next 15", () => {
     const fetchCallPattern = /(?<![\w.])fetch\(/
     // useBackupDownload gọi fetch trên trình duyệt tới GET /api/backup (route trả nhị
     // phân, tRPC không trả được) — không liên quan cache dữ liệu render của Next 15.
-    const ALLOWED = new Set(["src\\hooks\\useBackupDownload.ts"])
+    const ALLOWED = new Set(["src/hooks/useBackupDownload.ts"])
 
     function walk(dir: string): void {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -72,7 +72,7 @@ describe("Hợp đồng Next 15", () => {
         if (entry.isDirectory()) {
           walk(full)
         } else if (/\.(ts|tsx)$/.test(entry.name)) {
-          if (ALLOWED.has(full)) continue
+          if (ALLOWED.has(full.split("\\").join("/"))) continue
           const src = readFileSync(full, "utf8")
           if (fetchCallPattern.test(src)) {
             offenders.push(full)
