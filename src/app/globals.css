@@ -60,6 +60,7 @@
 }
 .session-card--tieu-hoc { @apply border-blue-500 bg-blue-50; }
 .session-card--thcs     { @apply border-emerald-500 bg-emerald-50; }
+.session-card--thpt     { @apply border-amber-600 bg-amber-50; }
 
 /* === EXPORT PNG === */
 .exporting .btn-action    { @apply hidden !important; }
