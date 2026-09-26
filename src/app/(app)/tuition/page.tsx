@@ -31,7 +31,7 @@ type TuitionStatusItem = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][n
 
 export default function TuitionPage() {
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
-  const { selectedGrade, setGrade, searchStudentName, setSearch, selectedStatus, setStatus, selectedStudentId } = useFilters()
+  const { selectedGrade, setGrade, searchStudentName, setSearch, selectedStatus, setStatus, selectedStudentId, setStudentId } = useFilters()
 
   const [selectedStudent, setSelectedStudent] = useState<(TuitionStatusItem & { year: number; month: number }) | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -41,11 +41,17 @@ export default function TuitionPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
+  // Chưa mở sheet cho selectedStudentId (deep link mới vào): lọc thẳng theo studentId
+  // để chắc chắn tìm thấy HS đích, không phụ thuộc search/trang (xem effect bên dưới).
+  const autoOpenedId = useRef<number | null>(null)
+  const pendingDeepLinkId = selectedStudentId && autoOpenedId.current !== selectedStudentId ? selectedStudentId : undefined
+
   const query = trpc.tuition.getMonthlyStatus.useQuery({
     year,
     month,
     grade: selectedGrade || undefined,
     search: searchStudentName || undefined,
+    studentId: pendingDeepLinkId,
     status: selectedStatus as MonthlyTuitionFilterInput["status"],
     page: currentPage,
     limit: pageSize,
@@ -66,7 +72,6 @@ export default function TuitionPage() {
   }
 
   // Link từ Dashboard có studentId: mở sheet đúng HS một lần (tra theo id vì tên có thể trùng).
-  const autoOpenedId = useRef<number | null>(null)
   useEffect(() => {
     if (!selectedStudentId || autoOpenedId.current === selectedStudentId) return
     const item = query.data?.items.find((i) => i.studentId === selectedStudentId)
@@ -251,7 +256,11 @@ export default function TuitionPage() {
 
       <TuitionDetailSheet
         open={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
+        onOpenChange={(open) => {
+          setIsSheetOpen(open)
+          // Đóng sheet mà URL còn studentId (vào từ deep link) → bỏ đi, tránh Back mở lại.
+          if (!open && selectedStudentId) setStudentId(null, { replace: true })
+        }}
         data={selectedStudent}
         // TRPCProvider tự invalidate sau mutation
         onSuccess={() => {}}
