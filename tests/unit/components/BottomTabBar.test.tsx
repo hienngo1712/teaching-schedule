@@ -99,4 +99,40 @@ describe("BottomTabBar", () => {
     )
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
   })
+
+  it("mở sheet → đổi route → quay lại route cũ thì sheet không tự mở lại", async () => {
+    const { rerender } = renderBar()
+    fireEvent.click(moreButton())
+    await screen.findByRole("dialog", { name: "Thêm" })
+    for (const path of ["/calendar", "/dashboard"]) {
+      vi.mocked(usePathname).mockReturnValue(path)
+      rerender(
+        <LanguageProvider forcedLanguage="vi">
+          <BottomTabBar />
+        </LanguageProvider>
+      )
+    }
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  })
+
+  it("nút Thêm có aria-expanded; Escape đóng sheet thì focus về nút Thêm", async () => {
+    renderBar()
+    // Modal mở thì nav bị aria-hidden, không query theo role được nữa → giữ tham chiếu.
+    const button = moreButton()
+    expect(button.getAttribute("aria-expanded")).toBe("false")
+    fireEvent.click(button)
+    const dialog = await screen.findByRole("dialog", { name: "Thêm" })
+    expect(button.getAttribute("aria-expanded")).toBe("true")
+    fireEvent.keyDown(dialog, { key: "Escape" })
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(document.activeElement).toBe(button)
+    expect(button.getAttribute("aria-expanded")).toBe("false")
+  })
+
+  it("sheet Thêm không có nút X (Close)", async () => {
+    renderBar()
+    fireEvent.click(moreButton())
+    const dialog = await screen.findByRole("dialog", { name: "Thêm" })
+    expect(within(dialog).queryByRole("button", { name: "Close" })).toBeNull()
+  })
 })

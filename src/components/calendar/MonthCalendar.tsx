@@ -273,7 +273,7 @@ export function MonthCalendar() {
 function LegendItem({ className, label }: { className: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={cn("h-3 w-3 rounded-sm border-l-[3px]", className)} />
+      <span className={cn("h-3 w-3 rounded-[3px] border-l-[3px]", className)} />
       {label}
     </span>
   )

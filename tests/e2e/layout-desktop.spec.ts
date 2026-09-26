@@ -77,6 +77,17 @@ test.describe('Sidebar desktop 1280px', () => {
     await expect(today).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     await expect(today).toHaveCSS('background-image', /rgba\(15, 118, 110, 0\.08\)/);
   });
+
+  // Token radius sm = 8px: ô 16px dùng rounded-sm thành tròn như radio, ô chú thích 12px thành vầng trăng.
+  test('checkbox bo 4px, ô chú thích lịch bo 3px', async ({ page }) => {
+    await page.goto('/calendar');
+    const swatch = page.getByText('Hỗn hợp', { exact: true }).locator('span').first();
+    await expect(swatch).toHaveCSS('border-radius', '3px');
+
+    await page.goto('/subjects');
+    await page.getByRole('button', { name: 'Thêm môn' }).click();
+    await expect(page.getByRole('dialog').getByRole('checkbox')).toHaveCSS('border-radius', '4px');
+  });
 });
 
 // Biến --font-geist-sans gắn ở <body>; nếu font-family chỉ đặt ở <html> (preflight) thì var() rỗng → rơi về serif.

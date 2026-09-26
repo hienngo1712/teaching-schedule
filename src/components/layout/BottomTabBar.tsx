@@ -27,6 +27,8 @@ export function BottomTabBar() {
   const { t } = useTranslation()
   // Gắn trạng thái mở với pathname: đổi route (kể cả nút Back) là sheet tự đóng.
   const [openAt, setOpenAt] = useState<string | null>(null)
+  // Route đổi mà Radix không gọi onOpenChange → xoá openAt, không thì quay lại route cũ sheet tự mở.
+  if (openAt !== null && openAt !== pathname) setOpenAt(null)
   const moreActive = isMoreActive(pathname)
 
   return (
@@ -51,20 +53,19 @@ export function BottomTabBar() {
           )
         })}
         <li>
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            aria-current={moreActive ? "page" : undefined}
-            onClick={() => setOpenAt(pathname)}
-            className={tabClass(moreActive)}
-          >
-            {moreActive && <ActiveBar />}
-            <Ellipsis className="size-5" />
-            <span className="max-w-full truncate px-1">{t("more")}</span>
-          </button>
+          <MoreSheet open={openAt === pathname} onOpenChange={(open) => setOpenAt(open ? pathname : null)}>
+            <button
+              type="button"
+              aria-current={moreActive ? "page" : undefined}
+              className={tabClass(moreActive)}
+            >
+              {moreActive && <ActiveBar />}
+              <Ellipsis className="size-5" />
+              <span className="max-w-full truncate px-1">{t("more")}</span>
+            </button>
+          </MoreSheet>
         </li>
       </ul>
-      <MoreSheet open={openAt === pathname} onOpenChange={(open) => setOpenAt(open ? pathname : null)} />
     </nav>
   )
 }

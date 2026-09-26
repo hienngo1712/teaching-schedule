@@ -1,25 +1,30 @@
 "use client"
 
+import type { ReactNode } from "react"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { MORE_ITEMS } from "./nav-items"
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  // Nút mở sheet; bọc bằng SheetTrigger để có aria-expanded và focus quay về khi đóng.
+  children: ReactNode
 }
 
-export function MoreSheet({ open, onOpenChange }: Props) {
+export function MoreSheet({ open, onOpenChange, children }: Props) {
   const { t } = useTranslation()
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetTrigger asChild>{children}</SheetTrigger>
       {/* Sheet phủ cả tab bar (D8); không có mô tả nên tắt aria-describedby để Radix không cảnh báo. */}
       <SheetContent
         side="bottom"
         aria-describedby={undefined}
+        hideClose
         className="rounded-t-[20px] px-4 pt-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))]"
       >
         <SheetTitle className="sr-only">{t("more")}</SheetTitle>
