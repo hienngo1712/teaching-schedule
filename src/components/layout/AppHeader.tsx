@@ -13,6 +13,7 @@ import { DatabaseBackup, KeyRound, LogOut, Languages } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
+import { RenewOffer } from "@/components/plan/RenewOffer"
 
 function getInitials(name?: string | null) {
   if (!name) return "GV"
@@ -37,6 +38,7 @@ export function AppHeader() {
       </span>
 
       <div className="flex shrink-0 items-center gap-2">
+        <RenewOffer />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="size-11 text-slate-600 md:size-10">

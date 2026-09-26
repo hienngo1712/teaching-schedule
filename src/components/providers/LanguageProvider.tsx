@@ -32,7 +32,12 @@ export function LanguageProvider({
 
   useEffect(() => {
     if (forcedLanguage) return
-    const savedLang = localStorage.getItem("language") as Language
+    let savedLang: string | null = null
+    try {
+      savedLang = localStorage.getItem("language")
+    } catch {
+      // Storage bị chặn (chế độ riêng tư): giữ tiếng Việt, không làm sập cả app.
+    }
     if (savedLang && (savedLang === "vi" || savedLang === "en")) {
       setLanguageState(savedLang)
     }
