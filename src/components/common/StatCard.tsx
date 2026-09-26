@@ -14,21 +14,24 @@ type Props = {
 
 export function StatCard({ label, value, hint, icon, loading, valueClassName }: Props) {
   return (
-    <Card data-testid="stat-card" className="border-slate-200 bg-white">
+    <Card data-testid="stat-card" className="bg-white">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium text-slate-600">{label}</p>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
           {icon}
         </div>
         {loading || value === undefined ? (
           <Skeleton className="mt-2 h-7 w-24" />
         ) : (
           // nowrap: số tiền 9 chữ số không được gãy "100.000.000 / đ" ở thẻ 2 cột 390px
-          <p data-testid="stat-value" className={cn("mt-1 whitespace-nowrap text-lg font-bold text-slate-900 xl:text-2xl", valueClassName)}>
+          <p
+            data-testid="stat-value"
+            className={cn("mt-1 whitespace-nowrap text-lg font-semibold tracking-tight text-foreground xl:text-2xl", valueClassName)}
+          >
             {value}
           </p>
         )}
-        {hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}
+        {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
       </CardContent>
     </Card>
   )

@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { BookOpen, DatabaseBackup, KeyRound, LogOut, Languages, Settings } from "lucide-react"
+import { DatabaseBackup, KeyRound, LogOut, Languages } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
@@ -30,16 +29,17 @@ export function AppHeader() {
   const fullName = session?.user?.fullName ?? session?.user?.username ?? t("teacher_fallback")
 
   return (
-    <header className="h-14 border-b border-slate-200 bg-white px-4 flex items-center justify-between">
-      <span className="truncate text-sm text-slate-600">
+    <header className="flex h-14 items-center justify-between gap-3 border-b bg-white px-4 md:h-16 md:px-8">
+      {/* min-w-0: nút 44px bên phải to hơn, tên dài phải cắt chứ không đẩy tràn ngang. */}
+      <span className="min-w-0 truncate text-sm text-muted-foreground">
         {t("hello")},{" "}
-        <span className="font-medium text-slate-900">{fullName}</span>
+        <span className="font-medium text-foreground">{fullName}</span>
       </span>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-slate-600">
+            <Button variant="outline" size="icon" className="size-11 text-slate-600 md:size-10">
               <Languages className="size-5" />
             </Button>
           </DropdownMenuTrigger>
@@ -62,25 +62,13 @@ export function AppHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="size-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold hover:bg-indigo-200"
+              className="flex size-11 items-center justify-center rounded-full bg-[#EEF0F4] text-[13px] font-semibold text-[#374151] hover:bg-[#E5E7EB] md:size-10"
               aria-label={t("account_menu")}
             >
               {getInitials(fullName)}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem asChild>
-              <Link href="/subjects">
-                <BookOpen className="size-4 mr-2" />
-                {t("subject")}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings">
-                <Settings className="size-4 mr-2" />
-                {t("settings")}
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuItem onSelect={backup.download} disabled={backup.isDownloading}>
               <DatabaseBackup className="size-4 mr-2" />
               {t("backup_data")}

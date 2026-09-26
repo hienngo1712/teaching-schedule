@@ -113,9 +113,10 @@ test.describe('Phiếu báo học phí (390px)', () => {
     const titles = [`Ca phiếu A ${stamp}`, `Ca phiếu B ${stamp}`];
     const startHour = Math.floor(Math.random() * 4) + 13; // 13 tới 16, ca thứ 2 cách 2 giờ
 
-    // 1. Cài đặt ngân hàng từ menu avatar
-    await page.getByRole('button', { name: 'Mở menu tài khoản' }).click();
-    await page.getByRole('menuitem', { name: 'Cài đặt' }).click();
+    // 1. Cài đặt ngân hàng từ tab Thêm
+    await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('button', { name: 'Thêm', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Thêm' }).getByRole('link', { name: /Cài đặt/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Thêm' })).toBeHidden();
     await expect(page).toHaveURL(/\/settings/);
     await page.getByLabel('Ngân hàng').click();
     await page.getByRole('option', { name: /^Vietcombank - / }).click();

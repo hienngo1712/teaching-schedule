@@ -5,41 +5,57 @@ import { usePathname } from "next/navigation"
 import { GraduationCap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-import { NAV_ITEMS, isNavActive } from "./nav-items"
+import { MANAGE_ITEMS, NAV_ITEMS, isNavActive, type NavItem } from "./nav-items"
+
+function SidebarLink({ item, pathname, label }: { item: NavItem; pathname: string; label: string }) {
+  const Icon = item.icon
+  const active = isNavActive(pathname, item.href)
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex min-h-10 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
+        active
+          ? "bg-primary/[0.08] font-semibold text-primary"
+          : "font-medium text-[#4B5563] hover:bg-accent hover:text-foreground"
+      )}
+    >
+      <Icon className="size-4" />
+      <span>{label}</span>
+    </Link>
+  )
+}
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { t } = useTranslation()
 
   return (
-    <aside className="h-full w-60 shrink-0 border-r border-slate-200 bg-white flex flex-col">
-      <div className="h-14 px-4 flex items-center gap-2 border-b border-slate-200">
-        <GraduationCap className="size-6 text-indigo-600" />
-        <span className="font-semibold text-slate-900">{t("calendar")}</span>
+    <aside className="flex h-full w-[232px] shrink-0 flex-col gap-7 border-r bg-white px-3.5 py-5">
+      <div className="flex items-center gap-2.5 px-1">
+        <span className="flex size-8 items-center justify-center rounded-[9px] bg-primary">
+          <GraduationCap className="size-[18px] text-white" />
+        </span>
+        <span className="text-base font-semibold text-foreground">{t("calendar")}</span>
       </div>
-      <nav className="p-2 flex flex-col gap-1">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon
-          const active = isNavActive(pathname, item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-              )}
-            >
-              <Icon className="size-4" />
-              <span>{t(item.labelKey)}</span>
-            </Link>
-          )
-        })}
+
+      <nav className="flex flex-col gap-1">
+        {NAV_ITEMS.map((item) => (
+          <SidebarLink key={item.href} item={item} pathname={pathname} label={t(item.labelKey)} />
+        ))}
       </nav>
 
-      <div className="mt-auto border-t border-slate-200 px-4 py-3 text-[11px] leading-tight text-slate-400">
+      <div className="mt-auto flex flex-col gap-1 border-t border-[#F0F1F4] pt-4">
+        <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+          {t("manage_group")}
+        </p>
+        {MANAGE_ITEMS.map((item) => (
+          <SidebarLink key={item.href} item={item} pathname={pathname} label={t(item.labelKey)} />
+        ))}
+      </div>
+
+      <div className="px-1 font-mono text-[11px] leading-tight text-muted-foreground">
         <div>
           v{process.env.NEXT_PUBLIC_APP_VERSION} · {process.env.NEXT_PUBLIC_BUILD_SHA}
         </div>

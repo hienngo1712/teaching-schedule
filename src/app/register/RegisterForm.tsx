@@ -102,7 +102,7 @@ export function RegisterForm() {
 
         <div className="text-center text-sm">
           <span className="text-slate-500">{t("already_have_account")} </span>
-          <Link href="/login" className="text-indigo-600 hover:underline font-medium">
+          <Link href="/login" className="text-primary hover:underline font-medium">
             {t("login_now")}
           </Link>
         </div>

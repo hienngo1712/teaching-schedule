@@ -41,7 +41,7 @@ export function TodaySessions() {
       {query.isPending ? (
         <Skeleton className="h-20 w-full rounded-lg" />
       ) : sessions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-200 bg-white py-8 text-center text-sm text-slate-500">
+        <div className="rounded-lg border border-dashed bg-white py-8 text-center text-sm text-slate-500">
           {t("no_sessions_today")}
         </div>
       ) : (

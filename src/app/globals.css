@@ -4,48 +4,33 @@
 
 @layer base {
   :root {
+    /* HSL lấy 1 số lẻ để đổi ngược đúng hex của bảng màu A3 (tests/unit/lib/theme-contrast.test.ts). */
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --page: 220 20% 97.1%;
+    --foreground: 220.9 39.3% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 220.9 39.3% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 220.9 39.3% 11%;
+    --primary: 175.3 77.4% 26.1%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 222.9 17.1% 92%;
+    --input: 222.9 17.1% 92%;
+    --ring: 175.3 77.4% 26.1%;
+    /* Đỏ nợ chỉ dùng cho tiền nợ / trạng thái nợ, không dùng cho nút xoá (destructive). */
+    --debt: 4.2 76.5% 40%;
+    --debt-soft: 5 85.7% 97.3%;
+    --success: 154.8 90.3% 24.3%;
+    --success-soft: 144.7 81% 95.9%;
+    --radius: 0.875rem;
   }
 }
 
@@ -63,7 +48,8 @@
   @apply min-h-[120px] p-2 bg-white flex flex-col gap-1;
 }
 .calendar-day-cell--today {
-  @apply bg-indigo-50 ring-1 ring-inset ring-indigo-400;
+  /* Phủ màu nhấn bằng gradient trên nền trắng: tô thẳng bg trong suốt sẽ lộ nền slate-200 của lưới. */
+  @apply bg-gradient-to-b from-primary/[0.08] to-primary/[0.08] ring-1 ring-inset ring-primary/40;
 }
 .calendar-day-cell--outside {
   @apply bg-gray-50 opacity-40;

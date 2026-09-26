@@ -80,7 +80,7 @@ export function LoginForm() {
 
       <div className="text-center text-sm">
         <span className="text-slate-500">{t("no_account")}{" "}</span>
-        <Link href="/register" className="text-indigo-600 hover:underline font-medium">
+        <Link href="/register" className="text-primary hover:underline font-medium">
           {t("register_now")}
         </Link>
       </div>

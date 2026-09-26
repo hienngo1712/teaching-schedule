@@ -56,7 +56,7 @@ export function CalendarToolbar({
   }, [searchStudentName])
 
   return (
-    <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
+    <div className="bg-white p-3 md:p-4 rounded-xl border">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         {/* Top/Left: Search & Primary Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-3 flex-1">
@@ -116,7 +116,7 @@ export function CalendarToolbar({
               variant="ghost"
               size="sm"
               onClick={resetFilters}
-              className="text-indigo-600 h-9 px-2 hover:bg-indigo-50 font-medium"
+              className="text-primary h-9 px-2 hover:bg-primary/[0.08] font-medium"
             >
               <X className="size-4 mr-1" />
               {t("clear_filters")}
@@ -139,7 +139,7 @@ export function CalendarToolbar({
             </Button>
           </div>
           
-          <Button onClick={onCreateClick} className="gap-2 h-11 md:h-10 bg-slate-900 hover:bg-slate-800 shadow-md shadow-slate-200 px-4 md:px-6">
+          <Button onClick={onCreateClick} className="gap-2 h-11 md:h-10 px-4 md:px-6">
             <Plus className="size-4 md:size-5" />
             <span>{t("create_session")}</span>
           </Button>

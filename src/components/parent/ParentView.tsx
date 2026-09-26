@@ -28,7 +28,7 @@ function MonthLink({ href, label }: { href: string | null; label: string }) {
   const base = "flex min-h-11 items-center px-3 text-sm"
   if (!href) return <span className={cn(base, "text-slate-300")}>{label}</span>
   return (
-    <Link href={href} className={cn(base, "font-medium text-indigo-700")}>
+    <Link href={href} className={cn(base, "font-medium text-primary")}>
       {label}
     </Link>
   )
@@ -44,7 +44,7 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
   ).length
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-page">
       <div className="mx-auto max-w-md space-y-6 px-4 py-6">
         <header className="space-y-1">
           <h1 className="text-xl font-bold text-slate-900">{view.student.fullName}</h1>
@@ -107,7 +107,7 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
                 <li key={`${s.date}-${s.startTime}`} className="flex items-center justify-between gap-3 py-2 text-sm">
                   <span className="min-w-0 truncate text-slate-700">{sessionLine(s)}</span>
                   {s.date === today && (
-                    <span className="shrink-0 rounded bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                    <span className="shrink-0 rounded bg-primary/[0.08] px-2 py-0.5 text-xs font-medium text-primary">
                       {t("today_badge")}
                     </span>
                   )}

@@ -26,28 +26,30 @@ export default function DashboardPage() {
           label={t("sessions_today")}
           value={stats?.sessionsToday}
           loading={isLoading}
-          icon={<CalendarDays className="size-4 text-emerald-600" />}
+          icon={<CalendarDays className="size-4 text-muted-foreground" />}
           hint={t("total_sessions_day")}
         />
         <StatCard
           label={t("revenue_this_month")}
           value={money(stats?.totalRevenueMonth)}
           loading={isLoading}
-          icon={<Banknote className="size-4 text-cyan-600" />}
+          icon={<Banknote className="size-4 text-muted-foreground" />}
           hint={t("hint_taught_fees")}
         />
         <StatCard
           label={t("collected_amount")}
           value={money(stats?.totalPaidMonth)}
+          valueClassName="text-primary"
           loading={isLoading}
-          icon={<Wallet className="size-4 text-green-600" />}
+          icon={<Wallet className="size-4 text-muted-foreground" />}
           hint={t("hint_collected")}
         />
         <StatCard
           label={t("unpaid_this_month")}
           value={money(stats?.totalUnpaidMonth)}
+          valueClassName="text-debt"
           loading={isLoading}
-          icon={<AlertCircle className="size-4 text-red-600" />}
+          icon={<AlertCircle className="size-4 text-muted-foreground" />}
           hint={t("hint_outstanding")}
         />
       </div>
@@ -58,28 +60,28 @@ export default function DashboardPage() {
           label={t("total_students")}
           value={stats?.totalStudents}
           loading={isLoading}
-          icon={<Users className="size-4 text-blue-600" />}
+          icon={<Users className="size-4 text-muted-foreground" />}
           hint={t("active_students")}
         />
         <StatCard
           label={t("sessions_this_month")}
           value={stats?.totalSessionsMonth}
           loading={isLoading}
-          icon={<CalendarCheck className="size-4 text-indigo-600" />}
+          icon={<CalendarCheck className="size-4 text-muted-foreground" />}
           hint={t("scheduled_this_month")}
         />
         <StatCard
           label={t("attendance_rate")}
           value={stats ? `${stats.attendanceRate}%` : undefined}
           loading={isLoading}
-          icon={<BarChart3 className="size-4 text-orange-600" />}
+          icon={<BarChart3 className="size-4 text-muted-foreground" />}
           hint={t("average_this_month")}
         />
         <StatCard
           label={t("expected_revenue")}
           value={money(stats?.expectedRevenueMonth)}
           loading={isLoading}
-          icon={<Banknote className="size-4 text-violet-600" />}
+          icon={<Banknote className="size-4 text-muted-foreground" />}
           hint={t("hint_expected_fees")}
         />
       </div>

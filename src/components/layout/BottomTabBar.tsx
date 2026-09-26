@@ -1,40 +1,70 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { Ellipsis } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-import { NAV_ITEMS, isNavActive } from "./nav-items"
+import { NAV_ITEMS, isMoreActive, isNavActive } from "./nav-items"
+import { MoreSheet } from "./MoreSheet"
+
+const TAB_ITEMS = NAV_ITEMS.slice(0, 4)
+
+function tabClass(active: boolean) {
+  return cn(
+    "relative flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px]",
+    active ? "font-semibold text-primary" : "font-medium text-muted-foreground"
+  )
+}
+
+function ActiveBar() {
+  return <span aria-hidden className="absolute left-1/2 top-0 h-[3px] w-5 -translate-x-1/2 rounded-full bg-primary" />
+}
 
 export function BottomTabBar() {
   const pathname = usePathname()
   const { t } = useTranslation()
+  // Gắn trạng thái mở với pathname: đổi route (kể cả nút Back) là sheet tự đóng.
+  const [openAt, setOpenAt] = useState<string | null>(null)
+  // Route đổi mà Radix không gọi onOpenChange → xoá openAt, không thì quay lại route cũ sheet tự mở.
+  if (openAt !== null && openAt !== pathname) setOpenAt(null)
+  const moreActive = isMoreActive(pathname)
 
   return (
     <nav
       aria-label={t("main_navigation")}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="grid grid-cols-5">
-        {NAV_ITEMS.map((item) => {
+        {TAB_ITEMS.map((item) => {
           const Icon = item.icon
           const active = isNavActive(pathname, item.href)
           return (
             <li key={item.href}>
-              <Link
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
-                  active ? "text-indigo-700" : "text-slate-500"
-                )}
-              >
+              <Link href={item.href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
+                {active && <ActiveBar />}
                 <Icon className="size-5" />
-                <span className="max-w-full truncate px-1">{t(item.labelKey)}</span>
+                <span className="max-w-full truncate px-1">
+                  {t(item.href === "/calendar" ? "calendar_short" : item.labelKey)}
+                </span>
               </Link>
             </li>
           )
         })}
+        <li>
+          <MoreSheet open={openAt === pathname} onOpenChange={(open) => setOpenAt(open ? pathname : null)}>
+            <button
+              type="button"
+              aria-current={moreActive ? "page" : undefined}
+              className={tabClass(moreActive)}
+            >
+              {moreActive && <ActiveBar />}
+              <Ellipsis className="size-5" />
+              <span className="max-w-full truncate px-1">{t("more")}</span>
+            </button>
+          </MoreSheet>
+        </li>
       </ul>
     </nav>
   )

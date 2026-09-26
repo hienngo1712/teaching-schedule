@@ -66,3 +66,10 @@ describe("TuitionDetailSheet - nút Phiếu báo", () => {
     expect(btn.hasAttribute("disabled")).toBe(true)
   })
 })
+
+describe("TuitionDetailSheet - màu nợ", () => {
+  it("còn phải trả > 0 → dòng còn lại dùng đỏ nợ", () => {
+    renderSheet()
+    expect(screen.getByTestId("remaining-line").className).toContain("text-debt")
+  })
+})
