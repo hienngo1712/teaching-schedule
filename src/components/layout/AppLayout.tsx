@@ -7,7 +7,7 @@ import { BottomTabBar } from "./BottomTabBar"
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     // 100dvh: thanh địa chỉ iOS Safari co giãn không làm nhảy layout như h-screen
-    <div className="flex h-[100dvh] overflow-hidden bg-slate-50">
+    <div className="flex h-[100dvh] overflow-hidden bg-page">
       <div className="hidden h-full bg-white md:flex">
         <AppSidebar />
       </div>

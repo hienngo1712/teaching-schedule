@@ -37,3 +37,28 @@ test.describe('Thẻ số liệu với số tiền lớn', () => {
     });
   }
 });
+
+test.describe('Sidebar desktop 1280px', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[name="username"]', 'teacher');
+    await page.fill('input[name="password"]', 'teacher123');
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/.*dashboard/);
+  });
+
+  test('nhóm Quản lý có Môn học, Cài đặt; link đang mở có aria-current', async ({ page }) => {
+    const sidebar = page.locator('aside');
+    await expect(sidebar.getByText('Quản lý', { exact: true })).toBeVisible();
+
+    await sidebar.getByRole('link', { name: 'Môn học' }).click();
+    await expect(page).toHaveURL(/\/subjects/);
+    await expect(sidebar.getByRole('link', { name: 'Môn học' })).toHaveAttribute('aria-current', 'page');
+
+    await sidebar.getByRole('link', { name: 'Cài đặt' }).click();
+    await expect(page).toHaveURL(/\/settings/);
+    await expect(sidebar.getByRole('link', { name: 'Cài đặt' })).toHaveAttribute('aria-current', 'page');
+  });
+});

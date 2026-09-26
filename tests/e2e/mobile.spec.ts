@@ -93,6 +93,17 @@ test.describe('Mobile 390px', () => {
     await expectNoHorizontalScroll(page);
   });
 
+  test('menu avatar chỉ còn Sao lưu dữ liệu, Đổi mật khẩu, Đăng xuất', async ({ page }) => {
+    await page.getByRole('button', { name: 'Mở menu tài khoản' }).click();
+    const menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem', { name: 'Sao lưu dữ liệu' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Đổi mật khẩu' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Đăng xuất' })).toBeVisible();
+    await expect(menu.getByRole('menuitem')).toHaveCount(3);
+    await page.keyboard.press('Escape');
+    await expectNoHorizontalScroll(page);
+  });
+
   // Mobile không có thẻ ca tô màu cấp học (chỉ có sọc màu môn) → chú thích màu cấp học sẽ gây hiểu nhầm.
   test('màn Lịch không hiện chú thích màu cấp học trên mobile', async ({ page }) => {
     await page.goto('/calendar');
