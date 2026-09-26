@@ -1,9 +1,10 @@
 import { PrismaClient } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { calcAttendanceRate, getLevel, vnDateParts } from "@/lib/utils"
+import type { SessionDTO } from "@/lib/types/models"
 import { assertOwnership } from "./_base.service"
-import { getMonthSessions } from "./session.service"
-import { getMonthlyOutstanding } from "./tuition.service"
+import { getCancelledWithoutMakeup, getMonthSessions } from "./session.service"
+import { getMonthlyOutstanding, getMonthlyTuitionStatus } from "./tuition.service"
 
 export async function getStudentReport(
   db: PrismaClient,
@@ -281,5 +282,119 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
     expectedRevenueMonth,
     totalUnpaidMonth,
     totalPaidMonth: paidAgg._sum.paidAmount ?? 0,
+  }
+}
+
+export type DashboardAlerts = {
+  year: number
+  month: number
+  debts: { studentId: number; fullName: string; grade: number; amount: number; months: number }[]
+  idleStudents: { studentId: number; fullName: string; grade: number }[]
+  unrescheduled: SessionDTO[]
+}
+
+const DEBT_LOOKBACK_MONTHS = 12
+
+// Đếm lùi từ tháng trước các tháng liên tiếp còn nợ theo snapshot đã lưu.
+// Chỉ để tham khảo: snapshot cũ có thể chưa tính lại sau khi sửa điểm danh (spec R1).
+async function countDebtMonths(
+  db: PrismaClient,
+  studentIds: number[],
+  year: number,
+  month: number
+): Promise<Map<number, number>> {
+  const result = new Map<number, number>()
+  if (studentIds.length === 0) return result
+
+  const rows = await db.monthlyTuition.findMany({
+    where: {
+      studentId: { in: studentIds },
+      OR: [{ year: year - 1, month: { gte: month } }, { year, month: { lt: month } }],
+    },
+    select: { studentId: true, year: true, month: true, totalAmountDue: true, paidAmount: true, isFullPaid: true },
+  })
+  const owing = new Set(
+    rows
+      .filter((r) => !r.isFullPaid && r.totalAmountDue - r.paidAmount > 0)
+      .map((r) => `${r.studentId}-${r.year}-${r.month}`)
+  )
+
+  for (const id of studentIds) {
+    let count = 0
+    let y = year
+    let m = month
+    while (count < DEBT_LOOKBACK_MONTHS) {
+      m -= 1
+      if (m === 0) {
+        m = 12
+        y -= 1
+      }
+      if (!owing.has(`${id}-${y}-${m}`)) break
+      count++
+    }
+    result.set(id, Math.max(1, count))
+  }
+  return result
+}
+
+export async function getDashboardAlerts(
+  db: PrismaClient,
+  userId: number,
+  now: Date = new Date()
+): Promise<DashboardAlerts> {
+  const { year, month, day } = vnDateParts(now)
+  // sessionDate là @db.Date lưu nửa đêm UTC; Date.UTC tự tràn tháng khi cộng/trừ ngày.
+  const dayOffset = (n: number) => new Date(Date.UTC(year, month - 1, day + n))
+  const idleFrom = dayOffset(-14)
+  const idleTo = dayOffset(7)
+  const cancelFrom = dayOffset(-60)
+
+  const [tuition, activeStudents, idle, unrescheduled] = await Promise.all([
+    // Cùng tham số với getMonthlyOutstanding để số nợ khớp màn Học phí; persist=false: không ghi DB.
+    getMonthlyTuitionStatus(db, userId, { year, month, status: "all", page: 1, limit: 1_000_000 }, false),
+    db.student.findMany({ where: { userId, isActive: true }, select: { id: true } }),
+    db.student.findMany({
+      where: {
+        userId,
+        isActive: true,
+        sessionStudents: {
+          none: {
+            session: {
+              userId,
+              status: { not: "cancelled" },
+              sessionDate: { gte: idleFrom, lte: idleTo },
+            },
+          },
+        },
+      },
+      select: { id: true, fullName: true, grade: true },
+      orderBy: [{ grade: "asc" }, { fullName: "asc" }],
+    }),
+    getCancelledWithoutMakeup(db, userId, { from: cancelFrom }),
+  ])
+
+  const activeIds = new Set(activeStudents.map((s) => s.id))
+  // Tiền thu tháng này trừ vào nợ cũ trước; tháng này đã tất toán thì coi như hết nợ (spec S2).
+  const debtors = tuition.items
+    .filter((it) => activeIds.has(it.studentId) && it.previousBalance > 0 && !it.isFullPaid)
+    .map((it) => ({
+      studentId: it.studentId,
+      fullName: it.fullName,
+      grade: it.grade,
+      amount: Math.min(it.previousBalance, it.totalAmountDue - it.paidAmount),
+    }))
+    .filter((d) => d.amount > 0)
+
+  const monthsById = await countDebtMonths(db, debtors.map((d) => d.studentId), year, month)
+  const debts = debtors
+    .map((d) => ({ ...d, months: monthsById.get(d.studentId) ?? 1 }))
+    .sort((a, b) => b.amount - a.amount)
+
+  return {
+    year,
+    month,
+    debts,
+    idleStudents: idle.map((s) => ({ studentId: s.id, fullName: s.fullName, grade: s.grade })),
+    unrescheduled,
   }
 }

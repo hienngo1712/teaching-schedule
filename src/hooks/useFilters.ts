@@ -89,11 +89,15 @@ export function useFilters() {
   )
 
   const setStudentId = useCallback(
-    (id: number | null) => {
-      const queryString = createQueryString({ 
-        studentId: id 
+    // replace=true: dùng khi đóng sheet để không tạo thêm entry lịch sử — bấm Back
+    // không quay lại được URL còn studentId (mở sheet lại ngoài ý muốn).
+    (id: number | null, options?: { replace?: boolean }) => {
+      const queryString = createQueryString({
+        studentId: id
       })
-      router.push(`${pathname}?${queryString}`)
+      const url = `${pathname}?${queryString}`
+      if (options?.replace) router.replace(url)
+      else router.push(url)
     },
     [router, pathname, createQueryString]
   )

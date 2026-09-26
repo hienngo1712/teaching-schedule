@@ -985,4 +985,33 @@ export async function restoreSession(
   return toDTO(restored as SessionWithSubjectAndStudents)
 }
 
+// Ca huỷ không có ca bù: chỉ xảy ra khi ca bù bị xoá (luồng huỷ luôn tạo ca bù) hoặc dữ liệu cũ.
+export async function getCancelledWithoutMakeup(
+  db: PrismaClient,
+  userId: number,
+  params: { from: Date }
+): Promise<SessionDTO[]> {
+  const sessions = await db.teachingSession.findMany({
+    where: {
+      userId,
+      status: "cancelled",
+      sessionDate: { gte: params.from },
+      makeupSessions: { none: {} },
+    },
+    include: {
+      subject: true,
+      sessionStudents: {
+        include: { student: true },
+        orderBy: { student: { fullName: "asc" } },
+      },
+      _count: { select: { sessionStudents: true } },
+      makeupSessions: { select: { id: true, sessionDate: true } },
+      makeupOf: { select: { id: true, sessionDate: true } },
+    },
+    orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }],
+  })
+
+  return sessions.map((s) => toDTO(s as SessionWithSubjectAndStudents))
+}
+
 export { parseTimeToDate }
