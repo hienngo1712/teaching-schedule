@@ -368,5 +368,9 @@
   "import_err_parentPhone": "Invalid phone number",
   "import_err_parentName": "Parent name max 100 characters",
   "import_err_tuitionFee": "Fee must be a non-negative number",
-  "import_err_notes": "Notes max 1000 characters"
+  "import_err_notes": "Notes max 1000 characters",
+  "backup_data": "Back up data",
+  "backup_preparing": "Preparing backup file…",
+  "backup_done": "Backup file downloaded",
+  "backup_error": "Could not create the backup file. Please try again."
 }

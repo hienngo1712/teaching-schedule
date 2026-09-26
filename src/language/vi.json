@@ -368,5 +368,9 @@
   "import_err_parentPhone": "SĐT không hợp lệ",
   "import_err_parentName": "Tên phụ huynh tối đa 100 ký tự",
   "import_err_tuitionFee": "Học phí phải là số không âm",
-  "import_err_notes": "Ghi chú tối đa 1000 ký tự"
+  "import_err_notes": "Ghi chú tối đa 1000 ký tự",
+  "backup_data": "Sao lưu dữ liệu",
+  "backup_preparing": "Đang tạo file sao lưu…",
+  "backup_done": "Đã tải file sao lưu",
+  "backup_error": "Không tạo được file sao lưu. Thử lại sau."
 }
