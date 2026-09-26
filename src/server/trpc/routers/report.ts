@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
 import {
+  getDashboardAlerts,
   getDashboardStats,
   getMonthlySummary,
   getStudentReport,
@@ -29,4 +30,7 @@ export const reportRouter = createTRPCRouter({
 
   dashboard: protectedProcedure
     .query(({ ctx }) => getDashboardStats(ctx.db, ctx.userId)),
+
+  alerts: protectedProcedure
+    .query(({ ctx }) => getDashboardAlerts(ctx.db, ctx.userId)),
 })
