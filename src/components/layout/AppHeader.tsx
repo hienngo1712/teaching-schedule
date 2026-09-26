@@ -10,9 +10,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { BookOpen, KeyRound, LogOut, Languages, Settings } from "lucide-react"
+import { BookOpen, DatabaseBackup, KeyRound, LogOut, Languages, Settings } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { useBackupDownload } from "@/hooks/useBackupDownload"
 
 function getInitials(name?: string | null) {
   if (!name) return "GV"
@@ -25,6 +26,7 @@ function getInitials(name?: string | null) {
 export function AppHeader() {
   const { data: session } = useSession()
   const { t, language, setLanguage } = useTranslation()
+  const backup = useBackupDownload()
   const fullName = session?.user?.fullName ?? session?.user?.username ?? t("teacher_fallback")
 
   return (
@@ -78,6 +80,10 @@ export function AppHeader() {
                 <Settings className="size-4 mr-2" />
                 {t("settings")}
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={backup.download} disabled={backup.isDownloading}>
+              <DatabaseBackup className="size-4 mr-2" />
+              {t("backup_data")}
             </DropdownMenuItem>
             <ChangePasswordDialog
               trigger={
