@@ -135,9 +135,15 @@ describe("parseImportRows", () => {
     expect(out[5].input.tuitionFee).toBe(150000)
   })
 
-  it("lớp 10, lớp 5.5, lớp rỗng → lỗi grade", () => {
-    const out = parseImportRows([row(2, "An An", 10), row(3, "Bình An", 5.5), row(4, "Chi An", null, "x")])
+  it("lớp 13, lớp 5.5, lớp rỗng → lỗi grade", () => {
+    const out = parseImportRows([row(2, "An An", 13), row(3, "Bình An", 5.5), row(4, "Chi An", null, "x")])
     expect(out.map((r) => r.errors)).toEqual([["grade"], ["grade"], ["grade"]])
+  })
+
+  it("lớp 12 và 'Lớp 10' → hợp lệ (THPT)", () => {
+    const out = parseImportRows([row(2, "An An", 12), row(3, "Bình An", "Lớp 10")])
+    expect(out.map((r) => r.errors)).toEqual([[], []])
+    expect(out.map((r) => r.input.grade)).toEqual([12, 10])
   })
 
   it("tên 1 ký tự → lỗi fullName", () => {
@@ -145,7 +151,7 @@ describe("parseImportRows", () => {
   })
 
   it("nhiều lỗi 1 dòng → đủ các field, theo thứ tự cột", () => {
-    const [r] = parseImportRows([row(2, "A", 12, "x".repeat(101), "123", -5, "y".repeat(1001))])
+    const [r] = parseImportRows([row(2, "A", 13, "x".repeat(101), "123", -5, "y".repeat(1001))])
     expect(r.errors).toEqual(["fullName", "grade", "parentName", "parentPhone", "tuitionFee", "notes"])
   })
 })
@@ -170,7 +176,7 @@ describe("buildPreview", () => {
     const rows = [
       parsed(2, "Trần Bình", 3),
       parsed(3, "Nguyễn An", 5),
-      parsed(4, "Lê Chi", 12, ["grade"]),
+      parsed(4, "Lê Chi", 13, ["grade"]),
       parsed(5, "trần bình", 3),
     ]
     // matches theo thứ tự các dòng không lỗi: 2, 3, 5
@@ -194,7 +200,7 @@ describe("buildPreview", () => {
 
 describe("toImportPayload", () => {
   it("gồm dòng hợp lệ + dòng trùng đã tick, theo thứ tự dòng trong file", () => {
-    const rows = [parsed(2, "Trần Bình", 3), parsed(3, "Nguyễn An", 5), parsed(4, "Lê Chi", 12, ["grade"]), parsed(5, "trần bình", 3)]
+    const rows = [parsed(2, "Trần Bình", 3), parsed(3, "Nguyễn An", 5), parsed(4, "Lê Chi", 13, ["grade"]), parsed(5, "trần bình", 3)]
     const preview = buildPreview(rows, [null, { id: 10, fullName: "Nguyễn An", grade: 5, isActive: true }, null])
 
     expect(toImportPayload(preview, new Set()).map((r) => r.fullName)).toEqual(["Trần Bình"])

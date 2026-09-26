@@ -364,7 +364,7 @@
   "import_err_empty": "File không có dòng dữ liệu",
   "import_err_too_many": "Tối đa 500 học sinh mỗi lần",
   "import_err_fullName": "Họ tên phải từ 2 đến 100 ký tự",
-  "import_err_grade": "Lớp phải là số từ 1 đến 9",
+  "import_err_grade": "Lớp phải là số từ 1 đến 12",
   "import_err_parentPhone": "SĐT không hợp lệ",
   "import_err_parentName": "Tên phụ huynh tối đa 100 ký tự",
   "import_err_tuitionFee": "Học phí phải là số không âm",

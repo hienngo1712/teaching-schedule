@@ -79,6 +79,12 @@ describe("Session CRUD + overlap", () => {
     expect(list).toEqual([])
   })
 
+  it("✓ getMonth lọc grade=12 → không lỗi validation", async () => {
+    const caller = await getAuthedCaller()
+    const list = await caller.session.getMonth({ year: 2026, month: 7, grade: 12 })
+    expect(list).toEqual([])
+  })
+
   // ── Update ───────────────────────────────────────────────────
   it("✓ update title, notes", async () => {
     const caller = await getAuthedCaller()

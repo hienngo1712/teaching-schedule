@@ -15,6 +15,12 @@ describe("Tuition Management", () => {
     await cleanup()
   })
 
+  it("✓ getMonthlyStatus lọc grade=12 → không lỗi validation", async () => {
+    const caller = await getAuthedCaller()
+    const status = await caller.tuition.getMonthlyStatus({ year: 2026, month: 5, grade: 12 })
+    expect(status.items).toEqual([])
+  })
+
   it("✓ getMonthlyStatus → tính toán totalExpected dựa trên điểm danh", async () => {
     const caller = await getAuthedCaller()
 

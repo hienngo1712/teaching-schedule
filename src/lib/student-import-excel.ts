@@ -16,7 +16,7 @@ const HEADER_BG = "FFE0E7FF" // cùng màu headerBg của useExcelExport
 const GUIDE_ROWS = [
   ["Cột", "Bắt buộc", "Cách điền", "Ví dụ"],
   ["Họ tên", "Có", "2 đến 100 ký tự", "Nguyễn Văn An"],
-  ["Lớp", "Có", "Số từ 1 đến 9 (ghi \"Lớp 5\" cũng được)", "5"],
+  ["Lớp", "Có", "Số từ 1 đến 12 (ghi \"Lớp 5\" cũng được)", "5"],
   ["Tên phụ huynh", "Không", "Tối đa 100 ký tự", "Chị Hoa"],
   ["SĐT phụ huynh", "Không", "Bắt đầu bằng 0 hoặc +84", "0912345678"],
   ["Học phí/buổi", "Không", "Số tiền VND, bỏ trống là 0", "150000"],

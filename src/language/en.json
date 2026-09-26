@@ -364,7 +364,7 @@
   "import_err_empty": "File has no data rows",
   "import_err_too_many": "At most 500 students per import",
   "import_err_fullName": "Name must be 2-100 characters",
-  "import_err_grade": "Grade must be a number from 1 to 9",
+  "import_err_grade": "Grade must be a number from 1 to 12",
   "import_err_parentPhone": "Invalid phone number",
   "import_err_parentName": "Parent name max 100 characters",
   "import_err_tuitionFee": "Fee must be a non-negative number",

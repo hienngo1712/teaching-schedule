@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { studentCreateSchema } from "@/lib/schemas/student"
+import { GRADES } from "@/lib/constants"
 
 describe("studentCreateSchema", () => {
   it("✓ accept valid data", () => {
@@ -22,10 +23,17 @@ describe("studentCreateSchema", () => {
     ).toThrow()
   })
 
-  it("✗ reject grade = 10", () => {
-    expect(() =>
-      studentCreateSchema.parse({ fullName: "An", grade: 10 })
-    ).toThrow()
+  it("✓ accept grade = 10 và 12 (THPT)", () => {
+    expect(() => studentCreateSchema.parse({ fullName: "An", grade: 10 })).not.toThrow()
+    expect(() => studentCreateSchema.parse({ fullName: "An", grade: 12 })).not.toThrow()
+  })
+
+  it("✗ reject grade = 13", () => {
+    expect(() => studentCreateSchema.parse({ fullName: "An", grade: 13 })).toThrow()
+  })
+
+  it("GRADES = 1..12, khớp giới hạn schema", () => {
+    expect([...GRADES]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
   })
 
   it("✓ accept SĐT VN bắt đầu 0", () => {
