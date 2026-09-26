@@ -81,10 +81,9 @@ test('giáo viên tạo link, phụ huynh xem không cần đăng nhập, tạo 
   // Mở dialog từ menu ⋯ của HS
   await page.goto('/students');
   await page.getByPlaceholder('Tìm tên học sinh...').filter({ visible: true }).first().fill(NAME);
-  // Debounce 400ms rồi router.push đổi query — chờ điều hướng ổn định trước khi thao tác,
-  // tránh race giữa RSC re-render và click vào menu (menu bị unmount giữa chừng).
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(500);
+  // Debounce 400ms rồi router.push đổi query — chờ URL cập nhật rồi chờ đúng 1 nút menu của HS đích
+  // xuất hiện (tránh race giữa RSC re-render và click, menu bị unmount giữa chừng).
+  await expect(page).toHaveURL(/studentName=/);
   const menuBtn = page.getByRole('button', { name: 'Menu hành động' }).filter({ visible: true });
   await expect(menuBtn).toHaveCount(1);
   await menuBtn.click();
@@ -125,8 +124,10 @@ test('giáo viên tạo link, phụ huynh xem không cần đăng nhập, tạo 
   await expect(parent.page.getByTestId('parent-month')).not.toHaveText(monthBefore ?? '');
 
   // Tham số tháng lặp → vẫn 200, về tháng hiện tại
+  const [curY, curM] = vnDay(0).split('-');
   const dup = await parent.page.goto(`${url1}?thang=${y}-${m}&thang=2020-01`);
   expect(dup!.status()).toBe(200);
+  await expect(parent.page.getByTestId('parent-month')).toHaveText(`Tháng ${Number(curM)}/${curY}`);
   await parent.context.close();
 
   // Tạo lại → link cũ 404

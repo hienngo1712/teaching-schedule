@@ -62,7 +62,8 @@ export function ParentLinkDialog({ student, onOpenChange }: Props) {
       await navigator.clipboard.writeText(url)
       toast.success(t("link_copied"))
     } catch {
-      // Trình duyệt chặn clipboard: người dùng vẫn bấm vào ô để chọn và tự sao chép.
+      // Trình duyệt chặn clipboard: báo lỗi, người dùng tự bấm vào ô để chọn và sao chép.
+      toast.error(t("link_copy_failed"))
     }
   }
 

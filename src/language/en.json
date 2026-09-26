@@ -395,5 +395,6 @@
   "parent_qr_hint": "Take a screenshot, then scan the QR image in your banking app.",
   "parent_footer": "View only. Please contact the teacher with any questions.",
   "link_created": "New link created",
-  "link_disabled": "Link disabled"
+  "link_disabled": "Link disabled",
+  "link_copy_failed": "Couldn't copy automatically. Tap the link field to select it and copy manually."
 }

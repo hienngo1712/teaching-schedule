@@ -148,10 +148,12 @@ export async function getParentView(
     nextMonth: idx < maxIdx ? toYm(idx + 1) : null,
     notice: {
       ...notice,
+      // studentId là id tự tăng nội bộ, không được lộ ra trang công khai.
+      studentId: 0,
       // C lấy username khi thiếu họ tên: không được lộ tên đăng nhập ra trang công khai.
       teacherName: student.user.fullName || "Giáo viên",
-      // Ghi chú lần thu là của giáo viên; tự lọc phòng khi card của C đổi cách hiển thị.
-      payments: notice.payments.map((p) => ({ ...p, note: null })),
+      // Ghi chú lần thu là của giáo viên; payment.id là id nội bộ → thay bằng chỉ số (card chỉ dùng làm React key).
+      payments: notice.payments.map((p, i) => ({ ...p, id: i, note: null })),
     },
     attendance: monthRows.map(toSessionDTO),
     upcoming: upcomingRows.map(toSessionDTO),

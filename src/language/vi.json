@@ -395,5 +395,6 @@
   "parent_qr_hint": "Chụp màn hình rồi chọn quét ảnh QR trong app ngân hàng.",
   "parent_footer": "Trang chỉ để xem. Có thắc mắc, vui lòng liên hệ giáo viên.",
   "link_created": "Đã tạo link mới",
-  "link_disabled": "Đã tắt link"
+  "link_disabled": "Đã tắt link",
+  "link_copy_failed": "Không tự sao chép được. Bấm vào ô link để chọn rồi tự sao chép."
 }

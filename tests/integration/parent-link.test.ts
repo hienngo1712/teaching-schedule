@@ -167,12 +167,20 @@ describe("getParentView", () => {
     expect(view!.attendance[0].attendance).toBe("present")
     expect(view!.notice.payments.length).toBeGreaterThan(0)
     for (const p of view!.notice.payments) expect(p.note).toBeNull()
+    // Không lộ id nội bộ: studentId đặt về 0, payment.id thay bằng chỉ số (0..n-1).
+    expect(view!.notice.studentId).toBe(0)
+    expect(view!.notice.payments.map((p) => p.id)).toEqual(
+      view!.notice.payments.map((_, i) => i)
+    )
 
     const json = JSON.stringify(view)
+    const realPaymentIds = (await caller.payment.list({ studentId: a.id, year, month })).map((p) => p.id)
     for (const secret of [
       "HS Bình Khác", "0909111222", "PH Bí Mật", "GhiChuHSBiMat", "TieuDeCaBiMat", "GhiChuCaBiMat",
       "GhiChuDiemDanhBiMat", "GhiChuLanThuBiMat", "GhiChuThangBiMat",
       '"userId"', '"parentLinkToken"', '"passwordHash"', '"parentPhone"', token,
+      `"studentId":${a.id}`,
+      ...realPaymentIds.map((id) => `"id":${id}`),
     ]) {
       expect(json, `RSC payload lộ: ${secret}`).not.toContain(secret)
     }
