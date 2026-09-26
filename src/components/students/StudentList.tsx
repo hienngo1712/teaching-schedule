@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { CalendarDays, MoreHorizontal, Pencil, Phone, Trash2, UserPlus } from "lucide-react"
+import { CalendarDays, Link2, MoreHorizontal, Pencil, Phone, Trash2, UserPlus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { GRADES } from "@/lib/constants"
@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { StudentFormDialog } from "./StudentFormDialog"
+import { ParentLinkDialog } from "./ParentLinkDialog"
 import { UpgradeAllClassesButton } from "./UpgradeAllClassesButton"
 import { ImportStudentsButton } from "./ImportStudentsDialog"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
@@ -96,6 +97,7 @@ export function StudentList() {
   >({ open: false })
 
   const [deleteTarget, setDeleteTarget] = useState<StudentRow | null>(null)
+  const [parentLinkTarget, setParentLinkTarget] = useState<StudentRow | null>(null)
 
   const deleteMut = trpc.student.delete.useMutation({
     onSuccess: () => {
@@ -142,6 +144,10 @@ export function StudentList() {
         <DropdownMenuItem onSelect={() => router.push(`/calendar?studentId=${s.id}`)}>
           <CalendarDays className="mr-2 size-4" />
           {t("view_schedule")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setParentLinkTarget(s)}>
+          <Link2 className="mr-2 size-4" />
+          {t("parent_link")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setFormState({ open: true, mode: "edit", student: s })}>
           <Pencil className="mr-2 size-4" />
@@ -289,6 +295,14 @@ export function StudentList() {
             : undefined
         }
       />
+
+      {parentLinkTarget && (
+        <ParentLinkDialog
+          key={parentLinkTarget.id}
+          student={parentLinkTarget}
+          onOpenChange={(open) => !open && setParentLinkTarget(null)}
+        />
+      )}
 
       <AlertDialog
         open={deleteTarget !== null}

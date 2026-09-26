@@ -134,3 +134,23 @@ export interface TuitionNoticeDTO {
     content: string
   } | null
 }
+
+// Trang phụ huynh công khai: chỉ liệt kê trường được phép lộ, không extends type Prisma.
+export type ParentSessionDTO = {
+  date: string // "YYYY-MM-DD"
+  startTime: string // "HH:mm"
+  endTime: string
+  subjectName: string
+  attendance: "pending" | "present" | "absent" | "late"
+}
+
+export type ParentViewDTO = {
+  student: { fullName: string; grade: number }
+  year: number
+  month: number
+  prevMonth: string | null // "YYYY-MM", null ở biên
+  nextMonth: string | null
+  notice: TuitionNoticeDTO // payments[].note luôn null
+  attendance: ParentSessionDTO[]
+  upcoming: ParentSessionDTO[]
+}

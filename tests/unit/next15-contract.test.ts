@@ -31,9 +31,9 @@ describe("Hợp đồng Next 15", () => {
     // word-boundary, để bắt cả kiểu destructure ở thân hàm (`const { params } = props`)
     // chứ không chỉ destructure ngay ở tham số.
     const identifierPattern = /\b(params|searchParams)\b/
-    // Ngoại lệ duy nhất: reports/page.tsx có biến local tên `params` (input tRPC),
-    // không liên quan gì tới prop route của Next.
-    const ALLOWED = new Set(["src/app/(app)/reports/page.tsx"])
+    // Ngoại lệ: reports/page.tsx có biến local `params` (input tRPC); p/[token]/page.tsx là
+    // page duy nhất dùng prop route, đã await theo kiểu async của Next 15 (test bên dưới).
+    const ALLOWED = new Set(["src/app/(app)/reports/page.tsx", "src/app/p/[token]/page.tsx"])
 
     const offenders: string[] = []
     function walk(dir: string): void {
@@ -54,6 +54,12 @@ describe("Hợp đồng Next 15", () => {
     walk("src/app")
 
     expect(offenders, `Các file dính params/searchParams chưa xử lý async: ${offenders.join(", ")}`).toEqual([])
+  })
+
+  it("trang phụ huynh await params và searchParams (prop route là Promise ở Next 15)", () => {
+    const src = readFileSync("src/app/p/[token]/page.tsx", "utf8")
+    expect(src).toContain("await params")
+    expect(src).toContain("await searchParams")
   })
 
   it("không dùng fetch() ở bất kỳ đâu trong src/ — nếu thêm phải tự khai báo cache", () => {
