@@ -196,7 +196,7 @@ export default function TuitionPage() {
             role="button"
             tabIndex={0}
             onClick={() => handleOpenDetail(item)}
-            onKeyDown={(e) => e.key === "Enter" && handleOpenDetail(item)}
+            onKeyDown={(e) => e.target === e.currentTarget && e.key === "Enter" && handleOpenDetail(item)}
             className="rounded-lg border border-slate-200 bg-white p-4 transition-transform active:scale-[0.98]"
           >
             <div className="flex items-start justify-between gap-2">

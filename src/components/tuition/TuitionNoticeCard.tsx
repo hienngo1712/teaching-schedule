@@ -8,14 +8,14 @@ import { formatVnDate } from "@/lib/payment-notes"
 import { noticeFeePerSession, noticePaymentState } from "@/lib/tuition-notice"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
-type Props = { notice: TuitionNoticeDTO; onReady?: () => void }
+type Props = { notice: TuitionNoticeDTO; onReady?: () => void; onError?: (e: unknown) => void }
 
 const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
 
 // Thuần hiển thị, G render lại ở trang phụ huynh. Chỉ block/grid, không rounded-full/inline-flex/shadow:
 // html2canvas vẽ sai các thứ đó (xem useExport.ts).
 export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function TuitionNoticeCard(
-  { notice, onReady },
+  { notice, onReady, onError },
   ref
 ) {
   const { t } = useTranslation()
@@ -34,11 +34,14 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
       .then((url) => {
         if (!cancelled) setQrSrc(url)
       })
-      .catch((e) => console.error("Không tạo được mã QR:", e))
+      .catch((e) => {
+        console.error("Không tạo được mã QR:", e)
+        if (!cancelled) onError?.(e)
+      })
     return () => {
       cancelled = true
     }
-  }, [payload, onReady])
+  }, [payload, onReady, onError])
 
   const fee = noticeFeePerSession(notice.presentDates)
   const dates = notice.presentDates

@@ -44,6 +44,12 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
       })
   }, [])
 
+  // QRCode.toDataURL lỗi → card không bao giờ gọi onReady → không để nút kẹt loading mãi.
+  const handleCardError = useCallback(() => {
+    setBlob(null)
+    setCaptureFailed(true)
+  }, [])
+
   const notice = query.data
   const title = `${t("tuition_notice_title")} ${month}/${year}`
   const filename = notice
@@ -74,7 +80,14 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
           {/* Phiếu rộng cố định 360px; màn hẹp hơn thì cuộn ngang trong khung, không tràn trang. */}
           <div className="overflow-x-auto">
             <div className="mx-auto w-fit">
-              <TuitionNoticeCard ref={cardRef} notice={notice} onReady={handleReady} />
+              {/* key = dataUpdatedAt → mount lại khi refetch đổi dữ liệu (kể cả khi payload QR vẫn null), chụp lại ảnh đúng dữ liệu mới. */}
+              <TuitionNoticeCard
+                key={query.dataUpdatedAt}
+                ref={cardRef}
+                notice={notice}
+                onReady={handleReady}
+                onError={handleCardError}
+              />
             </div>
           </div>
           {captureFailed && <p className="text-center text-sm text-red-600">{t("load_error")}</p>}
@@ -92,7 +105,13 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
           disabled={!blob}
           onClick={() => blob && shareOrDownloadPng(blob, filename, title)}
         >
-          {blob ? <Share2 className="mr-2 size-4" /> : <Loader2 className="mr-2 size-4 animate-spin" />}
+          {blob ? (
+            <Share2 className="mr-2 size-4" />
+          ) : captureFailed ? (
+            <Share2 className="mr-2 size-4 opacity-50" />
+          ) : (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          )}
           {t("share")}
         </Button>
       )}
@@ -101,7 +120,13 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
         disabled={!blob}
         onClick={() => blob && saveAs(blob, filename)}
       >
-        {blob ? <Download className="mr-2 size-4" /> : <Loader2 className="mr-2 size-4 animate-spin" />}
+        {blob ? (
+          <Download className="mr-2 size-4" />
+        ) : captureFailed ? (
+          <Download className="mr-2 size-4 opacity-50" />
+        ) : (
+          <Loader2 className="mr-2 size-4 animate-spin" />
+        )}
         {t("download_image")}
       </Button>
     </div>

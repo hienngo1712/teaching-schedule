@@ -127,7 +127,8 @@ describe("tuition.getNotice", () => {
     expect(n.paidAmount).toBe(80000)
     expect(n.remaining).toBe(120000)
     expect(n.overpaid).toBe(0)
-    expect(n.payments.map((p) => [p.paidAt, p.method, p.amount]).sort()).toEqual([
+    // Phiếu sắp payments tăng dần theo paidAt (khác listPayments/sheet chi tiết, vẫn desc).
+    expect(n.payments.map((p) => [p.paidAt, p.method, p.amount])).toEqual([
       ["2026-05-10", "cash", 50000],
       ["2026-05-20", "transfer", 30000],
     ])

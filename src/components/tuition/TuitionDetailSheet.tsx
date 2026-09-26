@@ -327,6 +327,7 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
             type="button"
             variant="outline"
             className="h-12 rounded-xl"
+            disabled={dirty}
             onClick={() => setNoticeOpen(true)}
           >
             <Receipt className="mr-2 size-4" />

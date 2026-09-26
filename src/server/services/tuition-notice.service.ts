@@ -44,6 +44,11 @@ export async function getTuitionNotice(
     db.user.findUniqueOrThrow({ where: { id: userId }, select: { fullName: true, username: true } }),
   ])
 
+  // Phiếu liệt kê các lần thu tăng dần theo thời gian (khác listPayments/sheet chi tiết, vẫn desc).
+  const noticePayments = [...payments].sort((a, b) =>
+    a.paidAt === b.paidAt ? a.id - b.id : a.paidAt < b.paidAt ? -1 : 1
+  )
+
   const { totalAmountDue, paidAmount, isFullPaid } = status
   // Khớp sheet chi tiết của B và getMonthlyOutstanding (spec C S8).
   const remaining = isFullPaid ? 0 : Math.max(0, totalAmountDue - paidAmount)
@@ -85,7 +90,7 @@ export async function getTuitionNotice(
       date: a.session.sessionDate.toISOString().slice(0, 10),
       fee: a.fee,
     })),
-    payments,
+    payments: noticePayments,
     remaining,
     overpaid,
     teacherName: user.fullName ?? user.username,
