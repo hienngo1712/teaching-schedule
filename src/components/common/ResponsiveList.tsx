@@ -58,7 +58,7 @@ export function ResponsiveList<T>({
 
   if (isError) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-200 bg-white py-12 text-center">
+      <div className="rounded-lg border border-dashed bg-white py-12 text-center">
         <p className="text-sm text-slate-600">{errorText}</p>
         {onRetry && (
           <Button variant="outline" className="mt-3 h-11 md:h-10" onClick={onRetry}>
@@ -71,7 +71,7 @@ export function ResponsiveList<T>({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-200 bg-white py-12 text-center text-sm text-slate-500">
+      <div className="rounded-lg border border-dashed bg-white py-12 text-center text-sm text-slate-500">
         {emptyText}
       </div>
     )
@@ -79,7 +79,7 @@ export function ResponsiveList<T>({
 
   return (
     <>
-      <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white md:block">
+      <div className="hidden overflow-hidden rounded-lg border bg-white md:block">
         <Table>
           <TableHeader>
             <TableRow>

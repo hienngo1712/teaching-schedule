@@ -41,7 +41,7 @@ function AlertGroup<T>({ testId, icon, title, description, items, getKey, render
       <div className="flex items-center gap-2">
         {icon}
         <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">{title}</h3>
-        <Badge variant="secondary" className="border-none bg-slate-100 text-slate-600">
+        <Badge variant="secondary" className="border-none bg-primary/[0.08] text-primary hover:bg-primary/[0.08]">
           {items.length}
         </Badge>
       </div>
@@ -91,7 +91,7 @@ export function DashboardAlerts() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <AlertGroup
               testId="alert-group-debt"
-              icon={<Wallet className="size-4 shrink-0 text-red-600" />}
+              icon={<Wallet className="size-4 shrink-0 text-muted-foreground" />}
               title={t("alert_debt_title")}
               description={t("alert_debt_desc")}
               items={data.debts}
@@ -111,7 +111,7 @@ export function DashboardAlerts() {
                     <span className="text-slate-500"> · {t("grade")} {d.grade}</span>
                   </p>
                   <div className="shrink-0 text-right">
-                    <p className="whitespace-nowrap text-sm font-semibold text-red-600">{formatCurrency(d.amount)}</p>
+                    <p className="whitespace-nowrap text-sm font-semibold text-debt">{formatCurrency(d.amount)}</p>
                     <p className="whitespace-nowrap text-xs text-slate-500">
                       {t("alert_debt_months").replace("{n}", d.months >= 12 ? "12+" : String(d.months))}
                     </p>
@@ -121,7 +121,7 @@ export function DashboardAlerts() {
             />
             <AlertGroup
               testId="alert-group-idle"
-              icon={<CalendarX className="size-4 shrink-0 text-orange-600" />}
+              icon={<CalendarX className="size-4 shrink-0 text-muted-foreground" />}
               title={t("alert_idle_title")}
               description={t("alert_idle_desc")}
               items={data.idleStudents}
@@ -137,7 +137,7 @@ export function DashboardAlerts() {
             />
             <AlertGroup
               testId="alert-group-unrescheduled"
-              icon={<CalendarClock className="size-4 shrink-0 text-violet-600" />}
+              icon={<CalendarClock className="size-4 shrink-0 text-muted-foreground" />}
               title={t("alert_unrescheduled_title")}
               description={t("alert_unrescheduled_desc")}
               items={unrescheduled}

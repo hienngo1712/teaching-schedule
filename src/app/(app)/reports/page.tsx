@@ -137,12 +137,10 @@ export default function ReportsPage() {
               label={t("expected_revenue")}
               value={money(monthlySummary?.expectedRevenue)}
               hint={t("hint_expected_fees")}
-              valueClassName="text-indigo-600"
             />
             <StatCard
               label={t("actual_revenue")}
               value={money(monthlySummary?.totalRevenue)}
-              valueClassName="text-emerald-600"
               hint={
                 <>
                   <p>{t("hint_taught_fees")}</p>
@@ -159,13 +157,13 @@ export default function ReportsPage() {
               label={t("collected_amount")}
               value={money(monthlySummary?.totalPaid)}
               hint={t("hint_collected")}
-              valueClassName="text-green-600"
+              valueClassName="text-primary"
             />
             <StatCard
               label={t("uncollected_amount")}
               value={money(monthlySummary?.totalOutstanding)}
               hint={t("hint_outstanding")}
-              valueClassName="text-orange-600"
+              valueClassName="text-debt"
             />
           </div>
 
