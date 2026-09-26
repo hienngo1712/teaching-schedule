@@ -20,15 +20,23 @@ const translations: Record<Language, Translations> = { vi, en }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("vi")
+export function LanguageProvider({
+  children,
+  forcedLanguage,
+}: {
+  children: React.ReactNode
+  // Trang công khai (link phụ huynh) cố định ngôn ngữ, không theo lựa chọn đã lưu trên máy.
+  forcedLanguage?: Language
+}) {
+  const [language, setLanguageState] = useState<Language>(forcedLanguage ?? "vi")
 
   useEffect(() => {
+    if (forcedLanguage) return
     const savedLang = localStorage.getItem("language") as Language
     if (savedLang && (savedLang === "vi" || savedLang === "en")) {
       setLanguageState(savedLang)
     }
-  }, [])
+  }, [forcedLanguage])
 
   useEffect(() => {
     // Sync dayjs locale
@@ -39,6 +47,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
+    if (forcedLanguage) return
     localStorage.setItem("language", lang)
     // Optional: set cookie for server-side awareness if needed
     document.cookie = `NEXT_LOCALE=${lang}; path=/; max-age=31536000`
