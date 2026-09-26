@@ -396,5 +396,11 @@
   "parent_footer": "View only. Please contact the teacher with any questions.",
   "link_created": "New link created",
   "link_disabled": "Link disabled",
-  "link_copy_failed": "Couldn't copy automatically. Tap the link field to select it and copy manually."
+  "link_copy_failed": "Couldn't copy automatically. Tap the link field to select it and copy manually.",
+  "more": "More",
+  "calendar_short": "Calendar",
+  "manage_group": "Manage",
+  "more_reports_desc": "Revenue and debts by month and year",
+  "more_subjects_desc": "Add, recolor, hide subjects",
+  "more_settings_desc": "Bank account for tuition"
 }

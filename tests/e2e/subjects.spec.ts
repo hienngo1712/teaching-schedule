@@ -42,9 +42,10 @@ test.describe('Quản lý môn học (390px)', () => {
   test('thêm, đổi màu, ẩn rồi hiện lại một môn', async ({ page }) => {
     const name = `E2E môn có tên khá dài để kiểm tra truncate ${Math.floor(Math.random() * 100000)}`;
 
-    // Vào từ menu avatar
-    await page.getByRole('button', { name: 'Mở menu tài khoản' }).click();
-    await page.getByRole('menuitem', { name: 'Môn học' }).click();
+    // Vào từ tab Thêm (menu avatar không còn mục Môn học)
+    await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('button', { name: 'Thêm', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Thêm' }).getByRole('link', { name: /Môn học/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Thêm' })).toBeHidden();
     await expect(page).toHaveURL(/\/subjects/);
 
     // Thêm môn

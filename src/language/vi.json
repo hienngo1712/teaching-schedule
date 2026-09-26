@@ -396,5 +396,11 @@
   "parent_footer": "Trang chỉ để xem. Có thắc mắc, vui lòng liên hệ giáo viên.",
   "link_created": "Đã tạo link mới",
   "link_disabled": "Đã tắt link",
-  "link_copy_failed": "Không tự sao chép được. Bấm vào ô link để chọn rồi tự sao chép."
+  "link_copy_failed": "Không tự sao chép được. Bấm vào ô link để chọn rồi tự sao chép.",
+  "more": "Thêm",
+  "calendar_short": "Lịch",
+  "manage_group": "Quản lý",
+  "more_reports_desc": "Doanh thu, công nợ theo tháng và năm",
+  "more_subjects_desc": "Thêm, đổi màu, ẩn môn",
+  "more_settings_desc": "Tài khoản ngân hàng nhận học phí"
 }

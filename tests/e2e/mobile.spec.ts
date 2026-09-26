@@ -4,10 +4,9 @@ test.use({ viewport: { width: 390, height: 844 } });
 
 const SCREENS = [
   { tab: 'Tổng quan', url: /dashboard/ },
-  { tab: 'Lịch dạy', url: /calendar/ },
+  { tab: 'Lịch', url: /calendar/ },
   { tab: 'Học sinh', url: /students/ },
   { tab: 'Học phí', url: /tuition/ },
-  { tab: 'Báo cáo', url: /reports/ },
 ];
 
 async function expectNoHorizontalScroll(page: Page) {
@@ -15,6 +14,17 @@ async function expectNoHorizontalScroll(page: Page) {
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth
   );
   expect(overflow).toBeLessThanOrEqual(0);
+}
+
+function mainNav(page: Page) {
+  return page.getByRole('navigation', { name: 'Điều hướng chính' });
+}
+
+async function openMore(page: Page) {
+  await mainNav(page).getByRole('button', { name: 'Thêm', exact: true }).click();
+  const sheet = page.getByRole('dialog', { name: 'Thêm' });
+  await expect(sheet).toBeVisible();
+  return sheet;
 }
 
 test.describe('Mobile 390px', () => {
@@ -34,15 +44,53 @@ test.describe('Mobile 390px', () => {
     await expect(page).toHaveURL(/.*dashboard/);
   });
 
-  test('thanh tab đáy chuyển đủ 5 màn, không màn nào tràn ngang', async ({ page }) => {
-    const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
+  test('thanh tab đáy: 4 tab + Báo cáo qua nút Thêm, không màn nào tràn ngang', async ({ page }) => {
+    const nav = mainNav(page);
     await expect(nav).toBeVisible();
     for (const s of SCREENS) {
-      await nav.getByRole('link', { name: s.tab }).click();
+      await nav.getByRole('link', { name: s.tab, exact: true }).click();
       await expect(page).toHaveURL(s.url);
-      await expect(nav.getByRole('link', { name: s.tab })).toHaveAttribute('aria-current', 'page');
+      await expect(nav.getByRole('link', { name: s.tab, exact: true })).toHaveAttribute('aria-current', 'page');
       await expectNoHorizontalScroll(page);
     }
+
+    const sheet = await openMore(page);
+    await sheet.getByRole('link', { name: /Báo cáo/ }).click();
+    await expect(page).toHaveURL(/reports/);
+    await expect(sheet).toBeHidden();
+    await expect(nav.getByRole('button', { name: 'Thêm', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expectNoHorizontalScroll(page);
+  });
+
+  test('sheet Thêm: 3 mục cao ≥ 56px có mô tả; vào Cài đặt rồi Môn học', async ({ page }) => {
+    const more = mainNav(page).getByRole('button', { name: 'Thêm', exact: true });
+    let sheet = await openMore(page);
+    await expect(sheet.getByRole('link')).toHaveCount(3);
+    const items = [
+      { name: /Báo cáo/, desc: 'Doanh thu, công nợ theo tháng và năm' },
+      { name: /Môn học/, desc: 'Thêm, đổi màu, ẩn môn' },
+      { name: /Cài đặt/, desc: 'Tài khoản ngân hàng nhận học phí' },
+    ];
+    for (const it of items) {
+      const link = sheet.getByRole('link', { name: it.name });
+      await expect(link).toContainText(it.desc);
+      const box = await link.boundingBox();
+      expect(box!.height).toBeGreaterThanOrEqual(56);
+    }
+    await expectNoHorizontalScroll(page);
+
+    await sheet.getByRole('link', { name: /Cài đặt/ }).click();
+    await expect(page).toHaveURL(/\/settings/);
+    await expect(sheet).toBeHidden();
+    await expect(more).toHaveAttribute('aria-current', 'page');
+    await expectNoHorizontalScroll(page);
+
+    sheet = await openMore(page);
+    await sheet.getByRole('link', { name: /Môn học/ }).click();
+    await expect(page).toHaveURL(/\/subjects/);
+    await expect(sheet).toBeHidden();
+    await expect(more).toHaveAttribute('aria-current', 'page');
+    await expectNoHorizontalScroll(page);
   });
 
   // Mobile không có thẻ ca tô màu cấp học (chỉ có sọc màu môn) → chú thích màu cấp học sẽ gây hiểu nhầm.
