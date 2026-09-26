@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
+import { createTRPCRouter, planProcedure } from "@/server/trpc"
 import {
   paymentCreateSchema,
   paymentDeleteSchema,
@@ -13,19 +13,19 @@ import {
 } from "@/server/services/payment.service"
 
 export const paymentRouter = createTRPCRouter({
-  list: protectedProcedure
+  list: planProcedure("payments")
     .input(paymentListSchema)
     .query(({ ctx, input }) => listPayments(ctx.db, ctx.userId, input)),
 
-  create: protectedProcedure
+  create: planProcedure("payments")
     .input(paymentCreateSchema)
     .mutation(({ ctx, input }) => createPayment(ctx.db, ctx.userId, input)),
 
-  update: protectedProcedure
+  update: planProcedure("payments")
     .input(paymentUpdateSchema)
     .mutation(({ ctx, input }) => updatePayment(ctx.db, ctx.userId, input.id, input.data)),
 
-  delete: protectedProcedure
+  delete: planProcedure("payments")
     .input(paymentDeleteSchema)
     .mutation(({ ctx, input }) => deletePayment(ctx.db, ctx.userId, input.id)),
 })

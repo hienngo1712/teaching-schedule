@@ -3,6 +3,8 @@ import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch"
 import { ZodError } from "zod"
 import type { Session } from "next-auth"
 import { db } from "@/server/db"
+import type { Feature } from "@/lib/plans"
+import { PlanRequiredError, assertFeature } from "@/server/services/plan.service"
 
 export type Context = {
   db: typeof db
@@ -42,6 +44,7 @@ const t = initTRPC.context<Context>().create({
         ...shape.data,
         zodError:
           error.cause instanceof ZodError ? error.cause.flatten() : null,
+        planRequired: error.cause instanceof PlanRequiredError ? error.cause.plan : null,
       },
     }
   },
@@ -75,3 +78,10 @@ const enforceAuth = t.middleware(({ ctx, next }) => {
 })
 
 export const protectedProcedure = t.procedure.use(loggerMiddleware).use(enforceAuth)
+
+// Chặn theo gói ở server (spec I mục 6.3): tốn thêm 1 query đọc user, chỉ ở procedure cần gói.
+export const planProcedure = (feature: Feature) =>
+  protectedProcedure.use(async ({ ctx, next }) => {
+    await assertFeature(ctx.db, ctx.userId, feature)
+    return next()
+  })
