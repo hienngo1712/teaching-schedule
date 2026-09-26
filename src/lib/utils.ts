@@ -1,13 +1,16 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { SchoolLevel } from "@/lib/types/models"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Tính cấp học từ lớp (1–5 = tiểu học, 6–9 = THCS)
-export function getLevel(grade: number): "tieu_hoc" | "thcs" {
-  return grade <= 5 ? "tieu_hoc" : "thcs"
+// Tính cấp học từ lớp (1–5 tiểu học, 6–9 THCS, 10–12 THPT)
+export function getLevel(grade: number): SchoolLevel {
+  if (grade <= 5) return "tieu_hoc"
+  if (grade <= 9) return "thcs"
+  return "thpt"
 }
 
 // Tỉ lệ điểm danh — không chia cho 0

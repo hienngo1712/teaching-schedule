@@ -13,7 +13,7 @@ import {
   type SessionCreateInput,
   type SessionFilterInput,
 } from "@/lib/schemas/session"
-import type { SessionDTO } from "@/lib/types/models"
+import type { SchoolLevel, SessionDTO } from "@/lib/types/models"
 
 /**
  * Kiểm tra ca dạy mới có trùng giờ với ca khác trong cùng ngày, cùng user.
@@ -77,11 +77,12 @@ type SessionWithSubjectAndStudents = Prisma.TeachingSessionGetPayload<{
   makeupOf?: { id: number; sessionDate: Date } | null
 }
 
-function deriveLevel(students: Array<{ grade: number }>): "tieu_hoc" | "thcs" | "mixed" {
+function deriveLevel(students: Array<{ grade: number }>): SchoolLevel | "mixed" {
   const levels = students.filter(st => st.grade > 0).map(st => getLevel(st.grade))
   if (levels.length === 0) return "tieu_hoc"
   if (levels.every(l => l === "tieu_hoc")) return "tieu_hoc"
   if (levels.every(l => l === "thcs")) return "thcs"
+  if (levels.every(l => l === "thpt")) return "thpt"
   return "mixed"
 }
 

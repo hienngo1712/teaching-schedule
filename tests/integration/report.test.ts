@@ -94,6 +94,11 @@ describe("Report Router", () => {
     expect(summary.overallAttendanceRate).toBeGreaterThanOrEqual(0)
   })
 
+  it("report.monthlySummary lọc grade=12 → không lỗi validation, 0 ca", async () => {
+    const summary = await caller.report.monthlySummary({ year: 2026, month: 5, grade: 12 })
+    expect(summary.totalSessions).toBe(0)
+  })
+
   it("report.student id không tồn tại → NOT_FOUND", async () => {
     await expect(
       caller.report.student({ studentId: 99999, year: 2026, month: 5 })

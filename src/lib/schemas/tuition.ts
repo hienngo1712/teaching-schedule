@@ -4,7 +4,7 @@ import { paginationSchema } from "./common"
 export const monthlyTuitionFilterSchema = z.object({
   year: z.number().int(),
   month: z.number().int().min(1).max(12),
-  grade: z.number().int().min(1).max(9).optional(),
+  grade: z.number().int().min(1).max(12).optional(),
   search: z.string().optional(),
   studentId: z.number().int().positive().optional(),
   status: z.enum(["all", "fully_paid", "paid_this_month", "partial", "unpaid"]).optional(),

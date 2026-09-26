@@ -74,4 +74,12 @@ describe("buildImportTemplate", () => {
   it("đọc lại chính file mẫu → hợp lệ nhưng chưa có dòng (empty)", async () => {
     expect(await readImportWorkbook(await buildImportTemplate())).toEqual({ ok: false, error: "empty" })
   })
+
+  it("sheet hướng dẫn ghi lớp 1 đến 12", async () => {
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(await buildImportTemplate())
+    const guide = wb.getWorksheet("Huong dan")!
+    expect(guide.getRow(3).getCell(1).value).toBe("Lớp")
+    expect(guide.getRow(3).getCell(3).value).toBe('Số từ 1 đến 12 (ghi "Lớp 5" cũng được)')
+  })
 })

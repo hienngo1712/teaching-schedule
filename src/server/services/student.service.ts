@@ -9,10 +9,10 @@ import type {
   StudentImportInput,
 } from "@/lib/schemas/student"
 import type { PaginatedResponse } from "@/lib/schemas/common"
-import type { StudentDTO } from "@/lib/types/models"
+import type { SchoolLevel, StudentDTO } from "@/lib/types/models"
 import { nameKey, type ExistingMatch } from "@/lib/student-import"
 
-function withLevel<T extends { grade: number }>(s: T): T & { level: "tieu_hoc" | "thcs" } {
+function withLevel<T extends { grade: number }>(s: T): T & { level: SchoolLevel } {
   return { ...s, level: getLevel(s.grade) }
 }
 
@@ -295,16 +295,16 @@ export async function upgradeAllClasses(
       })
       if (existing) throw conflictError
 
-      // Collect graduating student IDs (grade >= 9, gồm cả dữ liệu lỗi grade > 9)
-      // BEFORE any updates to avoid catching grade-8 students just incremented to 9.
+      // Lấy HS ra trường (grade >= 12, gồm cả dữ liệu lỗi grade > 12) TRƯỚC khi tăng lớp
+      // để không bắt nhầm HS lớp 11 vừa lên 12.
       const graduatingStudents = await tx.student.findMany({
-        where: { userId, isActive: true, grade: { gte: 9 } },
+        where: { userId, isActive: true, grade: { gte: 12 } },
         select: { id: true },
       })
       const graduatingIds = graduatingStudents.map((s) => s.id)
 
       const upgraded = await tx.student.updateMany({
-        where: { userId, isActive: true, grade: { gte: 1, lte: 8 } },
+        where: { userId, isActive: true, grade: { gte: 1, lte: 11 } },
         data: { grade: { increment: 1 } },
       })
       const deactivated = graduatingIds.length > 0

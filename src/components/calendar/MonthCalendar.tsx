@@ -114,11 +114,12 @@ export function MonthCalendar() {
         students={students}
       />
 
-      {/* Màu viền thẻ ca là cấp học (session-card--tieu-hoc/thcs trong globals.css), không phải màu môn.
+      {/* Màu viền thẻ ca là cấp học (session-card--tieu-hoc/thcs/thpt trong globals.css), không phải màu môn.
           Chỉ hiện ở desktop: danh sách ca mobile dùng sọc màu môn, không có màu cấp học. */}
       <div className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 md:flex">
         <LegendItem className="border-blue-500 bg-blue-50" label={t("primary_school")} />
         <LegendItem className="border-emerald-500 bg-emerald-50" label={t("secondary_school")} />
+        <LegendItem className="border-amber-600 bg-amber-50" label={t("high_school")} />
         <LegendItem className="border-slate-500 bg-slate-100" label={t("level_mixed")} />
         <LegendItem className="border-red-300 bg-red-50" label={t("cancelled_label")} />
       </div>

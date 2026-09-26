@@ -79,6 +79,36 @@ describe("Session CRUD + overlap", () => {
     expect(list).toEqual([])
   })
 
+  it("✓ getMonth lọc grade=12 → không lỗi validation", async () => {
+    const caller = await getAuthedCaller()
+    const list = await caller.session.getMonth({ year: 2026, month: 7, grade: 12 })
+    expect(list).toEqual([])
+  })
+
+  it("✓ getMonth: ca chỉ HS lớp 10 → level=thpt; ca lớp 9 + lớp 10 → mixed", async () => {
+    const caller = await getAuthedCaller()
+    const g9 = await caller.student.create({ fullName: "HS Lớp 9", grade: 9 })
+    const g10 = await caller.student.create({ fullName: "HS Lớp 10", grade: 10 })
+    await caller.session.create({
+      sessionDate: "2026-04-06",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId,
+      studentIds: [g10.id],
+    })
+    await caller.session.create({
+      sessionDate: "2026-04-07",
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId,
+      studentIds: [g9.id, g10.id],
+    })
+    const list = await caller.session.getMonth({ year: 2026, month: 4 })
+    const byDate = (d: string) => list.find((s) => new Date(s.sessionDate).toISOString().startsWith(d))
+    expect(byDate("2026-04-06")?.level).toBe("thpt")
+    expect(byDate("2026-04-07")?.level).toBe("mixed")
+  })
+
   // ── Update ───────────────────────────────────────────────────
   it("✓ update title, notes", async () => {
     const caller = await getAuthedCaller()

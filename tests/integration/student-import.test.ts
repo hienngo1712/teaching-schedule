@@ -19,6 +19,14 @@ describe("Nhập học sinh từ Excel", () => {
     await resetStudents()
   })
 
+  it("✓ importMany dòng lớp 12 (THPT) → tạo thành công", async () => {
+    const caller = await getAuthedCaller()
+    const res = await caller.student.importMany({ rows: [{ fullName: "Phạm Dũng", grade: 12 }] })
+    expect(res).toEqual({ created: 1 })
+    const list = await caller.student.list({ includeInactive: true, limit: 50 })
+    expect(list.items.find((s) => s.fullName === "Phạm Dũng")?.grade).toBe(12)
+  })
+
   it("✓ importMany 3 dòng hợp lệ → created 3, field đúng, isActive=true", async () => {
     const caller = await getAuthedCaller()
     const res = await caller.student.importMany({

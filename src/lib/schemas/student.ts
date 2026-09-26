@@ -5,7 +5,7 @@ const phoneRegex = /^(0|\+84)[0-9]{8,9}$/
 
 export const studentCreateSchema = z.object({
   fullName: z.string().trim().min(2, "Tên phải có ít nhất 2 ký tự").max(100),
-  grade: z.number().int().min(1).max(9),
+  grade: z.number().int().min(1).max(12),
   parentPhone: z
     .string()
     .trim()
@@ -25,7 +25,7 @@ export const studentUpdateSchema = z.object({
 })
 
 export const studentFilterSchema = z.object({
-  grade: z.number().int().min(1).max(9).optional(),
+  grade: z.number().int().min(1).max(12).optional(),
   search: z.string().trim().max(100).optional(),
   isActive: z.boolean().optional(),
   // When true, return both active and inactive students (overrides the

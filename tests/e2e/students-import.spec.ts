@@ -40,13 +40,13 @@ test.describe('Nhập học sinh từ Excel (390px)', () => {
     const sheet = wb.getWorksheet('Hoc sinh')!;
     sheet.addRow([nameA, 5, 'Chị Hoa', '0912345678', 150000, '']);
     sheet.addRow([nameB, 'Lớp 3', '', '', '', '']);
-    sheet.addRow([`${tag} Lỗi`, 12, '', '', '', '']);
+    sheet.addRow([`${tag} Lỗi`, 13, '', '', '', '']);
     const filePath = testInfo.outputPath('import.xlsx');
     await wb.xlsx.writeFile(filePath);
 
     await dialog.getByTestId('import-file-input').setInputFiles(filePath);
     await expect(dialog.getByTestId('import-summary')).toHaveText('2 hợp lệ · 0 trùng · 1 lỗi');
-    await expect(dialog.getByText('Lớp phải là số từ 1 đến 9')).toBeVisible();
+    await expect(dialog.getByText('Lớp phải là số từ 1 đến 12')).toBeVisible();
 
     await dialog.getByRole('button', { name: 'Nhập 2 học sinh' }).click();
     await expect(page.getByText('Đã nhập 2 học sinh')).toBeVisible();

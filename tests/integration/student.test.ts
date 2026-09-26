@@ -28,6 +28,14 @@ describe("Student CRUD", () => {
     expect(s.level).toBe("thcs")
   })
 
+  it("✓ create grade=11 → level=thpt", async () => {
+    const caller = await getAuthedCaller()
+    const s = await caller.student.create({ fullName: "Lê Khoa", grade: 11 })
+    expect(s.level).toBe("thpt")
+    const list = await caller.student.list({ grade: 11 })
+    expect(list.items[0].level).toBe("thpt")
+  })
+
   it("✓ list → trả tất cả HS active của user, sort grade+name ASC", async () => {
     const caller = await getAuthedCaller()
     await caller.student.create({ fullName: "Hùng", grade: 5 })
@@ -48,6 +56,21 @@ describe("Student CRUD", () => {
     const list = await caller.student.list({ grade: 3 })
     expect(list.items).toHaveLength(1)
     expect(list.items[0].fullName).toBe("An")
+  })
+
+  it("✓ list { grade: 12 } → chỉ HS lớp 12", async () => {
+    const caller = await getAuthedCaller()
+    await caller.student.create({ fullName: "An", grade: 3 })
+    await caller.student.create({ fullName: "Khoa", grade: 12 })
+    const list = await caller.student.list({ grade: 12 })
+    expect(list.items.map((s) => s.fullName)).toEqual(["Khoa"])
+  })
+
+  it("✗ create grade=13 → BAD_REQUEST", async () => {
+    const caller = await getAuthedCaller()
+    await expect(caller.student.create({ fullName: "Lớp Mười Ba", grade: 13 })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    })
   })
 
   it("✓ list { search: 'NGUY' } → tìm không phân biệt hoa thường", async () => {

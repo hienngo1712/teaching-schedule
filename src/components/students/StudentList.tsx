@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
+import type { SchoolLevel } from "@/lib/types/models"
 import { useFilters } from "@/hooks/useFilters"
 import { useDebounce } from "@/hooks/useDebounce"
 import { Badge } from "@/components/ui/badge"
@@ -47,6 +48,12 @@ import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
 type StudentRow = RouterOutputs["student"]["list"]["items"][number]
 
 const ALL_GRADES_VALUE = "all"
+// Record theo SchoolLevel: thêm cấp mới mà quên nhãn thì TypeScript báo lỗi (nhánh else cũ gắn nhầm THCS cho lớp 10–12).
+const LEVEL_BADGE: Record<SchoolLevel, { className: string; labelKey: "primary_school" | "secondary_school" | "high_school" }> = {
+  tieu_hoc: { className: "border-blue-200 bg-blue-50 text-blue-700", labelKey: "primary_school" },
+  thcs: { className: "border-emerald-200 bg-emerald-50 text-emerald-700", labelKey: "secondary_school" },
+  thpt: { className: "border-amber-200 bg-amber-50 text-amber-800", labelKey: "high_school" },
+}
 
 export function StudentList() {
   const router = useRouter()
@@ -111,16 +118,14 @@ export function StudentList() {
   const totalItems = listQuery.data?.totalCount ?? 0
   const totalPages = listQuery.data?.totalPages ?? 0
 
-  const levelBadge = (s: StudentRow) =>
-    s.level === "tieu_hoc" ? (
-      <Badge variant="outline" className="whitespace-nowrap border-blue-200 bg-blue-50 text-blue-700">
-        {t("primary_school")}
-      </Badge>
-    ) : (
-      <Badge variant="outline" className="whitespace-nowrap border-emerald-200 bg-emerald-50 text-emerald-700">
-        {t("secondary_school")}
+  const levelBadge = (s: StudentRow) => {
+    const { className, labelKey } = LEVEL_BADGE[s.level]
+    return (
+      <Badge variant="outline" className={`whitespace-nowrap ${className}`}>
+        {t(labelKey)}
       </Badge>
     )
+  }
 
   const statusBadge = (s: StudentRow) =>
     s.isActive ? (

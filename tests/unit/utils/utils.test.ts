@@ -23,6 +23,11 @@ describe("getLevel", () => {
     expect(getLevel(6)).toBe("thcs")
     expect(getLevel(9)).toBe("thcs")
   })
+  it("lớp 10–12 → thpt", () => {
+    expect(getLevel(10)).toBe("thpt")
+    expect(getLevel(11)).toBe("thpt")
+    expect(getLevel(12)).toBe("thpt")
+  })
 })
 
 describe("calcAttendanceRate", () => {

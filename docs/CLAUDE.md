@@ -6,7 +6,7 @@
 
 ## Tổng quan nhanh
 
-Ứng dụng quản lý lịch dạy học cá nhân cho **1 giáo viên**. Học sinh lớp 1–9. Deploy trên **Vercel** + **Neon PostgreSQL**.
+Ứng dụng quản lý lịch dạy học cá nhân cho **1 giáo viên**. Học sinh lớp 1–12. Deploy trên **Vercel** + **Neon PostgreSQL**.
 
 **Stack:** Next.js 14 (App Router) · TypeScript · tRPC v11 · Prisma · NextAuth.js v5 · shadcn/ui · TailwindCSS 4 · Vitest · Playwright
 

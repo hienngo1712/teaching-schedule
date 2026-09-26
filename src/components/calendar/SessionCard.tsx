@@ -28,6 +28,7 @@ export function SessionCard({ session, onClick }: Props) {
         "session-card text-left w-full",
         level === "tieu_hoc" && "session-card--tieu-hoc",
         level === "thcs" && "session-card--thcs",
+        level === "thpt" && "session-card--thpt",
         level === "mixed" && "border-slate-500 bg-slate-100",
         isCancelled && "opacity-60 border-red-300 bg-red-50"
       )}

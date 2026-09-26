@@ -6,7 +6,7 @@ export type { Student, Subject, TeachingSession, SessionStudent }
 /**
  * Common school level derived from grade
  */
-export type SchoolLevel = "tieu_hoc" | "thcs"
+export type SchoolLevel = "tieu_hoc" | "thcs" | "thpt"
 
 // Thông tin HS tối thiểu cho màn Báo cáo (không trả userId / phụ huynh).
 export type StudentReportInfo = {
