@@ -28,7 +28,7 @@ export function SessionCard({ session, onClick }: Props) {
         "session-card text-left w-full",
         level === "tieu_hoc" && "session-card--tieu-hoc",
         level === "thcs" && "session-card--thcs",
-        level === "mixed" && "border-indigo-500 bg-indigo-50",
+        level === "mixed" && "border-slate-500 bg-slate-100",
         isCancelled && "opacity-60 border-red-300 bg-red-50"
       )}
       title={`${session.startTime}–${session.endTime} · ${session.subject.name}`}
@@ -48,7 +48,7 @@ export function SessionCard({ session, onClick }: Props) {
         </div>
       )}
       {isMakeup && !isCancelled && (
-        <div className="text-[10px] font-semibold text-indigo-600">
+        <div className="text-[10px] font-semibold text-primary">
           {t("makeup_session")}
           {session.originalInfo
             ? ` · ${t("from_date").replace("{date}", dayjs(session.originalInfo.sessionDate).format("DD/MM"))}`

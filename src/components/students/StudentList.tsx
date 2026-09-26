@@ -246,7 +246,7 @@ export function StudentList() {
           </>
         }
         renderCard={(s) => (
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border bg-white p-4">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate font-medium text-slate-900">{s.fullName}</p>
@@ -264,7 +264,7 @@ export function StudentList() {
                 <span className="font-normal text-slate-500">{t("per_session")}</span>
               </span>
               {s.parentPhone && (
-                <a href={`tel:${s.parentPhone}`} className="inline-flex min-h-11 items-center gap-1.5 text-indigo-700">
+                <a href={`tel:${s.parentPhone}`} className="inline-flex min-h-11 items-center gap-1.5 text-primary">
                   <Phone className="size-4" />
                   {s.parentPhone}
                 </a>

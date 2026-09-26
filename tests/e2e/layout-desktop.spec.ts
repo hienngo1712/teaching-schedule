@@ -61,4 +61,11 @@ test.describe('Sidebar desktop 1280px', () => {
     await expect(page).toHaveURL(/\/settings/);
     await expect(sidebar.getByRole('link', { name: 'Cài đặt' })).toHaveAttribute('aria-current', 'page');
   });
+
+  test('nút Tạo ca dạy dùng màu nhấn #0F766E', async ({ page }) => {
+    await page.goto('/calendar');
+    const btn = page.getByRole('button', { name: 'Tạo ca dạy' }).first();
+    await expect(btn).toBeVisible();
+    await expect(btn).toHaveCSS('background-color', 'rgb(15, 118, 110)');
+  });
 });

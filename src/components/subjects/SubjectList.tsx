@@ -50,14 +50,14 @@ export function SubjectList() {
     <div
       key={s.id}
       data-testid="subject-card"
-      className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4"
+      className="flex items-center gap-3 rounded-lg border bg-white p-4"
     >
       <span className="size-4 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
       <span className={cn("min-w-0 flex-1 truncate font-medium", s.isActive ? "text-slate-900" : "text-slate-500")}>
         {s.name}
       </span>
       {s.isDefault && (
-        <Badge variant="outline" className="shrink-0 border-indigo-200 bg-indigo-50 text-indigo-700">
+        <Badge variant="outline" className="shrink-0 border-transparent bg-primary/[0.08] text-primary">
           {t("default_badge")}
         </Badge>
       )}

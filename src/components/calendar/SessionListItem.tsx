@@ -17,13 +17,13 @@ export function SessionListItem({ session, onClick }: Props) {
     <button
       type="button"
       onClick={() => onClick(session)}
-      className="flex w-full items-center gap-4 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.98]"
+      className="flex w-full items-center gap-4 rounded-lg border border-slate-200 bg-white p-4 text-left transition-all active:scale-[0.98]"
     >
       <div className="h-12 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: session.subject.color }} />
       <div className="min-w-0 flex-1">
         <div className="truncate font-bold text-slate-900">{getSessionLabel(session)}</div>
         <div className="mt-1.5 flex items-center gap-3 text-xs text-slate-500">
-          <div className="flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 font-medium text-indigo-600">
+          <div className="flex items-center gap-1 rounded bg-primary/[0.08] px-1.5 py-0.5 font-medium text-primary">
             <Clock className="size-3" />
             {session.startTime} - {session.endTime}
           </div>

@@ -37,9 +37,9 @@ export function ReportPeriodPicker() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="justify-between min-w-[200px] h-10 px-4 bg-white border-slate-200 hover:bg-slate-50 shadow-sm">
+        <Button variant="outline" className="justify-between min-w-[200px] h-10 px-4 bg-white border-slate-200 hover:bg-slate-50">
           <div className="flex items-center gap-2">
-            <CalendarIcon className="size-4 text-indigo-500" />
+            <CalendarIcon className="size-4 text-primary" />
             <span className="font-semibold text-slate-700">{label}</span>
           </div>
           <ChevronDown className="size-4 text-slate-400 ml-2" />
@@ -54,21 +54,21 @@ export function ReportPeriodPicker() {
                     onClick={() => setRange({ type: 'month' })}
                     className={cn(
                         "text-xs py-1.5 rounded-md transition-all font-bold",
-                        filterType === 'month' ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"
+                        filterType === 'month' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
                     )}
                 >{t("month")}</button>
                 <button
                     onClick={() => setRange({ type: 'year' })}
                     className={cn(
                         "text-xs py-1.5 rounded-md transition-all font-bold",
-                        filterType === 'year' ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"
+                        filterType === 'year' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
                     )}
                 >{t("year")}</button>
                 <button
                     onClick={() => setRange({ type: 'range' })}
                     className={cn(
                         "text-xs py-1.5 rounded-md transition-all font-bold",
-                        filterType === 'range' ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"
+                        filterType === 'range' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
                     )}
                 >{t("range")}</button>
             </div>

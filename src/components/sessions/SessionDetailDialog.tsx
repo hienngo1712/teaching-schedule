@@ -224,7 +224,7 @@ export function SessionDetailDialog({
         <DialogContent className="w-full h-full max-w-none content-start sm:h-auto sm:max-w-[600px] sm:max-h-[90vh] overflow-y-auto sm:rounded-lg top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
           {isLoading || !session ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="size-8 animate-spin text-indigo-500" />
+              <Loader2 className="size-8 animate-spin text-primary" />
               <p className="text-sm text-slate-500 font-medium">{t("loading_details")}</p>
             </div>
           ) : (

@@ -119,12 +119,12 @@ export function MonthCalendar() {
       <div className="hidden flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 md:flex">
         <LegendItem className="border-blue-500 bg-blue-50" label={t("primary_school")} />
         <LegendItem className="border-emerald-500 bg-emerald-50" label={t("secondary_school")} />
-        <LegendItem className="border-indigo-500 bg-indigo-50" label={t("level_mixed")} />
+        <LegendItem className="border-slate-500 bg-slate-100" label={t("level_mixed")} />
         <LegendItem className="border-red-300 bg-red-50" label={t("cancelled_label")} />
       </div>
 
       {/* Desktop Grid View */}
-      <div className="hidden md:grid border rounded-lg overflow-hidden bg-slate-200 grid-cols-7 gap-px shadow-sm">
+      <div className="hidden md:grid border rounded-lg overflow-hidden bg-slate-200 grid-cols-7 gap-px">
         {DAY_NAMES.map((name) => (
           <div
             key={name}
@@ -151,7 +151,7 @@ export function MonthCalendar() {
       {/* Mobile Responsive View (Grid + Daily List) */}
       <div className="md:hidden space-y-6">
         {/* Mini Calendar Grid */}
-        <div className="border rounded-xl overflow-hidden bg-slate-200 grid grid-cols-7 gap-px shadow-sm">
+        <div className="border rounded-xl overflow-hidden bg-slate-200 grid grid-cols-7 gap-px">
           {DAY_NAMES.map((name) => (
             <div
               key={name}
@@ -175,13 +175,13 @@ export function MonthCalendar() {
                     className={cn(
                       "relative h-14 bg-white flex flex-col items-center justify-center gap-1 transition-colors",
                       !cell.isCurrentMonth && "bg-slate-50 opacity-20",
-                      isSelected && "bg-indigo-50 ring-2 ring-inset ring-indigo-500 z-10",
+                      isSelected && "bg-primary/[0.08] ring-2 ring-inset ring-primary z-10",
                       cell.isToday && !isSelected && "bg-orange-50/50"
                     )}
                   >
                     <span className={cn(
                       "text-sm font-semibold",
-                      isSelected ? "text-indigo-700" : "text-slate-600",
+                      isSelected ? "text-primary" : "text-slate-600",
                       cell.isToday && !isSelected && "text-orange-600"
                     )}>
                       {cell.dayNumber}
@@ -190,7 +190,7 @@ export function MonthCalendar() {
                     {cell.sessions.length > 0 && (
                       <div className={cn(
                         "size-1.5 rounded-full",
-                        isSelected ? "bg-indigo-500" : "bg-slate-300"
+                        isSelected ? "bg-primary" : "bg-slate-300"
                       )} />
                     )}
                   </button>
@@ -202,7 +202,7 @@ export function MonthCalendar() {
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="font-bold text-slate-900 flex items-center gap-2">
-              <div className="size-2 rounded-full bg-indigo-500" />
+              <div className="size-2 rounded-full bg-primary" />
               {t("schedule_of")} {dayjs(selectedMobileDate).format("DD/MM/YYYY")}
             </h3>
             {selectedDateSessions.length > 0 && (
@@ -220,7 +220,7 @@ export function MonthCalendar() {
                 </p>
                 <button
                   onClick={() => handleEmptyClick(selectedMobileDate)}
-                  className="mt-3 text-xs font-semibold text-indigo-600 hover:underline"
+                  className="mt-3 text-xs font-semibold text-primary hover:underline"
                 >
                   {t("add_session")}
                 </button>

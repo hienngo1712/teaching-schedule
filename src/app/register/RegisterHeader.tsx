@@ -10,7 +10,7 @@ export function RegisterHeader() {
   return (
     <CardHeader className="text-center space-y-2">
       <div className="flex justify-center">
-        <div className="size-12 rounded-lg bg-indigo-600 flex items-center justify-center">
+        <div className="size-12 rounded-lg bg-primary flex items-center justify-center">
           <GraduationCap className="size-6 text-white" />
         </div>
       </div>

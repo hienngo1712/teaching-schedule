@@ -127,7 +127,7 @@ export function StudentScheduleView({
       </div>
 
       <div ref={exportRef} className="space-y-4">
-        <Card className="border-slate-200 shadow-md bg-white">
+        <Card className="bg-white">
           <CardHeader className="bg-slate-50 border-b rounded-t-lg">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -140,7 +140,7 @@ export function StudentScheduleView({
                 </div>
               </div>
               <div className="text-right">
-                <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50 font-bold px-3 py-1 text-sm">
+                <Badge variant="outline" className="text-primary border-transparent bg-primary/[0.08] font-bold px-3 py-1 text-sm">
                   {t("attendance_rate_with_colon")} {summary.rate}%
                 </Badge>
               </div>
@@ -215,7 +215,7 @@ export function StudentScheduleView({
               {summary.late > 0 && (
                 <span>{t("late")} <span className="text-amber-600 font-bold">{summary.late}</span></span>
               )}
-              <span>{t("expected_revenue")}: <span className="text-indigo-600 font-bold">{formatCurrency(summary.expectedFee)}</span></span>
+              <span>{t("expected_revenue")}: <span className="text-primary font-bold">{formatCurrency(summary.expectedFee)}</span></span>
               <span>{t("actual_revenue")}: <span className="text-emerald-600 font-bold">{formatCurrency(summary.totalFee)}</span></span>
             </div>
             <div className="text-slate-400 italic">
@@ -225,10 +225,10 @@ export function StudentScheduleView({
         </Card>
 
         <div className="mt-6 export-hide pb-6">
-          <Card className="border-slate-200 shadow-sm bg-white">
+          <Card className="bg-white">
             <CardHeader className="py-4">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Wallet className="size-5 text-indigo-600" />
+                <Wallet className="size-5 text-primary" />
                 {t("tuition_status")}
               </CardTitle>
             </CardHeader>
@@ -277,7 +277,7 @@ function TuitionStatusCard({ studentId, year, month }: { studentId: number, year
         <p className="text-sm text-slate-500 font-medium">{t("paid")}</p>
         <p className={cn(
           "text-xl font-bold mt-1",
-          status.isFullPaid ? "text-green-600" : status.paidAmount > 0 ? "text-amber-600" : "text-red-600"
+          status.isFullPaid ? "text-green-600" : status.paidAmount > 0 ? "text-amber-600" : "text-debt"
         )}>
           {formatCurrency(status.paidAmount)}
         </p>
