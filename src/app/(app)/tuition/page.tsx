@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { GRADES } from "@/lib/constants"
-import { formatCurrency } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
+import { getTuitionBadgeStatus, type TuitionBadgeStatus } from "@/lib/tuition-status"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
 import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
 import { TuitionStatusBadge } from "@/components/tuition/TuitionStatusBadge"
@@ -28,6 +29,14 @@ import type { MonthlyTuitionFilterInput } from "@/lib/schemas/tuition"
 
 
 type TuitionStatusItem = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
+
+const SETTLED: TuitionBadgeStatus[] = ["fully_paid", "overpaid", "settled_waived"]
+
+// Chỉ "chưa đóng" tô đỏ nợ; đã đủ thì lùi về chữ phụ để mắt dồn vào HS còn phải thu.
+function amountClass(status: TuitionBadgeStatus) {
+  if (status === "unpaid") return "text-debt"
+  return SETTLED.includes(status) ? "text-muted-foreground" : "text-foreground"
+}
 
 export default function TuitionPage() {
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
@@ -85,7 +94,7 @@ export default function TuitionPage() {
   const payButton = (item: TuitionStatusItem, className?: string) => (
     <Button
       size="sm"
-      variant="outline"
+      variant={SETTLED.includes(getTuitionBadgeStatus(item)) ? "outline" : "default"}
       className={className}
       onClick={(e) => {
         e.stopPropagation()
@@ -213,7 +222,7 @@ export default function TuitionPage() {
             tabIndex={0}
             onClick={() => handleOpenDetail(item)}
             onKeyDown={(e) => e.target === e.currentTarget && e.key === "Enter" && handleOpenDetail(item)}
-            className="rounded-lg border border-slate-200 bg-white p-4 transition-transform active:scale-[0.98]"
+            className="rounded-lg border bg-white p-4 transition-transform active:scale-[0.98]"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -232,7 +241,12 @@ export default function TuitionPage() {
             <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-3">
               <div>
                 <div className="text-xs text-slate-500">{t("amount_to_pay")}</div>
-                <div className="whitespace-nowrap text-lg font-medium text-slate-900">
+                <div
+                  className={cn(
+                    "whitespace-nowrap text-[17px] font-semibold tabular-nums tracking-tight",
+                    amountClass(getTuitionBadgeStatus(item))
+                  )}
+                >
                   {formatCurrency(item.totalAmountDue)}
                 </div>
               </div>

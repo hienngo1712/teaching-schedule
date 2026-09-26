@@ -163,7 +163,7 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
                   className={cn(
                     "font-medium",
                     row.previousBalance > 0
-                      ? "text-red-600"
+                      ? "text-debt"
                       : row.previousBalance < 0
                       ? "text-green-600"
                       : "text-slate-400"
@@ -201,7 +201,7 @@ function TuitionDetailBody({ data, onSaved }: { data: SheetData; onSaved: () => 
                       : summary.kind === "waived"
                       ? "text-teal-700"
                       : summary.amount > 0
-                      ? "text-red-600"
+                      ? "text-debt"
                       : "text-slate-400"
                   )}
                 >
