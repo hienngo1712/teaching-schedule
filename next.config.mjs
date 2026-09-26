@@ -18,6 +18,18 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_SHA: sha,
     NEXT_PUBLIC_BUILD_TIME: buildTime,
   },
+  // Trang phụ huynh: chặn máy tìm kiếm và không để token rò qua header Referer.
+  async headers() {
+    return [
+      {
+        source: "/p/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
+    ]
+  },
 };
 
 export default nextConfig;
