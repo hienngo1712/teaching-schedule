@@ -35,6 +35,7 @@ const HEADERS: Record<string, string[]> = {
     "Hình thức", "Ghi chú", "Ngày tạo", "Cập nhật lần cuối",
   ],
   "Lịch sử lên lớp": ["ID", "Năm học", "Thời điểm chạy", "Cách chạy", "Số HS lên lớp", "Số HS cho nghỉ"],
+  "Cài đặt": ["Mục", "Giá trị"],
 }
 
 // Số bản ghi của user theo đúng điều kiện chủ sở hữu ở spec mục 6.3.
@@ -185,7 +186,7 @@ describe("buildBackupWorkbook", () => {
 
   it("đủ sheet đúng thứ tự, dòng 1 đúng tiêu đề", async () => {
     const wb = await loadBackup(teacherId)
-    expect(wb.worksheets.map((ws) => ws.name)).toEqual(["Thông tin", ...DATA_SHEETS])
+    expect(wb.worksheets.map((ws) => ws.name)).toEqual(["Thông tin", ...DATA_SHEETS, "Cài đặt"])
     for (const ws of wb.worksheets) {
       expect(headersOf(ws), ws.name).toEqual(HEADERS[ws.name])
     }
@@ -268,7 +269,7 @@ describe("buildBackupWorkbook", () => {
   it("user chưa có dữ liệu: đủ sheet, chỉ có dòng tiêu đề", async () => {
     const empty = await db.user.create({ data: { username: "backup_empty", passwordHash: "x" } })
     const wb = await loadBackup(empty.id)
-    expect(wb.worksheets.map((ws) => ws.name)).toEqual(["Thông tin", ...DATA_SHEETS])
+    expect(wb.worksheets.map((ws) => ws.name)).toEqual(["Thông tin", ...DATA_SHEETS, "Cài đặt"])
     for (const name of DATA_SHEETS) {
       expect(sheet(wb, name).actualRowCount, name).toBe(1)
       expect(infoValue(wb, `Số dòng: ${name}`), name).toBe(0)
@@ -342,5 +343,25 @@ describe("buildBackupWorkbook", () => {
     const at = cellOf(ws, log.id, "Thời điểm chạy")
     expect((at.value as Date).getTime()).toBe(log.executedAt.getTime() + 7 * 60 * 60 * 1000)
     expect(at.numFmt).toBe("dd/mm/yyyy hh:mm")
+  })
+
+  it("Cài đặt: ngân hàng, số tài khoản giữ số 0, tên chủ tài khoản", async () => {
+    await db.user.update({
+      where: { id: teacherId },
+      data: { bankBin: "970436", bankAccountNumber: "0011223344", bankAccountName: "NGUYEN VAN A" },
+    })
+    const ws = sheet(await loadBackup(teacherId), "Cài đặt")
+    const rows = new Map<string, ExcelJS.Cell>()
+    for (let r = 2; r <= ws.rowCount; r++) rows.set(String(ws.getRow(r).getCell(1).value), ws.getRow(r).getCell(2))
+    expect(rows.get("Ngân hàng")?.value).toBe("Vietcombank")
+    expect(rows.get("Số tài khoản")?.value).toBe("0011223344")
+    expect(rows.get("Số tài khoản")?.numFmt).toBe("@")
+    expect(rows.get("Tên chủ tài khoản")?.value).toBe("NGUYEN VAN A")
+  })
+
+  it("Cài đặt: chưa cài ngân hàng thì các ô giá trị để trống", async () => {
+    const empty = await db.user.findUniqueOrThrow({ where: { username: "backup_empty" } })
+    const ws = sheet(await loadBackup(empty.id), "Cài đặt")
+    for (let r = 2; r <= ws.rowCount; r++) expect(ws.getRow(r).getCell(2).value).toBeNull()
   })
 })

@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client"
 import { ATTENDANCE_LABEL } from "@/lib/constants"
 import { formatDayOfWeek, formatTime } from "@/lib/utils"
 import type { PAYMENT_METHODS } from "@/lib/schemas/payment"
+import { findBank } from "@/lib/vn-banks"
 
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const HEADER_BG = "FFE0E7FF"
@@ -87,7 +88,7 @@ export async function buildBackupWorkbook(
   const [user, students, subjects, sessions, attendances, tuitions, payments, upgradeLogs] = await Promise.all([
     db.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { username: true, fullName: true },
+      select: { username: true, fullName: true, bankBin: true, bankAccountNumber: true, bankAccountName: true },
     }),
     db.student.findMany({
       where: { userId },
@@ -262,6 +263,15 @@ export async function buildBackupWorkbook(
   for (const [name, n] of counts) info.addRow([`Số dòng: ${name}`, n])
   info.addRow(["Lưu ý", NOTE_READONLY])
   info.addRow(["Lưu ý", NOTE_TUITION])
+
+  // Chỉ các field hiện trên trang Cài đặt; không bao giờ thêm mật khẩu/token vào đây.
+  const settings = wb.addWorksheet("Cài đặt", { views: [{ state: "frozen", ySplit: 1 }] })
+  settings.columns = [{ header: "Mục", width: 32 }, { header: "Giá trị", width: 40 }]
+  styleHeader(settings)
+  const bankName = user.bankBin ? (findBank(user.bankBin)?.shortName ?? user.bankBin) : null
+  settings.addRow(["Ngân hàng", bankName])
+  settings.addRow(["Số tài khoản", user.bankAccountNumber ?? null]).getCell(2).numFmt = NUM_FMT.phone!
+  settings.addRow(["Tên chủ tài khoản", user.bankAccountName ?? null])
 
   return wb
 }
