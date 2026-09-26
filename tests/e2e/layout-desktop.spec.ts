@@ -68,4 +68,20 @@ test.describe('Sidebar desktop 1280px', () => {
     await expect(btn).toBeVisible();
     await expect(btn).toHaveCSS('background-color', 'rgb(15, 118, 110)');
   });
+
+  // Lưới lịch nền slate-200 (làm vạch kẻ): ô hôm nay tô màu nhấn trong suốt sẽ lộ nền xám.
+  test('ô hôm nay trên lịch nền trắng phủ màu nhấn nhạt', async ({ page }) => {
+    await page.goto('/calendar');
+    const today = page.locator('.calendar-day-cell--today').first();
+    await expect(today).toBeVisible();
+    await expect(today).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(today).toHaveCSS('background-image', /rgba\(15, 118, 110, 0\.08\)/);
+  });
+});
+
+// Biến --font-geist-sans gắn ở <body>; nếu font-family chỉ đặt ở <html> (preflight) thì var() rỗng → rơi về serif.
+test('chữ toàn app dùng Geist, không rơi về serif', async ({ page }) => {
+  await page.goto('/login');
+  const family = await page.evaluate(() => getComputedStyle(document.querySelector('h1, h2, button')!).fontFamily);
+  expect(family).toMatch(/geist/i);
 });

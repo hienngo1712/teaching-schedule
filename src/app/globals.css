@@ -48,7 +48,8 @@
   @apply min-h-[120px] p-2 bg-white flex flex-col gap-1;
 }
 .calendar-day-cell--today {
-  @apply bg-primary/[0.08] ring-1 ring-inset ring-primary/40;
+  /* Phủ màu nhấn bằng gradient trên nền trắng: tô thẳng bg trong suốt sẽ lộ nền slate-200 của lưới. */
+  @apply bg-gradient-to-b from-primary/[0.08] to-primary/[0.08] ring-1 ring-inset ring-primary/40;
 }
 .calendar-day-cell--outside {
   @apply bg-gray-50 opacity-40;

@@ -175,7 +175,9 @@ export function MonthCalendar() {
                     className={cn(
                       "relative h-14 bg-white flex flex-col items-center justify-center gap-1 transition-colors",
                       !cell.isCurrentMonth && "bg-slate-50 opacity-20",
-                      isSelected && "bg-primary/[0.08] ring-2 ring-inset ring-primary z-10",
+                      // Gradient trên nền trắng (bg trong suốt lộ nền slate-200 của lưới); viết arbitrary vì
+                      // twMerge coi bg-gradient-to-* trùng nhóm bg-white và xoá nền trắng.
+                      isSelected && "bg-[linear-gradient(hsl(var(--primary)/0.08),hsl(var(--primary)/0.08))] ring-2 ring-inset ring-primary z-10",
                       cell.isToday && !isSelected && "bg-orange-50/50"
                     )}
                   >

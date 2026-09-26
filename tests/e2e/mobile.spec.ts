@@ -24,6 +24,8 @@ async function openMore(page: Page) {
   await mainNav(page).getByRole('button', { name: 'Thêm', exact: true }).click();
   const sheet = page.getByRole('dialog', { name: 'Thêm' });
   await expect(sheet).toBeVisible();
+  // Đo khi sheet còn trượt vào thì toạ độ lẻ làm chiều cao ra 55.9999 → chờ animation xong.
+  await sheet.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   return sheet;
 }
 
@@ -109,6 +111,15 @@ test.describe('Mobile 390px', () => {
     await page.goto('/calendar');
     await expect(page.getByRole('button', { name: 'Tạo ca dạy' }).first()).toBeVisible();
     await expect(page.getByText('Hỗn hợp')).toBeHidden();
+  });
+
+  // Lưới lịch mini nền slate-200: ô đang chọn tô màu nhấn trong suốt sẽ lộ nền xám.
+  test('ô ngày đang chọn trên lịch mini nền trắng phủ màu nhấn nhạt', async ({ page }) => {
+    await page.goto('/calendar');
+    const selected = page.locator('button.ring-primary').filter({ visible: true }).first();
+    await expect(selected).toBeVisible();
+    await expect(selected).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(selected).toHaveCSS('background-image', /rgba\(15, 118, 110, 0\.08\)/);
   });
 
   // Seed không có học sinh → test tự tạo HS (tên dài để thử truncate), tạo ca gắn HS đó, rồi tự dọn.
