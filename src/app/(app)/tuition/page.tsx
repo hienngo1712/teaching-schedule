@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ChevronLeft, ChevronRight, Receipt, Wallet } from "lucide-react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
@@ -31,7 +31,7 @@ type TuitionStatusItem = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][n
 
 export default function TuitionPage() {
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
-  const { selectedGrade, setGrade, searchStudentName, setSearch, selectedStatus, setStatus } = useFilters()
+  const { selectedGrade, setGrade, searchStudentName, setSearch, selectedStatus, setStatus, selectedStudentId } = useFilters()
 
   const [selectedStudent, setSelectedStudent] = useState<(TuitionStatusItem & { year: number; month: number }) | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -64,6 +64,17 @@ export default function TuitionPage() {
     setSelectedStudent({ ...item, year, month })
     setIsSheetOpen(true)
   }
+
+  // Link từ Dashboard có studentId: mở sheet đúng HS một lần (tra theo id vì tên có thể trùng).
+  const autoOpenedId = useRef<number | null>(null)
+  useEffect(() => {
+    if (!selectedStudentId || autoOpenedId.current === selectedStudentId) return
+    const item = query.data?.items.find((i) => i.studentId === selectedStudentId)
+    if (!item) return
+    autoOpenedId.current = selectedStudentId
+    setSelectedStudent({ ...item, year, month })
+    setIsSheetOpen(true)
+  }, [selectedStudentId, query.data, year, month])
 
   const offset = (currentPage - 1) * pageSize
   const payButton = (item: TuitionStatusItem, className?: string) => (
