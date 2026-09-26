@@ -5,9 +5,12 @@ import { assertOwnership } from "./_base.service"
 import type {
   StudentCreateInput,
   StudentFilterInput,
+  StudentImportCheckInput,
+  StudentImportInput,
 } from "@/lib/schemas/student"
 import type { PaginatedResponse } from "@/lib/schemas/common"
 import type { StudentDTO } from "@/lib/types/models"
+import { nameKey, type ExistingMatch } from "@/lib/student-import"
 
 function withLevel<T extends { grade: number }>(s: T): T & { level: "tieu_hoc" | "thcs" } {
   return { ...s, level: getLevel(s.grade) }
@@ -70,6 +73,70 @@ export async function createStudent(
     },
   })
   return withLevel(student)
+}
+
+// Gồm cả HS đã nghỉ (spec E D3). Cùng khóa nhiều em → ưu tiên em đang học.
+async function findExistingByKey(
+  db: Prisma.TransactionClient,
+  userId: number,
+  rows: { fullName: string; grade: number }[]
+): Promise<Map<string, ExistingMatch>> {
+  const map = new Map<string, ExistingMatch>()
+  if (rows.length === 0) return map
+  const existing = await db.student.findMany({
+    where: { userId, grade: { in: [...new Set(rows.map((r) => r.grade))] } },
+    select: { id: true, fullName: true, grade: true, isActive: true },
+    orderBy: [{ isActive: "desc" }, { id: "asc" }],
+  })
+  for (const s of existing) {
+    const key = nameKey(s.fullName, s.grade)
+    if (!map.has(key)) map.set(key, s)
+  }
+  return map
+}
+
+export async function checkImportDuplicates(
+  db: PrismaClient,
+  userId: number,
+  rows: StudentImportCheckInput["rows"]
+): Promise<{ matches: (ExistingMatch | null)[] }> {
+  const existing = await findExistingByKey(db, userId, rows)
+  return { matches: rows.map((r) => existing.get(nameKey(r.fullName, r.grade)) ?? null) }
+}
+
+export async function importStudents(
+  db: PrismaClient,
+  userId: number,
+  rows: StudentImportInput["rows"]
+): Promise<{ created: number }> {
+  return db.$transaction(async (tx) => {
+    // Kiểm tra trùng lại lúc ghi: bấm 2 lần / thử lại sau lỗi mạng không sinh bản sao.
+    const existing = await findExistingByKey(tx, userId, rows)
+    const seen = new Set<string>()
+    for (const r of rows) {
+      const key = nameKey(r.fullName, r.grade)
+      if ((existing.has(key) || seen.has(key)) && !r.allowDuplicate) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Danh sách đã thay đổi, hãy chọn lại file để kiểm tra.",
+        })
+      }
+      seen.add(key)
+    }
+    const { count } = await tx.student.createMany({
+      data: rows.map((r) => ({
+        userId,
+        fullName: r.fullName,
+        grade: r.grade,
+        parentPhone: r.parentPhone ?? null,
+        parentName: r.parentName ?? null,
+        notes: r.notes ?? null,
+        tuitionFee: r.tuitionFee,
+        isActive: true,
+      })),
+    })
+    return { created: count }
+  })
 }
 
 export async function updateStudent(
