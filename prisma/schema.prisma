@@ -20,11 +20,15 @@ model User {
   bankBin           String?           @map("bank_bin") @db.VarChar(8)
   bankAccountNumber String?           @map("bank_account_number") @db.VarChar(19)
   bankAccountName   String?           @map("bank_account_name") @db.VarChar(50)
+  plan              String            @default("standard") @map("plan") @db.VarChar(10)
+  planExpiresAt     DateTime?         @map("plan_expires_at")
+  trialEndsAt       DateTime?         @map("trial_ends_at")
   loginAttempts LoginAttempt[]
   students      Student[]
   subjects      Subject[]
   sessions      TeachingSession[]
   classUpgradeLogs ClassUpgradeLog[]
+  planOrders    PlanOrder[]
 
   @@map("users")
 }
@@ -181,4 +185,27 @@ model ClassUpgradeLog {
   @@unique([userId, year])
   @@index([userId])
   @@map("class_upgrade_logs")
+}
+
+model PlanOrder {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  plan         String    @db.VarChar(10)
+  period       String?   @db.VarChar(5)
+  amount       Int
+  code         String?   @unique @db.VarChar(8)
+  status       String    @db.VarChar(10)
+  source       String    @default("user") @db.VarChar(10)
+  bonusMonths  Int       @default(0) @map("bonus_months")
+  creditDays   Int       @default(0) @map("credit_days")
+  grantedUntil DateTime? @map("granted_until")
+  note         String?
+  decidedBy    String?   @map("decided_by") @db.VarChar(50)
+  decidedAt    DateTime? @map("decided_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  user         User      @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("plan_orders")
 }
