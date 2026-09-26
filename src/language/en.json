@@ -334,5 +334,14 @@
   "account_name": "Account holder",
   "bank_saved": "Bank account saved",
   "clear_bank": "Clear",
-  "clear_bank_confirm": "Clear bank details? Notices will no longer have a QR code."
+  "clear_bank_confirm": "Clear bank details? Notices will no longer have a QR code.",
+  "alerts_title": "Needs attention",
+  "alert_debt_title": "Unpaid from previous months",
+  "alert_debt_desc": "Active students with earlier unpaid tuition",
+  "alert_debt_months": "{n} month(s) overdue",
+  "alert_idle_title": "No recent sessions",
+  "alert_idle_desc": "No sessions in the past 14 or next 7 days",
+  "alert_unrescheduled_title": "Cancelled, no makeup",
+  "alert_unrescheduled_desc": "Cancelled in the last 60 days without a makeup",
+  "alert_view_all": "View all ({n})"
 }

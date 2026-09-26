@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatCard } from "@/components/common/StatCard"
 import { TodaySessions } from "@/components/dashboard/TodaySessions"
+import { DashboardAlerts } from "@/components/dashboard/DashboardAlerts"
 import { trpc } from "@/lib/trpc"
 import { cn, formatCurrency } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -86,6 +87,8 @@ export default function DashboardPage() {
       <Button variant="ghost" className="h-11 w-full md:hidden" onClick={() => setShowMore((v) => !v)}>
         {showMore ? t("show_less_stats") : t("show_more_stats")}
       </Button>
+
+      <DashboardAlerts />
 
       <TodaySessions />
     </div>

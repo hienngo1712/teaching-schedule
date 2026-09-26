@@ -334,5 +334,14 @@
   "account_name": "Tên chủ tài khoản",
   "bank_saved": "Đã lưu tài khoản ngân hàng",
   "clear_bank": "Xoá thông tin",
-  "clear_bank_confirm": "Xoá thông tin tài khoản? Phiếu báo sẽ không còn mã QR."
+  "clear_bank_confirm": "Xoá thông tin tài khoản? Phiếu báo sẽ không còn mã QR.",
+  "alerts_title": "Cần chú ý",
+  "alert_debt_title": "Còn nợ tháng trước",
+  "alert_debt_desc": "Học sinh đang học còn nợ học phí cũ",
+  "alert_debt_months": "Nợ {n} tháng",
+  "alert_idle_title": "Lâu không có ca",
+  "alert_idle_desc": "Không có ca trong 14 ngày qua và 7 ngày tới",
+  "alert_unrescheduled_title": "Ca nghỉ chưa xếp bù",
+  "alert_unrescheduled_desc": "Ca huỷ trong 60 ngày gần đây chưa có ca bù",
+  "alert_view_all": "Xem tất cả ({n})"
 }
