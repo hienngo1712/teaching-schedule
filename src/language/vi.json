@@ -488,6 +488,7 @@
   "admin_note": "Ghi chú",
   "admin_no_pending": "Không có đơn chờ",
   "admin_approve_confirm": "Xác nhận đơn {code}? Gói {plan} dùng đến hết ngày {date}.",
+  "admin_reject_confirm": "Từ chối đơn {code}? Tài khoản giữ nguyên gói hiện tại.",
   "admin_credit_days": "Gồm {days} ngày quy đổi từ Plus.",
   "admin_trial_note": "Tài khoản còn dùng thử Pro tới hết ngày {date}. Đặt gói thấp hơn vẫn hiện Pro tới lúc đó.",
   "admin_col_created": "Ngày tạo",

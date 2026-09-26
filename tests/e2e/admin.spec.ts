@@ -86,3 +86,26 @@ test('teacher vào /admin → 404; admin_test thấy link Trang quản trị ở
   await expect(admin.getByTestId('admin-link')).toBeVisible();
   await admin.context().close();
 });
+
+test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn chờ, xác nhận thì đơn bị từ chối', async ({ browser }) => {
+  const std = await db.user.findUniqueOrThrow({ where: { username: 'teacher_std' } });
+  const code = 'RJ' + Array.from({ length: 4 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('');
+  const order = await db.planOrder.create({ data: { userId: std.id, plan: 'plus', period: 'month', amount: 49000, code, status: 'pending' } });
+
+  const admin = await loginAs(browser, 'admin_test');
+  await admin.goto('/admin');
+  const card = admin.getByTestId('pending-order-card').filter({ hasText: code });
+  await card.getByRole('button', { name: 'Từ chối' }).click();
+  const confirm = admin.getByRole('alertdialog');
+  await expect(confirm).toContainText(code);
+  await confirm.getByRole('button', { name: 'Hủy' }).click();
+  await expect(confirm).toBeHidden();
+  expect((await db.planOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('pending');
+
+  await card.getByRole('button', { name: 'Từ chối' }).click();
+  await confirm.getByRole('button', { name: 'Từ chối' }).click();
+  await expect(admin.getByText('Đã từ chối đơn')).toBeVisible();
+  await expect(card).toHaveCount(0);
+  expect((await db.planOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('rejected');
+  await admin.context().close();
+});

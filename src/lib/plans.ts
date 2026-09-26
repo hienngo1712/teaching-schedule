@@ -59,7 +59,7 @@ export function featuresAddedIn(plan: Plan): PlanFeatureId[] {
 
 export type PlanFields = { plan: string; planExpiresAt: Date | null; trialEndsAt: Date | null }
 export type EffectivePlan = { plan: Plan; source: PlanSource; expiresAt: Date | null }
-export type CreditOrder = { amount: number; period: string | null }
+export type CreditOrder = { amount: number; period: string | null; bonusMonths: number }
 export type PlanBannerState = { kind: "trial_ending" | "expired"; plan: Plan; days: number; key: string }
 export type RenewOfferState = {
   plan: PaidPlan
@@ -190,7 +190,8 @@ export function computeUpgradeCredit(
   const none = { remainingValue: 0, creditDays: 0 }
   if (u.plan !== "plus" || !u.planExpiresAt || u.planExpiresAt <= now) return none
   if (!lastPlusOrder || lastPlusOrder.amount <= 0 || !isPeriod(lastPlusOrder.period)) return none
-  const totalDays = PERIOD_DAYS[lastPlusOrder.period]
+  // Tháng tặng nằm trong số ngày đơn đã mua, không tính thì dùng hết phần tặng rồi vẫn quy đổi đủ tiền.
+  const totalDays = PERIOD_DAYS[lastPlusOrder.period] + Math.round((lastPlusOrder.bonusMonths * 365) / 12)
   const left = Math.round((u.planExpiresAt.getTime() - vnStartOfDay(now).getTime()) / DAY_MS)
   const remainingDays = Math.min(totalDays, left)
   const remainingValue = Math.round((lastPlusOrder.amount * remainingDays) / totalDays)

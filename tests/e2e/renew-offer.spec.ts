@@ -60,7 +60,9 @@ test('Plus còn 45 ngày: popup giữa màn hình 1 lần/ngày; đóng xong nú
 
   const renew = page.getByRole('banner').getByRole('button', { name: 'Gia hạn' });
   await expect(renew).toBeVisible();
-  expect((await renew.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  const renewBox = (await renew.boundingBox())!;
+  expect(renewBox.height).toBeGreaterThanOrEqual(44);
+  expect(renewBox.width).toBeGreaterThanOrEqual(44);
 
   // Cùng ngày VN: tải lại / chuyển màn không tự hiện lại.
   await page.reload();

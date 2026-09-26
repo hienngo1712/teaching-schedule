@@ -66,7 +66,7 @@ export function RenewOffer() {
 
   return (
     <>
-      <Button type="button" aria-label={t("plan_renew")} className="h-11 gap-1.5 px-3 md:h-10" onClick={() => setOpen(true)}>
+      <Button type="button" aria-label={t("plan_renew")} className="h-11 min-w-11 gap-1.5 px-3 md:h-10" onClick={() => setOpen(true)}>
         <RefreshCw aria-hidden className="size-4" />
         <span className="hidden sm:inline">{t("plan_renew")}</span>
       </Button>

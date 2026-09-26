@@ -84,6 +84,9 @@ export async function getAdminOverview(db: PrismaClient) {
 export async function approveOrder(db: PrismaClient, admin: string, id: number): Promise<{ grantedUntil: Date; creditDays: number }> {
   const now = new Date()
   const result = await db.$transaction(async (tx) => {
+    // Khóa user trước khi chốt đơn (cùng thứ tự với createOrder, tránh deadlock): 2 đơn duyệt cùng lúc không ghi đè hạn nhau.
+    const owner = await tx.planOrder.findUnique({ where: { id }, select: { userId: true } })
+    if (owner) await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(owner.userId)})`
     // Chốt trạng thái trước: bấm 2 lần / 2 tab thì lần sau count = 0.
     const claimed = await tx.planOrder.updateMany({
       where: { id, status: "pending" },

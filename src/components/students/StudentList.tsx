@@ -208,16 +208,18 @@ export function StudentList() {
         actions={
           <>
             <UpgradeAllClassesButton />
-            {importGate.locked ? (
+            {/* Chưa biết gói: nút tạm vô hiệu (không mở dialog nhập, cũng không popup nâng cấp nhầm). */}
+            {!importGate.allowed ? (
               <Button
                 variant="outline"
+                disabled={!importGate.locked}
                 onClick={importGate.openUpgrade}
                 aria-label={t("import_excel")}
                 className="h-11 gap-1.5 px-3 md:h-10 md:px-4"
               >
                 <FileSpreadsheet className="size-4 text-green-600" />
                 <span className="hidden sm:inline">{t("import_excel")}</span>
-                <LockBadge plan={importGate.requiredPlan} />
+                {importGate.locked && <LockBadge plan={importGate.requiredPlan} />}
               </Button>
             ) : (
               <ImportStudentsButton />
@@ -360,7 +362,7 @@ export function StudentList() {
           key={parentLinkTarget.id}
           student={parentLinkTarget}
           onOpenChange={(open) => !open && setParentLinkTarget(null)}
-          canGenerate={!linkGate.locked}
+          canGenerate={linkGate.allowed}
         />
       )}
 

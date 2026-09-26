@@ -237,7 +237,7 @@ describe("paidDaysLeft / computeBonusMonths (spec 6.6)", () => {
     const x = paidLeft("plus", 45)
     expect(computeBonusMonths(x, "pro", "year", NOW)).toBe(2)
     // 490.000 × 45/365 = 60.411đ → floor(60.411 × 365 / 990.000) = 22 ngày Pro.
-    expect(computeUpgradeCredit(x, { amount: 490000, period: "year" }, "year", NOW)).toEqual({ remainingValue: 60411, creditDays: 22 })
+    expect(computeUpgradeCredit(x, { amount: 490000, period: "year", bonusMonths: 0 }, "year", NOW)).toEqual({ remainingValue: 60411, creditDays: 22 })
   })
 })
 
@@ -245,7 +245,7 @@ describe("computeUpgradeCredit (D7 quy đổi)", () => {
   // Plus năm mua 01/01/2026 → hạn 01/01/2027. Ngày 03/03/2026 đã dùng 61 ngày, còn 304/365.
   const plusYear = u({ plan: "plus", planExpiresAt: vn("2027-01-01T00:00") })
   const now = vn("2026-03-03T10:00")
-  const order = { amount: 490000, period: "year" }
+  const order = { amount: 490000, period: "year", bonusMonths: 0 }
 
   it("ví dụ spec: còn 408.110đ → Pro năm +150 ngày, Pro tháng +123 ngày (Pro 2 năm cùng đơn giá năm)", () => {
     expect(computeUpgradeCredit(plusYear, order, "year", now)).toEqual({ remainingValue: 408110, creditDays: 150 })
@@ -253,15 +253,27 @@ describe("computeUpgradeCredit (D7 quy đổi)", () => {
     expect(computeUpgradeCredit(plusYear, order, "2year", now)).toEqual({ remainingValue: 408110, creditDays: 150 })
   })
   it("Plus tháng 49.000đ còn 10 ngày → Pro tháng +4 ngày (làm tròn xuống)", () => {
-    expect(computeUpgradeCredit(paidLeft("plus", 10), { amount: 49000, period: "month" }, "month", NOW)).toEqual({ remainingValue: 16333, creditDays: 4 })
+    expect(computeUpgradeCredit(paidLeft("plus", 10), { amount: 49000, period: "month", bonusMonths: 0 }, "month", NOW)).toEqual({ remainingValue: 16333, creditDays: 4 })
   })
   it("đơn tặng 0đ hoặc admin đặt tay (period null) → 0 ngày", () => {
-    expect(computeUpgradeCredit(plusYear, { amount: 0, period: "year" }, "year", now)).toEqual({ remainingValue: 0, creditDays: 0 })
-    expect(computeUpgradeCredit(plusYear, { amount: 490000, period: null }, "year", now)).toEqual({ remainingValue: 0, creditDays: 0 })
+    expect(computeUpgradeCredit(plusYear, { amount: 0, period: "year", bonusMonths: 0 }, "year", now)).toEqual({ remainingValue: 0, creditDays: 0 })
+    expect(computeUpgradeCredit(plusYear, { amount: 490000, period: null, bonusMonths: 0 }, "year", now)).toEqual({ remainingValue: 0, creditDays: 0 })
     expect(computeUpgradeCredit(plusYear, null, "year", now)).toEqual({ remainingValue: 0, creditDays: 0 })
   })
   it("Plus mua trong trial (còn 400 ngày) → chặn trên bằng cả kỳ: không vượt số tiền đã trả", () => {
     expect(computeUpgradeCredit(paidLeft("plus", 400), order, "year", NOW)).toEqual({ remainingValue: 490000, creditDays: 180 })
+  })
+  it("Plus 2 năm có +2 tháng tặng, đã dùng 60 ngày → tổng ngày tính cả tháng tặng, không quy đổi đủ 980.000đ", () => {
+    // Mua 01/01/2026, hạn 01/03/2028 (26 tháng = 790 ngày); 02/03/2026 còn 730 ngày trên 730 + 61.
+    const x = u({ plan: "plus", planExpiresAt: vn("2028-03-01T00:00") })
+    const r = computeUpgradeCredit(x, { amount: 980000, period: "2year", bonusMonths: 2 }, "year", vn("2026-03-02T10:00"))
+    expect(r.remainingValue).toBe(Math.round((980000 * 730) / 791))
+    expect(r.remainingValue).toBeLessThan(980000)
+  })
+  it("Plus năm gia hạn sớm +2 tháng, đã dùng 60 ngày → chia cho 365 + 61 ngày", () => {
+    const x = u({ plan: "plus", planExpiresAt: vn("2027-03-01T00:00") })
+    const r = computeUpgradeCredit(x, { amount: 490000, period: "year", bonusMonths: 2 }, "year", vn("2026-03-02T10:00"))
+    expect(r.remainingValue).toBe(Math.round((490000 * 364) / 426))
   })
   it("Plus đã hết hạn hoặc đang là Pro → 0", () => {
     expect(computeUpgradeCredit(u({ plan: "plus", planExpiresAt: vn("2026-03-01T00:00") }), order, "year", now).creditDays).toBe(0)

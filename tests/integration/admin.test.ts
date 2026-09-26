@@ -65,6 +65,15 @@ describe("admin.overview / approveOrder / rejectOrder", () => {
     expect((await db.user.findUniqueOrThrow({ where: { id: userId } })).planExpiresAt).toEqual(expected)
   })
 
+  it("duyệt 2 đơn Plus tháng cùng lúc → hạn cộng dồn 2 tháng, không ghi đè nhau", async () => {
+    const [a, b] = await Promise.all(
+      [1, 2].map(() => db.planOrder.create({ data: { userId, plan: "plus", period: "month", amount: 49000, status: "pending" } }))
+    )
+    const admin = await getAuthedCaller("admin_test")
+    await Promise.all([admin.admin.approveOrder({ id: a.id }), admin.admin.approveOrder({ id: b.id })])
+    expect((await db.user.findUniqueOrThrow({ where: { id: userId } })).planExpiresAt).toEqual(addMonthsVn(addMonthsVn(vnStartOfDay(new Date()), 1), 1))
+  })
+
   it("gia hạn cùng gói còn 10 ngày: cộng dồn từ hạn cũ, tặng 1 tháng khi mua năm (chốt lúc tạo đơn)", async () => {
     const oldExpiry = addDays(vnStartOfDay(new Date()), 10)
     await db.user.update({ where: { id: userId }, data: { plan: "plus", planExpiresAt: oldExpiry } })

@@ -288,7 +288,8 @@ export default function TuitionPage() {
         data={selectedStudent}
         // TRPCProvider tự invalidate sau mutation
         onSuccess={() => {}}
-        paymentsLocked={paymentsGate.locked}
+        // Chưa biết gói cũng coi như khóa: sheet không gọi payment.list (tránh FORBIDDEN).
+        paymentsLocked={!paymentsGate.allowed}
       />
 
       {noticeStudentId !== null && (

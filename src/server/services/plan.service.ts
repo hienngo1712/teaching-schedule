@@ -98,7 +98,7 @@ export async function findLastPlusOrder(db: Db, userId: number): Promise<CreditO
   return db.planOrder.findFirst({
     where: { userId, plan: "plus", status: "approved" },
     orderBy: [{ decidedAt: "desc" }, { id: "desc" }],
-    select: { amount: true, period: true },
+    select: { amount: true, period: true, bonusMonths: true },
   })
 }
 
@@ -185,6 +185,8 @@ export async function createOrder(
   for (let attempt = 0; ; attempt++) {
     try {
       return await db.$transaction(async (tx) => {
+        // Khóa theo userId: 2 request cùng lúc không thì cùng thấy "chưa có đơn chờ" rồi ra 2 đơn pending.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
         // D14: tối đa 1 đơn chờ, đơn mới thay đơn cũ.
         await tx.planOrder.updateMany({ where: { userId, status: "pending" }, data: { status: "cancelled" } })
         const code = generateOrderCode()

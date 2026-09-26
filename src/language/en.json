@@ -488,6 +488,7 @@
   "admin_note": "Note",
   "admin_no_pending": "No pending orders",
   "admin_approve_confirm": "Approve order {code}? {plan} will be valid through {date}.",
+  "admin_reject_confirm": "Reject order {code}? The account keeps its current plan.",
   "admin_credit_days": "Includes {days} days converted from Plus.",
   "admin_trial_note": "This account has a Pro trial through {date}. A lower plan still shows Pro until then.",
   "admin_col_created": "Created",

@@ -62,7 +62,7 @@ describe("plan.me", () => {
     await db.user.update({ where: { id: userId }, data: { plan: "plus", planExpiresAt: FAR } })
     await db.planOrder.create({ data: { userId, plan: "plus", period: "year", amount: 490000, status: "approved", decidedAt: new Date() } })
     const me = await (await getAuthedCaller("teacher_std")).plan.me()
-    expect(me.plusCreditOrder).toEqual({ amount: 490000, period: "year" })
+    expect(me.plusCreditOrder).toEqual({ amount: 490000, period: "year", bonusMonths: 0 })
   })
 })
 
@@ -116,6 +116,12 @@ describe("plan.createOrder / cancelOrder", () => {
     expect((await db.planOrder.findUniqueOrThrow({ where: { id: first.id } })).status).toBe("cancelled")
     expect(await db.planOrder.count({ where: { userId, status: "pending" } })).toBe(1)
     expect((await c.plan.me()).pendingOrder?.id).toBe(second.id)
+  })
+
+  it("2 lần tạo đơn cùng lúc → đúng 1 đơn pending", async () => {
+    const c = await getAuthedCaller("teacher_std")
+    await Promise.all([c.plan.createOrder({ plan: "plus", period: "month" }), c.plan.createOrder({ plan: "pro", period: "month" })])
+    expect(await db.planOrder.count({ where: { userId, status: "pending" } })).toBe(1)
   })
 
   it("Pro trả phí còn hạn đặt Plus → BAD_REQUEST; đặt Pro (gia hạn) vẫn được", async () => {
