@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server"
 import type { RegisterInput } from "@/lib/schemas/auth"
 import { BCRYPT_COST } from "@/server/auth-credentials"
 import { seedSubjectsForUser } from "./subject-defaults"
+import { trialEndFor } from "@/lib/plans"
 
 // Re-export để giữ tương thích cho code đang import từ module này.
 export { DEFAULT_SUBJECTS, seedSubjectsForUser } from "./subject-defaults"
@@ -27,6 +28,8 @@ export async function registerUser(db: PrismaClient, input: RegisterInput) {
         username,
         passwordHash,
         fullName: fullName || null,
+        // D4: gán ở đây (không dùng default DB) để tài khoản cũ không bị gán nhầm dùng thử.
+        trialEndsAt: trialEndFor(new Date()),
       },
     })
   } catch (err) {

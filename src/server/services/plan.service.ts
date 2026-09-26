@@ -5,6 +5,8 @@ import {
   PLAN_LABEL,
   effectivePlan,
   hasFeature,
+  minPlanForStudents,
+  studentLimit,
   type EffectivePlan,
   type Feature,
   type PaidPlan,
@@ -40,4 +42,18 @@ export async function assertFeature(db: Db, userId: number, feature: Feature): P
   if (hasFeature(plan, feature)) return
   const need = FEATURE_PLAN[feature]
   throw planRequiredError(need, `Tính năng này cần gói ${PLAN_LABEL[need]}`)
+}
+
+// D8: chỉ chặn thêm HS đang học mới / bật lại HS nghỉ; không tự tắt HS nào khi hạ gói.
+// Đếm không khóa dòng: 2 request đồng thời có thể vượt 1 HS (chấp nhận, spec mục 6.3).
+export async function assertCanActivateStudents(db: Db, userId: number, n: number): Promise<void> {
+  const { plan } = await getUserPlan(db, userId)
+  const limit = studentLimit(plan)
+  if (limit === null) return
+  const count = await db.student.count({ where: { userId, isActive: true } })
+  if (count + n <= limit) return
+  throw planRequiredError(
+    minPlanForStudents(count + n),
+    `Gói ${PLAN_LABEL[plan]} tối đa ${limit} học sinh đang học (hiện có ${count})`
+  )
 }

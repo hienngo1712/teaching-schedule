@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { publicCaller } from "../helpers/trpc"
 import { db } from "@/server/db"
+import { trialEndFor } from "@/lib/plans"
 
 describe("User Registration", () => {
   const testUser = {
@@ -53,5 +54,15 @@ describe("User Registration", () => {
       username: "valid_user",
       password: "123", // too short
     })).rejects.toThrow()
+  })
+
+  it("✓ đăng ký mới → Standard + dùng thử Pro 60 ngày (trialEndsAt = 00:00 VN ngày đăng ký + 60 ngày)", async () => {
+    const username = `test_trial_${Date.now()}`
+    const before = new Date()
+    await publicCaller.auth.register({ username, password: "Password123!", fullName: "Dùng Thử" })
+    const u = await db.user.findUniqueOrThrow({ where: { username } })
+    expect(u.plan).toBe("standard")
+    expect(u.planExpiresAt).toBeNull()
+    expect(u.trialEndsAt?.toISOString()).toBe(trialEndFor(before).toISOString())
   })
 })
