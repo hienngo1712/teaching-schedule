@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss"
 import tailwindcssAnimate from "tailwindcss-animate"
+import defaultTheme from "tailwindcss/defaultTheme"
 
 const config: Config = {
   darkMode: ["class"],
@@ -21,6 +22,15 @@ const config: Config = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        page: "hsl(var(--page))",
+        debt: {
+          DEFAULT: "hsl(var(--debt))",
+          soft: "hsl(var(--debt-soft))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          soft: "hsl(var(--success-soft))",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -50,10 +60,17 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      // Thẻ rounded-lg/xl = 14px, nút/ô nhập rounded-md = 10px: đạt mockup không phải sửa từng file (D4).
       borderRadius: {
+        xl: "var(--radius)",
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 6px)",
+      },
+      // layout.tsx đã nạp biến --font-geist-*, trước đây thiếu khai báo nên body chạy font hệ thống.
+      fontFamily: {
+        sans: ["var(--font-geist-sans)", ...defaultTheme.fontFamily.sans],
+        mono: ["var(--font-geist-mono)", ...defaultTheme.fontFamily.mono],
       },
       keyframes: {
         "accordion-down": {

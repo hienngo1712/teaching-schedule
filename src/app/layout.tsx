@@ -35,7 +35,8 @@ export default function RootLayout({
         <TRPCProvider>
           <LanguageProvider>
             {children}
-            <Toaster richColors position="top-right" />
+            {/* Không có ThemeProvider (D1): ép sáng để máy đặt chế độ tối không ra toast tối. */}
+            <Toaster richColors position="top-right" theme="light" />
             <SpeedInsights />
           </LanguageProvider>
         </TRPCProvider>
