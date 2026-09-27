@@ -1,12 +1,18 @@
 import { z } from "zod"
 
-export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: z
-    .string()
-    .min(10, "Mật khẩu mới phải có ít nhất 10 ký tự")
-    .max(200),
-})
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: z
+      .string()
+      .min(10, "Mật khẩu mới phải có ít nhất 10 ký tự")
+      .max(200),
+  })
+  // Spec N R2: không giữ lại mật khẩu tạm admin cấp làm mật khẩu mới.
+  .refine((v) => v.newPassword !== v.currentPassword, {
+    message: "Mật khẩu mới phải khác mật khẩu hiện tại",
+    path: ["newPassword"],
+  })
 
 export const registerSchema = z.object({
   username: z

@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeAll, afterEach } from "vitest"
+import bcrypt from "bcryptjs"
 import { db } from "@/server/db"
 import { getSessionUserState } from "@/server/auth-credentials"
 import { nodeJwt } from "@/server/auth-node-callbacks"
 import { currentEpoch } from "@/lib/session-policy"
+import { changeUserPassword } from "@/server/services/user.service"
 
 let teacherId = 0
 beforeAll(async () => {
@@ -79,5 +81,14 @@ describe("nodeJwt (spec N Q11)", () => {
     expect(fresh).toMatchObject({ sessionVersion: 1 })
     expect(await call({ ...fresh!, iat: Math.floor(Date.now() / 1000) })).toMatchObject({ sessionVersion: 1 })
     expect(await call(token({ sessionVersion: 0 }))).toBeNull()
+  })
+
+  it("sau changeUserPassword → token cũ null", async () => {
+    await changeUserPassword(db, teacherId, "teacher123", "NewSecret@2026")
+    try {
+      expect(await call(token())).toBeNull()
+    } finally {
+      await db.user.update({ where: { id: teacherId }, data: { passwordHash: await bcrypt.hash("teacher123", 4) } })
+    }
   })
 })

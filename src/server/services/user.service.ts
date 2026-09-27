@@ -52,3 +52,22 @@ export async function registerUser(db: PrismaClient, input: RegisterInput) {
     fullName: user.fullName,
   }
 }
+
+// Đổi hash + tăng sessionVersion trong MỘT update: không có lúc hash mới mà token cũ còn sống (spec N Q15).
+export async function changeUserPassword(
+  db: PrismaClient,
+  userId: number,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const user = await db.user.findUniqueOrThrow({ where: { id: userId } })
+  const ok = await bcrypt.compare(currentPassword, user.passwordHash)
+  if (!ok) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Mật khẩu hiện tại không đúng" })
+  }
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST)
+  await db.user.update({
+    where: { id: userId },
+    data: { passwordHash, mustChangePassword: false, sessionVersion: { increment: 1 } },
+  })
+}

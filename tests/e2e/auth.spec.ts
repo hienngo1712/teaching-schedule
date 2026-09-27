@@ -1,11 +1,31 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { decode, encode } from 'next-auth/jwt';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import { EXPECTED_TEST_ENDPOINT } from '../env-setup';
 
 // http://localhost nên cookie không có tiền tố __Secure-; salt mã hóa JWT = tên cookie.
 const COOKIE = 'authjs.session-token';
 const SECRET = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? '';
 const REMEMBER = 'Ghi nhớ đăng nhập (30 ngày)';
+
+const db = new PrismaClient();
+
+test.beforeAll(() => {
+  // Test dưới ghi DB bằng Prisma để khôi phục mật khẩu → chỉ chạy trên DB test.
+  expect(process.env.DATABASE_URL ?? '').toContain(`@${EXPECTED_TEST_ENDPOINT}/`);
+});
+test.afterAll(async () => {
+  await db.$disconnect();
+});
+
+async function restoreTeacherPassword() {
+  await db.user.update({
+    where: { username: 'teacher' },
+    data: { passwordHash: await bcrypt.hash('teacher123', 4), mustChangePassword: false },
+  });
+}
 
 async function loginForm(page: Page, remember: boolean) {
   await page.goto('/login');
@@ -95,4 +115,39 @@ test('token lệch epoch → về /login?expired=1, thấy thông báo, cookie b
     'Phiên đăng nhập đã hết hoặc có phiên bản mới. Vui lòng đăng nhập lại.'
   );
   expect((await context.cookies()).find((x) => x.name === COOKIE)).toBeUndefined();
+});
+
+test('đổi mật khẩu: máy đang đổi vẫn đăng nhập (giữ ghi nhớ), máy khác bị về /login?expired=1', async ({ browser }) => {
+  const TEMP = 'TamThoi@2026x';
+  const ctxA = await browser.newContext();
+  const ctxB = await browser.newContext();
+  const a = await ctxA.newPage();
+  const b = await ctxB.newPage();
+  try {
+    await loginForm(a, true);
+    await loginForm(b, false);
+    const before = (await sessionPayload(ctxA)).payload.sessionVersion as number;
+
+    await a.click('button[aria-label="Mở menu tài khoản"]');
+    await a.getByRole('menuitem', { name: 'Đổi mật khẩu' }).click();
+    const dlg = a.getByRole('dialog');
+    await dlg.locator('#current-pw').fill('teacher123');
+    await dlg.locator('#new-pw').fill(TEMP);
+    await dlg.locator('#confirm-pw').fill(TEMP);
+    await dlg.locator('button[type="submit"]').click();
+    await expect(a.getByText('Đổi mật khẩu thành công')).toBeVisible();
+
+    await a.goto('/students');
+    await expect(a).toHaveURL(/\/students$/);
+    const after = (await sessionPayload(ctxA)).payload;
+    expect(after.sessionVersion).toBe(before + 1);
+    expect(after.remember).toBe(true);
+
+    await b.goto('/students');
+    await expect(b).toHaveURL(/\/login\?.*expired=1/);
+  } finally {
+    await restoreTeacherPassword();
+    await ctxA.close();
+    await ctxB.close();
+  }
 });
