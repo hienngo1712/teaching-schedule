@@ -11,6 +11,18 @@ export const createOrderSchema = z.object({
   expectedAmount: z.number().int().positive().optional(),
 })
 
+// Giá lẻ được phép (người dùng chốt Q12); khoảng chỉ để chặn gõ thừa/thiếu số 0. ×20 tối đa 20 triệu vẫn vừa Int.
+export const monthPriceSchema = z.number().int().min(10000).max(1000000)
+
+export const updatePricesSchema = z
+  .object({
+    prices: z.object({ plus: monthPriceSchema, pro: monthPriceSchema }),
+    // Giá admin đang thấy, để phát hiện bảng giá vừa đổi ở tab khác; không giới hạn khoảng.
+    expected: z.object({ plus: z.number().int(), pro: z.number().int() }),
+  })
+  // D7 (quy đổi, chặn Plus khi còn Pro) giả định Pro đắt hơn (spec L Q13).
+  .refine((d) => d.prices.pro > d.prices.plus, { message: "Giá Pro phải cao hơn giá Plus", path: ["prices", "pro"] })
+
 export const orderIdSchema = z.object({ id: z.number().int().positive() })
 
 export const rejectOrderSchema = orderIdSchema.extend({
@@ -31,3 +43,4 @@ export const setPlanSchema = z
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>
 export type SetPlanInput = z.infer<typeof setPlanSchema>
+export type UpdatePricesInput = z.infer<typeof updatePricesSchema>
