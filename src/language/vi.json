@@ -438,6 +438,7 @@
   "plan_replace_pending": "Tạo đơn mới sẽ hủy đơn đang chờ",
   "plan_create_order_short": "Tạo đơn",
   "plan_done": "Xong",
+  "plan_badge_trial": "Pro dùng thử",
   "plan_upgrade_credit": "Phần Plus còn lại (≈ {amount}) được quy đổi thành +{days} ngày Pro. Số ngày được tính lại khi chủ app xác nhận.",
   "plan_downgrade_blocked": "Gói Pro còn hạn tới {date}",
   "plan_pending": "Chờ xác nhận",

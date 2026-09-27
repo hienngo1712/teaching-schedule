@@ -151,3 +151,25 @@ test.describe('Gói của tôi (1280px)', () => {
     expect(summaryBox.x).toBeGreaterThan(proBox.x + proBox.width - 1);
   });
 });
+
+test.describe('Nhãn gói cạnh logo (1280px)', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test('teacher_std: Standard; khi dùng thử: Pro + aria-label Pro dùng thử; teacher: Pro', async ({ page, browser }) => {
+    await login(page, 'teacher_std');
+    const badge = page.locator('aside').getByTestId('current-plan-badge');
+    await expect(badge).toHaveText('Standard');
+
+    await db.user.update({ where: { username: 'teacher_std' }, data: { trialEndsAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) } });
+    await page.reload();
+    await expect(badge).toHaveText('Pro');
+    await expect(badge).toHaveAttribute('aria-label', 'Pro dùng thử');
+    await resetStd();
+
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const other = await context.newPage();
+    await login(other, 'teacher');
+    await expect(other.locator('aside').getByTestId('current-plan-badge')).toHaveText('Pro');
+    await context.close();
+  });
+});

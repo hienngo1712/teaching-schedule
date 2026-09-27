@@ -438,6 +438,7 @@
   "plan_replace_pending": "A new order cancels the pending one",
   "plan_create_order_short": "Create order",
   "plan_done": "Done",
+  "plan_badge_trial": "Pro trial",
   "plan_upgrade_credit": "Your remaining Plus (≈ {amount}) converts to +{days} Pro days, recalculated when confirmed.",
   "plan_downgrade_blocked": "Pro is active until {date}",
   "plan_pending": "Pending",
