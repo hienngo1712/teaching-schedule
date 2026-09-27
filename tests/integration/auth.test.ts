@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { authorizeCredentials, RateLimitedError } from "@/server/auth-credentials"
 import { db } from "@/server/db"
 import bcrypt from "bcryptjs"
 import { getAuthedCaller, publicCaller } from "../helpers/trpc"
+import { changeUserPassword } from "@/server/services/user.service"
 
 describe("Auth — authorizeCredentials", () => {
   beforeEach(async () => {
@@ -17,6 +18,8 @@ describe("Auth — authorizeCredentials", () => {
     const user = await authorizeCredentials("teacher", "teacher123", "127.0.0.1")
     expect(user).not.toBeNull()
     expect(user!.username).toBe("teacher")
+    expect(user!.sessionVersion).toBe(0)
+    expect(user!.mustChangePassword).toBe(false)
 
     const attempt = await db.loginAttempt.findFirst({
       where: { username: "teacher" },
@@ -90,7 +93,7 @@ describe("Auth — authorizeCredentials", () => {
   })
 })
 
-describe("Auth router — me / changePassword", () => {
+describe("Auth router — me", () => {
   it("✓ auth.me → trả user info", async () => {
     const caller = await getAuthedCaller()
     const me = await caller.auth.me()
@@ -103,53 +106,55 @@ describe("Auth router — me / changePassword", () => {
       code: "UNAUTHORIZED",
     })
   })
+})
 
-  it("✓ auth.changePassword đúng currentPassword → đổi thành công + login với pass mới", async () => {
-    // Reset password về default trước test (test trước có thể đã đổi)
+describe("changeUserPassword (spec N Q15–Q16, R2)", () => {
+  afterEach(async () => {
     await db.user.update({
       where: { username: "teacher" },
-      data: { passwordHash: await bcrypt.hash("teacher123", 4) },
+      data: { passwordHash: await bcrypt.hash("teacher123", 4), sessionVersion: 0, mustChangePassword: false },
     })
     await db.loginAttempt.deleteMany()
+  })
 
-    const caller = await getAuthedCaller()
-    const result = await caller.auth.changePassword({
-      currentPassword: "teacher123",
-      newPassword: "NewSecret@2026",
-    })
-    expect(result.success).toBe(true)
-
-    // Login với pass cũ → fail
+  it("✓ đúng mật khẩu cũ → pass mới đăng nhập được, pass cũ hết, sessionVersion +1, tắt mustChangePassword", async () => {
+    const before = await db.user.update({ where: { username: "teacher" }, data: { mustChangePassword: true } })
+    await changeUserPassword(db, before.id, "teacher123", "NewSecret@2026")
+    const after = await db.user.findUniqueOrThrow({ where: { id: before.id } })
+    expect(after.sessionVersion).toBe(before.sessionVersion + 1)
+    expect(after.mustChangePassword).toBe(false)
+    await db.loginAttempt.deleteMany()
     expect(await authorizeCredentials("teacher", "teacher123", null)).toBeNull()
-    // Login với pass mới → OK
-    expect(
-      await authorizeCredentials("teacher", "NewSecret@2026", null)
-    ).not.toBeNull()
-
-    // Restore
-    await db.user.update({
-      where: { username: "teacher" },
-      data: { passwordHash: await bcrypt.hash("teacher123", 4) },
+    expect(await authorizeCredentials("teacher", "NewSecret@2026", null)).toMatchObject({
+      sessionVersion: before.sessionVersion + 1,
+      mustChangePassword: false,
     })
   })
 
-  it("✗ auth.changePassword sai currentPassword → BAD_REQUEST", async () => {
-    const caller = await getAuthedCaller()
-    await expect(
-      caller.auth.changePassword({
-        currentPassword: "wrong-password",
-        newPassword: "AnotherSecret@2026",
-      })
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  it("✗ sai mật khẩu cũ → BAD_REQUEST, hash và sessionVersion giữ nguyên", async () => {
+    const before = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    await expect(changeUserPassword(db, before.id, "wrong-password", "AnotherSecret@2026")).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Mật khẩu hiện tại không đúng",
+    })
+    const after = await db.user.findUniqueOrThrow({ where: { id: before.id } })
+    expect(after.passwordHash).toBe(before.passwordHash)
+    expect(after.sessionVersion).toBe(before.sessionVersion)
   })
 
-  it("✗ auth.changePassword newPassword < 10 ký tự → validation error", async () => {
-    const caller = await getAuthedCaller()
-    await expect(
-      caller.auth.changePassword({
-        currentPassword: "teacher123",
-        newPassword: "short",
+  it("✗ sai mật khẩu cũ 5 lần → lần sau bị chặn TOO_MANY_REQUESTS kể cả đúng mật khẩu", async () => {
+    const before = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    for (let i = 0; i < 5; i++) {
+      await expect(changeUserPassword(db, before.id, "wrong-password", "AnotherSecret@2026", "7.7.7.7")).rejects.toMatchObject({
+        code: "BAD_REQUEST",
       })
-    ).rejects.toThrow()
+    }
+    expect(await db.loginAttempt.count({ where: { username: "teacher", success: false } })).toBe(5)
+    await expect(changeUserPassword(db, before.id, "teacher123", "AnotherSecret@2026", "7.7.7.7")).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    })
+    const after = await db.user.findUniqueOrThrow({ where: { id: before.id } })
+    expect(after.passwordHash).toBe(before.passwordHash)
+    expect(after.sessionVersion).toBe(before.sessionVersion)
   })
 })

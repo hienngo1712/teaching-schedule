@@ -68,6 +68,10 @@ const enforceAuth = t.middleware(({ ctx, next }) => {
   if (!ctx.session || !ctx.userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" })
   }
+  // Spec N R2: đăng nhập bằng mật khẩu tạm thì chưa được dùng nghiệp vụ cho tới khi đổi mật khẩu.
+  if (ctx.session.user.mustChangePassword === true) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "MUST_CHANGE_PASSWORD" })
+  }
   return next({
     ctx: {
       ...ctx,

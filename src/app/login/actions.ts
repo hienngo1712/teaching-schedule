@@ -1,15 +1,9 @@
 "use server"
 
-import { headers } from "next/headers"
 import { signIn } from "@/server/auth"
 import { isRateLimited } from "@/server/auth-credentials"
+import { getRequestIp } from "@/server/request-ip"
 import { AuthError } from "next-auth"
-
-async function getRequestIp(): Promise<string | null> {
-  const h = await headers()
-  const fwd = h.get("x-forwarded-for")
-  return fwd?.split(",")[0]?.trim() ?? h.get("x-real-ip")
-}
 
 export type LoginResult =
   | { ok: true }
@@ -18,6 +12,8 @@ export type LoginResult =
 export async function loginAction(formData: FormData): Promise<LoginResult> {
   const username = String(formData.get("username") ?? "").trim()
   const password = String(formData.get("password") ?? "")
+  // Radix Checkbox gửi "on" khi tick; signIn chỉ chuyển được chuỗi nên đổi sang "1"/"0" (spec N Q3).
+  const remember = formData.get("remember") === "on"
 
   if (!username || !password) {
     return { ok: false, error: "MISSING_FIELDS" }
@@ -34,6 +30,7 @@ export async function loginAction(formData: FormData): Promise<LoginResult> {
     await signIn("credentials", {
       username,
       password,
+      remember: remember ? "1" : "0",
       redirect: false,
     })
     return { ok: true }

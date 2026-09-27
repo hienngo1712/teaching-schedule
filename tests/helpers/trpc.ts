@@ -23,6 +23,9 @@ export async function getAuthedCaller(username = "teacher") {
         fullName: user.fullName,
         name: user.fullName,
         email: null,
+        remember: false,
+        // Giống nodeJwt: cờ lấy từ DB để test chặn R2 thấy đúng trạng thái.
+        mustChangePassword: user.mustChangePassword,
       },
       expires: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
     },

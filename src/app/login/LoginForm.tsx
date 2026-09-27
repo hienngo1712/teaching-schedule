@@ -7,13 +7,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/ui/password-input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { loginAction, type LoginResult } from "./actions"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { safeCallbackUrl } from "@/lib/safe-redirect"
 
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard"
+  const callbackUrl = searchParams.get("callbackUrl")
+  // Middleware/layout gắn expired=1 khi còn cookie mà phiên không hợp lệ (spec N Q7).
+  const expired = searchParams.get("expired") === "1"
   const { t } = useTranslation()
 
   const [error, setError] = useState<string | null>(null)
@@ -33,7 +37,7 @@ export function LoginForm() {
     startTransition(async () => {
       const result = await loginAction(formData)
       if (result.ok) {
-        router.replace(callbackUrl)
+        router.replace(safeCallbackUrl(callbackUrl, window.location.origin))
         router.refresh()
       } else {
         setError(ERROR_MESSAGES[result.error])
@@ -43,6 +47,14 @@ export function LoginForm() {
 
   return (
     <form action={handleSubmit} className="space-y-4">
+      {expired && !error && (
+        <div
+          role="status"
+          className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+        >
+          {t("session_expired_relogin")}
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="username">{t("username")}</Label>
         <Input
@@ -64,6 +76,12 @@ export function LoginForm() {
           disabled={isPending}
         />
       </div>
+
+      {/* Mặc định không tick, không nhớ lựa chọn cũ: an toàn cho máy dùng chung (spec N 6.4). */}
+      <label htmlFor="remember" className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+        <Checkbox id="remember" name="remember" disabled={isPending} className="h-5 w-5" />
+        <span>{t("remember_me")}</span>
+      </label>
 
       {error && (
         <div

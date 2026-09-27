@@ -23,6 +23,9 @@ model User {
   plan              String            @default("standard") @map("plan") @db.VarChar(10)
   planExpiresAt     DateTime?         @map("plan_expires_at")
   trialEndsAt       DateTime?         @map("trial_ends_at")
+  // Tăng khi đổi/reset mật khẩu → mọi JWT mang số cũ hết hiệu lực (spec N Q10).
+  sessionVersion     Int               @default(0) @map("session_version")
+  mustChangePassword Boolean           @default(false) @map("must_change_password")
   loginAttempts LoginAttempt[]
   students      Student[]
   subjects      Subject[]
@@ -235,4 +238,15 @@ model TrialDayChange {
 
   @@index([userId, createdAt])
   @@map("trial_day_changes")
+}
+
+// Nhật ký admin reset mật khẩu (spec N R3), không lưu mật khẩu. Không FK: tests/setup.ts xóa users mỗi lượt.
+model PasswordResetLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  resetBy   String   @map("reset_by") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("password_reset_logs")
 }

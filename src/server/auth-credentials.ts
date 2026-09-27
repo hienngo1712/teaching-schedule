@@ -79,6 +79,8 @@ export type AuthorizedUser = {
   id: string
   username: string
   fullName: string | null
+  sessionVersion: number
+  mustChangePassword: boolean
 }
 
 /**
@@ -127,5 +129,24 @@ export async function authorizeCredentials(
     id: String(user.id),
     username: user.username,
     fullName: user.fullName,
+    sessionVersion: user.sessionVersion,
+    mustChangePassword: user.mustChangePassword,
   }
+}
+
+/**
+ * Chạy mỗi lần auth() phía Node (spec N Q11): phiên còn hiệu lực khi user còn hoạt động
+ * và sessionVersion khớp token. Trả cờ mustChangePassword mới nhất để chặn R2.
+ */
+export async function getSessionUserState(
+  userId: number,
+  sessionVersion: number | undefined
+): Promise<{ mustChangePassword: boolean } | null> {
+  if (!Number.isInteger(userId) || userId <= 0 || sessionVersion === undefined) return null
+  const u = await db.user.findUnique({
+    where: { id: userId },
+    select: { isActive: true, sessionVersion: true, mustChangePassword: true },
+  })
+  if (!u || !u.isActive || u.sessionVersion !== sessionVersion) return null
+  return { mustChangePassword: u.mustChangePassword }
 }

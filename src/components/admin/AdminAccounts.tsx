@@ -9,6 +9,7 @@ import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { PLAN_LABEL, formatValidUntil } from "@/lib/plans"
 import { SetPlanDialog } from "./SetPlanDialog"
 import { TrialDaysDialog } from "./TrialDaysDialog"
+import { ResetPasswordDialog } from "./ResetPasswordDialog"
 import { SOURCE_KEY, dateOrDash } from "./admin-format"
 
 type UserRow = RouterOutputs["admin"]["overview"]["users"][number]
@@ -18,6 +19,7 @@ export function AdminAccounts() {
   const query = trpc.admin.overview.useQuery()
   const [setPlanFor, setSetPlanFor] = useState<UserRow | null>(null)
   const [trialFor, setTrialFor] = useState<UserRow | null>(null)
+  const [resetFor, setResetFor] = useState<UserRow | null>(null)
 
   const planCell = (u: UserRow) => `${PLAN_LABEL[u.plan]} · ${t(SOURCE_KEY[u.source])}`
   const expiry = (u: UserRow) => (u.expiresAt ? formatValidUntil(new Date(u.expiresAt)) : "-")
@@ -29,11 +31,16 @@ export function AdminAccounts() {
   const actions = (u: UserRow) => (
     <div className="flex flex-wrap gap-2">
       {setPlanButton(u)}
-      {/* Admin không dùng gói nên không cần đặt dùng thử (spec L mục 15). */}
+      {/* Admin không dùng gói/không reset được mật khẩu admin (spec L mục 15, spec N R3). */}
       {!u.isAdmin && (
-        <Button type="button" variant="outline" className="h-11 md:h-9" onClick={() => setTrialFor(u)}>
-          {t("admin_set_trial")}
-        </Button>
+        <>
+          <Button type="button" variant="outline" className="h-11 md:h-9" onClick={() => setTrialFor(u)}>
+            {t("admin_set_trial")}
+          </Button>
+          <Button type="button" variant="outline" className="h-11 md:h-9" onClick={() => setResetFor(u)}>
+            {t("admin_reset_password")}
+          </Button>
+        </>
       )}
     </div>
   )
@@ -82,6 +89,7 @@ export function AdminAccounts() {
 
       {setPlanFor && <SetPlanDialog key={setPlanFor.id} user={setPlanFor} onClose={() => setSetPlanFor(null)} />}
       {trialFor && <TrialDaysDialog key={trialFor.id} user={trialFor} onClose={() => setTrialFor(null)} />}
+      {resetFor && <ResetPasswordDialog key={resetFor.id} user={resetFor} onClose={() => setResetFor(null)} />}
     </div>
   )
 }
