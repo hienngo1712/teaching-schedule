@@ -367,7 +367,7 @@
   "clear_bank_confirm": "Clear bank details? Notices will no longer have a QR code.",
   "alerts_title": "Needs attention",
   "alert_debt_title": "Unpaid from previous months",
-  "alert_debt_desc": "Active students with earlier unpaid tuition",
+  "alert_debt_desc": "Students with earlier unpaid tuition, including dropped ones",
   "alert_debt_months": "{n} month(s) overdue",
   "alert_idle_title": "No recent sessions",
   "alert_idle_desc": "No sessions in the past 14 or next 7 days",

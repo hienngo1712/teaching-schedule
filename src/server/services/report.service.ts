@@ -288,7 +288,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
 export type DashboardAlerts = {
   year: number
   month: number
-  debts: { studentId: number; fullName: string; grade: number; amount: number; months: number }[]
+  debts: { studentId: number; fullName: string; grade: number; amount: number; months: number; isActive: boolean }[]
   idleStudents: { studentId: number; fullName: string; grade: number }[]
   unrescheduled: SessionDTO[]
 }
@@ -349,10 +349,10 @@ export async function getDashboardAlerts(
   const idleTo = dayOffset(7)
   const cancelFrom = dayOffset(-60)
 
-  const [tuition, activeStudents, idle, unrescheduled] = await Promise.all([
+  const [tuition, inactiveStudents, idle, unrescheduled] = await Promise.all([
     // Cùng tham số với getMonthlyOutstanding để số nợ khớp màn Học phí; persist=false: không ghi DB.
     getMonthlyTuitionStatus(db, userId, { year, month, status: "all", page: 1, limit: 1_000_000 }, false),
-    db.student.findMany({ where: { userId, isActive: true }, select: { id: true } }),
+    db.student.findMany({ where: { userId, isActive: false }, select: { id: true } }),
     db.student.findMany({
       where: {
         userId,
@@ -373,15 +373,24 @@ export async function getDashboardAlerts(
     getCancelledWithoutMakeup(db, userId, { from: cancelFrom }),
   ])
 
-  const activeIds = new Set(activeStudents.map((s) => s.id))
+  const inactiveIds = new Set(inactiveStudents.map((s) => s.id))
+  // Danh sách màn Học phí không có HS đã nghỉ mà tháng này không có ca → tính riêng lượt 2 (spec P1).
+  const listed = new Set(tuition.items.map((it) => it.studentId))
+  const missing = [...inactiveIds].filter((id) => !listed.has(id))
+  const extra =
+    missing.length > 0
+      ? (await getMonthlyTuitionStatus(db, userId, { year, month, status: "all", page: 1, limit: 1_000_000 }, false, missing)).items
+      : []
+
   // Tiền thu tháng này trừ vào nợ cũ trước; tháng này đã tất toán thì coi như hết nợ (spec S2).
-  const debtors = tuition.items
-    .filter((it) => activeIds.has(it.studentId) && it.previousBalance > 0 && !it.isFullPaid)
+  const debtors = [...tuition.items, ...extra]
+    .filter((it) => it.previousBalance > 0 && !it.isFullPaid)
     .map((it) => ({
       studentId: it.studentId,
       fullName: it.fullName,
       grade: it.grade,
       amount: Math.min(it.previousBalance, it.totalAmountDue - it.paidAmount),
+      isActive: !inactiveIds.has(it.studentId),
     }))
     .filter((d) => d.amount > 0)
 

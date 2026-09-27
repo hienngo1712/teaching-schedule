@@ -170,7 +170,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
     expect(alerts.month).toBe(9)
     expect(page.items[0].previousBalance).toBe(100000)
     expect(alerts.debts).toEqual([
-      { studentId: st.id, fullName: "HS Nợ", grade: 6, amount: page.items[0].previousBalance, months: 1 },
+      { studentId: st.id, fullName: "HS Nợ", grade: 6, amount: page.items[0].previousBalance, months: 1, isActive: true },
     ])
   })
 
@@ -224,8 +224,8 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
 
     const { debts } = await getDashboardAlerts(db, userId, NOW)
     expect(debts).toEqual([
-      { studentId: a.id, fullName: "HS Nợ Dài", grade: 6, amount: 300000, months: 3 },
-      { studentId: b.id, fullName: "HS Nợ Ngắn", grade: 2, amount: 100000, months: 1 },
+      { studentId: a.id, fullName: "HS Nợ Dài", grade: 6, amount: 300000, months: 3, isActive: true },
+      { studentId: b.id, fullName: "HS Nợ Ngắn", grade: 2, amount: 100000, months: 1, isActive: true },
     ])
   })
 
@@ -254,19 +254,46 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
     expect(debts.map((d) => d.months)).toEqual([12])
   })
 
-  it("HS đã nghỉ (isActive=false) còn nợ và không có ca → không xuất hiện ở nhóm nào", async () => {
+  it("HS đã nghỉ còn nợ, KHÔNG có ca tháng này → có trong nhóm nợ, isActive=false, số tiền khớp màn Học phí (spec P1)", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
     const st = await caller.student.create({ fullName: "HS Đã Nghỉ", grade: 6, tuitionFee: 100000 })
     await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: st.id, limit: 1 })
-    // Có ca tháng 9 → vẫn nằm trong danh sách màn Học phí, phải bị lọc bởi isActive.
-    await addSession(caller, { date: "2026-09-02", studentIds: [st.id], presentFee: 100000 })
     await db.student.update({ where: { id: st.id }, data: { isActive: false } })
 
     const alerts = await getDashboardAlerts(db, userId, NOW)
-    expect(alerts.debts).toEqual([])
+    const page = await caller.tuition.getMonthlyStatus({ year: 2026, month: 9, studentId: st.id, limit: 1 })
+
+    expect(page.items[0].previousBalance).toBe(100000)
+    expect(alerts.debts).toEqual([
+      { studentId: st.id, fullName: "HS Đã Nghỉ", grade: 6, amount: 100000, months: 1, isActive: false },
+    ])
+    // Nhóm "lâu không có ca" vẫn chỉ HS đang học.
     expect(alerts.idleStudents).toEqual([])
+  })
+
+  it("HS đã nghỉ vẫn có ca tháng này → chỉ 1 dòng nợ", async () => {
+    const caller = await getAuthedCaller()
+    const userId = await userIdOf("teacher")
+    const st = await caller.student.create({ fullName: "HS Nghỉ Có Ca", grade: 6, tuitionFee: 100000 })
+    await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
+    await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: st.id, limit: 1 })
+    await addSession(caller, { date: "2026-09-02", studentIds: [st.id], presentFee: 100000 })
+    await db.student.update({ where: { id: st.id }, data: { isActive: false } })
+
+    const { debts } = await getDashboardAlerts(db, userId, NOW)
+    expect(debts).toEqual([
+      { studentId: st.id, fullName: "HS Nghỉ Có Ca", grade: 6, amount: 100000, months: 1, isActive: false },
+    ])
+  })
+
+  it("HS đã nghỉ không còn nợ → không xuất hiện", async () => {
+    const caller = await getAuthedCaller()
+    const userId = await userIdOf("teacher")
+    const st = await caller.student.create({ fullName: "HS Nghỉ Sạch Nợ", grade: 6 })
+    await db.student.update({ where: { id: st.id }, data: { isActive: false } })
+    expect((await getDashboardAlerts(db, userId, NOW)).debts).toEqual([])
   })
 })
 
@@ -350,12 +377,15 @@ describe("getDashboardAlerts — an toàn", () => {
     await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     await addSession(caller, { date: "2026-09-20", studentIds: [st.id], presentFee: 100000 })
 
+    const stInactive = await caller.student.create({ fullName: "HS Đã Nghỉ Chỉ Đọc", grade: 6, tuitionFee: 100000 })
+    await addSession(caller, { date: "2026-08-11", studentIds: [stInactive.id], presentFee: 100000 })
+    await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: stInactive.id, limit: 1 })
+    await db.student.update({ where: { id: stInactive.id }, data: { isActive: false } })
+
     const before = await db.monthlyTuition.count()
     const alerts = await getDashboardAlerts(db, userId, NOW)
     expect(await db.monthlyTuition.count()).toBe(before)
-    expect(before).toBe(0)
-    // Chưa có snapshot nào → nợ lấy từ lịch sử, vẫn phải hiện.
-    expect(alerts.debts.map((d) => [d.studentId, d.amount, d.months])).toEqual([[st.id, 100000, 1]])
+    expect(alerts.debts.map((d) => d.studentId).sort()).toEqual([st.id, stInactive.id].sort())
   })
 
   it("đa người dùng: dữ liệu của giáo viên khác không xuất hiện", async () => {
@@ -365,13 +395,19 @@ describe("getDashboardAlerts — an toàn", () => {
     const cancelled = await addSession(caller2, { date: "2026-09-20", start: "10:00", end: "11:00" })
     await cancelDirect(cancelled.id)
 
+    const stInactive2 = await caller2.student.create({ fullName: "HS GV2 Da Nghi", grade: 5, tuitionFee: 100000 })
+    await addSession(caller2, { date: "2026-08-11", studentIds: [stInactive2.id], presentFee: 100000 })
+    await caller2.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: stInactive2.id, limit: 1 })
+    await db.student.update({ where: { id: stInactive2.id }, data: { isActive: false } })
+
     const mine = await getDashboardAlerts(db, await userIdOf("teacher"), NOW)
     expect(mine.debts).toEqual([])
     expect(mine.idleStudents).toEqual([])
     expect(mine.unrescheduled).toEqual([])
 
     const theirs = await getDashboardAlerts(db, await userIdOf("teacher2"), NOW)
-    expect(theirs.debts.map((d) => d.studentId)).toEqual([st.id])
+    expect(theirs.debts.map((d) => d.studentId)).toContain(st.id)
+    expect(theirs.debts.map((d) => d.studentId)).toContain(stInactive2.id)
     expect(theirs.idleStudents.map((s) => s.studentId)).toEqual([st.id])
     expect(theirs.unrescheduled.map((s) => s.id)).toEqual([cancelled.id])
   })
