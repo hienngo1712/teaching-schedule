@@ -29,7 +29,8 @@ export const PERIOD_MONTHS: Record<Period, number> = { month: 1, year: 12, "2yea
 // Số ngày danh nghĩa 1 kỳ cho quy đổi D7: đơn giá ngày = giá kỳ / số ngày.
 export const PERIOD_DAYS: Record<Period, number> = { month: 30, year: 365, "2year": 730 }
 export const STUDENT_LIMITS: Record<Plan, number | null> = { standard: 10, plus: 40, pro: null }
-export const TRIAL_DAYS = 60
+// Chỉ dùng khi DB thiếu dòng số ngày dùng thử mặc định (spec L mục 15); số thật ở bảng trial_day_changes.
+export const DEFAULT_TRIAL_DAYS = 60
 // Kỳ 2 năm luôn tặng tối thiểu 2 tháng (P1); gia hạn sớm thay bằng mức cao hơn, không cộng dồn.
 export const TWO_YEAR_BONUS_MONTHS = 2
 
@@ -211,8 +212,16 @@ export function computeUpgradeCredit(
   return { remainingValue, creditDays }
 }
 
-export function trialEndFor(createdAt: Date): Date {
-  return addDays(vnStartOfDay(createdAt), TRIAL_DAYS)
+// Hạn dùng thử tính từ đầu ngày VN của ngày tạo tài khoản (spec L mục 15 T3).
+// 0 ngày = không dùng thử: trả null, lưu mốc quá khứ sẽ hiện banner "hết dùng thử" oan.
+export function trialEndFor(createdAt: Date, days: number): Date | null {
+  return days > 0 ? addDays(vnStartOfDay(createdAt), days) : null
+}
+
+// Số ngày dùng thử đang có của tài khoản, để dialog admin hiện "cũ → mới".
+export function trialDaysOf(createdAt: Date, trialEndsAt: Date | null): number | null {
+  if (!trialEndsAt) return null
+  return Math.round((trialEndsAt.getTime() - vnStartOfDay(createdAt).getTime()) / DAY_MS)
 }
 
 export function formatValidUntil(expiresAt: Date): string {

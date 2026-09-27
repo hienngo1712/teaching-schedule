@@ -8,6 +8,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { PLAN_LABEL, formatValidUntil } from "@/lib/plans"
 import { SetPlanDialog } from "./SetPlanDialog"
+import { TrialDaysDialog } from "./TrialDaysDialog"
 import { SOURCE_KEY, dateOrDash } from "./admin-format"
 
 type UserRow = RouterOutputs["admin"]["overview"]["users"][number]
@@ -16,6 +17,7 @@ export function AdminAccounts() {
   const { t } = useTranslation()
   const query = trpc.admin.overview.useQuery()
   const [setPlanFor, setSetPlanFor] = useState<UserRow | null>(null)
+  const [trialFor, setTrialFor] = useState<UserRow | null>(null)
 
   const planCell = (u: UserRow) => `${PLAN_LABEL[u.plan]} · ${t(SOURCE_KEY[u.source])}`
   const expiry = (u: UserRow) => (u.expiresAt ? formatValidUntil(new Date(u.expiresAt)) : "-")
@@ -23,6 +25,17 @@ export function AdminAccounts() {
     <Button type="button" variant="outline" className="h-11 md:h-9" onClick={() => setSetPlanFor(u)}>
       {t("admin_set_plan")}
     </Button>
+  )
+  const actions = (u: UserRow) => (
+    <div className="flex flex-wrap gap-2">
+      {setPlanButton(u)}
+      {/* Admin không dùng gói nên không cần đặt dùng thử (spec L mục 15). */}
+      {!u.isAdmin && (
+        <Button type="button" variant="outline" className="h-11 md:h-9" onClick={() => setTrialFor(u)}>
+          {t("admin_set_trial")}
+        </Button>
+      )}
+    </div>
   )
 
   const columns: Column<UserRow>[] = [
@@ -33,7 +46,7 @@ export function AdminAccounts() {
     { header: t("admin_col_students"), cell: (u) => u.activeStudents, className: "text-right" },
     { header: t("admin_col_plan"), cell: planCell },
     { header: t("admin_col_expiry"), cell: expiry },
-    { header: <span className="sr-only">{t("actions")}</span>, cell: setPlanButton },
+    { header: <span className="sr-only">{t("actions")}</span>, cell: actions },
   ]
 
   return (
@@ -62,12 +75,13 @@ export function AdminAccounts() {
             <p className="text-xs text-slate-500">
               {t("admin_col_expiry")}: {expiry(u)} · {t("admin_col_students")}: {u.activeStudents} · {t("admin_col_last_login")}: {dateOrDash(u.lastLoginAt)}
             </p>
-            {setPlanButton(u)}
+            {actions(u)}
           </div>
         )}
       />
 
       {setPlanFor && <SetPlanDialog key={setPlanFor.id} user={setPlanFor} onClose={() => setSetPlanFor(null)} />}
+      {trialFor && <TrialDaysDialog key={trialFor.id} user={trialFor} onClose={() => setTrialFor(null)} />}
     </div>
   )
 }

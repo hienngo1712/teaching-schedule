@@ -1,7 +1,16 @@
 import { adminProcedure, createTRPCRouter } from "@/server/trpc"
-import { orderIdSchema, rejectOrderSchema, setPlanSchema, updatePricesSchema } from "@/lib/schemas/plan"
+import {
+  orderIdSchema,
+  rejectOrderSchema,
+  setPlanSchema,
+  setUserTrialSchema,
+  updatePricesSchema,
+  updateTrialDaysSchema,
+  userIdSchema,
+} from "@/lib/schemas/plan"
 import { adminSetPlan, approveOrder, getAdminOverview, getOrderHistory, rejectOrder } from "@/server/services/plan-admin.service"
 import { getMonthlyPrices, getPriceHistory, updatePrices } from "@/server/services/plan-price.service"
+import { getDefaultTrialDays, getTrialHistory, getUserTrialChanges, setUserTrialDays, updateDefaultTrialDays } from "@/server/services/trial.service"
 
 export const adminRouter = createTRPCRouter({
   overview: adminProcedure.query(({ ctx }) => getAdminOverview(ctx.db)),
@@ -27,4 +36,19 @@ export const adminRouter = createTRPCRouter({
   updatePrices: adminProcedure
     .input(updatePricesSchema)
     .mutation(({ ctx, input }) => updatePrices(ctx.db, ctx.session.user.username, input)),
+
+  trialSettings: adminProcedure.query(async ({ ctx }) => {
+    const [days, history] = await Promise.all([getDefaultTrialDays(ctx.db), getTrialHistory(ctx.db)])
+    return { days, history }
+  }),
+
+  updateTrialDays: adminProcedure
+    .input(updateTrialDaysSchema)
+    .mutation(({ ctx, input }) => updateDefaultTrialDays(ctx.db, ctx.session.user.username, input)),
+
+  setUserTrial: adminProcedure
+    .input(setUserTrialSchema)
+    .mutation(({ ctx, input }) => setUserTrialDays(ctx.db, ctx.session.user.username, input)),
+
+  userTrialChanges: adminProcedure.input(userIdSchema).query(({ ctx, input }) => getUserTrialChanges(ctx.db, input.userId)),
 })

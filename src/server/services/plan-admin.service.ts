@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
+import { isAdminUsername } from "@/lib/admin"
 import {
   addDays,
   computeNewExpiry,
@@ -71,6 +72,8 @@ export async function getAdminOverview(db: PrismaClient) {
         source: eff.source,
         expiresAt: eff.expiresAt,
         trialEndsAt: u.trialEndsAt,
+        // Admin không dùng gói nên UI ẩn nút đặt dùng thử (spec L mục 15).
+        isAdmin: isAdminUsername(u.username),
       }
     }),
     pendingOrders: await Promise.all(

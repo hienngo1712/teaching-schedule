@@ -24,6 +24,7 @@ import {
   pricesFromMonthly,
   renewOffer,
   studentLimit,
+  trialDaysOf,
   trialEndFor,
   vnStartOfDay,
   type PlanFields,
@@ -298,8 +299,8 @@ describe("computeUpgradeCredit (D7 quy đổi)", () => {
 
 describe("trialEndFor / daysLeft / formatValidUntil / expiryFromLastDay", () => {
   it("dùng thử: ngày đăng ký là ngày 1, hạn = 00:00 VN của ngày thứ 61", () => {
-    expect(iso(trialEndFor(vn("2026-09-26T23:59")))).toBe(iso(vn("2026-11-25T00:00")))
-    expect(iso(trialEndFor(vn("2026-09-26T00:30")))).toBe(iso(vn("2026-11-25T00:00")))
+    expect(iso(trialEndFor(vn("2026-09-26T23:59"), 60))).toBe(iso(vn("2026-11-25T00:00")))
+    expect(iso(trialEndFor(vn("2026-09-26T00:30"), 60))).toBe(iso(vn("2026-11-25T00:00")))
   })
   it("daysLeft tính cả hôm nay", () => {
     expect(daysLeft(vn("2026-09-27T00:00"), vn("2026-09-26T23:30"))).toBe(1)
@@ -311,6 +312,26 @@ describe("trialEndFor / daysLeft / formatValidUntil / expiryFromLastDay", () => 
   })
   it("ngày dùng cuối → hạn 00:00 VN hôm sau", () => {
     expect(iso(expiryFromLastDay("2026-12-31"))).toBe(iso(vn("2027-01-01T00:00")))
+  })
+})
+
+describe("trialEndFor / trialDaysOf (spec L mục 15)", () => {
+  it("tính từ đầu ngày VN của ngày tạo tài khoản; 00:30 VN (UTC còn hôm trước) vẫn là ngày VN đó", () => {
+    expect(iso(trialEndFor(vn("2026-08-07T09:00"), 120))).toBe(iso(vn("2026-12-05T00:00")))
+    expect(iso(trialEndFor(vn("2026-08-07T00:30"), 120))).toBe(iso(vn("2026-12-05T00:00")))
+  })
+  it("Review Focus 3: 0 ngày → null, không có banner hết dùng thử", () => {
+    expect(trialEndFor(NOW, 0)).toBeNull()
+    expect(planBanner(u({ trialEndsAt: trialEndFor(NOW, 0) }), NOW, false)).toBeNull()
+  })
+  it("trialDaysOf là nghịch của trialEndFor; chưa có dùng thử → null", () => {
+    const created = vn("2026-08-07T09:00")
+    expect(trialDaysOf(created, trialEndFor(created, 120))).toBe(120)
+    expect(trialDaysOf(created, trialEndFor(created, 60))).toBe(60)
+    expect(trialDaysOf(created, null)).toBeNull()
+  })
+  it("đã dùng 50 ngày, đặt 120 → còn 70 ngày", () => {
+    expect(daysLeft(trialEndFor(addDays(NOW, -50), 120)!, NOW)).toBe(70)
   })
 })
 

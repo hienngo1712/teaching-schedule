@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { createOrderSchema, updatePricesSchema } from "@/lib/schemas/plan"
+import { createOrderSchema, setUserTrialSchema, updatePricesSchema, updateTrialDaysSchema } from "@/lib/schemas/plan"
 
 describe("createOrderSchema (spec L Q6)", () => {
   it("expectedAmount tùy chọn; có thì giữ nguyên số", () => {
@@ -34,5 +34,18 @@ describe("updatePricesSchema (spec L Q12, Q13)", () => {
   })
   it("expected không giới hạn khoảng (giá hiện hành có thể là giá cũ ngoài khoảng)", () => {
     expect(updatePricesSchema.safeParse({ prices: { plus: 49000, pro: 99000 }, expected: { plus: 5000, pro: 99000 } }).success).toBe(true)
+  })
+})
+
+describe("schema số ngày dùng thử (spec L mục 15)", () => {
+  it("mặc định: nguyên 0–365, expected không giới hạn", () => {
+    for (const days of [0, 60, 365]) expect(updateTrialDaysSchema.safeParse({ days, expected: 60 }).success).toBe(true)
+    for (const days of [-1, 366, 1.5]) expect(updateTrialDaysSchema.safeParse({ days, expected: 60 }).success).toBe(false)
+    expect(updateTrialDaysSchema.safeParse({ days: 90, expected: 1000 }).success).toBe(true)
+  })
+  it("đặt riêng: nguyên 0–3650, userId nguyên dương", () => {
+    expect(setUserTrialSchema.safeParse({ userId: 1, days: 3650 }).success).toBe(true)
+    expect(setUserTrialSchema.safeParse({ userId: 1, days: 3651 }).success).toBe(false)
+    expect(setUserTrialSchema.safeParse({ userId: 0, days: 90 }).success).toBe(false)
   })
 })

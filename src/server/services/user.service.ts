@@ -5,6 +5,7 @@ import type { RegisterInput } from "@/lib/schemas/auth"
 import { BCRYPT_COST } from "@/server/auth-credentials"
 import { seedSubjectsForUser } from "./subject-defaults"
 import { trialEndFor } from "@/lib/plans"
+import { getDefaultTrialDays } from "./trial.service"
 
 // Re-export để giữ tương thích cho code đang import từ module này.
 export { DEFAULT_SUBJECTS, seedSubjectsForUser } from "./subject-defaults"
@@ -21,6 +22,7 @@ export async function registerUser(db: PrismaClient, input: RegisterInput) {
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST)
+  const trialDays = await getDefaultTrialDays(db)
   let user
   try {
     user = await db.user.create({
@@ -29,7 +31,8 @@ export async function registerUser(db: PrismaClient, input: RegisterInput) {
         passwordHash,
         fullName: fullName || null,
         // D4: gán ở đây (không dùng default DB) để tài khoản cũ không bị gán nhầm dùng thử.
-        trialEndsAt: trialEndFor(new Date()),
+        // Số ngày đọc lúc đăng ký: đổi mặc định chỉ ảnh hưởng tài khoản tạo sau (spec L mục 15 T2).
+        trialEndsAt: trialEndFor(new Date(), trialDays),
       },
     })
   } catch (err) {

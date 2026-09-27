@@ -23,6 +23,15 @@ export const updatePricesSchema = z
   // D7 (quy đổi, chặn Plus khi còn Pro) giả định Pro đắt hơn (spec L Q13).
   .refine((d) => d.prices.pro > d.prices.plus, { message: "Giá Pro phải cao hơn giá Plus", path: ["prices", "pro"] })
 
+// Mặc định cho tài khoản đăng ký sau, 0 = không dùng thử (spec L mục 15 T1).
+export const trialDaysSchema = z.number().int().min(0).max(365)
+// Đặt riêng tính từ ngày tạo tài khoản nên tài khoản cũ cần số lớn hơn 365.
+export const userTrialDaysSchema = z.number().int().min(0).max(3650)
+
+export const updateTrialDaysSchema = z.object({ days: trialDaysSchema, expected: z.number().int() })
+export const userIdSchema = z.object({ userId: z.number().int().positive() })
+export const setUserTrialSchema = userIdSchema.extend({ days: userTrialDaysSchema })
+
 export const orderIdSchema = z.object({ id: z.number().int().positive() })
 
 export const rejectOrderSchema = orderIdSchema.extend({
@@ -44,3 +53,5 @@ export const setPlanSchema = z
 export type CreateOrderInput = z.infer<typeof createOrderSchema>
 export type SetPlanInput = z.infer<typeof setPlanSchema>
 export type UpdatePricesInput = z.infer<typeof updatePricesSchema>
+export type UpdateTrialDaysInput = z.infer<typeof updateTrialDaysSchema>
+export type SetUserTrialInput = z.infer<typeof setUserTrialSchema>
