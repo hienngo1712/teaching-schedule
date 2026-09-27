@@ -71,7 +71,8 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
   const bonusOf = (period: Period) => computeBonusMonths(fields, choice.plan, period, now)
   // Xem trước: ưu đãi chốt lúc tạo đơn, ngày quy đổi tính lại lúc admin duyệt (server là chuẩn).
   const bonus = bonusOf(choice.period)
-  const credit = choice.plan === "pro" ? computeUpgradeCredit(fields, me.plusCreditOrder, choice.period, now) : null
+  const credit =
+    choice.plan === "pro" ? computeUpgradeCredit(fields, me.plusCreditOrder, choice.period, PLAN_PRICES.pro[choice.period], now) : null
   const newExpiry = addDays(computeNewExpiry(fields, choice.plan, choice.period, now, bonus), credit?.creditDays ?? 0)
   const price = PLAN_PRICES[choice.plan][choice.period]
 

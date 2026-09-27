@@ -4,7 +4,6 @@ import { randomInt } from "node:crypto"
 import {
   FEATURE_PLAN,
   PLAN_LABEL,
-  PLAN_PRICES,
   computeBonusMonths,
   effectivePlan,
   formatValidUntil,
@@ -19,6 +18,7 @@ import {
   type PaidPlan,
   type PlanFields,
 } from "@/lib/plans"
+import { getPlanPrices } from "./plan-price.service"
 import { buildVietQrPayload } from "@/lib/vietqr"
 import { findBank } from "@/lib/vn-banks"
 import { isAdminUsername } from "@/lib/admin"
@@ -112,12 +112,13 @@ const ORDER_SELECT = {
 
 export async function getMyPlan(db: PrismaClient, userId: number, username: string) {
   const now = new Date()
-  const [fields, activeStudents, orders, pending, lastPlus] = await Promise.all([
+  const [fields, activeStudents, orders, pending, lastPlus, prices] = await Promise.all([
     db.user.findUniqueOrThrow({ where: { id: userId }, select: PLAN_SELECT }),
     db.student.count({ where: { userId, isActive: true } }),
     db.planOrder.findMany({ where: { userId }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 10, select: ORDER_SELECT }),
     db.planOrder.findFirst({ where: { userId, status: "pending" }, orderBy: { id: "desc" }, select: ORDER_SELECT }),
     findLastPlusOrder(db, userId),
+    getPlanPrices(db),
   ])
   const eff = effectivePlan(fields, now)
   const bank = getPlanBankAccount()
@@ -132,6 +133,8 @@ export async function getMyPlan(db: PrismaClient, userId: number, username: stri
     trialEndsAt: fields.trialEndsAt,
     activeStudents,
     studentLimit: studentLimit(eff.plan),
+    // Client hiện giá và gửi lại expectedAmount từ đây, cùng hàm tính với createOrder (spec L Q5).
+    prices,
     plusCreditOrder: fields.plan === "plus" ? lastPlus : null,
     pendingOrder:
       pending && pending.code && content
@@ -172,7 +175,6 @@ export async function createOrder(
   if (blocked) {
     throw new TRPCError({ code: "BAD_REQUEST", message: `Gói Pro còn hạn tới ${formatValidUntil(blocked)}, chưa đặt được gói Plus` })
   }
-  const amount = PLAN_PRICES[input.plan][input.period]
   // Spec 6.6: ưu đãi chốt lúc tạo đơn, admin duyệt muộn vẫn giữ.
   const bonusMonths = computeBonusMonths(fields, input.plan, input.period, now)
   // Mã trùng unique gần như không thể nên chỉ thử lại 1 lần (như generateParentLink).
@@ -181,6 +183,11 @@ export async function createOrder(
       return await db.$transaction(async (tx) => {
         // Khóa theo userId: 2 request cùng lúc không thì cùng thấy "chưa có đơn chờ" rồi ra 2 đơn pending.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
+        // Đọc giá trong transaction: đơn mang giá đã commit lúc tạo (spec L Q7/Q8). So trước khi hủy đơn chờ cũ.
+        const amount = (await getPlanPrices(tx))[input.plan][input.period]
+        if (input.expectedAmount !== undefined && input.expectedAmount !== amount) {
+          throw new TRPCError({ code: "CONFLICT", message: "Giá gói vừa thay đổi, vui lòng xem lại giá mới" })
+        }
         // D14: tối đa 1 đơn chờ, đơn mới thay đơn cũ.
         await tx.planOrder.updateMany({ where: { userId, status: "pending" }, data: { status: "cancelled" } })
         const code = generateOrderCode()

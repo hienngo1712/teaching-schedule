@@ -30,7 +30,7 @@ export function pricesFromMonthly(m: Record<PaidPlan, number>): PlanPrices {
   return { plus: periods(m.plus), pro: periods(m.pro) }
 }
 export const PERIOD_MONTHS: Record<Period, number> = { month: 1, year: 12, "2year": 24 }
-// Số ngày danh nghĩa 1 kỳ cho quy đổi D7: đơn giá ngày = giá / số ngày (99.000/30, 990.000/365).
+// Số ngày danh nghĩa 1 kỳ cho quy đổi D7: đơn giá ngày = giá kỳ / số ngày.
 export const PERIOD_DAYS: Record<Period, number> = { month: 30, year: 365, "2year": 730 }
 export const STUDENT_LIMITS: Record<Plan, number | null> = { standard: 10, plus: 40, pro: null }
 export const TRIAL_DAYS = 60
@@ -195,21 +195,23 @@ export function computeBonusMonths(u: PlanFields, orderPlan: PaidPlan, period: P
 }
 
 // D7: phần tiền Plus còn lại đổi thành ngày Pro. Chặn trên bằng cả kỳ để Plus mua trong trial không quy đổi vượt số tiền đã trả.
+// targetPrice = số tiền đơn Pro đang mua (server: order.amount) để đổi giá giữa lúc tạo và lúc duyệt không đổi số ngày (spec L Q10).
 export function computeUpgradeCredit(
   u: PlanFields,
   lastPlusOrder: CreditOrder | null,
   targetPeriod: Period,
+  targetPrice: number,
   now: Date
 ): { remainingValue: number; creditDays: number } {
   const none = { remainingValue: 0, creditDays: 0 }
   if (u.plan !== "plus" || !u.planExpiresAt || u.planExpiresAt <= now) return none
-  if (!lastPlusOrder || lastPlusOrder.amount <= 0 || !isPeriod(lastPlusOrder.period)) return none
+  if (!lastPlusOrder || lastPlusOrder.amount <= 0 || !isPeriod(lastPlusOrder.period) || targetPrice <= 0) return none
   // Tháng tặng nằm trong số ngày đơn đã mua, không tính thì dùng hết phần tặng rồi vẫn quy đổi đủ tiền.
   const totalDays = PERIOD_DAYS[lastPlusOrder.period] + Math.round((lastPlusOrder.bonusMonths * 365) / 12)
   const left = Math.round((u.planExpiresAt.getTime() - vnStartOfDay(now).getTime()) / DAY_MS)
   const remainingDays = Math.min(totalDays, left)
   const remainingValue = Math.round((lastPlusOrder.amount * remainingDays) / totalDays)
-  const creditDays = Math.floor((remainingValue * PERIOD_DAYS[targetPeriod]) / PLAN_PRICES.pro[targetPeriod])
+  const creditDays = Math.floor((remainingValue * PERIOD_DAYS[targetPeriod]) / targetPrice)
   return { remainingValue, creditDays }
 }
 

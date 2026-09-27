@@ -3,10 +3,12 @@ import { PERIODS, PLANS } from "@/lib/plans"
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/
 
-// Không nhận số tiền từ client: tiền lấy từ PLAN_PRICES ở server (spec I 6.4).
+// Tiền lấy từ bảng giá DB ở server; expectedAmount chỉ để phát hiện giá vừa đổi, không bao giờ dùng làm số tiền (spec L Q6, I 6.4).
+// Tùy chọn để tab còn JS cũ lúc deploy vẫn tạo đơn được theo giá mới.
 export const createOrderSchema = z.object({
   plan: z.enum(["plus", "pro"]),
   period: z.enum(PERIODS),
+  expectedAmount: z.number().int().positive().optional(),
 })
 
 export const orderIdSchema = z.object({ id: z.number().int().positive() })

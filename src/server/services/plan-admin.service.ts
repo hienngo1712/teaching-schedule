@@ -17,14 +17,17 @@ import { PLAN_SELECT, findLastPlusOrder, type Db } from "./plan.service"
 // null = không duyệt được (D7: user đang có Pro trả phí mà đơn là Plus).
 export async function computeApproval(
   db: Db,
-  order: { userId: number; plan: string; period: string | null; bonusMonths: number },
+  order: { userId: number; plan: string; period: string | null; bonusMonths: number; amount: number },
   now: Date
 ): Promise<{ grantedUntil: Date; creditDays: number } | null> {
   if (!isPaidPlan(order.plan) || !isPeriod(order.period)) return null
   const user = await db.user.findUniqueOrThrow({ where: { id: order.userId }, select: PLAN_SELECT })
   if (orderBlockedUntil(user, order.plan, now)) return null
+  // Mẫu số là tiền đơn Pro đang duyệt, không đọc bảng giá hiện hành (spec L Q10, L4).
   const creditDays =
-    order.plan === "pro" ? computeUpgradeCredit(user, await findLastPlusOrder(db, order.userId), order.period, now).creditDays : 0
+    order.plan === "pro"
+      ? computeUpgradeCredit(user, await findLastPlusOrder(db, order.userId), order.period, order.amount, now).creditDays
+      : 0
   const grantedUntil = addDays(computeNewExpiry(user, order.plan, order.period, now, order.bonusMonths), creditDays)
   return { grantedUntil, creditDays }
 }
@@ -95,7 +98,7 @@ export async function approveOrder(db: PrismaClient, admin: string, id: number):
     if (claimed.count === 0) throw new TRPCError({ code: "CONFLICT", message: "Đơn không còn ở trạng thái chờ" })
     const order = await tx.planOrder.findUniqueOrThrow({
       where: { id },
-      select: { userId: true, plan: true, period: true, bonusMonths: true },
+      select: { userId: true, plan: true, period: true, bonusMonths: true, amount: true },
     })
     const approval = await computeApproval(tx, order, now)
     if (!approval) {
