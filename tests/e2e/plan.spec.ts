@@ -152,6 +152,42 @@ test.describe('Gói của tôi (1280px)', () => {
   });
 });
 
+for (const width of [768, 820]) {
+  test.describe(`Popup mua gói (${width}px)`, () => {
+    test.use({ viewport: { width, height: 1024 } });
+
+    test('giá từng thẻ kỳ nằm gọn trong thẻ, trang không tràn ngang', async ({ page }) => {
+      await login(page, 'teacher_std');
+      await page.goto('/plan');
+      await page.getByTestId('plan-card-pro').getByRole('button', { name: 'Chọn gói Pro' }).click();
+      const popup = page.getByTestId('plan-purchase');
+      await popup.getByTestId('purchase-plan-pro').click();
+      await expect(popup.getByTestId('purchase-plan-pro')).toHaveAttribute('aria-checked', 'true');
+
+      for (const period of ['month', 'year', '2year']) {
+        const card = popup.getByTestId(`purchase-period-${period}`);
+        // Đo bề rộng chữ thật (Range) vì span giá co theo thẻ, chữ nbsp tràn ra ngoài.
+        const overflow = await card.evaluate((el) => {
+          const box = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
+          const right = box.right - parseFloat(style.borderRightWidth);
+          let worst = -Infinity;
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          while (walker.nextNode()) {
+            const range = document.createRange();
+            range.selectNodeContents(walker.currentNode);
+            worst = Math.max(worst, range.getBoundingClientRect().right - right);
+          }
+          return worst;
+        });
+        expect(overflow, period).toBeLessThanOrEqual(0);
+      }
+      const pageOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(pageOverflow).toBeLessThanOrEqual(0);
+    });
+  });
+}
+
 test.describe('Nhãn gói cạnh logo (1280px)', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
