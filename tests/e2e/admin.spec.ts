@@ -21,7 +21,8 @@ async function loginAs(browser: Browser, username: string, viewport = MOBILE): P
   await page.fill('input[name="username"]', username);
   await page.fill('input[name="password"]', 'teacher123');
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/.*dashboard/);
+  // Admin bị middleware chuyển thẳng về khu quản trị (spec J Q3).
+  await expect(page).toHaveURL(username === 'admin_test' ? /\/admin\/orders$/ : /.*dashboard/);
   return page;
 }
 
@@ -108,13 +109,6 @@ test('/admin → /admin/orders; teacher vào /admin, /admin/orders, /admin/accou
   await teacher.context().close();
 });
 
-test('admin_test thấy link Trang quản trị ở /plan', async ({ browser }) => {
-  const admin = await loginAs(browser, 'admin_test');
-  await admin.goto('/plan');
-  await expect(admin.getByTestId('admin-link')).toBeVisible();
-  await admin.context().close();
-});
-
 test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn chờ, xác nhận thì bị từ chối và vào Lịch sử đơn', async ({ browser }) => {
   const { code, order } = await createPendingForStd('RJ');
 
@@ -157,5 +151,41 @@ test('desktop: sidebar khu quản trị 3 mục, nhãn Quản trị, số đơn 
   await aside.getByRole('link', { name: 'Lịch sử đơn' }).click();
   await expect(admin).toHaveURL(/\/admin\/history$/);
   await expect(aside.getByRole('link', { name: 'Lịch sử đơn' })).toHaveAttribute('aria-current', 'page');
+  await admin.context().close();
+});
+
+test('admin_test: route giáo viên → /admin/orders; tab bar và menu avatar chỉ của khu quản trị; không gọi plan.me; không tràn ngang', async ({ browser }) => {
+  const admin = await loginAs(browser, 'admin_test');
+  const planMe: string[] = [];
+  admin.on('request', (r) => {
+    if (r.url().includes('plan.me')) planMe.push(r.url());
+  });
+
+  for (const path of ['/dashboard', '/students', '/plan', '/', '/admin', '/api/backup']) {
+    await admin.goto(path);
+    await expect(admin, path).toHaveURL(/\/admin\/orders$/);
+  }
+  await expect(admin.getByRole('heading', { level: 1, name: 'Chờ xác nhận' })).toBeVisible();
+  await expect(admin.getByRole('banner').getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
+
+  const tabs = admin.getByRole('navigation', { name: 'Điều hướng chính' });
+  await expect(tabs.getByRole('link')).toHaveCount(3);
+  for (const link of await tabs.getByRole('link').all()) {
+    expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  await expect(tabs).not.toContainText('Tổng quan');
+  await expect(tabs).not.toContainText('Học phí');
+  await tabs.getByRole('link', { name: 'Lịch sử' }).click();
+  await expect(admin).toHaveURL(/\/admin\/history$/);
+
+  await admin.getByRole('button', { name: 'Mở menu tài khoản' }).click();
+  const menu = admin.getByRole('menu');
+  await expect(menu.getByRole('menuitem')).toHaveText(['Quản trị', 'Đổi mật khẩu', 'Đăng xuất']);
+  await menu.getByRole('menuitem', { name: 'Quản trị' }).click();
+  await expect(admin).toHaveURL(/\/admin\/orders$/);
+
+  const overflow = await admin.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  expect(planMe).toEqual([]);
   await admin.context().close();
 });

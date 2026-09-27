@@ -2,6 +2,7 @@
 // KHÔNG import gì kéo theo native module (bcrypt, prisma, ...).
 // File `auth.ts` extend config này thêm Credentials provider cho route handler Node.
 import type { NextAuthConfig, DefaultSession } from "next-auth"
+import { isAdminUsername } from "@/lib/admin"
 
 declare module "next-auth" {
   interface Session {
@@ -30,10 +31,17 @@ export const authConfig = {
   // Edge runtime: chưa khai báo provider — sẽ bổ sung ở `auth.ts` (Node).
   providers: [],
   callbacks: {
-    authorized({ auth }) {
+    authorized({ auth, request }) {
       // Phải kiểm tới `user`: khi cấu hình lỗi, `auth` là object chứa error nên
       // vẫn truthy (GHSA-8fpg-xm3f-6cx3) → `!!auth` sẽ cho qua.
-      return !!auth?.user
+      if (!auth?.user) return false
+      // J1: admin chỉ dùng khu quản trị. So chặt để "/administration" không bị coi là khu quản trị.
+      const { pathname } = request.nextUrl
+      const inAdminArea = pathname === "/admin" || pathname.startsWith("/admin/")
+      if (isAdminUsername(auth.user.username) && !inAdminArea) {
+        return Response.redirect(new URL("/admin/orders", request.nextUrl.origin))
+      }
+      return true
     },
     async jwt({ token, user }) {
       const t = token as typeof token & AppJWT
