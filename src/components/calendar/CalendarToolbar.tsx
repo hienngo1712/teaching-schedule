@@ -13,8 +13,7 @@ import {
 import { GRADES } from "@/lib/constants"
 import { useFilters } from "@/hooks/useFilters"
 import { useCalendar } from "@/hooks/useCalendar"
-import { useEffect, useState } from "react"
-import { useDebounce } from "@/hooks/useDebounce"
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch"
 import { ExportExcelButton } from "../reports/ExportExcelButton"
 import type { SessionDTO, StudentDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -44,16 +43,7 @@ export function CalendarToolbar({
 
   const { monthLabel, prevMonth, nextMonth } = useCalendar()
 
-  const [localSearch, setLocalSearch] = useState(searchStudentName)
-  const debouncedSearch = useDebounce(localSearch, 400)
-
-  useEffect(() => {
-    setSearch(debouncedSearch)
-  }, [debouncedSearch, setSearch])
-
-  useEffect(() => {
-    setLocalSearch(searchStudentName)
-  }, [searchStudentName])
+  const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
   return (
     <div className="bg-white p-3 md:p-4 rounded-xl border">
