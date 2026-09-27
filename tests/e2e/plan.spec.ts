@@ -225,3 +225,34 @@ test.describe('Nhãn gói cạnh logo (1280px)', () => {
     await context.close();
   });
 });
+
+test.describe('Nhãn gói trên avatar header (390px)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('teacher_std: Standard, teacher: Pro; nhãn hiện trong nút tài khoản, trang không tràn ngang', async ({ page, browser }) => {
+    await login(page, 'teacher_std');
+    const badge = page.getByRole('button', { name: 'Mở menu tài khoản' }).getByTestId('current-plan-badge');
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveText('Standard');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const other = await context.newPage();
+    await login(other, 'teacher');
+    const proBadge = other.getByRole('button', { name: 'Mở menu tài khoản' }).getByTestId('current-plan-badge');
+    await expect(proBadge).toBeVisible();
+    await expect(proBadge).toHaveText('Pro');
+    await context.close();
+  });
+});
+
+test.describe('Nhãn gói trên avatar header (1280px)', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test('desktop: nhãn trong header ẩn, sidebar vẫn có', async ({ page }) => {
+    await login(page, 'teacher_std');
+    await expect(page.locator('aside').getByTestId('current-plan-badge')).toHaveText('Standard');
+    await expect(page.getByRole('button', { name: 'Mở menu tài khoản' }).getByTestId('current-plan-badge')).toBeHidden();
+  });
+});

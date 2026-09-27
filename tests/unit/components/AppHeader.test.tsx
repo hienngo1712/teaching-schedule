@@ -15,6 +15,9 @@ vi.mock("@/components/plan/RenewOffer", () => ({ RenewOffer: () => <div data-tes
 vi.mock("@/components/layout/ChangePasswordDialog", () => ({
   ChangePasswordDialog: ({ trigger }: { trigger: React.ReactNode }) => trigger,
 }))
+vi.mock("@/components/plan/CurrentPlanBadge", () => ({
+  CurrentPlanBadge: ({ className }: { className?: string }) => <span data-testid="current-plan-badge" className={className} />,
+}))
 
 function renderHeader(variant?: "teacher" | "admin") {
   render(
@@ -40,5 +43,17 @@ describe("AppHeader", () => {
     const items = await screen.findAllByRole("menuitem")
     expect(items.map((i) => i.textContent)).toEqual(["Quản trị", "Đổi mật khẩu", "Đăng xuất"])
     expect(screen.getByRole("menuitem", { name: "Quản trị" }).getAttribute("href")).toBe("/admin/orders")
+  })
+
+  it("giáo viên: nhãn gói nằm trong nút menu tài khoản, chỉ hiện ở mobile", () => {
+    renderHeader()
+    const badge = screen.getByRole("button", { name: "Mở menu tài khoản", hidden: true }).querySelector('[data-testid="current-plan-badge"]')
+    expect(badge).not.toBeNull()
+    expect(badge!.className).toContain("md:hidden")
+  })
+
+  it("admin: không có nhãn gói", () => {
+    renderHeader("admin")
+    expect(screen.queryByTestId("current-plan-badge")).toBeNull()
   })
 })
