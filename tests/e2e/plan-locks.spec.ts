@@ -104,9 +104,10 @@ test('Standard: đủ menu như Pro; Báo cáo, Cần chú ý, Ghi nhận, sheet
 
   // Học sinh: nhập Excel khóa Pro; menu Link phụ huynh khóa Pro.
   await page.goto('/students');
-  const importBtn = page.getByRole('button', { name: 'Nhập Excel' });
-  await expect(importBtn.getByTestId('lock-badge')).toBeVisible();
-  await importBtn.click();
+  await page.getByTestId('add-student-more').click();
+  const importItem = page.getByRole('menuitem', { name: /Nhập Excel/ });
+  await expect(importItem.getByTestId('lock-badge')).toBeVisible();
+  await importItem.click();
   await expect(upgrade(page)).toContainText(PRO_TEXT);
   await closeUpgrade(page);
   const studentCard = page.locator('div.rounded-lg.border', { hasText: NAME }).filter({ visible: true }).first();
