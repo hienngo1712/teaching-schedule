@@ -16,11 +16,13 @@ import {
   minPlanForStudents,
   orderBlockedUntil,
   paidDaysLeft,
+  PERIOD_PRICE_FACTOR,
   PLAN_FEATURES,
   PLAN_PRICES,
   planBanner,
   planLabel,
   planRequiredOf,
+  pricesFromMonthly,
   renewOffer,
   studentLimit,
   trialEndFor,
@@ -55,6 +57,23 @@ describe("giá", () => {
       plus: { month: 49000, year: 490000, "2year": 980000 },
       pro: { month: 99000, year: 990000, "2year": 1980000 },
     })
+  })
+})
+
+describe("pricesFromMonthly (spec L Q2)", () => {
+  it("giá seed 49.000/99.000 → đúng bảng giá cũ", () => {
+    expect(pricesFromMonthly({ plus: 49000, pro: 99000 })).toEqual({
+      plus: { month: 49000, year: 490000, "2year": 980000 },
+      pro: { month: 99000, year: 990000, "2year": 1980000 },
+    })
+  })
+  it("giá mới và giá lẻ: năm ×10, 2 năm ×20", () => {
+    expect(pricesFromMonthly({ plus: 59000, pro: 129000 })).toEqual({
+      plus: { month: 59000, year: 590000, "2year": 1180000 },
+      pro: { month: 129000, year: 1290000, "2year": 2580000 },
+    })
+    expect(pricesFromMonthly({ plus: 49900, pro: 99900 }).plus).toEqual({ month: 49900, year: 499000, "2year": 998000 })
+    expect(PERIOD_PRICE_FACTOR).toEqual({ month: 1, year: 10, "2year": 20 })
   })
 })
 

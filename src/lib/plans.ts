@@ -15,6 +15,20 @@ export const PLAN_PRICES: Record<PaidPlan, Record<Period, number>> = {
   plus: { month: 49000, year: 490000, "2year": 980000 },
   pro: { month: 99000, year: 990000, "2year": 1980000 },
 }
+export type PlanPrices = Record<PaidPlan, Record<Period, number>>
+// Chỉ dùng khi DB thiếu dòng giá (spec L Q4); giá thật nằm ở bảng plan_price_changes.
+export const DEFAULT_MONTH_PRICES: Record<PaidPlan, number> = { plus: 49000, pro: 99000 }
+// Năm = 10 tháng nên nhãn "Tiết kiệm 2 tháng" luôn đúng (spec L Q2).
+export const PERIOD_PRICE_FACTOR: Record<Period, number> = { month: 1, year: 10, "2year": 20 }
+
+export function pricesFromMonthly(m: Record<PaidPlan, number>): PlanPrices {
+  const periods = (v: number) => ({
+    month: v * PERIOD_PRICE_FACTOR.month,
+    year: v * PERIOD_PRICE_FACTOR.year,
+    "2year": v * PERIOD_PRICE_FACTOR["2year"],
+  })
+  return { plus: periods(m.plus), pro: periods(m.pro) }
+}
 export const PERIOD_MONTHS: Record<Period, number> = { month: 1, year: 12, "2year": 24 }
 // Số ngày danh nghĩa 1 kỳ cho quy đổi D7: đơn giá ngày = giá / số ngày (99.000/30, 990.000/365).
 export const PERIOD_DAYS: Record<Period, number> = { month: 30, year: 365, "2year": 730 }

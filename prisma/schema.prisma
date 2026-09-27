@@ -209,3 +209,30 @@ model PlanOrder {
   @@index([status])
   @@map("plan_orders")
 }
+
+// Giá hiện hành của 1 gói = dòng mới nhất (spec L Q1). Không FK tới users: xóa tài khoản admin không mất lịch sử.
+model PlanPriceChange {
+  id                 Int      @id @default(autoincrement())
+  plan               String   @db.VarChar(10)
+  monthPrice         Int      @map("month_price")
+  previousMonthPrice Int?     @map("previous_month_price")
+  changedBy          String   @map("changed_by") @db.VarChar(50)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([plan, createdAt])
+  @@map("plan_price_changes")
+}
+
+// userId null = số ngày mặc định cho tài khoản đăng ký sau; có userId = lần admin đặt riêng (spec L mục 15).
+// Không FK: tests/setup.ts xóa users mỗi lượt, FK RESTRICT sẽ chặn.
+model TrialDayChange {
+  id           Int      @id @default(autoincrement())
+  userId       Int?     @map("user_id")
+  days         Int
+  previousDays Int?     @map("previous_days")
+  changedBy    String   @map("changed_by") @db.VarChar(50)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("trial_day_changes")
+}
