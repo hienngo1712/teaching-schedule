@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { PageHeader } from "@/components/common/PageHeader"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { usePlan } from "@/hooks/usePlan"
 import { PlanCompare } from "@/components/plan/PlanCompare"
-import { PlanCheckout, type PlanChoice } from "@/components/plan/PlanCheckout"
+import { PlanPurchaseDialog } from "@/components/plan/PlanPurchaseDialog"
 import { PendingOrderCard } from "@/components/plan/PendingOrderCard"
-import { isPeriod, orderBlockedUntil, planLabel } from "@/lib/plans"
+import { isPeriod, orderBlockedUntil, planLabel, type PaidPlan } from "@/lib/plans"
 import { formatVnDate } from "@/lib/payment-notes"
 import { formatCurrency } from "@/lib/utils"
 
@@ -22,8 +23,19 @@ const STATUS_KEY = {
 export default function PlanPage() {
   const { t } = useTranslation()
   const { me, fields } = usePlan()
-  // P11: luôn chọn sẵn Pro, kỳ Năm.
-  const [choice, setChoice] = useState<PlanChoice>({ plan: "pro", period: "year" })
+  const router = useRouter()
+  // Biến tên "query": tests/unit/next15-contract.test.ts cấm định danh tham số route trong page.tsx.
+  const query = useSearchParams()
+  const wantsBuy = query.get("buy") === "1"
+  const loaded = me !== undefined
+  const [purchasePlan, setPurchasePlan] = useState<PaidPlan | null>(null)
+
+  useEffect(() => {
+    // Q15: "Gia hạn ngay" dẫn tới /plan?buy=1 → tự mở popup Pro (kỳ Năm), bỏ param để tải lại không mở lại.
+    if (!wantsBuy || !loaded) return
+    setPurchasePlan("pro")
+    router.replace("/plan")
+  }, [wantsBuy, loaded, router])
 
   if (!me || !fields) {
     return (
@@ -44,16 +56,7 @@ export default function PlanPage() {
 
       {me.pendingOrder && <PendingOrderCard order={me.pendingOrder} paymentReady={me.paymentReady} />}
 
-      <PlanCompare
-        me={me}
-        plusBlocked={plusBlocked}
-        onChoose={(plan) => {
-          setChoice((c) => ({ ...c, plan }))
-          document.getElementById("plan-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" })
-        }}
-      />
-
-      <PlanCheckout me={me} fields={fields} choice={choice} onChange={setChoice} />
+      <PlanCompare me={me} plusBlocked={plusBlocked} onChoose={setPurchasePlan} />
 
       <section data-testid="plan-history" className="space-y-2 rounded-xl border bg-white p-4 md:p-6">
         <h2 className="text-base font-semibold text-foreground">{t("plan_history")}</h2>
@@ -76,6 +79,19 @@ export default function PlanPage() {
           </ul>
         )}
       </section>
+
+      {/* Mount mỗi lần mở để lựa chọn về gói vừa bấm + kỳ Năm (P11). */}
+      {purchasePlan && (
+        <PlanPurchaseDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setPurchasePlan(null)
+          }}
+          me={me}
+          fields={fields}
+          initialPlan={purchasePlan}
+        />
+      )}
     </div>
   )
 }

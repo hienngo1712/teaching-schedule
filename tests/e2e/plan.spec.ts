@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { EXPECTED_TEST_ENDPOINT } from '../env-setup';
 
 const db = new PrismaClient();
+const CODE_RE = /SM [ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}/;
 
 async function hideDevBadge(page: Page) {
   // Huy hiệu dev của Next (chỉ có khi `next dev`) đè lên góc trái dưới ở 390px.
@@ -43,7 +44,7 @@ test.afterAll(async () => {
 test.describe('Gói của tôi (390px)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('Standard: vào từ sheet Thêm, thẻ Pro đứng đầu, Pro + Năm chọn sẵn, tạo mã Plus năm rồi hủy', async ({ page }) => {
+  test('Standard: vào từ sheet Thêm, thẻ Pro đứng đầu, popup chọn sẵn Pro + 12 tháng, tạo mã Plus năm trong popup rồi hủy', async ({ page }) => {
     await login(page, 'teacher_std');
     await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('button', { name: 'Thêm', exact: true }).click();
     await page.getByRole('dialog', { name: 'Thêm' }).getByRole('link', { name: /Gói của tôi/ }).click();
@@ -64,35 +65,58 @@ test.describe('Gói của tôi (390px)', () => {
     await expect(page.getByTestId('plan-card-plus')).toContainText('Mọi thứ của gói Standard, thêm:');
     await expect(page.getByTestId('plan-card-pro')).toContainText('Không giới hạn học sinh');
 
-    const checkout = page.getByTestId('plan-checkout');
-    await expect(checkout.getByRole('button', { name: 'Pro', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await expect(checkout.getByRole('button', { name: 'Năm', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await expect(checkout).toContainText('990.000');
+    await expect(page.getByTestId('plan-checkout')).toHaveCount(0);
 
-    await checkout.getByRole('button', { name: 'Plus', exact: true }).click();
-    await expect(checkout).toContainText('490.000');
-    await checkout.getByRole('button', { name: '2 năm', exact: true }).click();
-    await expect(checkout).toContainText('980.000');
-    await expect(checkout).toContainText('Tặng 2 tháng');
-    await checkout.getByRole('button', { name: 'Năm', exact: true }).click();
+    await page.getByTestId('plan-card-pro').getByRole('button', { name: 'Chọn gói Pro' }).click();
+    const popup = page.getByTestId('plan-purchase');
+    await expect(popup).toBeVisible();
+    await expect(popup.getByTestId('purchase-plan-pro')).toHaveAttribute('aria-checked', 'true');
+    await expect(popup.getByTestId('purchase-period-year')).toHaveAttribute('aria-checked', 'true');
+    const summary = popup.getByTestId('purchase-summary');
+    await expect(summary).toContainText('990.000');
 
-    for (const b of await checkout.getByRole('button').all()) {
-      expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    }
+    await popup.getByTestId('purchase-plan-plus').click();
+    await expect(summary).toContainText('490.000');
+    await popup.getByTestId('purchase-period-2year').click();
+    await expect(summary).toContainText('980.000');
+    await expect(summary).toContainText('Tặng 2 tháng');
+    await expect(popup.getByTestId('purchase-period-2year')).toContainText('Tối đa 26 tháng');
+    await popup.getByTestId('purchase-period-year').click();
+    await expect(summary).toContainText('490.000');
 
-    await checkout.getByRole('button', { name: 'Tạo mã chuyển khoản' }).click();
-    const pending = page.getByTestId('pending-order');
+    // Mobile: toàn màn hình, panel Đơn hàng xếp dưới cột chọn kỳ.
+    const popupBox = (await popup.boundingBox())!;
+    expect(popupBox.width).toBeGreaterThanOrEqual(389);
+    expect((await summary.boundingBox())!.y).toBeGreaterThan((await popup.getByTestId('purchase-period-2year').boundingBox())!.y);
+
+    const allButtonsTall = async () => {
+      for (const b of await popup.getByRole('button').all()) {
+        expect((await b.boundingBox())!.height, (await b.textContent()) ?? '').toBeGreaterThanOrEqual(44);
+      }
+    };
+    const noOverflow = async () => {
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+    };
+    await allButtonsTall();
+    await noOverflow();
+
+    await popup.getByRole('button', { name: 'Tạo đơn', exact: true }).click();
+    const pending = popup.getByTestId('pending-order');
     await expect(pending).toBeVisible();
     await expect(pending).toContainText('Chờ xác nhận');
-    await expect(pending).toContainText(/SM [ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}/);
+    await expect(pending).toContainText(CODE_RE);
     await expect(pending).toContainText('490.000');
     await expect(pending.getByRole('img', { name: 'VietQR' })).toBeVisible();
+    await allButtonsTall();
+    await noOverflow();
 
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    expect(overflow).toBeLessThanOrEqual(0);
-
-    await pending.getByRole('button', { name: 'Hủy yêu cầu' }).click();
-    await expect(pending).toBeHidden();
+    await popup.getByRole('button', { name: 'Xong' }).click();
+    await expect(popup).toBeHidden();
+    const pagePending = page.getByTestId('pending-order');
+    await expect(pagePending).toBeVisible();
+    await pagePending.getByRole('button', { name: 'Hủy yêu cầu' }).click();
+    await expect(pagePending).toBeHidden();
     await expect(page.getByTestId('plan-history')).toContainText('Đã hủy');
   });
 });
@@ -100,7 +124,7 @@ test.describe('Gói của tôi (390px)', () => {
 test.describe('Gói của tôi (1280px)', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
-  test('desktop: Standard bên trái, Pro bên phải; bấm CTA thẻ Plus thì checkout chọn Plus', async ({ page }) => {
+  test('desktop: Standard trái, Pro phải, 3 thẻ cao bằng nhau; Chọn gói Plus mở popup chọn sẵn Plus, Đơn hàng bên phải', async ({ page }) => {
     await login(page, 'teacher_std');
     await page.goto('/plan');
     const x = async (id: string) => (await page.getByTestId(id).boundingBox())!.x;
@@ -117,6 +141,13 @@ test.describe('Gói của tôi (1280px)', () => {
     };
     expect(Math.abs((await ctaBottom('plus', 'Chọn gói Plus')) - (await ctaBottom('pro', 'Chọn gói Pro')))).toBeLessThanOrEqual(1);
     await page.getByTestId('plan-card-plus').getByRole('button', { name: 'Chọn gói Plus' }).click();
-    await expect(page.getByTestId('plan-checkout').getByRole('button', { name: 'Plus', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const popup = page.getByTestId('plan-purchase');
+    await expect(popup.getByTestId('purchase-plan-plus')).toHaveAttribute('aria-checked', 'true');
+    await expect(popup.getByTestId('purchase-period-year')).toHaveAttribute('aria-checked', 'true');
+    const plusBox = (await popup.getByTestId('purchase-plan-plus').boundingBox())!;
+    const proBox = (await popup.getByTestId('purchase-plan-pro').boundingBox())!;
+    const summaryBox = (await popup.getByTestId('purchase-summary').boundingBox())!;
+    expect(plusBox.x).toBeLessThan(proBox.x);
+    expect(summaryBox.x).toBeGreaterThan(proBox.x + proBox.width - 1);
   });
 });

@@ -51,11 +51,11 @@ test.afterAll(async () => {
 test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin/orders → Tài khoản & gói, Lịch sử đơn cập nhật', async ({ browser }) => {
   const std = await loginAs(browser, 'teacher_std');
   await std.goto('/plan');
-  const checkout = std.getByTestId('plan-checkout');
-  await checkout.getByRole('button', { name: 'Plus', exact: true }).click();
-  await checkout.getByRole('button', { name: 'Tháng', exact: true }).click();
-  await checkout.getByRole('button', { name: 'Tạo mã chuyển khoản' }).click();
-  const pending = std.getByTestId('pending-order');
+  await std.getByTestId('plan-card-plus').getByRole('button', { name: 'Chọn gói Plus' }).click();
+  const popup = std.getByTestId('plan-purchase');
+  await popup.getByTestId('purchase-period-month').click();
+  await popup.getByRole('button', { name: 'Tạo đơn', exact: true }).click();
+  const pending = popup.getByTestId('pending-order');
   await expect(pending).toBeVisible();
   const code = ((await pending.textContent()) ?? '').match(CODE_RE)![1];
   await std.context().close();
