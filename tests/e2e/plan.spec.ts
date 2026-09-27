@@ -293,3 +293,20 @@ test.describe('Giá đổi khi popup đang mở (spec L Q6, 1280px)', () => {
     await expect(pending).toContainText('590.000');
   });
 });
+
+test.describe('Đơn chờ quá 7 ngày (spec P7, 390px)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('đơn quá hạn: không còn thẻ chờ/QR, lịch sử hiện Hết hạn', async ({ page }) => {
+    await resetStd();
+    const u = await db.user.findUniqueOrThrow({ where: { username: 'teacher_std' } });
+    await db.planOrder.create({
+      data: { userId: u.id, plan: 'plus', period: 'year', amount: 490000, code: 'EXP7AB', status: 'pending', createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000) },
+    });
+    await login(page, 'teacher_std');
+    await page.goto('/plan');
+    await expect(page.getByTestId('plan-history')).toContainText('Hết hạn');
+    await expect(page.getByTestId('pending-order')).toHaveCount(0);
+    await resetStd();
+  });
+});

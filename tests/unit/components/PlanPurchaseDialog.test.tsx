@@ -68,6 +68,7 @@ function pendingOrder(id: number, code: string) {
     amount: 490000,
     bonusMonths: 0,
     createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     transferContent: `SM ${code}`,
     qr: { payload: "000201010212", bankShortName: "Vietcombank", accountNumber: "0123456789", accountName: "CHU APP TEST" },
   } as NonNullable<Me["pendingOrder"]>

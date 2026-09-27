@@ -114,6 +114,12 @@ export function addDays(d: Date, n: number): Date {
   return new Date(d.getTime() + n * DAY_MS)
 }
 
+// Đơn chờ chuyển khoản quá 7 ngày chưa duyệt thì hết hạn (spec P7), tính đúng từ giờ tạo.
+export const ORDER_TTL_DAYS = 7
+export function orderExpiresAt(createdAt: Date): Date {
+  return addDays(createdAt, ORDER_TTL_DAYS)
+}
+
 // d phải là 00:00 giờ VN. Tháng đích thiếu ngày thì lùi về ngày cuối tháng (31/1 + 1 tháng = 28 hoặc 29/2).
 export function addMonthsVn(d: Date, months: number): Date {
   const { year, month, day } = vnDateParts(d)

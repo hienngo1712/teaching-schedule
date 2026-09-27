@@ -19,7 +19,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { formatValidUntil, planLabel } from "@/lib/plans"
 import { formatCurrency } from "@/lib/utils"
-import { dateOrDash, periodKey } from "./admin-format"
+import { dateOrDash, dateTimeVn, periodKey } from "./admin-format"
 
 type PendingRow = RouterOutputs["admin"]["overview"]["pendingOrders"][number]
 
@@ -65,7 +65,15 @@ export function AdminPendingOrders() {
     { header: t("admin_col_period"), cell: (o) => t(periodKey(o.period)) },
     { header: t("payment_amount"), cell: (o) => formatCurrency(o.amount), className: "whitespace-nowrap text-right" },
     { header: t("admin_col_code"), cell: (o) => <span className="font-mono">{o.code}</span> },
-    { header: t("admin_col_created"), cell: (o) => dateOrDash(o.createdAt) },
+    {
+      header: t("admin_col_created"),
+      cell: (o) => (
+        <div className="whitespace-nowrap">
+          <div>{dateOrDash(o.createdAt)}</div>
+          <div className="text-xs text-slate-500">{t("admin_order_expires").replace("{date}", dateTimeVn(o.expiresAt))}</div>
+        </div>
+      ),
+    },
     { header: <span className="sr-only">{t("actions")}</span>, cell: orderActions },
   ]
 
@@ -94,7 +102,7 @@ export function AdminPendingOrders() {
               </div>
               <span className="shrink-0 font-mono text-sm">{o.code}</span>
             </div>
-            <p className="text-xs text-slate-500">{dateOrDash(o.createdAt)}</p>
+            <p className="text-xs text-slate-500">{dateOrDash(o.createdAt)} · {t("admin_order_expires").replace("{date}", dateTimeVn(o.expiresAt))}</p>
             {orderActions(o)}
           </div>
         )}

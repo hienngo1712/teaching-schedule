@@ -12,8 +12,8 @@ import { ADMIN_NAV_ITEMS } from "./admin-nav"
 export function AdminSidebar() {
   const pathname = usePathname()
   const { t } = useTranslation()
-  // Cùng query key với màn Đơn chờ nên dùng chung cache React Query, không thêm request.
-  const pendingCount = trpc.admin.overview.useQuery().data?.pendingOrders.length ?? 0
+  // Query nhẹ dùng chung với tab bar (spec P J5).
+  const pendingCount = trpc.admin.pendingCount.useQuery().data?.count ?? 0
 
   return (
     <aside className="flex h-full w-[232px] shrink-0 flex-col gap-7 border-r bg-white px-3.5 py-5">

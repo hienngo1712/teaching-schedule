@@ -3,7 +3,9 @@ import { TRPCError } from "@trpc/server"
 import { randomInt } from "node:crypto"
 import {
   FEATURE_PLAN,
+  ORDER_TTL_DAYS,
   PLAN_LABEL,
+  addDays,
   computeBonusMonths,
   effectivePlan,
   formatValidUntil,
@@ -11,6 +13,7 @@ import {
   isPlan,
   minPlanForStudents,
   orderBlockedUntil,
+  orderExpiresAt,
   studentLimit,
   type CreditOrder,
   type EffectivePlan,
@@ -96,6 +99,16 @@ export async function findLastPlusOrder(db: Db, userId: number): Promise<CreditO
   })
 }
 
+// Không có cron: đơn chờ quá hạn được chốt "expired" ở lần đọc/ghi kế tiếp; decided_at = đúng lúc hết hạn (spec P7).
+export async function expireStaleOrders(db: Db, now: Date, userId?: number): Promise<number> {
+  const cutoff = addDays(now, -ORDER_TTL_DAYS)
+  const byUser = userId === undefined ? Prisma.empty : Prisma.sql`AND user_id = ${userId}`
+  return db.$executeRaw`
+    UPDATE plan_orders
+    SET status = 'expired', decided_at = created_at + ${Prisma.raw(`interval '${ORDER_TTL_DAYS} days'`)}
+    WHERE status = 'pending' AND created_at <= ${cutoff} ${byUser}`
+}
+
 const ORDER_SELECT = {
   id: true,
   plan: true,
@@ -112,6 +125,7 @@ const ORDER_SELECT = {
 
 export async function getMyPlan(db: PrismaClient, userId: number, username: string) {
   const now = new Date()
+  await expireStaleOrders(db, now, userId)
   const [fields, activeStudents, orders, pending, lastPlus, prices] = await Promise.all([
     db.user.findUniqueOrThrow({ where: { id: userId }, select: PLAN_SELECT }),
     db.student.count({ where: { userId, isActive: true } }),
@@ -146,6 +160,7 @@ export async function getMyPlan(db: PrismaClient, userId: number, username: stri
             amount: pending.amount,
             bonusMonths: pending.bonusMonths,
             createdAt: pending.createdAt,
+            expiresAt: orderExpiresAt(pending.createdAt),
             transferContent: content,
             qr: bank
               ? {
@@ -183,6 +198,7 @@ export async function createOrder(
       return await db.$transaction(async (tx) => {
         // Khóa theo userId: 2 request cùng lúc không thì cùng thấy "chưa có đơn chờ" rồi ra 2 đơn pending.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
+        await expireStaleOrders(tx, now, userId)
         // Đọc giá trong transaction: đơn mang giá đã commit lúc tạo (spec L Q7/Q8). So trước khi hủy đơn chờ cũ.
         const amount = (await getPlanPrices(tx))[input.plan][input.period]
         if (input.expectedAmount !== undefined && input.expectedAmount !== amount) {
@@ -205,6 +221,7 @@ export async function createOrder(
 }
 
 export async function cancelOrder(db: PrismaClient, userId: number, id: number): Promise<{ success: true }> {
+  await expireStaleOrders(db, new Date(), userId)
   const { count } = await db.planOrder.updateMany({ where: { id, userId, status: "pending" }, data: { status: "cancelled" } })
   if (count === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy yêu cầu đang chờ" })
   return { success: true }

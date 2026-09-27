@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { trpc } from "@/lib/trpc"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { isNavActive } from "@/components/layout/nav-items"
 import { ADMIN_NAV_ITEMS } from "./admin-nav"
@@ -22,6 +23,7 @@ function ActiveBar() {
 export function AdminTabBar() {
   const pathname = usePathname()
   const { t } = useTranslation()
+  const pendingCount = trpc.admin.pendingCount.useQuery().data?.count ?? 0
   return (
     <nav
       aria-label={t("main_navigation")}
@@ -35,7 +37,17 @@ export function AdminTabBar() {
             <li key={item.href}>
               <Link href={item.href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
                 {active && <ActiveBar />}
-                <Icon className="size-5" />
+                <span className="relative">
+                  <Icon className="size-5" />
+                  {item.href === "/admin/orders" && pendingCount > 0 && (
+                    <span
+                      data-testid="admin-tab-pending-count"
+                      className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full bg-amber-100 px-1 text-center text-[10px] font-semibold leading-4 text-amber-800"
+                    >
+                      {pendingCount}
+                    </span>
+                  )}
+                </span>
                 <span className="max-w-full truncate px-1">{t(item.shortKey)}</span>
               </Link>
             </li>
