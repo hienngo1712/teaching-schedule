@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { ChangePasswordForm } from "./ChangePasswordForm"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export function ChangePasswordDialog({
   trigger,
@@ -20,15 +21,16 @@ export function ChangePasswordDialog({
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const { t } = useTranslation()
 
   function handleSuccess(relogin: boolean) {
     setOpen(false)
     if (relogin) {
-      toast.success("Đổi mật khẩu thành công, vui lòng đăng nhập lại")
+      toast.success(t("cp_success_relogin"))
       router.replace("/login")
       return
     }
-    toast.success("Đổi mật khẩu thành công")
+    toast.success(t("cp_success"))
     // Nạp lại layout để SessionProvider nhận phiên mới vừa cấp.
     router.refresh()
   }
@@ -38,10 +40,8 @@ export function ChangePasswordDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Đổi mật khẩu</DialogTitle>
-          <DialogDescription>
-            Mật khẩu mới tối thiểu 10 ký tự.
-          </DialogDescription>
+          <DialogTitle>{t("change_password")}</DialogTitle>
+          <DialogDescription>{t("cp_hint")}</DialogDescription>
         </DialogHeader>
         <ChangePasswordForm onSuccess={handleSuccess} onCancel={() => setOpen(false)} />
       </DialogContent>

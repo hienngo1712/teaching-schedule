@@ -18,8 +18,8 @@ describe("Hợp đồng Next 15", () => {
     expect(nextMajor).toBeGreaterThanOrEqual(15)
   })
 
-  it("login action await headers() thay vì dùng trực tiếp", () => {
-    const src = readFileSync("src/app/login/actions.ts", "utf8")
+  it("lấy IP (login + đổi mật khẩu) await headers() thay vì dùng trực tiếp", () => {
+    const src = readFileSync("src/server/request-ip.ts", "utf8")
     expect(src).toContain("await headers()")
     expect(src).not.toMatch(/[^t]\bheaders\(\)\.get/)
   })

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/server/auth", () => ({ auth: async () => mocks.session, signIn: mocks.signIn }))
 vi.mock("@/server/services/user.service", () => ({ changeUserPassword: mocks.change }))
 vi.mock("next-auth", () => ({ AuthError: class AuthError extends Error {} }))
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-forwarded-for": "5.6.7.8, 10.0.0.1" }) }))
 
 import { AuthError } from "next-auth"
 import { changePasswordAction } from "@/app/actions/change-password"
@@ -59,7 +60,7 @@ describe("changePasswordAction (spec N 6.3c)", () => {
 
   it("đúng → đổi theo userId của phiên, signIn lại bằng mật khẩu mới, giữ ghi nhớ", async () => {
     expect(await changePasswordAction(OK_INPUT)).toEqual({ ok: true })
-    expect(mocks.change).toHaveBeenCalledWith(expect.anything(), 7, "teacher123", "NewSecret@2026")
+    expect(mocks.change).toHaveBeenCalledWith(expect.anything(), 7, "teacher123", "NewSecret@2026", "5.6.7.8")
     expect(mocks.signIn).toHaveBeenCalledWith("credentials", {
       username: "teacher",
       password: "NewSecret@2026",
@@ -77,5 +78,16 @@ describe("changePasswordAction (spec N 6.3c)", () => {
   it("signIn lại thất bại (vd rate limit) → mật khẩu đã đổi, báo relogin", async () => {
     mocks.signIn.mockRejectedValueOnce(new AuthError("CredentialsSignin"))
     expect(await changePasswordAction(OK_INPUT)).toEqual({ ok: true, relogin: true })
+  })
+
+  it("signIn lại ném lỗi thường (không phải AuthError) → vẫn báo đổi xong, relogin", async () => {
+    mocks.signIn.mockRejectedValueOnce(new Error("db down"))
+    expect(await changePasswordAction(OK_INPUT)).toEqual({ ok: true, relogin: true })
+  })
+
+  it("sai quá nhiều lần → RATE_LIMITED, không signIn", async () => {
+    mocks.change.mockRejectedValueOnce(new TRPCError({ code: "TOO_MANY_REQUESTS", message: "RATE_LIMITED" }))
+    expect(await changePasswordAction(OK_INPUT)).toEqual({ ok: false, error: "RATE_LIMITED" })
+    expect(mocks.signIn).not.toHaveBeenCalled()
   })
 })

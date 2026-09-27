@@ -2,7 +2,7 @@ import { Prisma, PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { TRPCError } from "@trpc/server"
 import type { RegisterInput } from "@/lib/schemas/auth"
-import { BCRYPT_COST } from "@/server/auth-credentials"
+import { BCRYPT_COST, isRateLimited } from "@/server/auth-credentials"
 import { seedSubjectsForUser } from "./subject-defaults"
 import { trialEndFor } from "@/lib/plans"
 import { getDefaultTrialDays } from "./trial.service"
@@ -58,11 +58,19 @@ export async function changeUserPassword(
   db: PrismaClient,
   userId: number,
   currentPassword: string,
-  newPassword: string
+  newPassword: string,
+  ipAddress: string | null = null
 ): Promise<void> {
   const user = await db.user.findUniqueOrThrow({ where: { id: userId } })
+  // Dùng chung bộ đếm sai với đăng nhập: phiên bị lộ không thành chỗ dò mật khẩu không giới hạn.
+  if (await isRateLimited(user.username, ipAddress)) {
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "RATE_LIMITED" })
+  }
   const ok = await bcrypt.compare(currentPassword, user.passwordHash)
   if (!ok) {
+    await db.loginAttempt.create({
+      data: { username: user.username, ipAddress, success: false, userId: user.id },
+    })
     throw new TRPCError({ code: "BAD_REQUEST", message: "Mật khẩu hiện tại không đúng" })
   }
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST)

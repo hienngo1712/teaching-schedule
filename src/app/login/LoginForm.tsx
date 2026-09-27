@@ -10,11 +10,12 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { loginAction, type LoginResult } from "./actions"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { safeCallbackUrl } from "@/lib/safe-redirect"
 
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard"
+  const callbackUrl = searchParams.get("callbackUrl")
   // Middleware/layout gắn expired=1 khi còn cookie mà phiên không hợp lệ (spec N Q7).
   const expired = searchParams.get("expired") === "1"
   const { t } = useTranslation()
@@ -36,7 +37,7 @@ export function LoginForm() {
     startTransition(async () => {
       const result = await loginAction(formData)
       if (result.ok) {
-        router.replace(callbackUrl)
+        router.replace(safeCallbackUrl(callbackUrl, window.location.origin))
         router.refresh()
       } else {
         setError(ERROR_MESSAGES[result.error])

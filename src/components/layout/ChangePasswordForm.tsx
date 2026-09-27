@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/ui/password-input"
 import { changePasswordAction } from "@/app/actions/change-password"
+import { useTranslation } from "@/components/providers/LanguageProvider"
 
 // Dùng chung cho dialog trong menu tài khoản và trang đổi mật khẩu bắt buộc (spec N R2).
 export function ChangePasswordForm({
@@ -19,34 +20,38 @@ export function ChangePasswordForm({
   const [confirm, setConfirm] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const { t } = useTranslation()
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     if (next.length < 10) {
-      setError("Mật khẩu mới phải có ít nhất 10 ký tự")
+      setError(t("cp_err_min"))
       return
     }
     if (next === current) {
-      setError("Mật khẩu mới phải khác mật khẩu hiện tại")
+      setError(t("cp_err_same"))
       return
     }
     if (next !== confirm) {
-      setError("Xác nhận mật khẩu không khớp")
+      setError(t("cp_err_mismatch"))
       return
     }
     startTransition(async () => {
       const r = await changePasswordAction({ currentPassword: current, newPassword: next })
       if (r.ok) onSuccess(r.relogin === true)
-      else if (r.error === "UNAUTHORIZED") setError("Phiên đăng nhập đã hết, vui lòng đăng nhập lại")
-      else setError(r.message ?? "Mật khẩu hiện tại không đúng")
+      else if (r.error === "UNAUTHORIZED") setError(t("cp_err_session"))
+      else if (r.error === "RATE_LIMITED") setError(t("cp_err_rate_limited"))
+      // Không hiện r.message: chuỗi zod phía server chỉ có tiếng Việt.
+      else if (r.error === "INVALID") setError(t("cp_err_invalid"))
+      else setError(t("cp_err_wrong_current"))
     })
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="space-y-2">
-        <Label htmlFor="current-pw">Mật khẩu hiện tại</Label>
+        <Label htmlFor="current-pw">{t("cp_current")}</Label>
         <PasswordInput
           id="current-pw"
           autoComplete="current-password"
@@ -56,7 +61,7 @@ export function ChangePasswordForm({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="new-pw">Mật khẩu mới</Label>
+        <Label htmlFor="new-pw">{t("cp_new")}</Label>
         <PasswordInput
           id="new-pw"
           autoComplete="new-password"
@@ -67,7 +72,7 @@ export function ChangePasswordForm({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="confirm-pw">Xác nhận mật khẩu mới</Label>
+        <Label htmlFor="confirm-pw">{t("cp_confirm")}</Label>
         <PasswordInput
           id="confirm-pw"
           autoComplete="new-password"
@@ -84,11 +89,11 @@ export function ChangePasswordForm({
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {onCancel && (
           <Button type="button" variant="outline" className="h-11 md:h-10" onClick={onCancel} disabled={isPending}>
-            Hủy
+            {t("cancel")}
           </Button>
         )}
         <Button type="submit" className="h-11 md:h-10" disabled={isPending}>
-          {isPending ? "Đang lưu..." : "Đổi mật khẩu"}
+          {isPending ? t("saving") : t("change_password")}
         </Button>
       </div>
     </form>

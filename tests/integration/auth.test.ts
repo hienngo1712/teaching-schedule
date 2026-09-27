@@ -141,4 +141,20 @@ describe("changeUserPassword (spec N Q15–Q16, R2)", () => {
     expect(after.passwordHash).toBe(before.passwordHash)
     expect(after.sessionVersion).toBe(before.sessionVersion)
   })
+
+  it("✗ sai mật khẩu cũ 5 lần → lần sau bị chặn TOO_MANY_REQUESTS kể cả đúng mật khẩu", async () => {
+    const before = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    for (let i = 0; i < 5; i++) {
+      await expect(changeUserPassword(db, before.id, "wrong-password", "AnotherSecret@2026", "7.7.7.7")).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+      })
+    }
+    expect(await db.loginAttempt.count({ where: { username: "teacher", success: false } })).toBe(5)
+    await expect(changeUserPassword(db, before.id, "teacher123", "AnotherSecret@2026", "7.7.7.7")).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    })
+    const after = await db.user.findUniqueOrThrow({ where: { id: before.id } })
+    expect(after.passwordHash).toBe(before.passwordHash)
+    expect(after.sessionVersion).toBe(before.sessionVersion)
+  })
 })

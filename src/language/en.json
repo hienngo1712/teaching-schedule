@@ -595,5 +595,18 @@
   "admin_reset_password": "Reset password",
   "admin_reset_confirm": "Reset the password for {username}? Every device signed in to this account will be signed out, and the user must change the password at next sign in.",
   "admin_reset_done": "This temporary password is shown only once. Send it to the user, they must change it right after signing in.",
-  "admin_reset_close": "I have saved it"
+  "admin_reset_close": "I have saved it",
+  "cp_current": "Current password",
+  "cp_new": "New password",
+  "cp_confirm": "Confirm new password",
+  "cp_hint": "New password must be at least 10 characters.",
+  "cp_err_min": "New password must be at least 10 characters",
+  "cp_err_same": "New password must be different from the current password",
+  "cp_err_mismatch": "Password confirmation does not match",
+  "cp_err_wrong_current": "Current password is incorrect",
+  "cp_err_session": "Your session has ended, please sign in again",
+  "cp_err_rate_limited": "Too many incorrect attempts. Please try again in 15 minutes.",
+  "cp_err_invalid": "Invalid new password",
+  "cp_success": "Password changed",
+  "cp_success_relogin": "Password changed, please sign in again"
 }

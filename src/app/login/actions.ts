@@ -1,15 +1,9 @@
 "use server"
 
-import { headers } from "next/headers"
 import { signIn } from "@/server/auth"
 import { isRateLimited } from "@/server/auth-credentials"
+import { getRequestIp } from "@/server/request-ip"
 import { AuthError } from "next-auth"
-
-async function getRequestIp(): Promise<string | null> {
-  const h = await headers()
-  const fwd = h.get("x-forwarded-for")
-  return fwd?.split(",")[0]?.trim() ?? h.get("x-real-ip")
-}
 
 export type LoginResult =
   | { ok: true }

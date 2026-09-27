@@ -7,13 +7,14 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 
 const mocks = vi.hoisted(() => ({
   query: new URLSearchParams(),
-  loginAction: vi.fn<(fd: FormData) => Promise<{ ok: false; error: "INVALID_CREDENTIALS" }>>(async () => ({
+  replace: vi.fn(),
+  loginAction: vi.fn<(fd: FormData) => Promise<{ ok: boolean; error?: "INVALID_CREDENTIALS" }>>(async () => ({
     ok: false,
     error: "INVALID_CREDENTIALS",
   })),
 }))
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ replace: mocks.replace, refresh: vi.fn() }),
   useSearchParams: () => mocks.query,
 }))
 vi.mock("@/app/login/actions", () => ({ loginAction: mocks.loginAction }))
@@ -44,6 +45,7 @@ function renderForm(query = "") {
 
 beforeEach(() => {
   mocks.loginAction.mockClear()
+  mocks.replace.mockClear()
 })
 
 describe("LoginForm — ghi nhớ đăng nhập (spec N 6.4)", () => {
@@ -96,5 +98,19 @@ describe("LoginForm — thông báo hết phiên (spec N Q7)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }))
     await screen.findByRole("alert")
     expect(screen.queryByRole("status")).toBeNull()
+  })
+})
+
+describe("LoginForm — callbackUrl (chặn open redirect)", () => {
+  it.each([
+    ["callbackUrl=https%3A%2F%2Fevil.tld", "/dashboard"],
+    ["callbackUrl=%2F%2Fevil.tld", "/dashboard"],
+    ["callbackUrl=%2Fstudents%3Fx%3D1", "/students?x=1"],
+    ["callbackUrl=" + encodeURIComponent(window.location.origin + "/students"), "/students"],
+  ])("%s → %s", async (query, expected) => {
+    mocks.loginAction.mockResolvedValueOnce({ ok: true })
+    renderForm(query)
+    fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }))
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith(expected))
   })
 })
