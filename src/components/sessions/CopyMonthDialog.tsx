@@ -15,6 +15,7 @@ import { useFeatureGate } from "@/hooks/useFeatureGate"
 import { DAY_NAMES } from "@/lib/constants"
 import {
   COPY_MONTH_MAX_MONTHS,
+  COPY_MONTH_MAX_SESSIONS,
   monthFromIndex,
   monthIndex,
   shiftMonth,
@@ -92,6 +93,14 @@ export function CopyMonthDialog({ open, onOpenChange, initialYear, initialMonth,
     }
   }, [preview.error, onOpenChange])
 
+  // Mở lúc gói chưa tải xong: tải xong mới biết thiếu gói → chuyển sang popup nâng cấp.
+  useEffect(() => {
+    if (open && gate.locked) {
+      gate.openUpgrade()
+      onOpenChange(false)
+    }
+  }, [open, gate, onOpenChange])
+
   const copy = trpc.session.copyMonth.useMutation({
     onSuccess: (res) => {
       setResult(res)
@@ -100,6 +109,7 @@ export function CopyMonthDialog({ open, onOpenChange, initialYear, initialMonth,
     onError: (err) => {
       toast.error(err.message)
       if (planRequiredOf(err)) onOpenChange(false)
+      else void preview.refetch()
     },
   })
 
@@ -109,7 +119,8 @@ export function CopyMonthDialog({ open, onOpenChange, initialYear, initialMonth,
   // Số "Tạo N ca" phải là số server vừa tính cho đúng lựa chọn đang gửi.
   const stale = picked !== debouncedPicked || preview.isFetching || preview.isPlaceholderData
   const created = data?.totals.created ?? 0
-  const canConfirm = !!data && !stale && created > 0 && !copy.isPending
+  const overLimit = created > COPY_MONTH_MAX_SESSIONS
+  const canConfirm = !!data && !preview.error && !stale && created > 0 && !overLimit && !copy.isPending
 
   const changeSource = (v: string) => {
     const next = parseRef(v)
@@ -225,7 +236,14 @@ export function CopyMonthDialog({ open, onOpenChange, initialYear, initialMonth,
               </section>
 
               <section data-testid="copy-preview" className="space-y-3">
-                {!data ? (
+                {preview.error ? (
+                  <div className="space-y-3 rounded-lg border border-dashed p-6 text-center">
+                    <p className="text-sm text-red-700">{preview.error.message}</p>
+                    <Button variant="outline" className="h-11" onClick={() => void preview.refetch()}>
+                      {t("retry")}
+                    </Button>
+                  </div>
+                ) : !data ? (
                   <Skeleton className="h-40 w-full" />
                 ) : data.patterns.length === 0 ? (
                   <p data-testid="copy-empty" className="rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">
@@ -238,6 +256,11 @@ export function CopyMonthDialog({ open, onOpenChange, initialYear, initialMonth,
                         {t("copy_will_create").replace("{count}", String(data.totals.created))}
                       </p>
                       <SkipLines skipped={data.totals} />
+                      {overLimit && (
+                        <p data-testid="copy-over-limit" className="mt-1 text-sm font-medium text-red-700">
+                          {t("copy_over_limit").replace("{max}", String(COPY_MONTH_MAX_SESSIONS))}
+                        </p>
+                      )}
                       <ul className="mt-2 space-y-0.5 text-sm text-slate-600">
                         {data.months.map((m) => (
                           <li key={refValue(m)}>

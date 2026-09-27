@@ -182,6 +182,7 @@
   "copy_success": "Created {count} sessions",
   "copy_view_month": "View {month}",
   "copy_close": "Close",
+  "copy_over_limit": "At most {max} sessions per copy — deselect some patterns or pick fewer months",
   "create_session": "Create Session",
   "export_excel": "Export Excel",
   "export_options": "Export options",

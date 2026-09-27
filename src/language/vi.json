@@ -182,6 +182,7 @@
   "copy_success": "Đã tạo {count} ca",
   "copy_view_month": "Xem {month}",
   "copy_close": "Đóng",
+  "copy_over_limit": "Tối đa {max} ca mỗi lần — bỏ bớt mẫu hoặc chọn ít tháng hơn",
   "create_session": "Tạo ca dạy",
   "export_excel": "Xuất Excel",
   "export_options": "Tùy chọn xuất file",

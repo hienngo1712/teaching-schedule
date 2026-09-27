@@ -11,6 +11,10 @@ type MutOpts = { onSuccess?: (r: unknown) => void; onError?: (e: unknown) => voi
 
 const h = vi.hoisted(() => ({
   allowed: true,
+  ready: true,
+  error: null as unknown,
+  refetch: vi.fn(),
+  openUpgrade: vi.fn(),
   preview: null as unknown,
   inputs: [] as unknown[],
   opts: [] as QueryOpts[],
@@ -19,7 +23,7 @@ const h = vi.hoisted(() => ({
 }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("@/hooks/useFeatureGate", () => ({
-  useFeatureGate: () => ({ allowed: h.allowed, locked: !h.allowed, requiredPlan: "plus", openUpgrade: vi.fn(), guard: (fn: () => void) => fn }),
+  useFeatureGate: () => ({ allowed: h.allowed, locked: h.ready && !h.allowed, requiredPlan: "plus", openUpgrade: h.openUpgrade, guard: (fn: () => void) => fn }),
 }))
 vi.mock("@/lib/trpc", () => ({
   trpc: {
@@ -28,7 +32,7 @@ vi.mock("@/lib/trpc", () => ({
         useQuery: (input: unknown, opts: QueryOpts) => {
           h.inputs.push(input)
           h.opts.push(opts)
-          return { data: opts.enabled ? h.preview : undefined, error: null, isFetching: false, isPlaceholderData: false }
+          return { data: opts.enabled && !h.error ? h.preview : undefined, error: h.error, isFetching: false, isPlaceholderData: false, refetch: h.refetch }
         },
       },
       copyMonth: {
@@ -60,12 +64,13 @@ const EMPTY = { patterns: [], months: [{ year: 2030, month: 2, created: 0 }], to
 
 function renderDialog() {
   const props = { open: true, onOpenChange: vi.fn(), initialYear: 2030, initialMonth: 1, onViewMonth: vi.fn() }
-  render(
+  const ui = () => (
     <LanguageProvider forcedLanguage="vi">
       <CopyMonthDialog {...props} />
     </LanguageProvider>
   )
-  return props
+  const { rerender } = render(ui())
+  return { ...props, rerender: () => rerender(ui()) }
 }
 const confirmBtn = () => screen.getByTestId("copy-confirm") as HTMLButtonElement
 const boxes = () => screen.getAllByRole("checkbox")
@@ -73,6 +78,8 @@ const boxes = () => screen.getAllByRole("checkbox")
 beforeEach(() => {
   vi.clearAllMocks()
   h.allowed = true
+  h.ready = true
+  h.error = null
   h.preview = PREVIEW
   h.inputs = []
   h.opts = []
@@ -166,5 +173,40 @@ describe("CopyMonthDialog", () => {
       h.mutOpts?.onError?.({ message: "Tính năng này cần gói Plus", data: { planRequired: "plus" } })
     })
     expect(props.onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it("xem trước lỗi không phải gói → hiện lỗi + Thử lại thay skeleton; bấm gọi refetch", () => {
+    h.error = { message: "Lỗi máy chủ", data: { code: "INTERNAL_SERVER_ERROR", planRequired: null } }
+    renderDialog()
+    expect(screen.getByText("Lỗi máy chủ")).toBeTruthy()
+    expect(document.querySelector("[data-testid=copy-preview] .animate-pulse")).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Thử lại" }))
+    expect(h.refetch).toHaveBeenCalled()
+  })
+
+  it("mutation lỗi không phải gói → xem trước tự gọi lại", () => {
+    renderDialog()
+    act(() => {
+      h.mutOpts?.onError?.({ message: "Quá nhiều ca, hãy chọn ít tháng hơn", data: { code: "BAD_REQUEST", planRequired: null } })
+    })
+    expect(h.refetch).toHaveBeenCalled()
+  })
+
+  it("mở lúc gói chưa tải, sau đó gói không đủ → mở nâng cấp và đóng dialog", () => {
+    h.allowed = false
+    h.ready = false
+    const props = renderDialog()
+    expect(h.openUpgrade).not.toHaveBeenCalled()
+    h.ready = true
+    props.rerender()
+    expect(h.openUpgrade).toHaveBeenCalled()
+    expect(props.onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it("tổng ca vượt giới hạn → khoá nút Tạo + gợi ý", () => {
+    h.preview = { ...PREVIEW, totals: { ...PREVIEW.totals, created: 325 } }
+    renderDialog()
+    expect(confirmBtn().disabled).toBe(true)
+    expect(screen.getByText("Tối đa 300 ca mỗi lần — bỏ bớt mẫu hoặc chọn ít tháng hơn")).toBeTruthy()
   })
 })
