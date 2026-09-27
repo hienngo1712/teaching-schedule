@@ -23,7 +23,7 @@ function renderVi(ui: React.ReactNode) {
 }
 
 describe("AdminSidebar", () => {
-  it("logo Lịch dạy + nhãn Quản trị; đúng 3 mục admin, mục đang mở aria-current; số đơn chờ; không có mục giáo viên", () => {
+  it("logo Lịch dạy + nhãn Quản trị; đúng 4 mục admin, mục đang mở aria-current; số đơn chờ; không có mục giáo viên", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/history")
     overview.data = { pendingOrders: [{ id: 1 }, { id: 2 }], users: [] }
     renderVi(<AdminSidebar />)
@@ -33,9 +33,11 @@ describe("AdminSidebar", () => {
       "/admin/orders",
       "/admin/accounts",
       "/admin/history",
+      "/admin/prices",
     ])
     expect(screen.getByRole("link", { name: "Lịch sử đơn" }).getAttribute("aria-current")).toBe("page")
     expect(screen.getByRole("link", { name: /Tài khoản & gói/ }).getAttribute("aria-current")).toBeNull()
+    expect(screen.getByRole("link", { name: "Bảng giá" }).getAttribute("aria-current")).toBeNull()
     expect(screen.getByTestId("admin-pending-count").textContent).toBe("2")
     expect(screen.queryByText("Tổng quan")).toBeNull()
     expect(screen.queryByText("Học phí")).toBeNull()
@@ -49,7 +51,7 @@ describe("AdminSidebar", () => {
 })
 
 describe("AdminTabBar", () => {
-  it("3 tab nhãn ngắn, tab đang mở aria-current", () => {
+  it("4 tab nhãn ngắn, tab đang mở aria-current", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/accounts")
     renderVi(<AdminTabBar />)
     const links = screen.getAllByRole("link")
@@ -57,8 +59,10 @@ describe("AdminTabBar", () => {
       ["/admin/orders", "Đơn chờ"],
       ["/admin/accounts", "Tài khoản"],
       ["/admin/history", "Lịch sử"],
+      ["/admin/prices", "Bảng giá"],
     ])
     expect(screen.getByRole("link", { name: "Tài khoản" }).getAttribute("aria-current")).toBe("page")
     expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).className).toContain("md:hidden")
+    expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).querySelector("ul")?.className).toContain("grid-cols-4")
   })
 })

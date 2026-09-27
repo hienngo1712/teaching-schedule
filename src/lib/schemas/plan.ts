@@ -3,11 +3,34 @@ import { PERIODS, PLANS } from "@/lib/plans"
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/
 
-// Không nhận số tiền từ client: tiền lấy từ PLAN_PRICES ở server (spec I 6.4).
+// Tiền lấy từ bảng giá DB ở server; expectedAmount chỉ để phát hiện giá vừa đổi, không bao giờ dùng làm số tiền (spec L Q6, I 6.4).
+// Tùy chọn để tab còn JS cũ lúc deploy vẫn tạo đơn được theo giá mới.
 export const createOrderSchema = z.object({
   plan: z.enum(["plus", "pro"]),
   period: z.enum(PERIODS),
+  expectedAmount: z.number().int().positive().optional(),
 })
+
+// Giá lẻ được phép (người dùng chốt Q12); khoảng chỉ để chặn gõ thừa/thiếu số 0. ×20 tối đa 20 triệu vẫn vừa Int.
+export const monthPriceSchema = z.number().int().min(10000).max(1000000)
+
+export const updatePricesSchema = z
+  .object({
+    prices: z.object({ plus: monthPriceSchema, pro: monthPriceSchema }),
+    // Giá admin đang thấy, để phát hiện bảng giá vừa đổi ở tab khác; không giới hạn khoảng.
+    expected: z.object({ plus: z.number().int(), pro: z.number().int() }),
+  })
+  // D7 (quy đổi, chặn Plus khi còn Pro) giả định Pro đắt hơn (spec L Q13).
+  .refine((d) => d.prices.pro > d.prices.plus, { message: "Giá Pro phải cao hơn giá Plus", path: ["prices", "pro"] })
+
+// Mặc định cho tài khoản đăng ký sau, 0 = không dùng thử (spec L mục 15 T1).
+export const trialDaysSchema = z.number().int().min(0).max(365)
+// Đặt riêng tính từ ngày tạo tài khoản nên tài khoản cũ cần số lớn hơn 365.
+export const userTrialDaysSchema = z.number().int().min(0).max(3650)
+
+export const updateTrialDaysSchema = z.object({ days: trialDaysSchema, expected: z.number().int() })
+export const userIdSchema = z.object({ userId: z.number().int().positive() })
+export const setUserTrialSchema = userIdSchema.extend({ days: userTrialDaysSchema })
 
 export const orderIdSchema = z.object({ id: z.number().int().positive() })
 
@@ -29,3 +52,6 @@ export const setPlanSchema = z
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>
 export type SetPlanInput = z.infer<typeof setPlanSchema>
+export type UpdatePricesInput = z.infer<typeof updatePricesSchema>
+export type UpdateTrialDaysInput = z.infer<typeof updateTrialDaysSchema>
+export type SetUserTrialInput = z.infer<typeof setUserTrialSchema>

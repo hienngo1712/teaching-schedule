@@ -15,6 +15,8 @@ function setBankEnv(on: boolean) {
 }
 
 async function reset() {
+  // tests/setup.ts không xóa bảng giá: dòng giá test thêm phải xóa để file khác thấy 49.000/99.000.
+  await db.planPriceChange.deleteMany({ where: { changedBy: { not: "migration" } } })
   await db.planOrder.deleteMany({ where: { user: { username: { in: ["teacher_std", "teacher", "admin_test"] } } } })
   await db.user.update({ where: { id: userId }, data: { plan: "standard", planExpiresAt: null, trialEndsAt: null } })
 }
@@ -148,5 +150,88 @@ describe("plan.createOrder / cancelOrder", () => {
     await expect(c.plan.cancelOrder({ id })).resolves.toEqual({ success: true })
     expect((await db.planOrder.findUniqueOrThrow({ where: { id } })).status).toBe("cancelled")
     await expect(c.plan.cancelOrder({ id })).rejects.toMatchObject({ code: "NOT_FOUND" })
+  })
+})
+
+describe("giá từ DB (spec L)", () => {
+  const addPrice = (plan: "plus" | "pro", monthPrice: number, previousMonthPrice: number) =>
+    db.planPriceChange.create({ data: { plan, monthPrice, previousMonthPrice, changedBy: "price_test" } })
+
+  it("plan.me.prices theo bảng giá DB, đổi giá thấy ngay", async () => {
+    const c = await getAuthedCaller("teacher_std")
+    expect((await c.plan.me()).prices).toEqual({
+      plus: { month: 49000, year: 490000, "2year": 980000 },
+      pro: { month: 99000, year: 990000, "2year": 1980000 },
+    })
+    await addPrice("plus", 59000, 49000)
+    expect((await c.plan.me()).prices.plus).toEqual({ month: 59000, year: 590000, "2year": 1180000 })
+  })
+
+  it("tạo đơn sau khi đổi giá: không gửi expectedAmount → giá mới; expectedAmount khớp → tạo được", async () => {
+    await addPrice("plus", 59000, 49000)
+    const c = await getAuthedCaller("teacher_std")
+    const a = await c.plan.createOrder({ plan: "plus", period: "year" })
+    expect((await db.planOrder.findUniqueOrThrow({ where: { id: a.id } })).amount).toBe(590000)
+    const b = await c.plan.createOrder({ plan: "plus", period: "month", expectedAmount: 59000 })
+    expect((await db.planOrder.findUniqueOrThrow({ where: { id: b.id } })).amount).toBe(59000)
+  })
+
+  it("expectedAmount lệch giá DB → CONFLICT, không tạo đơn, đơn chờ cũ vẫn pending", async () => {
+    const c = await getAuthedCaller("teacher_std")
+    const old = await c.plan.createOrder({ plan: "pro", period: "month", expectedAmount: 99000 })
+    await addPrice("plus", 59000, 49000)
+    await expect(c.plan.createOrder({ plan: "plus", period: "year", expectedAmount: 490000 })).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "Giá gói vừa thay đổi, vui lòng xem lại giá mới",
+    })
+    expect((await db.planOrder.findUniqueOrThrow({ where: { id: old.id } })).status).toBe("pending")
+    expect(await db.planOrder.count({ where: { userId } })).toBe(1)
+  })
+
+  it("đổi giá khi có đơn chờ: amount và QR giữ nguyên, duyệt vẫn 490.000", async () => {
+    process.env.ADMIN_USERNAMES = "admin_test"
+    const c = await getAuthedCaller("teacher_std")
+    const { id } = await c.plan.createOrder({ plan: "plus", period: "year", expectedAmount: 490000 })
+    await addPrice("plus", 59000, 49000)
+    const me = await c.plan.me()
+    expect(me.pendingOrder).toMatchObject({ id, amount: 490000 })
+    // Tag 54 của VietQR = số tiền, độ dài 06.
+    expect(me.pendingOrder?.qr?.payload).toContain("5406490000")
+    await (await getAuthedCaller("admin_test")).admin.approveOrder({ id })
+    expect(await db.planOrder.findUniqueOrThrow({ where: { id } })).toMatchObject({ status: "approved", amount: 490000 })
+  })
+
+  it("quy đổi Plus→Pro: mẫu số là amount đơn Pro (990.000) dù giá Pro đổi 129.000 trước lúc duyệt", async () => {
+    process.env.ADMIN_USERNAMES = "admin_test"
+    const today = vnStartOfDay(new Date())
+    await db.user.update({ where: { id: userId }, data: { plan: "plus", planExpiresAt: addDays(today, 304) } })
+    await db.planOrder.create({ data: { userId, plan: "plus", period: "year", amount: 490000, status: "approved", decidedAt: new Date() } })
+    const { id } = await (await getAuthedCaller("teacher_std")).plan.createOrder({ plan: "pro", period: "year" })
+    await addPrice("pro", 129000, 99000)
+    const res = await (await getAuthedCaller("admin_test")).admin.approveOrder({ id })
+    // floor(408.110 × 365 / 990.000) = 150; nếu đọc giá mới 1.290.000 sẽ ra 115.
+    expect(res.creditDays).toBe(150)
+    expect((await db.planOrder.findUniqueOrThrow({ where: { id } })).amount).toBe(990000)
+  })
+
+  it("race: tạo đơn (expectedAmount giá cũ) song song admin đổi giá → đơn luôn đúng giá đã thấy, nếu không thì CONFLICT và không có đơn", async () => {
+    process.env.ADMIN_USERNAMES = "admin_test"
+    const teacher = await getAuthedCaller("teacher_std")
+    const admin = await getAuthedCaller("admin_test")
+    for (let i = 0; i < 5; i++) {
+      await db.planPriceChange.deleteMany({ where: { changedBy: { not: "migration" } } })
+      await db.planOrder.deleteMany({ where: { userId } })
+      const [order, update] = await Promise.allSettled([
+        teacher.plan.createOrder({ plan: "plus", period: "year", expectedAmount: 490000 }),
+        admin.admin.updatePrices({ prices: { plus: 59000, pro: 99000 }, expected: { plus: 49000, pro: 99000 } }),
+      ])
+      expect(update.status).toBe("fulfilled")
+      if (order.status === "fulfilled") {
+        expect((await db.planOrder.findUniqueOrThrow({ where: { id: order.value.id } })).amount).toBe(490000)
+      } else {
+        expect(order.reason).toMatchObject({ code: "CONFLICT" })
+        expect(await db.planOrder.count({ where: { userId } })).toBe(0)
+      }
+    }
   })
 })

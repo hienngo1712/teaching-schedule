@@ -63,6 +63,6 @@ describe("User Registration", () => {
     const u = await db.user.findUniqueOrThrow({ where: { username } })
     expect(u.plan).toBe("standard")
     expect(u.planExpiresAt).toBeNull()
-    expect(u.trialEndsAt?.toISOString()).toBe(trialEndFor(before).toISOString())
+    expect(u.trialEndsAt?.toISOString()).toBe(trialEndFor(before, 60)?.toISOString())
   })
 })

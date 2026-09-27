@@ -95,14 +95,14 @@ test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin/
   await std2.context().close();
 });
 
-test('/admin → /admin/orders; teacher vào /admin, /admin/orders, /admin/accounts, /admin/history → 404', async ({ browser }) => {
+test('/admin → /admin/orders; teacher vào /admin, /admin/orders, /admin/accounts, /admin/history, /admin/prices → 404', async ({ browser }) => {
   const admin = await loginAs(browser, 'admin_test');
   await admin.goto('/admin');
   await expect(admin).toHaveURL(/\/admin\/orders$/);
   await admin.context().close();
 
   const teacher = await loginAs(browser, 'teacher');
-  for (const path of ['/admin', '/admin/orders', '/admin/accounts', '/admin/history']) {
+  for (const path of ['/admin', '/admin/orders', '/admin/accounts', '/admin/history', '/admin/prices']) {
     const res = await teacher.goto(path);
     expect(res!.status(), path).toBe(404);
   }
@@ -133,7 +133,7 @@ test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn ch�
   await admin.context().close();
 });
 
-test('desktop: sidebar khu quản trị 3 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
+test('desktop: sidebar khu quản trị 4 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
   await createPendingForStd('SB');
   const admin = await loginAs(browser, 'admin_test', DESKTOP);
   await admin.goto('/admin/orders');
@@ -143,6 +143,7 @@ test('desktop: sidebar khu quản trị 3 mục, nhãn Quản trị, số đơn 
     '/admin/orders',
     '/admin/accounts',
     '/admin/history',
+    '/admin/prices',
   ]);
   await expect(aside).not.toContainText('Tổng quan');
   await expect(aside).not.toContainText('Học phí');
@@ -169,7 +170,7 @@ test('admin_test: route giáo viên → /admin/orders; tab bar và menu avatar c
   await expect(admin.getByRole('banner').getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
 
   const tabs = admin.getByRole('navigation', { name: 'Điều hướng chính' });
-  await expect(tabs.getByRole('link')).toHaveCount(3);
+  await expect(tabs.getByRole('link')).toHaveCount(4);
   for (const link of await tabs.getByRole('link').all()) {
     expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }

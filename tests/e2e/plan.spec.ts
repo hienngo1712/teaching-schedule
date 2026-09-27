@@ -256,3 +256,40 @@ test.describe('Nhãn gói trên avatar header (1280px)', () => {
     await expect(page.getByRole('button', { name: 'Mở menu tài khoản' }).getByTestId('current-plan-badge')).toBeHidden();
   });
 });
+
+test.describe('Giá đổi khi popup đang mở (spec L Q6, 1280px)', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  // tests/setup.ts không xóa bảng giá: dọn để file e2e khác thấy 49.000/99.000.
+  const resetPrices = () => db.planPriceChange.deleteMany({ where: { changedBy: { not: 'migration' } } });
+  test.beforeEach(async () => {
+    await resetPrices();
+    await resetStd();
+  });
+  test.afterEach(async () => {
+    await resetPrices();
+    await resetStd();
+  });
+
+  test('bấm Tạo đơn sau khi admin đổi giá → báo giá đổi, hiện giá mới, chưa tạo đơn; bấm lại → QR theo giá mới', async ({ page }) => {
+    await login(page, 'teacher_std');
+    await page.goto('/plan');
+    await page.getByTestId('plan-card-plus').getByRole('button', { name: 'Chọn gói Plus' }).click();
+    const popup = page.getByTestId('plan-purchase');
+    const summary = popup.getByTestId('purchase-summary');
+    await expect(popup.getByTestId('purchase-period-year')).toHaveAttribute('aria-checked', 'true');
+    await expect(summary).toContainText('490.000');
+
+    await db.planPriceChange.create({ data: { plan: 'plus', monthPrice: 59000, previousMonthPrice: 49000, changedBy: 'e2e_price' } });
+    await popup.getByRole('button', { name: 'Tạo đơn', exact: true }).click();
+    await expect(page.getByText('Giá gói vừa thay đổi, đã cập nhật giá mới. Vui lòng xem lại trước khi tạo đơn.')).toBeVisible();
+    await expect(summary).toContainText('590.000');
+    await expect(popup.getByTestId('pending-order')).toHaveCount(0);
+    expect(await db.planOrder.count({ where: { user: { username: 'teacher_std' } } })).toBe(0);
+
+    await popup.getByRole('button', { name: 'Tạo đơn', exact: true }).click();
+    const pending = popup.getByTestId('pending-order');
+    await expect(pending).toBeVisible();
+    await expect(pending).toContainText('590.000');
+  });
+});

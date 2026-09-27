@@ -7,16 +7,21 @@ import { act, render, screen, fireEvent } from "@testing-library/react"
 import type { RouterOutputs } from "@/lib/trpc"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { PlanPurchaseDialog } from "@/components/plan/PlanPurchaseDialog"
-import { addDays, vnStartOfDay, type PlanFields } from "@/lib/plans"
+import { addDays, pricesFromMonthly, vnStartOfDay, type PlanFields } from "@/lib/plans"
+import { toast } from "sonner"
 
 type Me = RouterOutputs["plan"]["me"]
-type CreateOpts = { onSuccess?: (res: { id: number; code: string; bonusMonths: number }) => void }
+type CreateOpts = {
+  onSuccess?: (res: { id: number; code: string; bonusMonths: number }) => void
+  onError?: (e: { message: string; data?: { code?: string } | null }) => void
+}
 
-const mut = vi.hoisted(() => ({ create: vi.fn(), createOpts: null as null | CreateOpts }))
+const mut = vi.hoisted(() => ({ create: vi.fn(), createOpts: null as null | CreateOpts, invalidate: vi.fn() }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("qrcode", () => ({ toDataURL: vi.fn().mockResolvedValue("data:image/png;base64,AAAA") }))
 vi.mock("@/lib/trpc", () => ({
   trpc: {
+    useUtils: () => ({ plan: { me: { invalidate: mut.invalidate } } }),
     plan: {
       createOrder: {
         useMutation: (opts: CreateOpts) => {
@@ -49,6 +54,7 @@ function makeMe(over: Partial<Me> = {}): Me {
     orders: [],
     paymentReady: true,
     isAdmin: false,
+    prices: pricesFromMonthly({ plus: 49000, pro: 99000 }),
     ...over,
   } as Me
 }
@@ -119,7 +125,7 @@ describe("PlanPurchaseDialog", () => {
     expect(text("purchase-summary")).toContain("980.000")
     expect(text("purchase-summary")).toContain("Tặng 2 tháng")
     fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
-    expect(mut.create).toHaveBeenCalledWith({ plan: "plus", period: "2year" })
+    expect(mut.create).toHaveBeenCalledWith({ plan: "plus", period: "2year", expectedAmount: 980000 })
   })
 
   it("gia hạn sớm Plus còn 45 ngày: 12 tháng Tặng 2 / Tối đa 14, 24 tháng Tặng 4 / Tối đa 28; lên Pro năm có +22 ngày quy đổi", () => {
@@ -170,5 +176,43 @@ describe("PlanPurchaseDialog", () => {
     rerender({ me: makeMe({ pendingOrder: pendingOrder(7, "CANCEL") }) })
     fireEvent.click(await screen.findByRole("button", { name: "Hủy yêu cầu" }))
     expect(props.onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it("giá theo me.prices: Plus 59.000 → 12 tháng 590.000; Tạo đơn gửi expectedAmount đang hiện", () => {
+    renderDialog({ me: makeMe({ prices: pricesFromMonthly({ plus: 59000, pro: 129000 }) }), initialPlan: "plus" })
+    expect(text("purchase-plan-plus")).toContain("59.000")
+    expect(text("purchase-plan-pro")).toContain("129.000")
+    expect(text("purchase-period-year")).toContain("590.000")
+    expect(text("purchase-period-2year")).toContain("1.180.000")
+    expect(text("purchase-summary")).toContain("590.000")
+    fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
+    expect(mut.create).toHaveBeenCalledWith({ plan: "plus", period: "year", expectedAmount: 590000 })
+  })
+
+  it("server báo CONFLICT (giá vừa đổi) → toast giá đổi + nạp lại plan.me, popup giữ bước chọn", () => {
+    renderDialog()
+    fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
+    act(() => mut.createOpts!.onError!({ message: "Giá gói vừa thay đổi, vui lòng xem lại giá mới", data: { code: "CONFLICT" } }))
+    expect(toast.error).toHaveBeenCalledWith("Giá gói vừa thay đổi, đã cập nhật giá mới. Vui lòng xem lại trước khi tạo đơn.")
+    expect(mut.invalidate).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId("purchase-summary")).toBeTruthy()
+  })
+
+  it("lỗi khác → toast đúng message server, không nạp lại plan.me", () => {
+    renderDialog()
+    act(() => mut.createOpts!.onError!({ message: "Chưa mở thanh toán", data: { code: "PRECONDITION_FAILED" } }))
+    expect(toast.error).toHaveBeenCalledWith("Chưa mở thanh toán")
+    expect(mut.invalidate).not.toHaveBeenCalled()
+  })
+
+  it("Review Focus 5: Plus còn 45 ngày chọn Pro năm; giá Pro đổi 129.000 → xem trước +17 ngày Pro theo giá đơn sẽ tạo", () => {
+    const fields: PlanFields = { plan: "plus", planExpiresAt: addDays(vnStartOfDay(new Date()), 45), trialEndsAt: null }
+    const me = makeMe({ plan: "plus", source: "paid", paidPlan: "plus", plusCreditOrder: { amount: 490000, period: "year", bonusMonths: 0 } })
+    const { rerender } = renderDialog({ me, fields, initialPlan: "pro" })
+    expect(text("purchase-summary")).toContain("+22 ngày Pro")
+    rerender({ me: { ...me, prices: pricesFromMonthly({ plus: 49000, pro: 129000 }) } })
+    // floor(60.411 × 365 / 1.290.000) = 17
+    expect(text("purchase-summary")).toContain("+17 ngày Pro")
+    expect(text("purchase-summary")).toContain("1.290.000")
   })
 })
