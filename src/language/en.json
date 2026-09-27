@@ -477,6 +477,7 @@
   "plan_feat_payments": "Payment records and history",
   "plan_feat_notice": "Tuition notices with VietQR",
   "plan_feat_monthly_report": "Monthly reports",
+  "plan_feat_copy_month": "Copy schedule to next months (up to 3)",
   "plan_feat_parent_link": "Parent links",
   "plan_feat_alerts": "Needs attention on Dashboard",
   "plan_feat_import": "Import students from Excel",

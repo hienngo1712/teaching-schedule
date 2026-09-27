@@ -143,7 +143,8 @@ describe("PLAN_FEATURES (P11: bậc thang không lặp, 1 nguồn với chặn q
   })
   it("thẻ Standard / Plus / Pro", () => {
     expect(featuresAddedIn("standard")).toEqual(["schedule", "attendance", "students", "tuitionCalc", "dashboardStats", "backup"])
-    expect(featuresAddedIn("plus")).toEqual(["payments", "tuitionNotice", "monthlyReport"])
+    expect(featuresAddedIn("plus")).toEqual(["payments", "tuitionNotice", "monthlyReport", "copyMonth"])
+    expect(FEATURE_PLAN.copyMonth).toBe("plus")
     expect(featuresAddedIn("pro")).toEqual(["parentLink", "dashboardAlerts", "studentImport", "multiMonthReport", "unlimitedStudents"])
   })
 })
