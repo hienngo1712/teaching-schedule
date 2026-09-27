@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from "vitest"
+import { describe, it, expect, beforeAll, beforeEach, vi, afterEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
 
@@ -145,34 +145,39 @@ describe("Xóa học sinh ↔ đồng bộ lịch & giữ điểm danh", () => {
     expect(byId[c.id]).toBe("late")
   })
 
-  // ── Bug 5: buổi HÔM NAY đã kết thúc phải giữ (bảo toàn lịch sử) ──
-  it("✓ xóa HS → giữ buổi hôm nay đã kết thúc, gỡ buổi hôm nay chưa kết thúc", async () => {
-    const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
-
-    // Buổi hôm nay đã kết thúc (kết thúc lúc 00:01 UTC — gần như luôn đã qua)
-    const ended = await caller.session.create({
-      sessionDate: daysFromNow(0),
-      startTime: "00:00",
-      endTime: "00:01",
-      subjectId,
-      studentIds: [a.id],
-    })
-    // Buổi hôm nay chưa kết thúc (kết thúc lúc 23:59 UTC)
-    const upcoming = await caller.session.create({
-      sessionDate: daysFromNow(0),
-      startTime: "23:58",
-      endTime: "23:59",
-      subjectId,
-      studentIds: [a.id],
+  // ── Bug 5: buổi HÔM NAY đã kết thúc phải giữ (giờ VN, spec P6) ──
+  describe("giờ VN (spec P6)", () => {
+    afterEach(() => {
+      vi.useRealTimers()
     })
 
-    await caller.student.delete({ id: a.id })
+    it("18:00 VN: xoá HS giữ ca 16:00–17:00 vừa dạy, gỡ ca 19:00–20:00 cùng ngày", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date("2099-03-10T11:00:00Z"))
+      const caller = await getAuthedCaller()
+      const a = await caller.student.create({ fullName: "HS Giờ VN", grade: 5 })
+      const ended = await caller.session.create({ sessionDate: "2099-03-10", startTime: "16:00", endTime: "17:00", subjectId, studentIds: [a.id] })
+      const upcoming = await caller.session.create({ sessionDate: "2099-03-10", startTime: "19:00", endTime: "20:00", subjectId, studentIds: [a.id] })
 
-    const endedDetail = await caller.session.getDetail({ id: ended.id })
-    const upcomingDetail = await caller.session.getDetail({ id: upcoming.id })
-    expect(endedDetail.studentCount).toBe(1) // giữ buổi đã dạy
-    expect(upcomingDetail.studentCount).toBe(0) // gỡ buổi chưa dạy
+      await caller.student.delete({ id: a.id })
+
+      expect((await caller.session.getDetail({ id: ended.id })).studentCount).toBe(1)
+      expect((await caller.session.getDetail({ id: upcoming.id })).studentCount).toBe(0)
+    })
+
+    it("01:00 VN hôm sau: xoá HS giữ ca tối qua 20:00–21:00, gỡ ca sáng nay 08:00", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date("2099-03-10T18:00:00Z"))
+      const caller = await getAuthedCaller()
+      const a = await caller.student.create({ fullName: "HS Nửa Đêm", grade: 5 })
+      const lastNight = await caller.session.create({ sessionDate: "2099-03-10", startTime: "20:00", endTime: "21:00", subjectId, studentIds: [a.id] })
+      const morning = await caller.session.create({ sessionDate: "2099-03-11", startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id] })
+
+      await caller.student.delete({ id: a.id })
+
+      expect((await caller.session.getDetail({ id: lastNight.id })).studentCount).toBe(1)
+      expect((await caller.session.getDetail({ id: morning.id })).studentCount).toBe(0)
+    })
   })
 
   // ── Bug 2: thêm HS qua update phải giữ điểm danh HS cũ ───────────

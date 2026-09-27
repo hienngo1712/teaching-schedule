@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient, type ClassUpgradeLog } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { getLevel } from "@/lib/utils"
+import { hasSessionEnded, vnToday } from "@/lib/session-time"
 import { assertOwnership } from "./_base.service"
 import { assertCanActivateStudents } from "./plan.service"
 import type {
@@ -145,6 +146,16 @@ export async function importStudents(
   })
 }
 
+// Link HS ↔ ca CHƯA kết thúc theo giờ VN; ca đã dạy (kể cả sáng nay) là lịch sử, không được đụng.
+async function findUnfinishedLinks(tx: Prisma.TransactionClient, userId: number, studentIds: number[], now: Date) {
+  if (studentIds.length === 0) return []
+  const links = await tx.sessionStudent.findMany({
+    where: { studentId: { in: studentIds }, session: { userId, sessionDate: { gte: vnToday(now) } } },
+    select: { id: true, studentId: true, session: { select: { sessionDate: true, endTime: true } } },
+  })
+  return links.filter((l) => !hasSessionEnded(l.session, now))
+}
+
 export async function updateStudent(
   db: PrismaClient,
   userId: number,
@@ -173,45 +184,11 @@ export async function updateStudent(
       },
     })
 
-    // Đổi grade → đồng bộ snapshot grade các buổi CHƯA kết thúc. Buổi đã dạy xong
-    // (kể cả sáng nay) giữ nguyên grade lịch sử — dùng đúng filter endTime-aware
-    // như softDeleteStudent để không ghi đè buổi đã qua trong ngày hôm nay.
+    // Đổi grade → đồng bộ snapshot grade các buổi chưa kết thúc; buổi đã dạy giữ grade lịch sử.
     if (data.grade !== undefined && data.grade !== existing.grade) {
-      const now = new Date()
-      const todayUTC = new Date(
-        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-      )
-      const links = await tx.sessionStudent.findMany({
-        where: {
-          studentId: id,
-          session: { userId, sessionDate: { gte: todayUTC } },
-        },
-        select: {
-          id: true,
-          session: { select: { sessionDate: true, endTime: true } },
-        },
-      })
-      const nowMs = now.getTime()
-      const toSync = links
-        .filter(({ session }) => {
-          const sd = session.sessionDate
-          const et = session.endTime
-          const endMs = Date.UTC(
-            sd.getUTCFullYear(),
-            sd.getUTCMonth(),
-            sd.getUTCDate(),
-            et.getUTCHours(),
-            et.getUTCMinutes(),
-            et.getUTCSeconds()
-          )
-          return endMs > nowMs
-        })
-        .map((l) => l.id)
+      const toSync = (await findUnfinishedLinks(tx, userId, [id], new Date())).map((l) => l.id)
       if (toSync.length > 0) {
-        await tx.sessionStudent.updateMany({
-          where: { id: { in: toSync } },
-          data: { grade: data.grade },
-        })
+        await tx.sessionStudent.updateMany({ where: { id: { in: toSync } }, data: { grade: data.grade } })
       }
     }
 
@@ -229,50 +206,12 @@ export async function softDeleteStudent(
   const existing = await db.student.findUnique({ where: { id } })
   assertOwnership(existing, userId)
 
-  // Mốc "hôm nay" theo UTC, khớp cách sessionDate được lưu (Date.UTC trong parseSessionDate).
-  const now = new Date()
-  const todayUTC = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  )
-
   await db.$transaction(async (tx) => {
-    // Ứng viên: các buổi từ hôm nay trở đi mà HS đang tham gia. (Buổi quá khứ
-    // không đụng tới để bảo toàn lịch sử điểm danh & doanh thu.)
-    const links = await tx.sessionStudent.findMany({
-      where: {
-        studentId: id,
-        session: { userId, sessionDate: { gte: todayUTC } },
-      },
-      select: {
-        id: true,
-        session: { select: { sessionDate: true, endTime: true } },
-      },
-    })
-
-    // Chỉ gỡ buổi CHƯA kết thúc (thời điểm kết thúc còn ở tương lai). Buổi hôm nay
-    // đã dạy xong vẫn được giữ — sessionDate là @db.Date nên phải kết hợp với
-    // endTime để xác định buổi đã qua, tránh xóa nhầm snapshot buổi đã dạy.
-    const nowMs = now.getTime()
-    const toRemove = links
-      .filter(({ session }) => {
-        const sd = session.sessionDate
-        const et = session.endTime
-        const endMs = Date.UTC(
-          sd.getUTCFullYear(),
-          sd.getUTCMonth(),
-          sd.getUTCDate(),
-          et.getUTCHours(),
-          et.getUTCMinutes(),
-          et.getUTCSeconds()
-        )
-        return endMs > nowMs
-      })
-      .map((l) => l.id)
-
+    // Chỉ gỡ khỏi buổi chưa kết thúc: buổi đã dạy giữ để bảo toàn điểm danh & doanh thu.
+    const toRemove = (await findUnfinishedLinks(tx, userId, [id], new Date())).map((l) => l.id)
     if (toRemove.length > 0) {
       await tx.sessionStudent.deleteMany({ where: { id: { in: toRemove } } })
     }
-
     await tx.student.update({ where: { id }, data: { isActive: false } })
   })
   return { success: true }
@@ -283,55 +222,81 @@ export async function upgradeAllClasses(
   userId: number,
   trigger: "auto" | "manual"
 ): Promise<{ upgradedCount: number; deactivatedCount: number; year: number }> {
-  const year = new Date().getUTCFullYear()
+  const now = new Date()
+  const year = now.getUTCFullYear()
   const conflictError = new TRPCError({
     code: "CONFLICT",
     message: `Bạn đã nâng lớp toàn bộ học sinh trong năm ${year} rồi.`,
   })
 
   try {
-    return await db.$transaction(async (tx) => {
-      // Idempotency check INSIDE the transaction to avoid TOCTOU race where
-      // two concurrent callers both pass the check and one hits the unique
-      // constraint with an opaque P2002 error.
-      const existing = await tx.classUpgradeLog.findUnique({
-        where: { userId_year: { userId, year } },
-      })
-      if (existing) throw conflictError
+    return await db.$transaction(
+      async (tx) => {
+        // Idempotency check INSIDE the transaction to avoid TOCTOU race where
+        // two concurrent callers both pass the check and one hits the unique
+        // constraint with an opaque P2002 error.
+        const existing = await tx.classUpgradeLog.findUnique({
+          where: { userId_year: { userId, year } },
+        })
+        if (existing) throw conflictError
 
-      // Lấy HS ra trường (grade >= 12, gồm cả dữ liệu lỗi grade > 12) TRƯỚC khi tăng lớp
-      // để không bắt nhầm HS lớp 11 vừa lên 12.
-      const graduatingStudents = await tx.student.findMany({
-        where: { userId, isActive: true, grade: { gte: 12 } },
-        select: { id: true },
-      })
-      const graduatingIds = graduatingStudents.map((s) => s.id)
+        // Lấy HS ra trường (grade >= 12, gồm cả dữ liệu lỗi grade > 12) TRƯỚC khi tăng lớp
+        // để không bắt nhầm HS lớp 11 vừa lên 12.
+        const graduatingStudents = await tx.student.findMany({
+          where: { userId, isActive: true, grade: { gte: 12 } },
+          select: { id: true },
+        })
+        const graduatingIds = graduatingStudents.map((s) => s.id)
 
-      const upgraded = await tx.student.updateMany({
-        where: { userId, isActive: true, grade: { gte: 1, lte: 11 } },
-        data: { grade: { increment: 1 } },
-      })
-      const deactivated = graduatingIds.length > 0
-        ? await tx.student.updateMany({
-            where: { id: { in: graduatingIds } },
-            data: { isActive: false },
-          })
-        : { count: 0 }
-      await tx.classUpgradeLog.create({
-        data: {
-          userId,
-          year,
-          trigger,
+        const upgrading = await tx.student.findMany({
+          where: { userId, isActive: true, grade: { gte: 1, lte: 11 } },
+          select: { id: true, grade: true },
+        })
+        const upgraded = await tx.student.updateMany({
+          where: { id: { in: upgrading.map((s) => s.id) } },
+          data: { grade: { increment: 1 } },
+        })
+        const deactivated = graduatingIds.length > 0
+          ? await tx.student.updateMany({
+              where: { id: { in: graduatingIds } },
+              data: { isActive: false },
+            })
+          : { count: 0 }
+
+        // Ca chưa kết thúc (giờ VN): HS lên lớp mang khối mới, HS ra trường bị gỡ; ca trống vẫn giữ (spec P Q8).
+        const newGrade = new Map(upgrading.map((s) => [s.id, s.grade + 1]))
+        const links = await findUnfinishedLinks(tx, userId, [...newGrade.keys(), ...graduatingIds], now)
+        const byGrade = new Map<number, number[]>()
+        const toRemove: number[] = []
+        for (const l of links) {
+          const g = newGrade.get(l.studentId)
+          if (g === undefined) toRemove.push(l.id)
+          else byGrade.set(g, [...(byGrade.get(g) ?? []), l.id])
+        }
+        for (const [grade, ids] of byGrade) {
+          await tx.sessionStudent.updateMany({ where: { id: { in: ids } }, data: { grade } })
+        }
+        if (toRemove.length > 0) {
+          await tx.sessionStudent.deleteMany({ where: { id: { in: toRemove } } })
+        }
+
+        await tx.classUpgradeLog.create({
+          data: {
+            userId,
+            year,
+            trigger,
+            upgradedCount: upgraded.count,
+            deactivatedCount: deactivated.count,
+          },
+        })
+        return {
           upgradedCount: upgraded.count,
           deactivatedCount: deactivated.count,
-        },
-      })
-      return {
-        upgradedCount: upgraded.count,
-        deactivatedCount: deactivated.count,
-        year,
-      }
-    })
+          year,
+        }
+      },
+      { timeout: 15000 }
+    )
   } catch (err) {
     // Defense-in-depth: if two callers race past the in-tx check (extremely
     // rare given short transaction window), the unique constraint catches it.
