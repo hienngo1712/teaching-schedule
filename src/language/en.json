@@ -480,7 +480,6 @@
   "admin_page": "Admin",
   "admin_link": "Admin page",
   "admin_pending_orders": "Pending",
-  "admin_accounts": "Accounts",
   "admin_approve": "Approve",
   "admin_reject": "Reject",
   "admin_set_plan": "Set plan",
@@ -501,5 +500,15 @@
   "admin_approved": "Order approved",
   "admin_rejected": "Order rejected",
   "admin_plan_set": "Plan updated",
-  "admin_cannot_approve": "Cannot approve: the account has an active Pro plan"
+  "admin_cannot_approve": "Cannot approve: the account has an active Pro plan",
+  "admin_accounts_plans": "Accounts & plans",
+  "admin_order_history": "Order history",
+  "admin_tab_orders": "Pending",
+  "admin_tab_accounts": "Accounts",
+  "admin_tab_history": "History",
+  "admin_badge": "Admin",
+  "admin_col_status": "Status",
+  "admin_col_granted": "Granted until",
+  "admin_col_decided": "Decided by",
+  "admin_no_history": "No orders yet"
 }

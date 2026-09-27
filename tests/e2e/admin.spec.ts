@@ -3,10 +3,12 @@ import { PrismaClient } from '@prisma/client';
 import { EXPECTED_TEST_ENDPOINT } from '../env-setup';
 
 const db = new PrismaClient();
-const VIEWPORT = { width: 390, height: 844 };
+const MOBILE = { width: 390, height: 844 };
+const DESKTOP = { width: 1280, height: 900 };
+const CODE_RE = /SM ([ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6})/;
 
-async function loginAs(browser: Browser, username: string): Promise<Page> {
-  const context = await browser.newContext({ viewport: VIEWPORT });
+async function loginAs(browser: Browser, username: string, viewport = MOBILE): Promise<Page> {
+  const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   await page.addInitScript(() => {
     document.addEventListener('DOMContentLoaded', () => {
@@ -21,6 +23,13 @@ async function loginAs(browser: Browser, username: string): Promise<Page> {
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/.*dashboard/);
   return page;
+}
+
+async function createPendingForStd(prefix: string) {
+  const std = await db.user.findUniqueOrThrow({ where: { username: 'teacher_std' } });
+  const code = prefix + Array.from({ length: 4 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('');
+  const order = await db.planOrder.create({ data: { userId: std.id, plan: 'plus', period: 'month', amount: 49000, code, status: 'pending' } });
+  return { code, order };
 }
 
 async function resetStd() {
@@ -38,7 +47,7 @@ test.afterAll(async () => {
   await db.$disconnect();
 });
 
-test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin → teacher_std thấy Plus + hạn', async ({ browser }) => {
+test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin/orders → Tài khoản & gói, Lịch sử đơn cập nhật', async ({ browser }) => {
   const std = await loginAs(browser, 'teacher_std');
   await std.goto('/plan');
   const checkout = std.getByTestId('plan-checkout');
@@ -47,11 +56,12 @@ test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin 
   await checkout.getByRole('button', { name: 'Tạo mã chuyển khoản' }).click();
   const pending = std.getByTestId('pending-order');
   await expect(pending).toBeVisible();
-  const code = ((await pending.textContent()) ?? '').match(/SM ([ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6})/)![1];
+  const code = ((await pending.textContent()) ?? '').match(CODE_RE)![1];
   await std.context().close();
 
   const admin = await loginAs(browser, 'admin_test');
-  await admin.goto('/admin');
+  await admin.goto('/admin/orders');
+  await expect(admin.getByRole('heading', { level: 1, name: 'Chờ xác nhận' })).toBeVisible();
   const card = admin.getByTestId('pending-order-card').filter({ hasText: code });
   await expect(card).toBeVisible();
   await expect(card).toContainText('teacher_std');
@@ -63,7 +73,16 @@ test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin 
   await confirm.getByRole('button', { name: 'Xác nhận' }).click();
   await expect(admin.getByText('Đã xác nhận đơn')).toBeVisible();
   await expect(card).toHaveCount(0);
+
+  await admin.goto('/admin/accounts');
+  await expect(admin.getByRole('heading', { level: 1, name: 'Tài khoản & gói' })).toBeVisible();
   await expect(admin.getByTestId('admin-user-card').filter({ hasText: 'teacher_std' })).toContainText('Plus');
+
+  await admin.goto('/admin/history');
+  const hist = admin.getByTestId('admin-history-card').filter({ hasText: code });
+  await expect(hist).toContainText('Đã xác nhận');
+  await expect(hist).toContainText('admin_test');
+  await expect(hist).toContainText('Hạn cấp');
   await admin.context().close();
 
   const std2 = await loginAs(browser, 'teacher_std');
@@ -75,25 +94,32 @@ test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin 
   await std2.context().close();
 });
 
-test('teacher vào /admin → 404; admin_test thấy link Trang quản trị ở /plan', async ({ browser }) => {
-  const teacher = await loginAs(browser, 'teacher');
-  const res = await teacher.goto('/admin');
-  expect(res!.status()).toBe(404);
-  await teacher.context().close();
+test('/admin → /admin/orders; teacher vào /admin, /admin/orders, /admin/accounts, /admin/history → 404', async ({ browser }) => {
+  const admin = await loginAs(browser, 'admin_test');
+  await admin.goto('/admin');
+  await expect(admin).toHaveURL(/\/admin\/orders$/);
+  await admin.context().close();
 
+  const teacher = await loginAs(browser, 'teacher');
+  for (const path of ['/admin', '/admin/orders', '/admin/accounts', '/admin/history']) {
+    const res = await teacher.goto(path);
+    expect(res!.status(), path).toBe(404);
+  }
+  await teacher.context().close();
+});
+
+test('admin_test thấy link Trang quản trị ở /plan', async ({ browser }) => {
   const admin = await loginAs(browser, 'admin_test');
   await admin.goto('/plan');
   await expect(admin.getByTestId('admin-link')).toBeVisible();
   await admin.context().close();
 });
 
-test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn chờ, xác nhận thì đơn bị từ chối', async ({ browser }) => {
-  const std = await db.user.findUniqueOrThrow({ where: { username: 'teacher_std' } });
-  const code = 'RJ' + Array.from({ length: 4 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('');
-  const order = await db.planOrder.create({ data: { userId: std.id, plan: 'plus', period: 'month', amount: 49000, code, status: 'pending' } });
+test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn chờ, xác nhận thì bị từ chối và vào Lịch sử đơn', async ({ browser }) => {
+  const { code, order } = await createPendingForStd('RJ');
 
   const admin = await loginAs(browser, 'admin_test');
-  await admin.goto('/admin');
+  await admin.goto('/admin/orders');
   const card = admin.getByTestId('pending-order-card').filter({ hasText: code });
   await card.getByRole('button', { name: 'Từ chối' }).click();
   const confirm = admin.getByRole('alertdialog');
@@ -107,5 +133,29 @@ test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn ch�
   await expect(admin.getByText('Đã từ chối đơn')).toBeVisible();
   await expect(card).toHaveCount(0);
   expect((await db.planOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('rejected');
+
+  await admin.goto('/admin/history');
+  await expect(admin.getByTestId('admin-history-card').filter({ hasText: code })).toContainText('Bị từ chối');
+  await admin.context().close();
+});
+
+test('desktop: sidebar khu quản trị 3 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
+  await createPendingForStd('SB');
+  const admin = await loginAs(browser, 'admin_test', DESKTOP);
+  await admin.goto('/admin/orders');
+  const aside = admin.locator('aside');
+  await expect(aside.getByText('Quản trị', { exact: true })).toBeVisible();
+  expect(await aside.getByRole('link').evaluateAll((els) => els.map((e) => e.getAttribute('href')))).toEqual([
+    '/admin/orders',
+    '/admin/accounts',
+    '/admin/history',
+  ]);
+  await expect(aside).not.toContainText('Tổng quan');
+  await expect(aside).not.toContainText('Học phí');
+  const pendingCount = await db.planOrder.count({ where: { status: 'pending' } });
+  await expect(aside.getByTestId('admin-pending-count')).toHaveText(String(pendingCount));
+  await aside.getByRole('link', { name: 'Lịch sử đơn' }).click();
+  await expect(admin).toHaveURL(/\/admin\/history$/);
+  await expect(aside.getByRole('link', { name: 'Lịch sử đơn' })).toHaveAttribute('aria-current', 'page');
   await admin.context().close();
 });

@@ -480,7 +480,6 @@
   "admin_page": "Quản trị",
   "admin_link": "Trang quản trị",
   "admin_pending_orders": "Chờ xác nhận",
-  "admin_accounts": "Tài khoản",
   "admin_approve": "Xác nhận",
   "admin_reject": "Từ chối",
   "admin_set_plan": "Đặt gói",
@@ -501,5 +500,15 @@
   "admin_approved": "Đã xác nhận đơn",
   "admin_rejected": "Đã từ chối đơn",
   "admin_plan_set": "Đã đặt gói",
-  "admin_cannot_approve": "Không duyệt được: tài khoản đang có gói Pro còn hạn"
+  "admin_cannot_approve": "Không duyệt được: tài khoản đang có gói Pro còn hạn",
+  "admin_accounts_plans": "Tài khoản & gói",
+  "admin_order_history": "Lịch sử đơn",
+  "admin_tab_orders": "Đơn chờ",
+  "admin_tab_accounts": "Tài khoản",
+  "admin_tab_history": "Lịch sử",
+  "admin_badge": "Quản trị",
+  "admin_col_status": "Trạng thái",
+  "admin_col_granted": "Hạn cấp",
+  "admin_col_decided": "Người duyệt",
+  "admin_no_history": "Chưa có đơn nào"
 }
