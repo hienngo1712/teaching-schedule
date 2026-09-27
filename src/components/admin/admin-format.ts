@@ -1,6 +1,7 @@
 import type vi from "@/language/vi.json"
 import { isPeriod } from "@/lib/plans"
 import { formatVnDate } from "@/lib/payment-notes"
+import { formatTime } from "@/lib/utils"
 
 export const SOURCE_KEY = { trial: "plan_source_trial", paid: "plan_source_paid", free: "plan_source_free" } as const
 
@@ -12,4 +13,10 @@ export function periodKey(p: string | null): keyof typeof vi {
 
 export function dateOrDash(d: string | null): string {
   return d ? formatVnDate(new Date(d)) : "-"
+}
+
+// Giờ VN (UTC+7) cho lịch sử cấu hình: server chạy UTC, formatTime đọc giờ UTC nên cộng 7 giờ trước.
+export function dateTimeVn(d: string): string {
+  const date = new Date(d)
+  return `${formatVnDate(date)} ${formatTime(new Date(date.getTime() + 7 * 60 * 60 * 1000))}`
 }
