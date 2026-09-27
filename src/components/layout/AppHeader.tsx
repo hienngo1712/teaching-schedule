@@ -15,6 +15,7 @@ import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
 import { RenewOffer } from "@/components/plan/RenewOffer"
+import { CurrentPlanBadge } from "@/components/plan/CurrentPlanBadge"
 
 function getInitials(name?: string | null) {
   if (!name) return "GV"
@@ -67,10 +68,12 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="flex size-11 items-center justify-center rounded-full bg-[#EEF0F4] text-[13px] font-semibold text-[#374151] hover:bg-[#E5E7EB] md:size-10"
+              className="relative flex size-11 items-center justify-center rounded-full bg-[#EEF0F4] text-[13px] font-semibold text-[#374151] hover:bg-[#E5E7EB] md:size-10"
               aria-label={t("account_menu")}
             >
               {getInitials(fullName)}
+              {/* Mobile không có sidebar/logo → nhãn gói đè góc avatar; desktop đã có ở sidebar. */}
+              {!admin && <CurrentPlanBadge className="pointer-events-none absolute -right-1.5 -top-1.5 md:hidden" />}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">

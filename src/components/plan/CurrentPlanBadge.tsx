@@ -13,7 +13,7 @@ const STYLE: Record<Plan, string> = {
   pro: "border-primary bg-primary text-primary-foreground",
 }
 
-export function CurrentPlanBadge() {
+export function CurrentPlanBadge({ className }: { className?: string }) {
   const { t } = useTranslation()
   const { me } = usePlan()
   if (!me) return null
@@ -26,7 +26,8 @@ export function CurrentPlanBadge() {
       aria-label={trialLabel}
       className={cn(
         "inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 text-[10px] font-semibold leading-4",
-        STYLE[me.plan]
+        STYLE[me.plan],
+        className
       )}
     >
       {trialLabel && <Clock aria-hidden className="size-3" />}

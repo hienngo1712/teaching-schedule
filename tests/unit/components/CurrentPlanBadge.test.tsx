@@ -15,10 +15,10 @@ beforeEach(() => {
   mockPlan.me = undefined
 })
 
-function renderBadge() {
+function renderBadge(className?: string) {
   render(
     <LanguageProvider forcedLanguage="vi">
-      <CurrentPlanBadge />
+      <CurrentPlanBadge className={className} />
     </LanguageProvider>
   )
   return screen.queryByTestId("current-plan-badge")
@@ -63,5 +63,13 @@ describe("CurrentPlanBadge", () => {
     expect(badge.querySelector("svg")).not.toBeNull()
     expect(badge.getAttribute("aria-label")).toBe("Pro dùng thử")
     expect(badge.getAttribute("title")).toBe("Pro dùng thử")
+  })
+
+  it("gộp className truyền vào sau class sẵn có", () => {
+    mockPlan.me = { plan: "standard", source: "free" }
+    const badge = renderBadge("absolute md:hidden")!
+    expect(badge.className).toContain("rounded-full")
+    expect(badge.className).toContain("absolute")
+    expect(badge.className).toContain("md:hidden")
   })
 })
