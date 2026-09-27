@@ -14,6 +14,7 @@ export default async function AppGroupLayout({
   const session = await auth()
   // Middleware Edge không tra DB: phiên bị đá (đổi mật khẩu, khóa tài khoản) chỉ lộ ra ở đây (spec N Q13).
   if (!session?.user) redirect("/login?expired=1")
+  if (session.user.mustChangePassword === true) redirect("/change-password")
   // Lưới thứ 2 nếu middleware bị bỏ qua: admin không dùng màn giáo viên (spec J Q3).
   if (isAdminUsername(session.user.username)) redirect("/admin/orders")
 

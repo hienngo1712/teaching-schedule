@@ -55,8 +55,13 @@ export const authConfig = {
         url.searchParams.set("expired", "1")
         return Response.redirect(url)
       }
-      // J1: admin chỉ dùng khu quản trị. So chặt để "/administration" không bị coi là khu quản trị.
       const { pathname } = request.nextUrl
+      // Spec N R2: mật khẩu tạm thì chỉ được ở trang đổi mật khẩu. Cờ trong token chỉ đổi khi reset/đổi mật khẩu,
+      // cả hai đều cấp lại hoặc vô hiệu token nên đủ tin ở Edge; Node kiểm lại bằng DB.
+      if (auth.user.mustChangePassword === true && pathname !== "/change-password") {
+        return Response.redirect(new URL("/change-password", request.nextUrl.origin))
+      }
+      // J1: admin chỉ dùng khu quản trị. So chặt để "/administration" không bị coi là khu quản trị.
       const inAdminArea = pathname === "/admin" || pathname.startsWith("/admin/")
       if (isAdminUsername(auth.user.username) && !inAdminArea) {
         return Response.redirect(new URL("/admin/orders", request.nextUrl.origin))

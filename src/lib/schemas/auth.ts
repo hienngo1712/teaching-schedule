@@ -14,6 +14,8 @@ export const changePasswordSchema = z
     path: ["newPassword"],
   })
 
+export const resetPasswordSchema = z.object({ userId: z.number().int().positive() })
+
 export const registerSchema = z.object({
   username: z
     .string()

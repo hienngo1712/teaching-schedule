@@ -32,6 +32,8 @@
   "logging_in": "Đang đăng nhập...",
   "remember_me": "Ghi nhớ đăng nhập (30 ngày)",
   "session_expired_relogin": "Phiên đăng nhập đã hết hoặc có phiên bản mới. Vui lòng đăng nhập lại.",
+  "must_change_password_title": "Đổi mật khẩu để tiếp tục",
+  "must_change_password_desc": "Tài khoản vừa được đặt lại mật khẩu. Hãy đặt mật khẩu mới (khác mật khẩu tạm) trước khi dùng tiếp.",
   "no_account": "Chưa có tài khoản?",
   "register_now": "Đăng ký ngay",
   "missing_fields": "Vui lòng nhập tên đăng nhập và mật khẩu.",

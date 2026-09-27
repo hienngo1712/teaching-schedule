@@ -16,10 +16,12 @@ vi.mock("@/components/admin/AdminLayout", () => ({ AdminLayout: ({ children }: {
 vi.mock("@/components/providers/SessionProvider", () => ({ SessionProvider: ({ children }: { children: unknown }) => children }))
 vi.mock("@/app/login/LoginForm", () => ({ LoginForm: () => null }))
 vi.mock("@/app/login/LoginHeader", () => ({ LoginHeader: () => null }))
+vi.mock("@/app/change-password/ForcedChangePassword", () => ({ ForcedChangePassword: () => null }))
 
 import AppGroupLayout from "@/app/(app)/layout"
 import AdminGroupLayout from "@/app/(admin)/admin/layout"
 import LoginPage from "@/app/login/page"
+import ChangePasswordPage from "@/app/change-password/page"
 
 const original = process.env.ADMIN_USERNAMES
 const as = (username: string) => ({ user: { id: "1", username, fullName: null }, expires: "" })
@@ -75,5 +77,23 @@ describe("layout khi auth() trả null", () => {
     await expect(AdminGroupLayout({ children: "x" })).rejects.toThrow("NOT_FOUND")
     mocks.session = as("admin_test")
     await expect(AdminGroupLayout({ children: "x" })).resolves.toBeTruthy()
+  })
+})
+
+describe("bắt đổi mật khẩu (spec N R2)", () => {
+  const flagged = { user: { id: "1", username: "teacher", fullName: null, mustChangePassword: true }, expires: "" }
+
+  it("(app) có cờ → /change-password", async () => {
+    mocks.session = flagged
+    await expect(AppGroupLayout({ children: "x" })).rejects.toThrow("REDIRECT /change-password")
+  })
+
+  it("/change-password: chưa đăng nhập → /login?expired=1; không có cờ → /dashboard; có cờ → hiện form", async () => {
+    mocks.session = null
+    await expect(ChangePasswordPage()).rejects.toThrow("REDIRECT /login?expired=1")
+    mocks.session = as("teacher")
+    await expect(ChangePasswordPage()).rejects.toThrow("REDIRECT /dashboard")
+    mocks.session = flagged
+    await expect(ChangePasswordPage()).resolves.toBeTruthy()
   })
 })

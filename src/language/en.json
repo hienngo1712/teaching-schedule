@@ -32,6 +32,8 @@
   "logging_in": "Logging in...",
   "remember_me": "Remember me (30 days)",
   "session_expired_relogin": "Your session has ended or a new version is available. Please sign in again.",
+  "must_change_password_title": "Change your password to continue",
+  "must_change_password_desc": "Your password was just reset. Set a new password (different from the temporary one) before continuing.",
   "no_account": "Don't have an account?",
   "register_now": "Register now",
   "missing_fields": "Please enter username and password.",

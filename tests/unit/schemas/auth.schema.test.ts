@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { changePasswordSchema } from "@/lib/schemas/auth"
+import { changePasswordSchema, resetPasswordSchema } from "@/lib/schemas/auth"
 
 const firstMessage = (input: unknown) => {
   const r = changePasswordSchema.safeParse(input)
@@ -21,5 +21,14 @@ describe("changePasswordSchema (spec N R2)", () => {
   it("bỏ field lạ (client không gửi được username)", () => {
     const r = changePasswordSchema.safeParse({ currentPassword: "teacher123", newPassword: "NewSecret@2026", username: "x" })
     expect(r.success && "username" in r.data).toBe(false)
+  })
+})
+
+describe("resetPasswordSchema (spec N R3)", () => {
+  it("chỉ nhận userId nguyên dương", () => {
+    expect(resetPasswordSchema.safeParse({ userId: 5 }).success).toBe(true)
+    for (const userId of [0, -1, 1.5, "5"]) {
+      expect(resetPasswordSchema.safeParse({ userId }).success, String(userId)).toBe(false)
+    }
   })
 })

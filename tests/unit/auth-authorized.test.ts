@@ -5,6 +5,7 @@ const authorized = authConfig.callbacks.authorized
 const original = process.env.ADMIN_USERNAMES
 const ADMIN = { user: { id: "9", username: "admin_test" }, expires: "" }
 const TEACHER = { user: { id: "1", username: "teacher" }, expires: "" }
+const MUST_CHANGE = { user: { id: "1", username: "teacher", mustChangePassword: true }, expires: "" }
 
 function call(auth: unknown, path = "/dashboard", cookieNames: string[] = []) {
   const request = {
@@ -79,5 +80,15 @@ describe("authConfig.callbacks.authorized", () => {
   it("auth là object lỗi + còn cookie → vẫn chặn (redirect), không cho qua", () => {
     const res = call({ error: "Configuration" }, "/dashboard", ["authjs.session-token"])
     expect(res).toBeInstanceOf(Response)
+  })
+
+  it("đang bị bắt đổi mật khẩu → mọi route (kể cả /api/backup) 302 về /change-password; ở /change-password thì cho qua", () => {
+    for (const path of ["/dashboard", "/students", "/api/backup", "/plan"]) {
+      const res = call(MUST_CHANGE, path)
+      expect(res, path).toBeInstanceOf(Response)
+      expect((res as Response).headers.get("location"), path).toBe("http://localhost:3000/change-password")
+    }
+    expect(call(MUST_CHANGE, "/change-password")).toBe(true)
+    expect(call(TEACHER, "/change-password")).toBe(true)
   })
 })

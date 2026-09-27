@@ -8,8 +8,10 @@ import {
   updateTrialDaysSchema,
   userIdSchema,
 } from "@/lib/schemas/plan"
+import { resetPasswordSchema } from "@/lib/schemas/auth"
 import { adminSetPlan, approveOrder, getAdminOverview, getOrderHistory, rejectOrder } from "@/server/services/plan-admin.service"
 import { getMonthlyPrices, getPriceHistory, updatePrices } from "@/server/services/plan-price.service"
+import { adminResetPassword } from "@/server/services/password-reset.service"
 import { getDefaultTrialDays, getTrialHistory, getUserTrialChanges, setUserTrialDays, updateDefaultTrialDays } from "@/server/services/trial.service"
 
 export const adminRouter = createTRPCRouter({
@@ -51,4 +53,8 @@ export const adminRouter = createTRPCRouter({
     .mutation(({ ctx, input }) => setUserTrialDays(ctx.db, ctx.session.user.username, input)),
 
   userTrialChanges: adminProcedure.input(userIdSchema).query(({ ctx, input }) => getUserTrialChanges(ctx.db, input.userId)),
+
+  resetPassword: adminProcedure
+    .input(resetPasswordSchema)
+    .mutation(({ ctx, input }) => adminResetPassword(ctx.db, ctx.session.user.username, input.userId)),
 })

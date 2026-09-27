@@ -27,6 +27,13 @@ describe("GET /api/backup", () => {
     expect(res.status).toBe(401)
   })
 
+  it("đang bị bắt đổi mật khẩu → 403, không xuất dữ liệu (spec N R2)", async () => {
+    const teacher = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    authMock.mockResolvedValue({ user: { id: String(teacher.id), mustChangePassword: true } })
+    const res = await GET()
+    expect(res.status).toBe(403)
+  })
+
   it("đã đăng nhập → 200, đúng header, body là xlsx đọc được", async () => {
     const teacher = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
     authMock.mockResolvedValue({ user: { id: String(teacher.id) } })

@@ -10,6 +10,8 @@ const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
 export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return new Response(null, { status: 401 })
+  // Cờ đặt tay trong DB chỉ lộ ở auth() Node, middleware Edge không thấy (spec N R2).
+  if (session.user.mustChangePassword === true) return new Response(null, { status: 403 })
 
   try {
     const userId = Number(session.user.id)
