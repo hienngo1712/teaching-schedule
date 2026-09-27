@@ -21,9 +21,12 @@ import {
 } from "@/lib/plans"
 import { buildVietQrPayload } from "@/lib/vietqr"
 import { findBank } from "@/lib/vn-banks"
+import { isAdminUsername } from "@/lib/admin"
 import type { CreateOrderInput } from "@/lib/schemas/plan"
 
 export type Db = PrismaClient | Prisma.TransactionClient
+// Giữ export cũ để trpc/index.ts và getMyPlan không phải đổi chỗ import.
+export { isAdminUsername }
 
 export const PLAN_SELECT = { plan: true, planExpiresAt: true, trialEndsAt: true } satisfies Prisma.UserSelect
 
@@ -73,15 +76,6 @@ const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 
 export function generateOrderCode(): string {
   return Array.from({ length: 6 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("")
-}
-
-export function isAdminUsername(username?: string | null): boolean {
-  if (!username) return false
-  return (process.env.ADMIN_USERNAMES ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .includes(username)
 }
 
 // D12: TK nhận tiền của chủ app nằm ở env, không lưu DB. BIN lạ coi như chưa cài.

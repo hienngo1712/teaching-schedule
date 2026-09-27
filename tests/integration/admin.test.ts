@@ -31,6 +31,7 @@ describe("admin.* — quyền", () => {
     await expect(c.admin.approveOrder({ id: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" })
     await expect(c.admin.rejectOrder({ id: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" })
     await expect(c.admin.setPlan({ userId, plan: "pro", lastDay: "2099-01-01", note: "x" })).rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(c.admin.orderHistory()).rejects.toMatchObject({ code: "FORBIDDEN" })
     delete process.env.ADMIN_USERNAMES
     await expect((await getAuthedCaller("admin_test")).admin.overview()).rejects.toMatchObject({ code: "FORBIDDEN" })
   })
@@ -156,5 +157,64 @@ describe("admin.setPlan", () => {
     await expect(admin.admin.setPlan({ userId, plan: "pro", note: "x" })).rejects.toMatchObject({ code: "BAD_REQUEST" })
     await expect(admin.admin.setPlan({ userId: 99999999, plan: "pro", lastDay: "2026-12-31", note: "x" })).rejects.toMatchObject({ code: "NOT_FOUND" })
     expect(await db.planOrder.count({ where: { userId } })).toBe(0)
+  })
+})
+
+describe("admin.orderHistory", () => {
+  it("chỉ đơn đã xử lý (không pending), mới nhất trước, kèm username/fullName, tối đa 100", async () => {
+    // createdAt ở tương lai để chắc là đơn mới nhất DB test (file test khác có thể còn để lại đơn); reset() xóa hết sau đó.
+    const future = Date.now() + 24 * 60 * 60 * 1000
+    await db.planOrder.createMany({
+      data: Array.from({ length: 101 }, (_, i) => ({
+        userId,
+        plan: "plus",
+        period: "month",
+        amount: 49000,
+        status: "cancelled",
+        createdAt: new Date(future + i * 1000),
+      })),
+    })
+    const newest = await db.planOrder.create({
+      data: {
+        userId,
+        plan: "pro",
+        period: "year",
+        amount: 990000,
+        code: "HSTRY2",
+        status: "rejected",
+        note: "Sai nội dung",
+        decidedBy: "admin_test",
+        decidedAt: new Date(),
+        createdAt: new Date(future + 200_000),
+      },
+    })
+    const pending = await db.planOrder.create({
+      data: { userId, plan: "plus", period: "year", amount: 490000, status: "pending", createdAt: new Date(future + 300_000) },
+    })
+
+    const rows = await (await getAuthedCaller("admin_test")).admin.orderHistory()
+
+    expect(rows).toHaveLength(100)
+    expect(rows.some((r) => r.id === pending.id)).toBe(false)
+    expect(rows.every((r) => r.status !== "pending")).toBe(true)
+    expect(rows[0]).toMatchObject({
+      id: newest.id,
+      code: "HSTRY2",
+      plan: "pro",
+      period: "year",
+      amount: 990000,
+      status: "rejected",
+      source: "user",
+      bonusMonths: 0,
+      creditDays: 0,
+      grantedUntil: null,
+      note: "Sai nội dung",
+      decidedBy: "admin_test",
+      username: "teacher_std",
+      fullName: "Giáo viên Standard",
+    })
+    expect(rows[0]).not.toHaveProperty("user")
+    const times = rows.map((r) => r.createdAt.getTime())
+    expect(times).toEqual([...times].sort((a, b) => b - a))
   })
 })
