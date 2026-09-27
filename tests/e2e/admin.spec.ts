@@ -3,10 +3,12 @@ import { PrismaClient } from '@prisma/client';
 import { EXPECTED_TEST_ENDPOINT } from '../env-setup';
 
 const db = new PrismaClient();
-const VIEWPORT = { width: 390, height: 844 };
+const MOBILE = { width: 390, height: 844 };
+const DESKTOP = { width: 1280, height: 900 };
+const CODE_RE = /SM ([ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6})/;
 
-async function loginAs(browser: Browser, username: string): Promise<Page> {
-  const context = await browser.newContext({ viewport: VIEWPORT });
+async function loginAs(browser: Browser, username: string, viewport = MOBILE): Promise<Page> {
+  const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   await page.addInitScript(() => {
     document.addEventListener('DOMContentLoaded', () => {
@@ -19,8 +21,16 @@ async function loginAs(browser: Browser, username: string): Promise<Page> {
   await page.fill('input[name="username"]', username);
   await page.fill('input[name="password"]', 'teacher123');
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/.*dashboard/);
+  // Admin bị middleware chuyển thẳng về khu quản trị (spec J Q3).
+  await expect(page).toHaveURL(username === 'admin_test' ? /\/admin\/orders$/ : /.*dashboard/);
   return page;
+}
+
+async function createPendingForStd(prefix: string) {
+  const std = await db.user.findUniqueOrThrow({ where: { username: 'teacher_std' } });
+  const code = prefix + Array.from({ length: 4 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('');
+  const order = await db.planOrder.create({ data: { userId: std.id, plan: 'plus', period: 'month', amount: 49000, code, status: 'pending' } });
+  return { code, order };
 }
 
 async function resetStd() {
@@ -38,20 +48,21 @@ test.afterAll(async () => {
   await db.$disconnect();
 });
 
-test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin → teacher_std thấy Plus + hạn', async ({ browser }) => {
+test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin/orders → Tài khoản & gói, Lịch sử đơn cập nhật', async ({ browser }) => {
   const std = await loginAs(browser, 'teacher_std');
   await std.goto('/plan');
-  const checkout = std.getByTestId('plan-checkout');
-  await checkout.getByRole('button', { name: 'Plus', exact: true }).click();
-  await checkout.getByRole('button', { name: 'Tháng', exact: true }).click();
-  await checkout.getByRole('button', { name: 'Tạo mã chuyển khoản' }).click();
-  const pending = std.getByTestId('pending-order');
+  await std.getByTestId('plan-card-plus').getByRole('button', { name: 'Chọn gói Plus' }).click();
+  const popup = std.getByTestId('plan-purchase');
+  await popup.getByTestId('purchase-period-month').click();
+  await popup.getByRole('button', { name: 'Tạo đơn', exact: true }).click();
+  const pending = popup.getByTestId('pending-order');
   await expect(pending).toBeVisible();
-  const code = ((await pending.textContent()) ?? '').match(/SM ([ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6})/)![1];
+  const code = ((await pending.textContent()) ?? '').match(CODE_RE)![1];
   await std.context().close();
 
   const admin = await loginAs(browser, 'admin_test');
-  await admin.goto('/admin');
+  await admin.goto('/admin/orders');
+  await expect(admin.getByRole('heading', { level: 1, name: 'Chờ xác nhận' })).toBeVisible();
   const card = admin.getByTestId('pending-order-card').filter({ hasText: code });
   await expect(card).toBeVisible();
   await expect(card).toContainText('teacher_std');
@@ -63,37 +74,46 @@ test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin 
   await confirm.getByRole('button', { name: 'Xác nhận' }).click();
   await expect(admin.getByText('Đã xác nhận đơn')).toBeVisible();
   await expect(card).toHaveCount(0);
+
+  await admin.goto('/admin/accounts');
+  await expect(admin.getByRole('heading', { level: 1, name: 'Tài khoản & gói' })).toBeVisible();
   await expect(admin.getByTestId('admin-user-card').filter({ hasText: 'teacher_std' })).toContainText('Plus');
+
+  await admin.goto('/admin/history');
+  const hist = admin.getByTestId('admin-history-card').filter({ hasText: code });
+  await expect(hist).toContainText('Đã xác nhận');
+  await expect(hist).toContainText('admin_test');
+  await expect(hist).toContainText('Hạn cấp');
   await admin.context().close();
 
   const std2 = await loginAs(browser, 'teacher_std');
   await std2.goto('/plan');
-  const current = std2.getByTestId('current-plan');
-  await expect(current).toContainText('Plus');
-  await expect(current).toContainText('Đã mua');
-  await expect(current).toContainText('Dùng đến hết ngày');
+  const plusCard = std2.getByTestId('plan-card-plus');
+  await expect(plusCard).toContainText('Đang dùng');
+  await expect(plusCard).toContainText('Dùng đến hết ngày');
+  await expect(std2.getByTestId('current-plan')).toHaveCount(0);
   await std2.context().close();
 });
 
-test('teacher vào /admin → 404; admin_test thấy link Trang quản trị ở /plan', async ({ browser }) => {
-  const teacher = await loginAs(browser, 'teacher');
-  const res = await teacher.goto('/admin');
-  expect(res!.status()).toBe(404);
-  await teacher.context().close();
-
-  const admin = await loginAs(browser, 'admin_test');
-  await admin.goto('/plan');
-  await expect(admin.getByTestId('admin-link')).toBeVisible();
-  await admin.context().close();
-});
-
-test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn chờ, xác nhận thì đơn bị từ chối', async ({ browser }) => {
-  const std = await db.user.findUniqueOrThrow({ where: { username: 'teacher_std' } });
-  const code = 'RJ' + Array.from({ length: 4 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('');
-  const order = await db.planOrder.create({ data: { userId: std.id, plan: 'plus', period: 'month', amount: 49000, code, status: 'pending' } });
-
+test('/admin → /admin/orders; teacher vào /admin, /admin/orders, /admin/accounts, /admin/history → 404', async ({ browser }) => {
   const admin = await loginAs(browser, 'admin_test');
   await admin.goto('/admin');
+  await expect(admin).toHaveURL(/\/admin\/orders$/);
+  await admin.context().close();
+
+  const teacher = await loginAs(browser, 'teacher');
+  for (const path of ['/admin', '/admin/orders', '/admin/accounts', '/admin/history']) {
+    const res = await teacher.goto(path);
+    expect(res!.status(), path).toBe(404);
+  }
+  await teacher.context().close();
+});
+
+test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn chờ, xác nhận thì bị từ chối và vào Lịch sử đơn', async ({ browser }) => {
+  const { code, order } = await createPendingForStd('RJ');
+
+  const admin = await loginAs(browser, 'admin_test');
+  await admin.goto('/admin/orders');
   const card = admin.getByTestId('pending-order-card').filter({ hasText: code });
   await card.getByRole('button', { name: 'Từ chối' }).click();
   const confirm = admin.getByRole('alertdialog');
@@ -107,5 +127,65 @@ test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn ch�
   await expect(admin.getByText('Đã từ chối đơn')).toBeVisible();
   await expect(card).toHaveCount(0);
   expect((await db.planOrder.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('rejected');
+
+  await admin.goto('/admin/history');
+  await expect(admin.getByTestId('admin-history-card').filter({ hasText: code })).toContainText('Bị từ chối');
+  await admin.context().close();
+});
+
+test('desktop: sidebar khu quản trị 3 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
+  await createPendingForStd('SB');
+  const admin = await loginAs(browser, 'admin_test', DESKTOP);
+  await admin.goto('/admin/orders');
+  const aside = admin.locator('aside');
+  await expect(aside.getByText('Quản trị', { exact: true })).toBeVisible();
+  expect(await aside.getByRole('link').evaluateAll((els) => els.map((e) => e.getAttribute('href')))).toEqual([
+    '/admin/orders',
+    '/admin/accounts',
+    '/admin/history',
+  ]);
+  await expect(aside).not.toContainText('Tổng quan');
+  await expect(aside).not.toContainText('Học phí');
+  const pendingCount = await db.planOrder.count({ where: { status: 'pending' } });
+  await expect(aside.getByTestId('admin-pending-count')).toHaveText(String(pendingCount));
+  await aside.getByRole('link', { name: 'Lịch sử đơn' }).click();
+  await expect(admin).toHaveURL(/\/admin\/history$/);
+  await expect(aside.getByRole('link', { name: 'Lịch sử đơn' })).toHaveAttribute('aria-current', 'page');
+  await admin.context().close();
+});
+
+test('admin_test: route giáo viên → /admin/orders; tab bar và menu avatar chỉ của khu quản trị; không gọi plan.me; không tràn ngang', async ({ browser }) => {
+  const admin = await loginAs(browser, 'admin_test');
+  const planMe: string[] = [];
+  admin.on('request', (r) => {
+    if (r.url().includes('plan.me')) planMe.push(r.url());
+  });
+
+  for (const path of ['/dashboard', '/students', '/plan', '/', '/admin', '/api/backup']) {
+    await admin.goto(path);
+    await expect(admin, path).toHaveURL(/\/admin\/orders$/);
+  }
+  await expect(admin.getByRole('heading', { level: 1, name: 'Chờ xác nhận' })).toBeVisible();
+  await expect(admin.getByRole('banner').getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
+
+  const tabs = admin.getByRole('navigation', { name: 'Điều hướng chính' });
+  await expect(tabs.getByRole('link')).toHaveCount(3);
+  for (const link of await tabs.getByRole('link').all()) {
+    expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  await expect(tabs).not.toContainText('Tổng quan');
+  await expect(tabs).not.toContainText('Học phí');
+  await tabs.getByRole('link', { name: 'Lịch sử' }).click();
+  await expect(admin).toHaveURL(/\/admin\/history$/);
+
+  await admin.getByRole('button', { name: 'Mở menu tài khoản' }).click();
+  const menu = admin.getByRole('menu');
+  await expect(menu.getByRole('menuitem')).toHaveText(['Quản trị', 'Đổi mật khẩu', 'Đăng xuất']);
+  await menu.getByRole('menuitem', { name: 'Quản trị' }).click();
+  await expect(admin).toHaveURL(/\/admin\/orders$/);
+
+  const overflow = await admin.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  expect(planMe).toEqual([]);
   await admin.context().close();
 });

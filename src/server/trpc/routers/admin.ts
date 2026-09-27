@@ -1,9 +1,10 @@
 import { adminProcedure, createTRPCRouter } from "@/server/trpc"
 import { orderIdSchema, rejectOrderSchema, setPlanSchema } from "@/lib/schemas/plan"
-import { adminSetPlan, approveOrder, getAdminOverview, rejectOrder } from "@/server/services/plan-admin.service"
+import { adminSetPlan, approveOrder, getAdminOverview, getOrderHistory, rejectOrder } from "@/server/services/plan-admin.service"
 
 export const adminRouter = createTRPCRouter({
   overview: adminProcedure.query(({ ctx }) => getAdminOverview(ctx.db)),
+  orderHistory: adminProcedure.query(({ ctx }) => getOrderHistory(ctx.db)),
 
   approveOrder: adminProcedure
     .input(orderIdSchema)

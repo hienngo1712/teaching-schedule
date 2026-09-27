@@ -75,7 +75,12 @@ test('Plus còn 45 ngày: popup giữa màn hình 1 lần/ngày; đóng xong nú
   await renew.click();
   await expect(dialog).toBeVisible();
   await dialog.getByRole('link', { name: 'Gia hạn ngay' }).click();
-  await expect(page).toHaveURL(/\/plan/);
+  // Q15: /plan?buy=1 tự mở popup Pro + 12 tháng rồi bỏ param.
+  const purchase = page.getByTestId('plan-purchase');
+  await expect(purchase).toBeVisible();
+  await expect(page).toHaveURL(/\/plan$/);
+  await expect(purchase.getByTestId('purchase-plan-pro')).toHaveAttribute('aria-checked', 'true');
+  await expect(purchase.getByTestId('purchase-period-year')).toHaveAttribute('aria-checked', 'true');
   await expect(dialog).toBeHidden();
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

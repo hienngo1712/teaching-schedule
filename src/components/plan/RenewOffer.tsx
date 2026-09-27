@@ -92,7 +92,7 @@ export function RenewOffer() {
               {t("plan_later")}
             </Button>
             <Button asChild className="h-11 md:h-10">
-              <Link href="/plan" onClick={() => setOpen(false)}>
+              <Link href="/plan?buy=1" onClick={() => setOpen(false)}>
                 {t("renew_offer_now")}
               </Link>
             </Button>

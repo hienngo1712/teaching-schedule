@@ -143,3 +143,30 @@ export async function adminSetPlan(db: PrismaClient, admin: string, input: SetPl
   console.info(`[admin] ${admin} đặt gói ${input.plan} cho user ${input.userId}`)
   return { success: true }
 }
+
+// Lịch sử để đối soát chuyển khoản sai nội dung (spec I-11). Vài chục tài khoản nên 100 đơn gần nhất là đủ, chưa phân trang.
+export async function getOrderHistory(db: PrismaClient) {
+  const rows = await db.planOrder.findMany({
+    where: { status: { not: "pending" } },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 100,
+    select: {
+      id: true,
+      code: true,
+      plan: true,
+      period: true,
+      amount: true,
+      bonusMonths: true,
+      creditDays: true,
+      status: true,
+      source: true,
+      grantedUntil: true,
+      note: true,
+      decidedBy: true,
+      decidedAt: true,
+      createdAt: true,
+      user: { select: { username: true, fullName: true } },
+    },
+  })
+  return rows.map(({ user, ...o }) => ({ ...o, username: user.username, fullName: user.fullName }))
+}

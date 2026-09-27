@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { DatabaseBackup, KeyRound, LogOut, Languages } from "lucide-react"
+import { DatabaseBackup, KeyRound, LogOut, Languages, ShieldCheck } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
@@ -23,7 +24,8 @@ function getInitials(name?: string | null) {
   return (first + last).toUpperCase() || "GV"
 }
 
-export function AppHeader() {
+export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admin" }) {
+  const admin = variant === "admin"
   const { data: session } = useSession()
   const { t, language, setLanguage } = useTranslation()
   const backup = useBackupDownload()
@@ -38,7 +40,8 @@ export function AppHeader() {
       </span>
 
       <div className="flex shrink-0 items-center gap-2">
-        <RenewOffer />
+        {/* Admin không dùng gói: không gọi plan.me, không nhắc gia hạn. */}
+        {!admin && <RenewOffer />}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="size-11 text-slate-600 md:size-10">
@@ -71,10 +74,19 @@ export function AppHeader() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onSelect={backup.download} disabled={backup.isDownloading}>
-              <DatabaseBackup className="size-4 mr-2" />
-              {t("backup_data")}
-            </DropdownMenuItem>
+            {admin ? (
+              <DropdownMenuItem asChild>
+                <Link href="/admin/orders">
+                  <ShieldCheck className="size-4 mr-2" />
+                  {t("admin_page")}
+                </Link>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onSelect={backup.download} disabled={backup.isDownloading}>
+                <DatabaseBackup className="size-4 mr-2" />
+                {t("backup_data")}
+              </DropdownMenuItem>
+            )}
             <ChangePasswordDialog
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

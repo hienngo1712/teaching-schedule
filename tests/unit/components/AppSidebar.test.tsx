@@ -8,13 +8,14 @@ import { AppSidebar } from "@/components/layout/AppSidebar"
 import { UpgradeDialog } from "@/components/plan/UpgradeDialog"
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/subjects" }))
-const mockPlan = vi.hoisted(() => ({ allow: true }))
+const mockPlan = vi.hoisted(() => ({ allow: true, me: undefined as undefined | { plan: string; source: string } }))
 vi.mock("@/hooks/usePlan", () => ({
-  usePlan: () => ({ me: undefined, ready: true, fields: null, has: () => mockPlan.allow }),
+  usePlan: () => ({ me: mockPlan.me, ready: true, fields: null, has: () => mockPlan.allow }),
 }))
 
 beforeEach(() => {
   mockPlan.allow = true
+  mockPlan.me = undefined
 })
 
 describe("AppSidebar", () => {
@@ -54,5 +55,17 @@ describe("AppSidebar", () => {
     expect(reports.textContent).toContain("Plus")
     fireEvent.click(reports)
     expect(await screen.findByText("Nâng lên gói Plus hoặc Pro để sử dụng tính năng này.")).toBeTruthy()
+  })
+
+  it("nhãn gói hiệu lực nằm ngay sau chữ Lịch dạy ở logo", () => {
+    mockPlan.me = { plan: "plus", source: "paid" }
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <AppSidebar />
+      </LanguageProvider>
+    )
+    const badge = screen.getByTestId("current-plan-badge")
+    expect(badge.textContent).toBe("Plus")
+    expect(badge.previousElementSibling?.textContent).toBe("Lịch dạy")
   })
 })

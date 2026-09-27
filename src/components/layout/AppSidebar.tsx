@@ -8,6 +8,7 @@ import { FEATURE_PLAN } from "@/lib/plans"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { usePlan } from "@/hooks/usePlan"
 import { LockBadge } from "@/components/plan/LockBadge"
+import { CurrentPlanBadge } from "@/components/plan/CurrentPlanBadge"
 import { openUpgrade } from "@/components/plan/upgrade-store"
 import { MANAGE_ITEMS, NAV_ITEMS, isNavActive, type NavItem } from "./nav-items"
 
@@ -59,6 +60,7 @@ export function AppSidebar() {
           <GraduationCap className="size-[18px] text-white" />
         </span>
         <span className="text-base font-semibold text-foreground">{t("calendar")}</span>
+        <CurrentPlanBadge />
       </div>
 
       <nav className="flex flex-col gap-1">

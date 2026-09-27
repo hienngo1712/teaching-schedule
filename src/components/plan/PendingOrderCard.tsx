@@ -12,7 +12,15 @@ import { formatCurrency } from "@/lib/utils"
 
 type Order = NonNullable<RouterOutputs["plan"]["me"]["pendingOrder"]>
 
-export function PendingOrderCard({ order, paymentReady }: { order: Order; paymentReady: boolean }) {
+export function PendingOrderCard({
+  order,
+  paymentReady,
+  onCancelled,
+}: {
+  order: Order
+  paymentReady: boolean
+  onCancelled?: () => void
+}) {
   const { t } = useTranslation()
   const [qrSrc, setQrSrc] = useState<string | null>(null)
   const payload = order.qr?.payload ?? null
@@ -31,7 +39,10 @@ export function PendingOrderCard({ order, paymentReady }: { order: Order; paymen
   }, [payload])
 
   const cancel = trpc.plan.cancelOrder.useMutation({
-    onSuccess: () => toast.success(t("plan_order_cancelled")),
+    onSuccess: () => {
+      toast.success(t("plan_order_cancelled"))
+      onCancelled?.()
+    },
     onError: (e) => toast.error(e.message),
   })
 

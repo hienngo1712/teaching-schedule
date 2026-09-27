@@ -3,6 +3,7 @@
 import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import type { RouterOutputs } from "@/lib/trpc"
 import { FEATURE_LABEL_KEY } from "./feature-labels"
 import {
   PLANS,
@@ -11,6 +12,7 @@ import {
   STUDENT_LIMITS,
   TWO_YEAR_BONUS_MONTHS,
   featuresAddedIn,
+  formatValidUntil,
   type PaidPlan,
   type Plan,
 } from "@/lib/plans"
@@ -24,18 +26,21 @@ const CARD_ORDER: Record<Plan, string> = {
 }
 const BELOW: Record<Plan, Plan | null> = { standard: null, plus: "standard", pro: "plus" }
 
-type Props = { current: Plan; plusBlocked: boolean; onChoose: (plan: PaidPlan) => void }
+type Me = RouterOutputs["plan"]["me"]
+type Props = { me: Me; plusBlocked: boolean; onChoose: (plan: PaidPlan) => void }
 
-export function PlanCompare({ current, plusBlocked, onChoose }: Props) {
+export function PlanCompare({ me, plusBlocked, onChoose }: Props) {
   const { t } = useTranslation()
   return (
     <section className="space-y-3">
       <h2 className="text-base font-semibold text-foreground">{t("plan_compare")}</h2>
-      <div className="flex flex-col gap-3 md:grid md:grid-cols-3 md:items-start md:gap-4 md:pt-2">
+      {/* J3a: items-stretch để 3 thẻ cao bằng nhau, CTA mt-auto dính đáy. */}
+      <div className="flex flex-col gap-3 md:grid md:grid-cols-3 md:items-stretch md:gap-4">
         {PLANS.map((plan) => {
           const pro = plan === "pro"
           const below = BELOW[plan]
           const limit = STUDENT_LIMITS[plan]
+          const inUse = me.plan === plan
           return (
             <article
               key={plan}
@@ -43,7 +48,7 @@ export function PlanCompare({ current, plusBlocked, onChoose }: Props) {
               className={cn(
                 "flex flex-col gap-3 rounded-xl p-4 md:p-5",
                 CARD_ORDER[plan],
-                pro ? "border-2 border-primary bg-primary/[0.04] md:-mt-2 md:pb-7" : "border border-slate-200 bg-white"
+                pro ? "border-2 border-primary bg-primary/[0.04]" : "border border-slate-200 bg-white"
               )}
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -53,9 +58,9 @@ export function PlanCompare({ current, plusBlocked, onChoose }: Props) {
                     {t("plan_recommended")}
                   </span>
                 )}
-                {current === plan && (
+                {inUse && (
                   <span className="rounded-full border border-slate-300 bg-white px-2 text-xs leading-5 text-slate-600">
-                    {t("plan_in_use")}
+                    {t(me.source === "trial" ? "plan_source_trial" : "plan_in_use")}
                   </span>
                 )}
               </div>
@@ -76,6 +81,14 @@ export function PlanCompare({ current, plusBlocked, onChoose }: Props) {
                     {formatCurrency(PLAN_PRICES[plan]["2year"])}
                     {t("plan_per_2years")} · {t("plan_bonus_months").replace("{n}", String(TWO_YEAR_BONUS_MONTHS))}
                   </p>
+                </div>
+              )}
+
+              {/* Q14: thay cho thẻ "Gói hiện tại" đã bỏ. */}
+              {inUse && (
+                <div className="space-y-0.5 text-sm font-medium text-foreground">
+                  {me.expiresAt && <p>{t("plan_valid_until").replace("{date}", formatValidUntil(new Date(me.expiresAt)))}</p>}
+                  <p>{t("plan_active_now").replace("{count}", String(me.activeStudents))}</p>
                 </div>
               )}
 
