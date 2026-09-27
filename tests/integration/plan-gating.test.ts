@@ -48,6 +48,8 @@ const PLUS_CASES: [string, Call][] = [
   ["report.monthlySummary 1 tháng", (c) => c.report.monthlySummary({ year: Y, month: M })],
   ["report.monthlySummary toMonth trùng tháng đầu", (c) => c.report.monthlySummary({ year: Y, month: M, toYear: Y, toMonth: M })],
   ["report.student 1 tháng", (c, sid) => c.report.student({ studentId: sid, year: Y, month: M })],
+  ["session.copyMonthPreview", (c) => c.session.copyMonthPreview({ source: { year: 2031, month: 1 }, from: { year: 2031, month: 2 }, months: 1 })],
+  ["session.copyMonth", (c) => c.session.copyMonth({ source: { year: 2031, month: 1 }, from: { year: 2031, month: 2 }, months: 1, patternKeys: ["0|17:00|19:00|999999"] })],
 ]
 
 const PRO_CASES: [string, Call][] = [
