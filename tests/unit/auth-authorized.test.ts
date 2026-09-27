@@ -6,8 +6,12 @@ const original = process.env.ADMIN_USERNAMES
 const ADMIN = { user: { id: "9", username: "admin_test" }, expires: "" }
 const TEACHER = { user: { id: "1", username: "teacher" }, expires: "" }
 
-function call(auth: unknown, path = "/dashboard") {
-  return authorized({ auth, request: { nextUrl: new URL(path, "http://localhost:3000") } } as unknown as Parameters<typeof authorized>[0])
+function call(auth: unknown, path = "/dashboard", cookieNames: string[] = []) {
+  const request = {
+    nextUrl: new URL(path, "http://localhost:3000"),
+    cookies: { getAll: () => cookieNames.map((name) => ({ name, value: "x" })) },
+  }
+  return authorized({ auth, request } as unknown as Parameters<typeof authorized>[0])
 }
 
 beforeEach(() => {
@@ -54,5 +58,26 @@ describe("authConfig.callbacks.authorized", () => {
     }
     delete process.env.ADMIN_USERNAMES
     expect(call(ADMIN, "/dashboard")).toBe(true)
+  })
+
+  it("không có user nhưng còn cookie phiên (hết hạn / lệch phiên bản) → 302 /login kèm callbackUrl + expired=1", () => {
+    for (const name of ["authjs.session-token", "__Secure-authjs.session-token", "authjs.session-token.0"]) {
+      const res = call(null, "/students?x=1", [name])
+      expect(res, name).toBeInstanceOf(Response)
+      expect((res as Response).status, name).toBe(302)
+      const loc = new URL((res as Response).headers.get("location")!)
+      expect(loc.pathname).toBe("/login")
+      expect(loc.searchParams.get("callbackUrl")).toBe("http://localhost:3000/students?x=1")
+      expect(loc.searchParams.get("expired")).toBe("1")
+    }
+  })
+
+  it("không có user, không cookie phiên (chỉ cookie khác) → false để thư viện tự về /login", () => {
+    expect(call(null, "/dashboard", ["authjs.csrf-token", "lang"])).toBe(false)
+  })
+
+  it("auth là object lỗi + còn cookie → vẫn chặn (redirect), không cho qua", () => {
+    const res = call({ error: "Configuration" }, "/dashboard", ["authjs.session-token"])
+    expect(res).toBeInstanceOf(Response)
   })
 })

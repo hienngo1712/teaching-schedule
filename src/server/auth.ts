@@ -10,6 +10,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
+        remember: { label: "Remember", type: "text" },
       },
       async authorize(credentials, req) {
         const username = String(credentials?.username ?? "").trim()
@@ -24,7 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await authorizeCredentials(username, password, ip)
         if (!user) return null
-        return { id: user.id, username: user.username, fullName: user.fullName }
+        return { id: user.id, username: user.username, fullName: user.fullName, remember: credentials?.remember === "1" }
       },
     }),
   ],
