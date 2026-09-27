@@ -88,10 +88,10 @@ test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin/
 
   const std2 = await loginAs(browser, 'teacher_std');
   await std2.goto('/plan');
-  const current = std2.getByTestId('current-plan');
-  await expect(current).toContainText('Plus');
-  await expect(current).toContainText('Đã mua');
-  await expect(current).toContainText('Dùng đến hết ngày');
+  const plusCard = std2.getByTestId('plan-card-plus');
+  await expect(plusCard).toContainText('Đang dùng');
+  await expect(plusCard).toContainText('Dùng đến hết ngày');
+  await expect(std2.getByTestId('current-plan')).toHaveCount(0);
   await std2.context().close();
 });
 

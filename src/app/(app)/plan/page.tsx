@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { PageHeader } from "@/components/common/PageHeader"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -9,11 +8,10 @@ import { usePlan } from "@/hooks/usePlan"
 import { PlanCompare } from "@/components/plan/PlanCompare"
 import { PlanCheckout, type PlanChoice } from "@/components/plan/PlanCheckout"
 import { PendingOrderCard } from "@/components/plan/PendingOrderCard"
-import { PLAN_LABEL, formatValidUntil, isPeriod, orderBlockedUntil, planLabel } from "@/lib/plans"
+import { isPeriod, orderBlockedUntil, planLabel } from "@/lib/plans"
 import { formatVnDate } from "@/lib/payment-notes"
 import { formatCurrency } from "@/lib/utils"
 
-const SOURCE_KEY = { trial: "plan_source_trial", paid: "plan_source_paid", free: "plan_source_free" } as const
 const STATUS_KEY = {
   pending: "plan_pending",
   approved: "plan_status_approved",
@@ -44,24 +42,10 @@ export default function PlanPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader title={t("my_plan")} />
 
-      <section data-testid="current-plan" className="rounded-xl border bg-white p-4 md:p-6">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("plan_current")}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-semibold text-foreground">{PLAN_LABEL[me.plan]}</h2>
-          <span className="rounded-full border border-primary px-2 text-xs font-medium leading-5 text-primary">{t(SOURCE_KEY[me.source])}</span>
-        </div>
-        {me.expiresAt && (
-          <p className="mt-2 text-sm text-slate-600">{t("plan_valid_until").replace("{date}", formatValidUntil(new Date(me.expiresAt)))}</p>
-        )}
-        <p className="mt-1 text-sm text-slate-600">
-          {me.studentLimit === null
-            ? t("plan_students_unlimited").replace("{count}", String(me.activeStudents))
-            : t("plan_students_usage").replace("{count}", String(me.activeStudents)).replace("{limit}", String(me.studentLimit))}
-        </p>
-      </section>
+      {me.pendingOrder && <PendingOrderCard order={me.pendingOrder} paymentReady={me.paymentReady} />}
 
       <PlanCompare
-        current={me.plan}
+        me={me}
         plusBlocked={plusBlocked}
         onChoose={(plan) => {
           setChoice((c) => ({ ...c, plan }))
@@ -69,7 +53,6 @@ export default function PlanPage() {
         }}
       />
 
-      {me.pendingOrder && <PendingOrderCard order={me.pendingOrder} paymentReady={me.paymentReady} />}
       <PlanCheckout me={me} fields={fields} choice={choice} onChange={setChoice} />
 
       <section data-testid="plan-history" className="space-y-2 rounded-xl border bg-white p-4 md:p-6">
@@ -93,12 +76,6 @@ export default function PlanPage() {
           </ul>
         )}
       </section>
-
-      {me.isAdmin && (
-        <Link href="/admin" data-testid="admin-link" className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline">
-          {t("admin_link")}
-        </Link>
-      )}
     </div>
   )
 }

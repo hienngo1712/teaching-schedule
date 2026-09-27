@@ -49,10 +49,11 @@ test.describe('Gói của tôi (390px)', () => {
     await page.getByRole('dialog', { name: 'Thêm' }).getByRole('link', { name: /Gói của tôi/ }).click();
     await expect(page).toHaveURL(/\/plan/);
 
-    const current = page.getByTestId('current-plan');
-    await expect(current).toContainText('Standard');
-    await expect(current).toContainText('Miễn phí');
-    await expect(current).toContainText(/Học sinh đang học: \d+\/10/);
+    // J3b: không còn thẻ Gói hiện tại; gói đang dùng hiện trên thẻ gói.
+    await expect(page.getByTestId('current-plan')).toHaveCount(0);
+    const stdCard = page.getByTestId('plan-card-standard');
+    await expect(stdCard).toContainText('Đang dùng');
+    await expect(stdCard).toContainText(/Đang có \d+ học sinh đang học/);
 
     // Mobile: Pro → Plus → Standard từ trên xuống.
     const y = async (id: string) => (await page.getByTestId(id).boundingBox())!.y;
@@ -105,6 +106,16 @@ test.describe('Gói của tôi (1280px)', () => {
     const x = async (id: string) => (await page.getByTestId(id).boundingBox())!.x;
     expect(await x('plan-card-standard')).toBeLessThan(await x('plan-card-plus'));
     expect(await x('plan-card-plus')).toBeLessThan(await x('plan-card-pro'));
+    // J3a: 3 thẻ cao bằng nhau, CTA Plus/Pro cùng mép dưới.
+    const heights = await Promise.all(
+      ['plan-card-standard', 'plan-card-plus', 'plan-card-pro'].map(async (id) => (await page.getByTestId(id).boundingBox())!.height)
+    );
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1);
+    const ctaBottom = async (plan: string, name: string) => {
+      const b = (await page.getByTestId(`plan-card-${plan}`).getByRole('button', { name }).boundingBox())!;
+      return b.y + b.height;
+    };
+    expect(Math.abs((await ctaBottom('plus', 'Chọn gói Plus')) - (await ctaBottom('pro', 'Chọn gói Pro')))).toBeLessThanOrEqual(1);
     await page.getByTestId('plan-card-plus').getByRole('button', { name: 'Chọn gói Plus' }).click();
     await expect(page.getByTestId('plan-checkout').getByRole('button', { name: 'Plus', exact: true })).toHaveAttribute('aria-pressed', 'true');
   });
