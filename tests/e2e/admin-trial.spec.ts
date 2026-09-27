@@ -1,6 +1,12 @@
-import { test, expect, type Browser, type Page } from '@playwright/test';
+import { test, expect, type Browser, type Page, type Locator } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 import { EXPECTED_TEST_ENDPOINT } from '../env-setup';
+
+// Từ spec P9 các thao tác tài khoản nằm trong menu Hành động của từng dòng/thẻ.
+async function openUserMenu(scope: Locator, username: string) {
+  await scope.getByRole('button', { name: `Menu hành động ${username}` }).click();
+  return scope.page().getByRole('menu');
+}
 
 const db = new PrismaClient();
 const MOBILE = { width: 390, height: 844 };
@@ -66,8 +72,10 @@ test('desktop: thẻ dùng thử mặc định 60 ngày; admin đặt 120 ngày 
   await expect(admin.getByRole('row').filter({ hasText: 'Ban đầu 60 ngày' })).toHaveCount(1);
 
   await admin.goto('/admin/accounts');
-  await expect(admin.getByRole('row').filter({ hasText: 'admin_test' }).getByRole('button', { name: 'Đặt dùng thử' })).toHaveCount(0);
-  await admin.getByRole('row').filter({ hasText: 'teacher_std' }).getByRole('button', { name: 'Đặt dùng thử' }).click();
+  const m = await openUserMenu(admin.getByRole('row').filter({ hasText: 'admin_test' }), 'admin_test');
+  await expect(m.getByRole('menuitem', { name: 'Đặt dùng thử' })).toHaveCount(0);
+  await admin.keyboard.press('Escape');
+  await (await openUserMenu(admin.getByRole('row').filter({ hasText: 'teacher_std' }), 'teacher_std')).getByRole('menuitem', { name: 'Đặt dùng thử' }).click();
   const dialog = admin.getByRole('dialog');
   await expect(dialog).toContainText('Chưa có dùng thử');
   await dialog.getByRole('textbox', { name: 'Số ngày dùng thử (tính từ ngày tạo tài khoản)' }).fill('120');
@@ -88,13 +96,25 @@ test('desktop: thẻ dùng thử mặc định 60 ngày; admin đặt 120 ngày 
   await teacher.context().close();
 });
 
-test('390px: nút Đặt dùng thử ≥44px (không có ở thẻ admin), dialog không tràn ngang, nút Hủy/Lưu ≥44px', async ({ browser }) => {
+test('390px: nút Menu hành động ≥44px (không có mục Đặt dùng thử ở thẻ admin), mục menu ≥44px, dialog không tràn ngang, nút Hủy/Lưu ≥44px', async ({ browser }) => {
   const admin = await loginAs(browser, 'admin_test', MOBILE);
   await admin.goto('/admin/accounts');
-  await expect(admin.getByTestId('admin-user-card').filter({ hasText: 'admin_test' }).getByRole('button', { name: 'Đặt dùng thử' })).toHaveCount(0);
-  const btn = admin.getByTestId('admin-user-card').filter({ hasText: 'teacher_std' }).getByRole('button', { name: 'Đặt dùng thử' });
-  expect((await btn.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  const mAdmin = await openUserMenu(admin.getByTestId('admin-user-card').filter({ hasText: 'admin_test' }), 'admin_test');
+  await expect(mAdmin.getByRole('menuitem', { name: 'Đặt dùng thử' })).toHaveCount(0);
+  await admin.keyboard.press('Escape');
+
+  const card = admin.getByTestId('admin-user-card').filter({ hasText: 'teacher_std' });
+  const btn = card.getByRole('button', { name: 'Menu hành động teacher_std' });
+  const b = (await btn.boundingBox())!;
+  expect(b.height).toBeGreaterThanOrEqual(44);
+  expect(b.width).toBeGreaterThanOrEqual(44);
+
   await btn.click();
+  const menu = admin.getByRole('menu');
+  await menu.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  const item = menu.getByRole('menuitem', { name: 'Đặt dùng thử' });
+  expect((await item.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await item.click();
   const dialog = admin.getByRole('dialog');
   // Dialog đang zoom-in thì boundingBox thấp hơn thật: chờ animation xong mới đo.
   await dialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));

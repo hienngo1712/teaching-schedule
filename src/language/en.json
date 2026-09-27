@@ -553,6 +553,7 @@
   "admin_col_status": "Status",
   "admin_col_granted": "Granted until",
   "admin_col_decided": "Decided by",
+  "admin_col_actions": "Actions",
   "admin_no_history": "No orders yet",
   "admin_prices": "Pricing",
   "admin_tab_prices": "Pricing",
