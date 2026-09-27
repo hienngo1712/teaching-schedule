@@ -17,6 +17,8 @@ describe("Auth — authorizeCredentials", () => {
     const user = await authorizeCredentials("teacher", "teacher123", "127.0.0.1")
     expect(user).not.toBeNull()
     expect(user!.username).toBe("teacher")
+    expect(user!.sessionVersion).toBe(0)
+    expect(user!.mustChangePassword).toBe(false)
 
     const attempt = await db.loginAttempt.findFirst({
       where: { username: "teacher" },
