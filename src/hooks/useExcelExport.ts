@@ -13,7 +13,7 @@ const EXCEL_COLORS = {
   absent: toArgb(COLORS.absent),
   late: toArgb(COLORS.late),
   pending: toArgb(COLORS.pending),
-  headerBg: "FFE0E7FF",
+  headerBg: "FFCCFBF1",
   white: "FFFFFFFF",
 } as const
 

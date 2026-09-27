@@ -26,10 +26,11 @@ export function SessionCard({ session, onClick }: Props) {
       onClick={() => onClick?.(session)}
       className={cn(
         "session-card text-left w-full",
-        level === "tieu_hoc" && "session-card--tieu-hoc",
-        level === "thcs" && "session-card--thcs",
-        level === "thpt" && "session-card--thpt",
-        level === "mixed" && "border-slate-500 bg-slate-100",
+        // .session-card--* nằm ngoài @layer nên đè utility đỏ, tailwind-merge không gỡ được: ca huỷ không gắn màu cấp.
+        !isCancelled && level === "tieu_hoc" && "session-card--tieu-hoc",
+        !isCancelled && level === "thcs" && "session-card--thcs",
+        !isCancelled && level === "thpt" && "session-card--thpt",
+        !isCancelled && level === "mixed" && "border-slate-500 bg-slate-100",
         isCancelled && "opacity-60 border-red-300 bg-red-50"
       )}
       title={`${session.startTime}–${session.endTime} · ${session.subject.name}`}

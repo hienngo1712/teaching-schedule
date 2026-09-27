@@ -11,7 +11,7 @@ import {
 export type ImportReadError = "file" | "size" | "template" | "empty" | "too_many"
 export type ImportReadResult = { ok: true; rows: ParsedImportRow[] } | { ok: false; error: ImportReadError }
 
-const HEADER_BG = "FFE0E7FF" // cùng màu headerBg của useExcelExport
+const HEADER_BG = "FFCCFBF1" // cùng màu headerBg của useExcelExport
 
 const GUIDE_ROWS = [
   ["Cột", "Bắt buộc", "Cách điền", "Ví dụ"],
