@@ -18,7 +18,6 @@ import {
   paidDaysLeft,
   PERIOD_PRICE_FACTOR,
   PLAN_FEATURES,
-  PLAN_PRICES,
   planBanner,
   planLabel,
   planRequiredOf,
@@ -48,15 +47,6 @@ describe("vnStartOfDay / addDays", () => {
   })
   it("addDays cộng đúng số ngày", () => {
     expect(iso(addDays(vn("2026-09-26T00:00"), 60))).toBe(iso(vn("2026-11-25T00:00")))
-  })
-})
-
-describe("giá", () => {
-  it("kỳ 2 năm gấp đôi giá năm (P1)", () => {
-    expect(PLAN_PRICES).toEqual({
-      plus: { month: 49000, year: 490000, "2year": 980000 },
-      pro: { month: 99000, year: 990000, "2year": 1980000 },
-    })
   })
 })
 

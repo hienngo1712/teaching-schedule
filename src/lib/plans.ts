@@ -11,10 +11,6 @@ export type PlanSource = "paid" | "trial" | "free"
 
 export const PLAN_RANK: Record<Plan, number> = { standard: 0, plus: 1, pro: 2 }
 export const PLAN_LABEL: Record<Plan, string> = { standard: "Standard", plus: "Plus", pro: "Pro" }
-export const PLAN_PRICES: Record<PaidPlan, Record<Period, number>> = {
-  plus: { month: 49000, year: 490000, "2year": 980000 },
-  pro: { month: 99000, year: 990000, "2year": 1980000 },
-}
 export type PlanPrices = Record<PaidPlan, Record<Period, number>>
 // Chỉ dùng khi DB thiếu dòng giá (spec L Q4); giá thật nằm ở bảng plan_price_changes.
 export const DEFAULT_MONTH_PRICES: Record<PaidPlan, number> = { plus: 49000, pro: 99000 }

@@ -8,7 +8,6 @@ import { FEATURE_LABEL_KEY } from "./feature-labels"
 import {
   PLANS,
   PLAN_LABEL,
-  PLAN_PRICES,
   STUDENT_LIMITS,
   TWO_YEAR_BONUS_MONTHS,
   featuresAddedIn,
@@ -70,15 +69,15 @@ export function PlanCompare({ me, plusBlocked, onChoose }: Props) {
               ) : (
                 <div className="space-y-0.5 text-sm text-slate-600">
                   <p>
-                    <span className="text-2xl font-semibold text-foreground">{formatCurrency(PLAN_PRICES[plan].month)}</span>
+                    <span className="text-2xl font-semibold text-foreground">{formatCurrency(me.prices[plan].month)}</span>
                     {t("plan_per_month")}
                   </p>
                   <p>
-                    {formatCurrency(PLAN_PRICES[plan].year)}
+                    {formatCurrency(me.prices[plan].year)}
                     {t("plan_per_year")} · {t("plan_save_2_months")}
                   </p>
                   <p>
-                    {formatCurrency(PLAN_PRICES[plan]["2year"])}
+                    {formatCurrency(me.prices[plan]["2year"])}
                     {t("plan_per_2years")} · {t("plan_bonus_months").replace("{n}", String(TWO_YEAR_BONUS_MONTHS))}
                   </p>
                 </div>

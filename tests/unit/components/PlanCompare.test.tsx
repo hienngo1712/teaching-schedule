@@ -6,6 +6,7 @@ import { render, screen, fireEvent, within } from "@testing-library/react"
 import type { RouterOutputs } from "@/lib/trpc"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { PlanCompare } from "@/components/plan/PlanCompare"
+import { pricesFromMonthly } from "@/lib/plans"
 
 type Me = RouterOutputs["plan"]["me"]
 
@@ -24,6 +25,7 @@ function makeMe(over: Partial<Me> = {}): Me {
     orders: [],
     paymentReady: true,
     isAdmin: false,
+    prices: pricesFromMonthly({ plus: 49000, pro: 99000 }),
     ...over,
   } as Me
 }
@@ -72,5 +74,17 @@ describe("PlanCompare", () => {
     expect(pro.parentElement!.className).toContain("md:items-stretch")
     expect(pro.parentElement!.className).not.toContain("md:items-start")
     expect(pro.className).not.toContain("md:-mt-2")
+  })
+
+  it("giá thẻ Plus/Pro lấy từ me.prices (tháng, năm, 2 năm)", () => {
+    renderCompare(makeMe({ prices: pricesFromMonthly({ plus: 59000, pro: 129000 }) }))
+    const plus = screen.getByTestId("plan-card-plus").textContent ?? ""
+    expect(plus).toContain("59.000")
+    expect(plus).toContain("590.000")
+    expect(plus).toContain("1.180.000")
+    const pro = screen.getByTestId("plan-card-pro").textContent ?? ""
+    expect(pro).toContain("129.000")
+    expect(pro).toContain("1.290.000")
+    expect(pro).toContain("2.580.000")
   })
 })

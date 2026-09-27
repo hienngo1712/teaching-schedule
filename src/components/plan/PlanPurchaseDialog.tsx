@@ -12,7 +12,6 @@ import {
   PERIODS,
   PERIOD_MONTHS,
   PLAN_LABEL,
-  PLAN_PRICES,
   STUDENT_LIMITS,
   addDays,
   computeBonusMonths,
@@ -71,17 +70,27 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
   const bonusOf = (period: Period) => computeBonusMonths(fields, choice.plan, period, now)
   // Xem trước: ưu đãi chốt lúc tạo đơn, ngày quy đổi tính lại lúc admin duyệt (server là chuẩn).
   const bonus = bonusOf(choice.period)
+  const prices = me.prices
+  const price = prices[choice.plan][choice.period]
   const credit =
-    choice.plan === "pro" ? computeUpgradeCredit(fields, me.plusCreditOrder, choice.period, PLAN_PRICES.pro[choice.period], now) : null
+    choice.plan === "pro" ? computeUpgradeCredit(fields, me.plusCreditOrder, choice.period, prices.pro[choice.period], now) : null
   const newExpiry = addDays(computeNewExpiry(fields, choice.plan, choice.period, now, bonus), credit?.creditDays ?? 0)
-  const price = PLAN_PRICES[choice.plan][choice.period]
 
+  const utils = trpc.useUtils()
   const create = trpc.plan.createOrder.useMutation({
     onSuccess: (res) => {
       toast.success(t("plan_order_created"))
       setCreatedId(res.id)
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => {
+      // Admin vừa đổi giá: server không tạo đơn; nạp lại giá, giữ popup ở bước chọn (spec L Q6).
+      if (e.data?.code === "CONFLICT") {
+        toast.error(t("plan_price_changed"))
+        void utils.plan.me.invalidate()
+        return
+      }
+      toast.error(e.message)
+    },
   })
 
   // Chỉ hiện đơn vừa tạo: lúc chưa refetch xong, me.pendingOrder có thể còn là đơn cũ (đã bị hủy ở server).
@@ -137,7 +146,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
                         )}
                       </span>
                       <span className="text-sm text-slate-600">
-                        <span className="text-xl font-semibold text-foreground">{formatCurrency(PLAN_PRICES[plan].month)}</span>
+                        <span className="text-xl font-semibold text-foreground">{formatCurrency(prices[plan].month)}</span>
                         {t("plan_per_month")}
                       </span>
                       <span className="text-sm text-slate-600">{t(DESC_KEY[plan])}</span>
@@ -192,7 +201,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
                             <span className="rounded-full bg-primary/10 px-2 text-xs font-medium leading-5 text-primary">{tag}</span>
                           )}
                         </span>
-                        <span className="text-lg font-semibold text-foreground">{formatCurrency(PLAN_PRICES[choice.plan][period])}</span>
+                        <span className="text-lg font-semibold text-foreground">{formatCurrency(prices[choice.plan][period])}</span>
                         {/* Q12: ngày quy đổi D7 không cộng vào N, chỉ hiện ở Đơn hàng. */}
                         <span className="text-xs text-slate-500">
                           {t("plan_max_months").replace("{n}", String(PERIOD_MONTHS[period] + b))}
@@ -235,7 +244,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
                 type="button"
                 className="h-12 w-full"
                 disabled={!me.paymentReady || create.isPending}
-                onClick={() => create.mutate(choice)}
+                onClick={() => create.mutate({ ...choice, expectedAmount: price })}
               >
                 {t("plan_create_order_short")}
               </Button>
