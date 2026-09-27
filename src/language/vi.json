@@ -591,5 +591,9 @@
   "admin_trial_off": "Không dùng thử",
   "admin_trial_err_user_range": "Số ngày từ 0 đến 3650",
   "admin_trial_set": "Đã đặt số ngày dùng thử",
-  "admin_trial_recent": "Lần đặt gần đây"
+  "admin_trial_recent": "Lần đặt gần đây",
+  "admin_reset_password": "Reset mật khẩu",
+  "admin_reset_confirm": "Đặt lại mật khẩu cho {username}? Mọi thiết bị đang đăng nhập tài khoản này sẽ bị đăng xuất, người dùng phải đổi mật khẩu khi đăng nhập lại.",
+  "admin_reset_done": "Mật khẩu tạm chỉ hiện một lần. Gửi cho người dùng, họ sẽ phải đổi mật khẩu ngay khi đăng nhập.",
+  "admin_reset_close": "Tôi đã lưu mật khẩu"
 }

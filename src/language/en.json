@@ -591,5 +591,9 @@
   "admin_trial_off": "No trial",
   "admin_trial_err_user_range": "Days must be 0 to 3650",
   "admin_trial_set": "Trial days set",
-  "admin_trial_recent": "Recent changes"
+  "admin_trial_recent": "Recent changes",
+  "admin_reset_password": "Reset password",
+  "admin_reset_confirm": "Reset the password for {username}? Every device signed in to this account will be signed out, and the user must change the password at next sign in.",
+  "admin_reset_done": "This temporary password is shown only once. Send it to the user, they must change it right after signing in.",
+  "admin_reset_close": "I have saved it"
 }
