@@ -109,7 +109,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
             </Button>
           </div>
         ) : (
-          <div className="flex min-w-0 flex-col gap-6 md:grid md:grid-cols-[1fr_320px]">
+          <div className="flex min-w-0 flex-col gap-6 lg:grid lg:grid-cols-[1fr_320px]">
             <div className="min-w-0 space-y-5">
               <div role="radiogroup" aria-label={t("admin_col_plan")} className="flex flex-col gap-3 md:grid md:grid-cols-2">
                 {PAID_PLANS.map((plan) => {
@@ -205,7 +205,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
 
             <aside
               data-testid="purchase-summary"
-              className="min-w-0 space-y-3 rounded-xl bg-slate-50 p-4 md:sticky md:top-0 md:self-start"
+              className="min-w-0 space-y-3 rounded-xl bg-slate-50 p-4 lg:sticky lg:top-0 lg:self-start"
             >
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("plan_order_summary")}</p>
               <div className="flex items-start justify-between gap-2 text-sm">

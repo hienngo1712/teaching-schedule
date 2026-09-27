@@ -181,6 +181,22 @@ for (const width of [768, 820]) {
           return worst;
         });
         expect(overflow, period).toBeLessThanOrEqual(0);
+
+        // Nhãn kỳ, nhãn ưu đãi, giá phải nằm 1 dòng (chỉ dòng "Tối đa ..." được xuống dòng).
+        const wrapped = await card.evaluate((el) => {
+          const out: string[] = [];
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          while (walker.nextNode()) {
+            const text = walker.currentNode.textContent ?? '';
+            if (!text.trim() || text.startsWith('Tối đa')) continue;
+            const range = document.createRange();
+            range.selectNodeContents(walker.currentNode);
+            const tops = new Set(Array.from(range.getClientRects()).map((r) => Math.round(r.top)));
+            if (tops.size > 1) out.push(text);
+          }
+          return out;
+        });
+        expect(wrapped, period).toEqual([]);
       }
       const pageOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(pageOverflow).toBeLessThanOrEqual(0);
