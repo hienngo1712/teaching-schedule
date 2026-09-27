@@ -22,9 +22,10 @@ import { trpc } from "@/lib/trpc"
 interface ExportExcelButtonProps {
   sessions: SessionDTO[]
   students?: StudentDTO[]
+  className?: string
 }
 
-export function ExportExcelButton({ sessions, students = [] }: ExportExcelButtonProps) {
+export function ExportExcelButton({ sessions, students = [], className }: ExportExcelButtonProps) {
   const { t } = useTranslation()
   const { data: session } = useSession()
   const { isExporting, exportMonthlySchedule, exportStudentSchedule, exportGradeReport, exportAttendanceSummary } = useExcelExport()
@@ -89,7 +90,7 @@ export function ExportExcelButton({ sessions, students = [] }: ExportExcelButton
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={isExporting}>
+        <Button variant="outline" size="sm" disabled={isExporting} className={className}>
           {isExporting ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (

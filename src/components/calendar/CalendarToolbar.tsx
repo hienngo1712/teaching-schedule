@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Plus, Repeat, X } from "lucide-react"
+import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Repeat, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,6 +14,8 @@ import { GRADES } from "@/lib/constants"
 import { useFilters } from "@/hooks/useFilters"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch"
+import { useFeatureGate } from "@/hooks/useFeatureGate"
+import { LockBadge } from "@/components/plan/LockBadge"
 import { ExportExcelButton } from "../reports/ExportExcelButton"
 import type { SessionDTO, StudentDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -21,6 +23,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 interface CalendarToolbarProps {
   onCreateClick: () => void
   onBulkCreateClick: () => void
+  onCopyMonthClick: () => void
   sessions: SessionDTO[]
   students?: StudentDTO[]
 }
@@ -28,6 +31,7 @@ interface CalendarToolbarProps {
 export function CalendarToolbar({
   onCreateClick,
   onBulkCreateClick,
+  onCopyMonthClick,
   sessions,
   students = []
 }: CalendarToolbarProps) {
@@ -42,6 +46,7 @@ export function CalendarToolbar({
   } = useFilters()
 
   const { monthLabel, prevMonth, nextMonth } = useCalendar()
+  const copyGate = useFeatureGate("copyMonth")
 
   const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
@@ -114,22 +119,36 @@ export function CalendarToolbar({
           )}
         </div>
 
-        {/* Bottom/Right: Actions */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 md:pt-0 border-t border-slate-100 md:border-t-0 justify-between md:justify-end">
-          <div className="flex items-center gap-2">
-            <ExportExcelButton sessions={sessions} students={students} />
+        {/* Dưới md lưới 2 cột: Lịch lặp | Chép lịch tháng, Xuất Excel | Tạo ca dạy; từ md giữ 1 hàng như cũ. */}
+        <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-1 md:flex md:flex-wrap md:items-center md:justify-end md:border-t-0 md:pt-0">
+          <ExportExcelButton
+            sessions={sessions}
+            students={students}
+            className="order-3 h-11 w-full md:order-1 md:h-9 md:w-auto"
+          />
 
-            <Button
-              variant="outline"
-              onClick={onBulkCreateClick}
-              className="gap-2 h-11 md:h-10 border-slate-200 text-slate-600 hover:bg-slate-50"
-            >
-              <Repeat className="size-4" />
-              <span>{t("bulk_schedule")}</span>
-            </Button>
-          </div>
-          
-          <Button onClick={onCreateClick} className="gap-2 h-11 md:h-10 px-4 md:px-6">
+          <Button
+            variant="outline"
+            onClick={onBulkCreateClick}
+            className="order-1 h-11 w-full gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 md:order-2 md:h-10 md:w-auto"
+          >
+            <Repeat className="size-4" />
+            <span>{t("bulk_schedule")}</span>
+          </Button>
+
+          {/* Khóa chứ không ẩn (spec I): Standard bấm mở UpgradeDialog thay vì dialog chép. */}
+          <Button
+            variant="outline"
+            data-testid="copy-month-button"
+            onClick={copyGate.guard(onCopyMonthClick)}
+            className="order-2 h-11 w-full min-w-0 gap-2 border-slate-200 px-2 text-slate-600 hover:bg-slate-50 md:order-3 md:h-10 md:w-auto md:px-4"
+          >
+            <CalendarPlus className="size-4 shrink-0" />
+            <span className="truncate">{t("copy_month")}</span>
+            {copyGate.locked && <LockBadge plan={copyGate.requiredPlan} />}
+          </Button>
+
+          <Button onClick={onCreateClick} className="order-4 h-11 w-full gap-2 px-4 md:ml-2 md:h-10 md:w-auto md:px-6">
             <Plus className="size-4 md:size-5" />
             <span>{t("create_session")}</span>
           </Button>

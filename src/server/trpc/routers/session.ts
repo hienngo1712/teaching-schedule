@@ -1,10 +1,12 @@
 import { z } from "zod"
-import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
+import { createTRPCRouter, planProcedure, protectedProcedure } from "@/server/trpc"
 import {
   addRecurringStudentsSchema,
   sessionBulkCreateSchema,
   sessionBulkDeleteFutureSchema,
   sessionBulkUpdateFutureSchema,
+  sessionCopyMonthPreviewSchema,
+  sessionCopyMonthSchema,
   sessionCreateMakeupSchema,
   sessionCreateSchema,
   sessionDuplicateSchema,
@@ -28,6 +30,7 @@ import {
   removeStudentFromSession,
   updateSession,
 } from "@/server/services/session.service"
+import { copyMonth, previewCopyMonth } from "@/server/services/session-copy.service"
 
 export const sessionRouter = createTRPCRouter({
   getMonth: protectedProcedure
@@ -93,6 +96,14 @@ export const sessionRouter = createTRPCRouter({
     .mutation(({ ctx, input }) =>
       checkBulkCreateConflicts(ctx.db, ctx.userId, input)
     ),
+
+  copyMonthPreview: planProcedure("copyMonth")
+    .input(sessionCopyMonthPreviewSchema)
+    .query(({ ctx, input }) => previewCopyMonth(ctx.db, ctx.userId, input)),
+
+  copyMonth: planProcedure("copyMonth")
+    .input(sessionCopyMonthSchema)
+    .mutation(({ ctx, input }) => copyMonth(ctx.db, ctx.userId, input)),
 
   addStudents: protectedProcedure
     .input(

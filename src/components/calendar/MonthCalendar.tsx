@@ -18,6 +18,7 @@ import { CalendarDayCell } from "./CalendarDayCell"
 import { SessionListItem } from "./SessionListItem"
 import { SessionFormDialog } from "../sessions/SessionFormDialog"
 import { BulkCreateDialog } from "../sessions/BulkCreateDialog"
+import { CopyMonthDialog } from "../sessions/CopyMonthDialog"
 import { SessionDetailDialog } from "../sessions/SessionDetailDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
@@ -25,12 +26,13 @@ type SessionWithDate = Omit<RouterOutputs["session"]["getMonth"][number], "sessi
 
 export function MonthCalendar() {
   const { t } = useTranslation()
-  const { year, month } = useCalendar()
+  const { year, month, goToMonth } = useCalendar()
   const { filterParams, selectedStudentId } = useFilters()
   const exportRef = useRef<HTMLDivElement>(null)
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false)
+  const [isCopyOpen, setIsCopyOpen] = useState(false)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | undefined>()
   const [editingSession, setEditingSession] = useState<SessionDTO | undefined>()
@@ -110,6 +112,7 @@ export function MonthCalendar() {
       <CalendarToolbar 
         onCreateClick={handleCreateClick}
         onBulkCreateClick={() => setIsBulkDialogOpen(true)}
+        onCopyMonthClick={() => setIsCopyOpen(true)}
         sessions={sessions}
         students={students}
       />
@@ -258,6 +261,17 @@ export function MonthCalendar() {
         open={isBulkDialogOpen}
         onOpenChange={setIsBulkDialogOpen}
       />
+
+      {/* Mount theo điều kiện: mỗi lần mở chọn lại từ tháng đang xem, không giữ lựa chọn cũ. */}
+      {isCopyOpen && (
+        <CopyMonthDialog
+          open
+          onOpenChange={setIsCopyOpen}
+          initialYear={year}
+          initialMonth={month}
+          onViewMonth={goToMonth}
+        />
+      )}
 
       {selectedSession && (
         <SessionDetailDialog

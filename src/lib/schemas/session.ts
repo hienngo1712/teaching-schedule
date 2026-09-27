@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { COPY_MONTH_MAX_MONTHS } from "@/lib/copy-month"
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/
 const timeRegex = /^\d{2}:\d{2}$/
@@ -122,6 +123,30 @@ export const sessionCreateMakeupSchema = z
     path: ["endTime"],
   })
 
+const monthRefSchema = z.object({
+  year: z.number().int().min(2020).max(2100),
+  month: z.number().int().min(1).max(12),
+})
+const copyMonthBase = z.object({
+  source: monthRefSchema,
+  from: monthRefSchema,
+  months: z.number().int().min(1).max(COPY_MONTH_MAX_MONTHS),
+})
+const monthNo = (m: { year: number; month: number }) => m.year * 12 + m.month
+const fromAfterSource = (d: z.infer<typeof copyMonthBase>) =>
+  monthNo(d.from) > monthNo(d.source) && monthNo(d.from) <= monthNo(d.source) + 12
+const FROM_RULE = { message: "Tháng bắt đầu phải sau tháng nguồn, tối đa 12 tháng", path: ["from"] }
+const patternKeySchema = z.string().max(40)
+
+// Không có patternKeys = server chọn mặc định theo loại mẫu (chỉ "regular").
+export const sessionCopyMonthPreviewSchema = copyMonthBase
+  .extend({ patternKeys: z.array(patternKeySchema).max(200).optional() })
+  .refine(fromAfterSource, FROM_RULE)
+
+export const sessionCopyMonthSchema = copyMonthBase
+  .extend({ patternKeys: z.array(patternKeySchema).min(1).max(200) })
+  .refine(fromAfterSource, FROM_RULE)
+
 export type SessionCreateInput = z.infer<typeof sessionCreateSchema>
 export type SessionUpdateInput = z.infer<typeof sessionUpdateSchema>
 export type SessionFilterInput = z.infer<typeof sessionFilterSchema>
@@ -129,3 +154,5 @@ export type SessionBulkCreateInput = z.infer<typeof sessionBulkCreateSchema>
 export type SessionBulkDeleteFutureInput = z.infer<typeof sessionBulkDeleteFutureSchema>
 export type SessionBulkUpdateFutureInput = z.infer<typeof sessionBulkUpdateFutureSchema>
 export type SessionCreateMakeupInput = z.infer<typeof sessionCreateMakeupSchema>
+export type SessionCopyMonthPreviewInput = z.infer<typeof sessionCopyMonthPreviewSchema>
+export type SessionCopyMonthInput = z.infer<typeof sessionCopyMonthSchema>
