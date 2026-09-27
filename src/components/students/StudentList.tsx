@@ -10,7 +10,7 @@ import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import type { SchoolLevel } from "@/lib/types/models"
 import { useFilters } from "@/hooks/useFilters"
-import { useDebounce } from "@/hooks/useDebounce"
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -76,20 +76,15 @@ export function StudentList() {
     openUpgrade({ plan: minPlanForStudents(me.activeStudents + 1), message: studentLimitMessage(t, me.plan, limit) })
   }
 
-  const [localSearch, setLocalSearch] = useState(searchStudentName)
-  const debouncedSearch = useDebounce(localSearch, 400)
 
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active")
 
-  useEffect(() => {
-    setSearch(debouncedSearch)
-    setCurrentPage(1) // Reset to page 1 when search changes
-  }, [debouncedSearch, setSearch])
+  const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
   useEffect(() => {
-    setLocalSearch(searchStudentName)
+    setCurrentPage(1) // Reset to page 1 when search changes
   }, [searchStudentName])
 
   useEffect(() => {

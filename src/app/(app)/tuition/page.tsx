@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Receipt, Wallet } from "lucide-react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -43,6 +44,7 @@ function amountClass(status: TuitionBadgeStatus) {
 export default function TuitionPage() {
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
   const { selectedGrade, setGrade, searchStudentName, setSearch, selectedStatus, setStatus, selectedStudentId, setStudentId } = useFilters()
+  const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
   const [selectedStudent, setSelectedStudent] = useState<(TuitionStatusItem & { year: number; month: number }) | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -179,7 +181,7 @@ export default function TuitionPage() {
       />
 
       <FilterBar
-        search={{ value: searchStudentName, onChange: setSearch, placeholder: t("search_student") }}
+        search={{ value: localSearch, onChange: setLocalSearch, placeholder: t("search_student") }}
         activeCount={activeFilterCount}
         filters={
           <>
