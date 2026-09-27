@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { DEFAULT_TRIAL_DAYS, trialDaysOf, trialEndFor } from "@/lib/plans"
+import { isAdminUsername } from "@/lib/admin"
 import type { SetUserTrialInput, UpdateTrialDaysInput } from "@/lib/schemas/plan"
 import type { Db } from "./plan.service"
 import { SETTINGS_LOCK_CLASS } from "./plan-price.service"
@@ -11,7 +12,8 @@ const CHANGE_SELECT = { id: true, days: true, previousDays: true, changedBy: tru
 export async function getDefaultTrialDays(db: Db): Promise<number> {
   const row = await db.trialDayChange.findFirst({
     where: { userId: null },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    // như latestMonthPrice (spec P L3).
+    orderBy: { id: "desc" },
     select: { days: true },
   })
   if (row) return row.days
@@ -48,8 +50,14 @@ export async function updateDefaultTrialDays(db: PrismaClient, admin: string, in
 // Tính từ ngày tạo tài khoản; không đụng plan/planExpiresAt, effectivePlan tự lấy gói có hiệu lực (spec L mục 15 T3).
 export async function setUserTrialDays(db: PrismaClient, admin: string, input: SetUserTrialInput): Promise<{ trialEndsAt: Date | null }> {
   const trialEndsAt = await db.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({ where: { id: input.userId }, select: { createdAt: true, trialEndsAt: true } })
+    // Cùng khóa theo user với tạo/duyệt đơn: 2 lần đặt cùng lúc không ghi previousDays sai (spec P L2).
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(input.userId)})`
+    const user = await tx.user.findUnique({
+      where: { id: input.userId },
+      select: { username: true, createdAt: true, trialEndsAt: true },
+    })
     if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
+    if (isAdminUsername(user.username)) throw new TRPCError({ code: "FORBIDDEN", message: "Tài khoản admin không dùng gói" })
     const next = trialEndFor(user.createdAt, input.days)
     await tx.user.update({ where: { id: input.userId }, data: { trialEndsAt: next } })
     await tx.trialDayChange.create({

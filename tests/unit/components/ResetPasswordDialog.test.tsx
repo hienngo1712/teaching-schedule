@@ -8,7 +8,7 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { toast } from "sonner"
 
 type Opts = { onSuccess?: (r: { username: string; tempPassword: string }) => void; onError?: (e: { message: string }) => void }
-const mut = vi.hoisted(() => ({ mutate: vi.fn(), opts: null as null | Opts }))
+const mut = vi.hoisted(() => ({ mutate: vi.fn(), opts: null as null | Opts, isPending: false }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("@/lib/trpc", () => ({
   trpc: {
@@ -16,7 +16,7 @@ vi.mock("@/lib/trpc", () => ({
       resetPassword: {
         useMutation: (opts: Opts) => {
           mut.opts = opts
-          return { mutate: mut.mutate, isPending: false }
+          return { mutate: mut.mutate, isPending: mut.isPending }
         },
       },
     },
@@ -39,6 +39,7 @@ function renderDialog(onClose = vi.fn()) {
 
 beforeEach(() => {
   mut.mutate.mockReset()
+  mut.isPending = false
   vi.mocked(toast.success).mockClear()
 })
 
@@ -75,5 +76,18 @@ describe("ResetPasswordDialog (spec N R1)", () => {
   it("nút cao ≥44px ở mobile", () => {
     renderDialog()
     expect(screen.getByRole("button", { name: "Reset mật khẩu" }).className).toContain("h-11")
+  })
+
+  it("đang reset → Esc không đóng; xong (không pending) → Esc đóng (spec P N2)", () => {
+    mut.isPending = true
+    const onClose = renderDialog()
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" })
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it("không pending → Esc gọi onClose", () => {
+    const onClose = renderDialog()
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" })
+    expect(onClose).toHaveBeenCalled()
   })
 })

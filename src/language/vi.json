@@ -172,7 +172,7 @@
   "copy_will_create": "Sẽ tạo {count} ca",
   "copy_skip_existing": "{count} ca đã có, bỏ qua",
   "copy_skip_conflict": "{count} ca trùng giờ, bỏ qua",
-  "copy_skip_past": "{count} ngày đã qua, bỏ qua",
+  "copy_skip_past": "{count} ca rơi vào ngày đã qua, bỏ qua",
   "copy_kind_single": "Chỉ 1 buổi trong tháng",
   "copy_kind_stopped": "Không còn dạy sau {date}",
   "copy_kind_biweekly": "Có vẻ dạy cách tuần, chỉ chép được hằng tuần",
@@ -477,6 +477,7 @@
   "plan_payment_not_ready": "Chưa mở thanh toán",
   "plan_copied": "Đã sao chép",
   "plan_order_created": "Đã tạo mã chuyển khoản",
+  "plan_order_load_error": "Đã tạo đơn nhưng chưa tải được thông tin chuyển khoản.",
   "plan_price_changed": "Giá gói vừa thay đổi, đã cập nhật giá mới. Vui lòng xem lại trước khi tạo đơn.",
   "plan_order_cancelled": "Đã hủy yêu cầu",
   "plan_history": "Lịch sử đơn",
@@ -611,5 +612,8 @@
   "cp_err_rate_limited": "Nhập sai mật khẩu hiện tại quá nhiều lần. Vui lòng thử lại sau 15 phút.",
   "cp_err_invalid": "Mật khẩu mới không hợp lệ",
   "cp_success": "Đổi mật khẩu thành công",
-  "cp_success_relogin": "Đổi mật khẩu thành công, vui lòng đăng nhập lại"
+  "cp_success_relogin": "Đổi mật khẩu thành công, vui lòng đăng nhập lại",
+  "password_already_changed_title": "Mật khẩu đã được cập nhật",
+  "password_already_changed_desc": "Đăng nhập lại để tiếp tục dùng ứng dụng.",
+  "relogin": "Đăng nhập lại"
 }

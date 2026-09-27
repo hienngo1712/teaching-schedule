@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
+  capConflictsPerPattern,
   conflictLabel,
   deriveWeeklyPatterns,
   monthFromIndex,
@@ -290,5 +291,16 @@ describe("planMonthCopy (spec 5)", () => {
     expect(picked.selectedKeys).toEqual([sat.key])
     expect(dates(picked)).toEqual(["2030-02-02", "2030-02-09", "2030-02-16", "2030-02-23"])
     expect(picked.perPattern[mon.key][0]).toMatchObject({ slots: 4, created: 0 })
+  })
+})
+
+describe("capConflictsPerPattern (spec P M1)", () => {
+  it("cắt theo từng mẫu, giữ thứ tự; mẫu sau không bị mẫu trước chiếm hết", () => {
+    const mk = (patternKey: string, i: number) => ({ patternKey, date: `2030-02-${String(i + 1).padStart(2, "0")}`, conflict: "x" })
+    const input = [...Array.from({ length: 25 }, (_, i) => mk("A", i)), ...Array.from({ length: 3 }, (_, i) => mk("B", i))]
+    const out = capConflictsPerPattern(input, 20)
+    expect(out.filter((c) => c.patternKey === "A")).toHaveLength(20)
+    expect(out.filter((c) => c.patternKey === "B")).toHaveLength(3)
+    expect(out[0]).toEqual(input[0])
   })
 })

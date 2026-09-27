@@ -25,6 +25,7 @@ import {
   type PlanFields,
 } from "@/lib/plans"
 import { cn, formatCurrency } from "@/lib/utils"
+import { handleRadioGroupKeyDown } from "@/lib/radio-group-keys"
 import { FEATURE_LABEL_KEY } from "./feature-labels"
 import { PendingOrderCard } from "./PendingOrderCard"
 
@@ -63,7 +64,10 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
   const { t } = useTranslation()
   // P11: kỳ Năm chọn sẵn; trang mount lại dialog mỗi lần mở nên state tự về mặc định.
   const [choice, setChoice] = useState<PlanChoice>({ plan: initialPlan, period: "year" })
-  const [createdId, setCreatedId] = useState<number | null>(null)
+  const [created, setCreated] = useState<{ id: number; code: string } | null>(null)
+
+  // Cùng key với usePlan của trang: chỉ đọc trạng thái refetch, không thêm request.
+  const meQuery = trpc.plan.me.useQuery()
 
   const now = new Date()
   const plusBlockedUntil = orderBlockedUntil(fields, "plus", now)
@@ -80,7 +84,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
   const create = trpc.plan.createOrder.useMutation({
     onSuccess: (res) => {
       toast.success(t("plan_order_created"))
-      setCreatedId(res.id)
+      setCreated({ id: res.id, code: res.code })
     },
     onError: (e) => {
       // Admin vừa đổi giá: server không tạo đơn; nạp lại giá, giữ popup ở bước chọn (spec L Q6).
@@ -94,7 +98,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
   })
 
   // Chỉ hiện đơn vừa tạo: lúc chưa refetch xong, me.pendingOrder có thể còn là đơn cũ (đã bị hủy ở server).
-  const createdOrder = createdId !== null && me.pendingOrder?.id === createdId ? me.pendingOrder : null
+  const createdOrder = created !== null && me.pendingOrder?.id === created.id ? me.pendingOrder : null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -107,12 +111,23 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
           <DialogTitle>{t("plan_purchase_title")}</DialogTitle>
         </DialogHeader>
 
-        {createdId !== null ? (
+        {created !== null ? (
           <div className="space-y-4">
             {createdOrder ? (
               <PendingOrderCard order={createdOrder} paymentReady={me.paymentReady} onCancelled={() => onOpenChange(false)} />
-            ) : (
+            ) : meQuery.isFetching ? (
               <Skeleton className="h-64 w-full rounded-xl" />
+            ) : (
+              // Refetch lỗi hoặc không thấy đơn vừa tạo: vẫn đưa mã để chuyển khoản được (spec P J1).
+              <div data-testid="purchase-load-error" className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <p>{t("plan_order_load_error")}</p>
+                <p className="font-medium">
+                  {t("notice_transfer_content")}: SM {created.code}
+                </p>
+                <Button type="button" variant="outline" className="h-11 bg-white md:h-10" onClick={() => void meQuery.refetch()}>
+                  {t("retry")}
+                </Button>
+              </div>
             )}
             <Button type="button" className="h-12 w-full" onClick={() => onOpenChange(false)}>
               {t("plan_done")}
@@ -121,7 +136,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
         ) : (
           <div className="flex min-w-0 flex-col gap-6 lg:grid lg:grid-cols-[1fr_320px]">
             <div className="min-w-0 space-y-5">
-              <div role="radiogroup" aria-label={t("admin_col_plan")} className="flex flex-col gap-3 md:grid md:grid-cols-2">
+              <div role="radiogroup" aria-label={t("admin_col_plan")} onKeyDown={handleRadioGroupKeyDown} className="flex flex-col gap-3 md:grid md:grid-cols-2">
                 {PAID_PLANS.map((plan) => {
                   const selected = choice.plan === plan
                   const blocked = plan === "plus" && plusBlockedUntil !== null
@@ -131,6 +146,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
                       type="button"
                       role="radio"
                       aria-checked={selected}
+                      tabIndex={selected ? 0 : -1}
                       disabled={blocked}
                       data-testid={`purchase-plan-${plan}`}
                       onClick={() => setChoice((c) => ({ ...c, plan }))}
@@ -176,7 +192,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
 
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("plan_duration")}</p>
-                <div role="radiogroup" aria-label={t("plan_duration")} className="flex flex-col gap-2 md:grid md:grid-cols-3">
+                <div role="radiogroup" aria-label={t("plan_duration")} onKeyDown={handleRadioGroupKeyDown} className="flex flex-col gap-2 md:grid md:grid-cols-3">
                   {PERIODS.map((period) => {
                     const selected = choice.period === period
                     const b = bonusOf(period)
@@ -188,6 +204,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
                         type="button"
                         role="radio"
                         aria-checked={selected}
+                        tabIndex={selected ? 0 : -1}
                         data-testid={`purchase-period-${period}`}
                         onClick={() => setChoice((c) => ({ ...c, period }))}
                         className={cn(optionClass(selected), "gap-1 p-3")}

@@ -54,6 +54,13 @@ describe("plan-price.service (đọc)", () => {
     expect(warn).toHaveBeenCalledWith("[plan-price] thiếu giá pro, dùng mặc định")
     expect(await db.planPriceChange.count({ where: { plan: "pro", changedBy: "migration" } })).toBe(1)
   })
+
+  it("giá hiện hành = dòng id lớn nhất dù createdAt sớm hơn (spec P L3)", async () => {
+    await db.planPriceChange.create({
+      data: { plan: "plus", monthPrice: 59000, previousMonthPrice: 49000, changedBy: "test-p-l3", createdAt: new Date("2000-01-01T00:00:00Z") },
+    })
+    expect((await getMonthlyPrices(db)).plus).toBe(59000)
+  })
 })
 
 describe("admin.prices / admin.updatePrices", () => {

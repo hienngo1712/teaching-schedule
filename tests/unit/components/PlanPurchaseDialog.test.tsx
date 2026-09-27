@@ -17,12 +17,14 @@ type CreateOpts = {
 }
 
 const mut = vi.hoisted(() => ({ create: vi.fn(), createOpts: null as null | CreateOpts, invalidate: vi.fn() }))
+const meQ = vi.hoisted(() => ({ isFetching: true, refetch: vi.fn() }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("qrcode", () => ({ toDataURL: vi.fn().mockResolvedValue("data:image/png;base64,AAAA") }))
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ plan: { me: { invalidate: mut.invalidate } } }),
     plan: {
+      me: { useQuery: () => meQ },
       createOrder: {
         useMutation: (opts: CreateOpts) => {
           mut.createOpts = opts
@@ -93,6 +95,8 @@ const checked = (id: string) => screen.getByTestId(id).getAttribute("aria-checke
 beforeEach(() => {
   vi.clearAllMocks()
   mut.createOpts = null
+  meQ.isFetching = true
+  meQ.refetch.mockReset()
 })
 
 describe("PlanPurchaseDialog", () => {
@@ -215,5 +219,31 @@ describe("PlanPurchaseDialog", () => {
     // floor(60.411 × 365 / 1.290.000) = 17
     expect(text("purchase-summary")).toContain("+17 ngày Pro")
     expect(text("purchase-summary")).toContain("1.290.000")
+  })
+
+  it("tạo đơn xong mà refetch plan.me lỗi/không có đơn mới → hiện lỗi + mã SM + Thử lại (spec P J1)", () => {
+    const { props, rerender } = renderDialog({ me: makeMe({ pendingOrder: pendingOrder(1, "OLDOLD") }) })
+    fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
+    act(() => mut.createOpts!.onSuccess!({ id: 5, code: "NEWNEW", bonusMonths: 0 }))
+    expect(screen.queryByTestId("purchase-load-error")).toBeNull() // còn đang fetch → Skeleton
+    meQ.isFetching = false
+    rerender(props)
+    const box = screen.getByTestId("purchase-load-error")
+    expect(box.textContent).toContain("Đã tạo đơn nhưng chưa tải được thông tin chuyển khoản.")
+    expect(box.textContent).toContain("SM NEWNEW")
+    const retry = screen.getByRole("button", { name: "Thử lại" })
+    expect(retry.className).toContain("h-11")
+    fireEvent.click(retry)
+    expect(meQ.refetch).toHaveBeenCalled()
+  })
+
+  it("radiogroup kỳ hạn: mũi tên phải chọn kỳ kế tiếp, roving tabindex (spec P J3)", () => {
+    renderDialog()
+    const year = screen.getByTestId("purchase-period-year")
+    expect(year.tabIndex).toBe(0)
+    expect(screen.getByTestId("purchase-period-month").tabIndex).toBe(-1)
+    year.focus()
+    fireEvent.keyDown(year, { key: "ArrowRight" })
+    expect(screen.getByTestId("purchase-period-2year").getAttribute("aria-checked")).toBe("true")
   })
 })

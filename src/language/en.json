@@ -172,7 +172,7 @@
   "copy_will_create": "{count} sessions will be created",
   "copy_skip_existing": "{count} already exist, skipped",
   "copy_skip_conflict": "{count} time conflicts, skipped",
-  "copy_skip_past": "{count} past days, skipped",
+  "copy_skip_past": "{count} sessions on past days, skipped",
   "copy_kind_single": "Only once this month",
   "copy_kind_stopped": "Not taught after {date}",
   "copy_kind_biweekly": "Looks biweekly, only weekly copy is supported",
@@ -477,6 +477,7 @@
   "plan_payment_not_ready": "Payments are not open yet",
   "plan_copied": "Copied",
   "plan_order_created": "Transfer code created",
+  "plan_order_load_error": "Order created, but the transfer details could not be loaded.",
   "plan_price_changed": "Prices just changed and have been updated. Please review before creating the order.",
   "plan_order_cancelled": "Request cancelled",
   "plan_history": "Order history",
@@ -611,5 +612,8 @@
   "cp_err_rate_limited": "Too many incorrect attempts. Please try again in 15 minutes.",
   "cp_err_invalid": "Invalid new password",
   "cp_success": "Password changed",
-  "cp_success_relogin": "Password changed, please sign in again"
+  "cp_success_relogin": "Password changed, please sign in again",
+  "password_already_changed_title": "Your password has been updated",
+  "password_already_changed_desc": "Sign in again to continue.",
+  "relogin": "Sign in again"
 }

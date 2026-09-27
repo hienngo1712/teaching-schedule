@@ -9,7 +9,8 @@ const PAID_PLANS: PaidPlan[] = ["plus", "pro"]
 async function latestMonthPrice(db: Db, plan: PaidPlan): Promise<number> {
   const row = await db.planPriceChange.findFirst({
     where: { plan },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    // id cấp lúc INSERT sau khóa → đúng thứ commit; createdAt = giờ bắt đầu transaction nên có thể sớm hơn dòng đã commit trước (spec P L3).
+    orderBy: { id: "desc" },
     select: { monthPrice: true },
   })
   if (row) return row.monthPrice

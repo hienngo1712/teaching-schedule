@@ -36,6 +36,7 @@ describe("CurrentPlanBadge", () => {
     expect(badge.className).toContain("border-slate-300")
     expect(badge.className).toContain("text-slate-600")
     expect(badge.getAttribute("aria-label")).toBeNull()
+    expect(badge.getAttribute("role")).toBeNull()
   })
 
   it("Plus: viền + chữ primary nền trắng", () => {
@@ -63,6 +64,8 @@ describe("CurrentPlanBadge", () => {
     expect(badge.querySelector("svg")).not.toBeNull()
     expect(badge.getAttribute("aria-label")).toBe("Pro dùng thử")
     expect(badge.getAttribute("title")).toBe("Pro dùng thử")
+    expect(badge.getAttribute("role")).toBe("img")
+    expect(screen.getByRole("img", { name: "Pro dùng thử" })).toBe(badge)
   })
 
   it("gộp className truyền vào sau class sẵn có", () => {
