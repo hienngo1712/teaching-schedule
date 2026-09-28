@@ -119,6 +119,8 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
     makeupOfId: s.makeupOfId,
     cancelReason: s.cancelReason,
     cancelledAt: s.cancelledAt,
+    isDeleted: s.isDeleted,
+    deletedAt: s.deletedAt,
     makeupInfo:
       s.makeupSessions && s.makeupSessions.length > 0
         ? { id: s.makeupSessions[0].id, sessionDate: s.makeupSessions[0].sessionDate }

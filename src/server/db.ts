@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client"
+import { withLiveFilter } from "./soft-delete"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -12,7 +13,8 @@ function createPrismaClient(): PrismaClient {
     query: {
       async $allOperations({ operation, model, args, query }) {
         const start = Date.now()
-        const result = await query(args)
+        // Tự bỏ bản đã xoá mềm ở thao tác đọc cấp cao (spec Q Q1); quan hệ/raw SQL lọc tay.
+        const result = await query(withLiveFilter(model, operation, args) as typeof args)
         const duration = Date.now() - start
         if (duration > 100) { // Chỉ log các query chậm > 100ms để tránh noise
           console.log(`[Prisma] ${model}.${operation} - ${duration}ms`)

@@ -64,6 +64,8 @@ describe("useCalendar grid", () => {
       makeupOfId: null,
       studentCount: 0,
       level: "tieu_hoc" as const,
+      isDeleted: false,
+      deletedAt: null,
       students: [],
     }
     const { grid } = buildCalendarGrid(2026, 4, [session])

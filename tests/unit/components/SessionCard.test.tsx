@@ -26,6 +26,8 @@ const base: SessionListDTO = {
   makeupOfId: null,
   studentCount: 1,
   level: "tieu_hoc",
+  isDeleted: false,
+  deletedAt: null,
 }
 
 describe("SessionCard — màu viền theo cấp học", () => {
