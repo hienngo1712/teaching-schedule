@@ -3603,9 +3603,91 @@ Expected: `git status --short` trước commit chỉ có file của task.
 
 ---
 
+### Task 6b: Căn lại hàng bộ lọc (`FilterBar`) — ô chọn sát mép phải, hết lệch "bậc thang"
+
+> Người dùng thêm 2026-09-28 (ảnh màn Học sinh, Học phí, Báo cáo): tiêu đề bên trái + nút hành động sát phải ở hàng trên, còn hàng bộ lọc dồn hết sang trái ở hàng dưới → nhìn lệch "trái thấp, phải cao". Spec K mục 15.
+
+**Quyết định:** chỉ desktop (`md:` trở lên): cụm ô chọn (select) của `FilterBar` đẩy sát mép phải (`md:ml-auto`), thẳng mép phải với nút hành động và bảng. Ô tìm kiếm giữ bên trái như cũ. Màn Báo cáo (không có ô tìm kiếm) → 2 ô chọn nằm sát phải, ngay dưới nút Xuất Excel / Tháng. Mobile (< 768px) GIỮ NGUYÊN (ô tìm kiếm + nút "Lọc" mở sheet). Không đổi độ rộng ô chọn, không đổi `PageHeader`.
+
+**Files:**
+- Modify: `src/components/common/FilterBar.tsx` (div bọc `filters` bản desktop)
+- Create: `tests/e2e/filter-bar-align.spec.ts`
+
+**Interfaces:**
+- Consumes: không có gì từ Task 1–6.
+- Produces: không đổi props của `FilterBar`.
+
+- [ ] **Step 1: Viết e2e (đỏ)**
+
+```ts
+import { test, expect, type Page } from '@playwright/test';
+
+// Hàng bộ lọc desktop: ô chọn cuối phải sát mép phải hàng tiêu đề (thẳng nút hành động), không dồn trái.
+async function login(page: Page) {
+  await page.goto('/login');
+  await page.fill('input[name="username"]', 'teacher');
+  await page.fill('input[name="password"]', 'teacher123');
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/.*dashboard/);
+}
+
+// Khoảng cách (px) từ mép phải ô chọn xa nhất tới mép phải khối PageHeader (h1 → div → div).
+async function rightGap(page: Page) {
+  await expect(page.locator('main [role="combobox"]:visible').first()).toBeVisible();
+  return page.evaluate(() => {
+    const boxes = [...document.querySelectorAll<HTMLElement>('main [role="combobox"]')].filter((el) => el.offsetParent);
+    const header = document.querySelector('main h1')!.parentElement!.parentElement!;
+    const last = Math.max(...boxes.map((b) => b.getBoundingClientRect().right));
+    return Math.round(header.getBoundingClientRect().right - last);
+  });
+}
+
+for (const path of ['/students', '/tuition', '/reports']) {
+  test(`bộ lọc ${path} sát mép phải ở 1280px`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await login(page);
+    await page.goto(path);
+    expect(Math.abs(await rightGap(page))).toBeLessThanOrEqual(2);
+  });
+}
+
+test('mobile 390px vẫn dùng nút Lọc, không hiện ô chọn ngoài trang', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+  await page.goto('/students');
+  await expect(page.getByRole('button', { name: /Lọc|Filter/ })).toBeVisible();
+  await expect(page.locator('main [role="combobox"]:visible')).toHaveCount(0);
+});
+```
+
+- [ ] **Step 2: Chạy, xác nhận đỏ**
+
+Run: `pnpm test tests/integration/plan-launch-migration.test.ts` (seed) rồi `pnpm exec playwright test tests/e2e/filter-bar-align.spec.ts`
+Expected: 3 test desktop FAIL (khoảng cách vài trăm px); test mobile PASS. Hàng tiêu đề không phải `h1 → div → div` như `PageHeader`, hoặc màn nào không có combobox (vd ô lớp bị khoá gói thành nút) → sửa selector cho khớp code thật, ghi Ruling.
+
+- [ ] **Step 3: Sửa `FilterBar`**
+
+Trong `src/components/common/FilterBar.tsx` đổi đúng một dòng (trước là `className="hidden items-center gap-2 md:flex"`):
+
+```tsx
+          <div className="hidden items-center gap-2 md:ml-auto md:flex">{filters}</div>
+```
+
+- [ ] **Step 4: Chạy lại e2e liên quan**
+
+Run: `pnpm exec playwright test tests/e2e/filter-bar-align.spec.ts tests/e2e/students.spec.ts tests/e2e/plan-locks.spec.ts tests/e2e/mobile.spec.ts tests/e2e/layout-desktop.spec.ts`
+Expected: tất cả PASS. Rồi `pnpm exec tsc --noEmit` và `pnpm lint` sạch.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/components/common/FilterBar.tsx tests/e2e/filter-bar-align.spec.ts
+git commit -m "fix(k): hàng bộ lọc desktop đẩy ô chọn sát mép phải, hết lệch bậc thang với nút hành động"
+```
+
 ### Task 7: Kiểm chứng cuối, nâng version 0.6.0, danh sách kiểm tra tay (không merge, không push)
 
-**Đọc trước:** Global Constraints; spec mục 2, 11, 12, 13, 14; "Điều chỉnh so với spec"; `git log --oneline main..HEAD` (1 commit docs + 6 commit Task 1–6).
+**Đọc trước:** Global Constraints; spec mục 2, 11, 12, 13, 14; "Điều chỉnh so với spec"; `git log --oneline main..HEAD` (1 commit docs + commit Task 1–6 và 6b).
 
 **Files:**
 - Modify: `package.json` (chỉ dòng `"version"`)
