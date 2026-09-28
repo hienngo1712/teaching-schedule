@@ -14,6 +14,7 @@ import {
   importStudents,
   listStudents,
   softDeleteStudent,
+  getStudentDeleteCheck,
   updateStudent,
   upgradeAllClasses,
   getUpgradeLogThisYear,
@@ -43,6 +44,10 @@ export const studentRouter = createTRPCRouter({
     .mutation(({ ctx, input }) =>
       deactivateStudent(ctx.db, ctx.userId, input.id)
     ),
+
+  deleteCheck: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(({ ctx, input }) => getStudentDeleteCheck(ctx.db, ctx.userId, input.id)),
 
   delete: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))

@@ -89,6 +89,7 @@ describe("Học phí khi xoá / khôi phục (spec Q mục 6)", () => {
     expect((await getParentView(db, TOKEN, ym))!.attendance).toHaveLength(1)
     await caller.session.delete({ id: s.id })
     expect((await getParentView(db, TOKEN, ym))!.attendance).toHaveLength(0)
+    await caller.student.deactivate({ id: st.id }) // R2: HS có lần thu phải Đã nghỉ + hết nợ mới xoá được
     await caller.student.delete({ id: st.id })
     expect(await getParentView(db, TOKEN, ym)).toBeNull()
   })
