@@ -38,7 +38,7 @@ export function FilterBar({ search, filters, activeCount = 0 }: Props) {
 
       {filters && (
         <>
-          <div className="hidden items-center gap-2 md:flex">{filters}</div>
+          <div className="hidden items-center gap-2 md:ml-auto md:flex">{filters}</div>
 
           {/* SheetContent chỉ mount khi mở nên `filters` không bị render 2 lần cùng lúc */}
           <Sheet>
