@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { CalendarDays, Link2, MoreHorizontal, Pencil, Phone, Trash2, UserX } from "lucide-react"
+import { Phone } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { DeleteStudentDialog } from "./DeleteStudentDialog"
+import { StudentActionsMenu } from "./StudentActionsMenu"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import type { SchoolLevel } from "@/lib/types/models"
 import { useFilters } from "@/hooks/useFilters"
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -21,12 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -154,42 +148,26 @@ export function StudentList() {
       </Badge>
     )
 
+  const markBackMut = trpc.student.update.useMutation({
+    onSuccess: () => {
+      toast.success(t("mark_back_success"))
+      utils.student.list.invalidate()
+    },
+    onError: (e) => toast.error(e.message),
+  })
+
   const actionsMenu = (s: StudentRow) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-11 md:size-9" aria-label={t("actions")}>
-          <MoreHorizontal className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => router.push(`/calendar?studentId=${s.id}`)}>
-          <CalendarDays className="mr-2 size-4" />
-          {t("view_schedule")}
-        </DropdownMenuItem>
-        {/* HS đã có link vẫn mở được dialog để tắt link (D9). */}
-        <DropdownMenuItem
-          onSelect={() => (linkGate.locked && !s.parentLinkToken ? linkGate.openUpgrade() : setParentLinkTarget(s))}
-        >
-          <Link2 className="mr-2 size-4" />
-          {t("parent_link")}
-          {linkGate.locked && <LockBadge plan={linkGate.requiredPlan} className="ml-auto pl-2" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => setFormState({ open: true, mode: "edit", student: s })}>
-          <Pencil className="mr-2 size-4" />
-          {t("edit")}
-        </DropdownMenuItem>
-        {s.isActive && (
-          <DropdownMenuItem onSelect={() => setDeactivateTarget(s)}>
-            <UserX className="mr-2 size-4" />
-            {t("deactivate")}
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuItem className="text-red-600 focus:text-red-700" onSelect={() => setDeleteTarget(s)}>
-          <Trash2 className="mr-2 size-4" />
-          {t("delete")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <StudentActionsMenu
+      isActive={s.isActive}
+      parentLinkLocked={linkGate.locked}
+      parentLinkBadge={linkGate.locked ? <LockBadge plan={linkGate.requiredPlan} className="ml-auto pl-2" /> : undefined}
+      onViewSchedule={() => router.push(`/calendar?studentId=${s.id}`)}
+      onParentLink={() => (linkGate.locked && !s.parentLinkToken ? linkGate.openUpgrade() : setParentLinkTarget(s))}
+      onEdit={() => setFormState({ open: true, mode: "edit", student: s })}
+      onMarkDropped={() => setDeactivateTarget(s)}
+      onMarkBack={() => markBackMut.mutate({ id: s.id, data: { isActive: true } })}
+      onDelete={() => setDeleteTarget(s)}
+    />
   )
 
   const offset = (currentPage - 1) * pageSize

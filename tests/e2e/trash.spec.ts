@@ -55,9 +55,8 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
       } catch {}
     }
     for (const id of createdStudentIds.splice(0)) {
-      try {
-        await trpcMutation(page, 'student.delete', { id });
-      } catch {}
+      try { await trpcMutation(page, 'student.deactivate', { id }); } catch {}
+      try { await trpcMutation(page, 'student.delete', { id }); } catch {}
     }
   });
 
@@ -77,7 +76,7 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
 
     // Xoá HS
     await page.click(`tr:has-text("${name}") button:has(svg)`);
-    await page.getByRole('menuitem', { name: 'Xóa', exact: true }).click();
+    await page.getByRole('menuitem', { name: /Xóa học sinh/ }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa' }).click();
     await expect(page.locator('text=Đã chuyển học sinh vào Thùng rác')).toBeVisible();
     await expect(page.getByText(name)).toHaveCount(0);
@@ -195,70 +194,44 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
     await trpcMutation(page, 'session.delete', { id: b.id });
   });
 
-  test('4. HS còn nợ: cảnh báo nợ, Cho nghỉ thay chuyển sang Đã nghỉ, bấm Xoá tiếp vào Thùng rác', async ({ page }) => {
+  test('4. HS có dữ liệu: đang học → không xóa được; Đã nghỉ còn nợ → không xóa được; không có nút Cho nghỉ thay', async ({ page }) => {
     const stamp = Math.floor(Math.random() * 100_000);
     const nameDebt = `E2E Nợ ${stamp}`;
     const subjectId = await getDefaultSubjectId(page);
-
-    // Tạo HS có học phí 100.000
-    const st = await trpcMutation<{ id: number }>(page, 'student.create', {
-      fullName: nameDebt,
-      grade: 6,
-      tuitionFee: 100_000,
-    });
+    const st = await trpcMutation<{ id: number }>(page, 'student.create', { fullName: nameDebt, grade: 6, tuitionFee: 100_000 });
     createdStudentIds.push(st.id);
-
-    // Tạo ca trong tháng hiện tại theo giờ VN và điểm danh present
     const vnNow = new Date(Date.now() + 7 * 3600_000);
     const vnMonthDay = `${vnNow.toISOString().slice(0, 7)}-03`;
     const h = String(Math.floor(Math.random() * 8) + 6).padStart(2, '0');
     const sess = await trpcMutation<{ id: number }>(page, 'session.create', {
-      sessionDate: vnMonthDay,
-      startTime: `${h}:00`,
-      endTime: `${h}:45`,
-      subjectId,
-      studentIds: [st.id],
+      sessionDate: vnMonthDay, startTime: `${h}:00`, endTime: `${h}:45`, subjectId, studentIds: [st.id],
     });
     createdSessionIds.push(sess.id);
-    await trpcMutation(page, 'attendance.update', {
-      sessionId: sess.id,
-      attendances: [{ studentId: st.id, attendance: 'present', fee: 100_000 }],
-    });
+    await trpcMutation(page, 'attendance.update', { sessionId: sess.id, attendances: [{ studentId: st.id, attendance: 'present', fee: 100_000 }] });
 
-    // Vào /students -> mở menu -> Xoá
     await page.goto('/students');
     const row = page.locator('tr', { hasText: nameDebt });
     await row.getByRole('button', { name: 'Menu hành động' }).click();
-    await page.getByRole('menuitem', { name: 'Xóa', exact: true }).click();
-
-    // AlertDialog cảnh báo nợ và có nút "Cho nghỉ thay"
+    await page.getByRole('menuitem', { name: /Xóa học sinh/ }).click();
     const dialog = page.getByRole('alertdialog');
-    await expect(dialog.getByText(/còn nợ 100\.000/)).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Cho nghỉ thay' })).toBeVisible();
+    await expect(dialog.getByText(/đang học và đã có buổi học hoặc lần thu/)).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /nghỉ thay/i })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Đóng' }).click();
 
-    // Bấm "Cho nghỉ thay"
-    await dialog.getByRole('button', { name: 'Cho nghỉ thay' }).click();
-    await expect(page.getByText('Đã cho học sinh nghỉ')).toBeVisible();
+    // Đánh dấu Đã nghỉ qua menu
+    await row.getByRole('button', { name: 'Menu hành động' }).click();
+    await page.getByRole('menuitem', { name: /Đã nghỉ/ }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Đã nghỉ' }).click();
+    await expect(page.getByText('Đã chuyển học sinh sang Đã nghỉ')).toBeVisible();
 
-    // Lọc "Đã nghỉ" thấy HS
     await page.click('button:has-text("Đang học")');
     await page.getByRole('option', { name: 'Đã nghỉ' }).click();
     const rowInactive = page.locator('tr', { hasText: nameDebt });
-    await expect(rowInactive).toBeVisible();
-
-    // Mở lại menu của HS đã nghỉ -> Xoá -> Cảnh báo nợ nhưng KHÔNG có nút "Cho nghỉ thay"
     await rowInactive.getByRole('button', { name: 'Menu hành động' }).click();
-    await page.getByRole('menuitem', { name: 'Xóa', exact: true }).click();
+    await page.getByRole('menuitem', { name: /Xóa học sinh/ }).click();
     const dialog2 = page.getByRole('alertdialog');
     await expect(dialog2.getByText(/còn nợ 100\.000/)).toBeVisible();
-    await expect(dialog2.getByRole('button', { name: 'Cho nghỉ thay' })).toHaveCount(0);
-
-    // Bấm Xoá -> HS vào Thùng rác
-    await dialog2.getByRole('button', { name: 'Xóa' }).click();
-    await expect(page.getByText('Đã chuyển học sinh vào Thùng rác')).toBeVisible();
-    await expect(page.getByText(nameDebt)).toHaveCount(0);
-
-    // Dọn dẹp ca dạy
-    await trpcMutation(page, 'session.delete', { id: sess.id });
+    await expect(dialog2.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
   });
 });

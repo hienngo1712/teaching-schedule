@@ -5,154 +5,82 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { DeleteStudentDialog } from "@/components/students/DeleteStudentDialog"
-import { vnDateParts } from "@/lib/utils"
 
-type StatusData = {
-  items: { totalAmountDue: number; paidAmount: number; isFullPaid: boolean }[]
-}
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
-const mockStatusQuery = vi.hoisted(() => ({
-  data: undefined as StatusData | undefined,
+const q = vi.hoisted(() => ({
+  data: undefined as unknown,
   isPending: false,
   isError: false,
-  lastArgs: null as Record<string, unknown> | null,
+  refetch: vi.fn(),
 }))
-
-const mockDeleteMut = vi.hoisted(() => ({
-  mutate: vi.fn(),
-  isPending: false,
-}))
-
-const mockDeactivateMut = vi.hoisted(() => ({
-  mutate: vi.fn(),
-  isPending: false,
-}))
+const del = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }))
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
-    tuition: {
-      getMonthlyStatusReadOnly: {
-        useQuery: (args: Record<string, unknown>) => {
-          mockStatusQuery.lastArgs = args
-          return {
-            data: mockStatusQuery.data,
-            isPending: mockStatusQuery.isPending,
-            isError: mockStatusQuery.isError,
-          }
-        },
-      },
-    },
+    useUtils: () => ({ student: { list: { invalidate: vi.fn() } }, trash: { counts: { invalidate: vi.fn() } } }),
     student: {
-      delete: {
-        useMutation: (opts?: { onSuccess?: () => void }) => ({
-          mutate: (args: { id: number }) => {
-            mockDeleteMut.mutate(args)
-            opts?.onSuccess?.()
-          },
-          isPending: mockDeleteMut.isPending,
-        }),
-      },
-      deactivate: {
-        useMutation: (opts?: { onSuccess?: () => void }) => ({
-          mutate: (args: { id: number }) => {
-            mockDeactivateMut.mutate(args)
-            opts?.onSuccess?.()
-          },
-          isPending: mockDeactivateMut.isPending,
-        }),
-      },
+      deleteCheck: { useQuery: () => q },
+      delete: { useMutation: () => del },
     },
   },
 }))
 
-function renderDialog(student = { id: 1, fullName: "HS Test", isActive: true }, onOpenChange = vi.fn()) {
-  return render(
-    <LanguageProvider forcedLanguage="vi">
-      <DeleteStudentDialog student={student} onOpenChange={onOpenChange} />
+const student = { id: 7, fullName: "QA Trần Thị Bình", isActive: true }
+const renderIt = () =>
+  render(
+    <LanguageProvider>
+      <DeleteStudentDialog student={student} onOpenChange={() => {}} />
     </LanguageProvider>
   )
-}
 
-describe("DeleteStudentDialog", () => {
+describe("DeleteStudentDialog (spec R mục 3)", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockStatusQuery.data = undefined
-    mockStatusQuery.isPending = false
-    mockStatusQuery.isError = false
-    mockDeleteMut.isPending = false
-    mockDeactivateMut.isPending = false
+    q.data = undefined
+    q.isPending = false
+    q.isError = false
+    del.mutate.mockReset()
   })
 
-  it("(a) HS đang học còn nợ: hiện cảnh báo nợ, nút Cho nghỉ thay, nút Xóa và Cho nghỉ thay gọi đúng mutation", () => {
-    mockStatusQuery.data = {
-      items: [{ totalAmountDue: 350000, paidAmount: 0, isFullPaid: false }],
-    }
-    const onOpenChange = vi.fn()
-    renderDialog({ id: 1, fullName: "HS Test", isActive: true }, onOpenChange)
+  it("đang kiểm → nút Xóa disabled, chữ Đang kiểm tra", () => {
+    q.isPending = true
+    renderIt()
+    expect((screen.getByRole("button", { name: /Đang kiểm tra/ }) as HTMLButtonElement).disabled).toBe(true)
+  })
 
-    expect(screen.getByText(/còn nợ 350\.000 đ/)).toBeTruthy()
-    const deactivateBtn = screen.getByRole("button", { name: "Cho nghỉ thay" })
-    expect(deactivateBtn).toBeTruthy()
-
-    fireEvent.click(deactivateBtn)
-    expect(mockDeactivateMut.mutate).toHaveBeenCalledWith({ id: 1 })
-    expect(onOpenChange).toHaveBeenCalledWith(false)
-
+  it("allowed → mô tả Thùng rác + giữ tiền, bấm Xóa gọi delete", () => {
+    q.data = { allowed: true }
+    renderIt()
+    expect(screen.getByText(/Tiền đã thu vẫn được giữ trong Báo cáo/)).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "Xóa" }))
-    expect(mockDeleteMut.mutate).toHaveBeenCalledWith({ id: 1 })
+    expect(del.mutate).toHaveBeenCalledWith({ id: 7 })
   })
 
-  it("(b) isFullPaid=true dù còn số nợ: coi như không nợ, không có Cho nghỉ thay", () => {
-    mockStatusQuery.data = {
-      items: [{ totalAmountDue: 350000, paidAmount: 0, isFullPaid: true }],
-    }
-    renderDialog()
-
-    expect(screen.queryByText(/còn nợ/)).toBeNull()
-    expect(screen.queryByRole("button", { name: "Cho nghỉ thay" })).toBeNull()
-    expect(screen.getByRole("button", { name: "Xóa" })).toBeTruthy()
+  it("active_with_data → báo không xóa được, chỉ nút Đóng", () => {
+    q.data = { allowed: false, reason: "active_with_data" }
+    renderIt()
+    expect(screen.getByText(/đang học và đã có buổi học hoặc lần thu/)).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Đóng" })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Xóa" })).toBeNull()
   })
 
-  it("(c) nợ > 0 nhưng HS đã nghỉ (isActive=false): không có nút Cho nghỉ thay", () => {
-    mockStatusQuery.data = {
-      items: [{ totalAmountDue: 350000, paidAmount: 0, isFullPaid: false }],
-    }
-    renderDialog({ id: 2, fullName: "HS Đã Nghỉ", isActive: false })
-
-    expect(screen.getByText(/còn nợ 350\.000 đ/)).toBeTruthy()
-    expect(screen.queryByRole("button", { name: "Cho nghỉ thay" })).toBeNull()
+  it("debt → báo còn nợ đúng số, chỉ nút Đóng", () => {
+    q.data = { allowed: false, reason: "debt", debt: 2_250_000 }
+    renderIt()
+    expect(screen.getByText(/còn nợ 2\.250\.000/)).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Xóa" })).toBeNull()
   })
 
-  it("(d) isPending: nút xóa hiện 'Đang kiểm tra…' và disabled", () => {
-    mockStatusQuery.isPending = true
-    renderDialog()
-
-    const btn = screen.getByRole("button", { name: "Đang kiểm tra…" })
-    expect(btn).toBeTruthy()
-    expect((btn as HTMLButtonElement).disabled).toBe(true)
+  it("không còn nút Cho nghỉ thay", () => {
+    q.data = { allowed: false, reason: "debt", debt: 100_000 }
+    renderIt()
+    expect(screen.queryByRole("button", { name: /nghỉ thay/i })).toBeNull()
   })
 
-  it("(e) isError: coi như không nợ, nút Xóa bật", () => {
-    mockStatusQuery.isError = true
-    renderDialog()
-
-    expect(screen.queryByText(/còn nợ/)).toBeNull()
-    const btn = screen.getByRole("button", { name: "Xóa" })
-    expect(btn).toBeTruthy()
-    expect((btn as HTMLButtonElement).disabled).toBe(false)
-  })
-
-  it("(f) query gọi với year/month = vnDateParts() hiện tại", () => {
-    const { year, month } = vnDateParts()
-    renderDialog({ id: 5, fullName: "HS Check Date", isActive: true })
-
-    expect(mockStatusQuery.lastArgs).toMatchObject({
-      studentId: 5,
-      year,
-      month,
-      status: "all",
-      page: 1,
-      limit: 1,
-    })
+  it("lỗi tải → nút Thử lại gọi refetch", () => {
+    q.isError = true
+    renderIt()
+    fireEvent.click(screen.getByRole("button", { name: "Thử lại" }))
+    expect(q.refetch).toHaveBeenCalled()
   })
 })

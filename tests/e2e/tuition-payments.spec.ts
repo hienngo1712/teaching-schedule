@@ -125,6 +125,13 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await expect(sheet.getByTestId('paid-total')).toHaveText(/50\.000/);
     await expectNoHorizontalScroll(page);
 
+    // Xoá nốt lần 1 để HS sạch dữ liệu trước khi xoá HS
+    const remainingCashRow = sheet.getByTestId('payment-row').filter({ hasText: 'Tiền mặt' });
+    await remainingCashRow.getByRole('button', { name: 'Menu hành động' }).click();
+    await page.getByRole('menuitem', { name: 'Xóa' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa' }).click();
+    await expect(page.getByText('Đã xoá lần thu')).toBeVisible();
+
     // 8. Dọn dữ liệu: xoá ca rồi xoá HS (xoá mềm)
     await page.keyboard.press('Escape');
     await page.goto('/calendar');
@@ -137,7 +144,7 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await page.goto('/students');
     const studentCard = page.getByTestId('list-card').filter({ hasText: studentName });
     await studentCard.getByRole('button', { name: 'Menu hành động' }).click();
-    await page.getByRole('menuitem', { name: 'Xóa', exact: true }).click();
+    await page.getByRole('menuitem', { name: /Xóa học sinh/ }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa' }).click();
     await expect(page.getByText('Đã chuyển học sinh vào Thùng rác')).toBeVisible();
   });

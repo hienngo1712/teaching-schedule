@@ -13,84 +13,73 @@ import {
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { trpc } from "@/lib/trpc"
-import { formatCurrency, vnDateParts } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils"
 
 type Props = {
   student: { id: number; fullName: string; isActive: boolean }
   onOpenChange: (open: boolean) => void
 }
 
+// Server là nguồn sự thật của quy tắc xoá (spec R2); dialog chỉ hiện kết quả.
 export function DeleteStudentDialog({ student, onOpenChange }: Props) {
   const { t } = useTranslation()
-  const { year, month } = vnDateParts()
-  // Đường chỉ đọc, cùng hàm tính với màn Học phí/Tổng quan: nợ = nợ lũy kế tới tháng này (spec Q 5b).
-  const status = trpc.tuition.getMonthlyStatusReadOnly.useQuery({
-    studentId: student.id,
-    year,
-    month,
-    status: "all",
-    page: 1,
-    limit: 1,
-  })
-  const row = status.data?.items[0]
-  const debt = row && !row.isFullPaid ? Math.max(0, row.totalAmountDue - row.paidAmount) : 0
+  const utils = trpc.useUtils()
+  const check = trpc.student.deleteCheck.useQuery({ id: student.id })
   const close = () => onOpenChange(false)
   const del = trpc.student.delete.useMutation({
     onSuccess: () => {
       toast.success(t("delete_success"))
+      utils.student.list.invalidate()
+      utils.trash.counts.invalidate()
       close()
     },
     onError: (e) => toast.error(e.message),
   })
-  const deactivate = trpc.student.deactivate.useMutation({
-    onSuccess: () => {
-      toast.success(t("deactivate_success"))
-      close()
-    },
-    onError: (e) => toast.error(e.message),
-  })
-  const busy = del.isPending || deactivate.isPending
+
+  const result = check.data
+  const blocked = result && !result.allowed
+  const message = check.isError
+    ? t("load_error")
+    : !result
+      ? null
+      : result.allowed
+        ? null
+        : result.reason === "debt"
+          ? t("delete_blocked_debt").replace("{name}", student.fullName).replace("{amount}", formatCurrency(result.debt))
+          : t("delete_blocked_active").replace("{name}", student.fullName)
+
   return (
-    <AlertDialog open onOpenChange={onOpenChange}>
+    <AlertDialog open onOpenChange={(o) => !del.isPending && onOpenChange(o)}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("delete_student")}</AlertDialogTitle>
           <AlertDialogDescription>
-            {debt > 0 ? (
-              t("delete_student_debt_desc")
-                .replace("{name}", student.fullName)
-                .replace("{amount}", formatCurrency(debt))
-            ) : (
+            {message ?? (
               <>
-                <strong className="text-slate-900">{student.fullName}</strong>{" "}
-                {t("delete_student_desc")}
+                <strong className="text-slate-900">{student.fullName}</strong> {t("delete_student_desc")}
               </>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2">
-          <AlertDialogCancel className="h-11 md:h-10" disabled={busy}>
-            {t("cancel")}
+          {check.isError ? (
+            <Button type="button" variant="outline" className="h-11 md:h-10" onClick={() => check.refetch()}>
+              {t("retry")}
+            </Button>
+          ) : null}
+          <AlertDialogCancel className="h-11 md:h-10" disabled={del.isPending}>
+            {blocked || check.isError ? t("close") : t("cancel")}
           </AlertDialogCancel>
-          {debt > 0 && student.isActive && (
+          {!blocked && !check.isError && (
             <Button
               type="button"
-              variant="outline"
-              className="h-11 md:h-10"
-              disabled={busy}
-              onClick={() => deactivate.mutate({ id: student.id })}
+              className="h-11 bg-red-600 hover:bg-red-700 md:h-10"
+              disabled={check.isPending || del.isPending}
+              onClick={() => del.mutate({ id: student.id })}
             >
-              {t("deactivate_instead")}
+              {check.isPending ? t("checking") : del.isPending ? t("deleting") : t("delete")}
             </Button>
           )}
-          <Button
-            type="button"
-            className="h-11 bg-red-600 hover:bg-red-700 md:h-10"
-            disabled={busy || status.isPending}
-            onClick={() => del.mutate({ id: student.id })}
-          >
-            {status.isPending ? t("checking") : del.isPending ? t("deleting") : t("delete")}
-          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
