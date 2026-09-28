@@ -31,7 +31,7 @@ export function AdminTabBar() {
       aria-label={t("main_navigation")}
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-6">
         {ADMIN_NAV_ITEMS.map((item) => {
           const Icon = item.icon
           const active = isNavActive(pathname, item.href)

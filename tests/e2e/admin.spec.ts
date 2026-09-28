@@ -95,14 +95,14 @@ test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin/
   await std2.context().close();
 });
 
-test('/admin → /admin/overview; teacher vào /admin, /admin/overview, /admin/orders, /admin/accounts, /admin/history, /admin/prices → 404', async ({ browser }) => {
+test('/admin → /admin/overview; teacher vào /admin, /admin/overview, /admin/orders, /admin/accounts, /admin/history, /admin/prices, /admin/revenue → 404', async ({ browser }) => {
   const admin = await loginAs(browser, 'admin_test');
   await admin.goto('/admin');
   await expect(admin).toHaveURL(/\/admin\/overview$/);
   await admin.context().close();
 
   const teacher = await loginAs(browser, 'teacher');
-  for (const path of ['/admin', '/admin/overview', '/admin/orders', '/admin/accounts', '/admin/history', '/admin/prices']) {
+  for (const path of ['/admin', '/admin/overview', '/admin/orders', '/admin/accounts', '/admin/history', '/admin/prices', '/admin/revenue']) {
     const res = await teacher.goto(path);
     expect(res!.status(), path).toBe(404);
   }
@@ -133,7 +133,7 @@ test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn ch�
   await admin.context().close();
 });
 
-test('desktop: sidebar khu quản trị 5 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
+test('desktop: sidebar khu quản trị 6 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
   await createPendingForStd('SB');
   const admin = await loginAs(browser, 'admin_test', DESKTOP);
   await admin.goto('/admin/orders');
@@ -145,6 +145,7 @@ test('desktop: sidebar khu quản trị 5 mục, nhãn Quản trị, số đơn 
     '/admin/accounts',
     '/admin/history',
     '/admin/prices',
+    '/admin/revenue',
   ]);
   await expect(aside).not.toContainText('Học phí');
   const pendingCount = await db.planOrder.count({ where: { status: 'pending' } });
@@ -170,7 +171,7 @@ test('admin_test: route giáo viên → /admin/overview; tab bar và menu avatar
   await expect(admin.getByRole('banner').getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
 
   const tabs = admin.getByRole('navigation', { name: 'Điều hướng chính' });
-  await expect(tabs.getByRole('link')).toHaveCount(5);
+  await expect(tabs.getByRole('link')).toHaveCount(6);
   for (const link of await tabs.getByRole('link').all()) {
     expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }

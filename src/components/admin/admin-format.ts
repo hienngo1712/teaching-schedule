@@ -26,3 +26,8 @@ export function shortDateTimeVn(d: string): string {
   const date = new Date(d)
   return `${formatVnDate(date).slice(0, 5)} ${formatTime(new Date(date.getTime() + 7 * 60 * 60 * 1000))}`
 }
+
+export function fillMonth(template: string, { year, month }: { year: number; month: number }): string {
+  return template.replace("{m}", String(month)).replace("{y}", String(year))
+}
+
