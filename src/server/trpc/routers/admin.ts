@@ -1,5 +1,6 @@
 import { adminProcedure, createTRPCRouter } from "@/server/trpc"
 import {
+  accountTrendSchema,
   orderIdSchema,
   rejectOrderSchema,
   revenueQuerySchema,
@@ -16,11 +17,14 @@ import { adminResetPassword } from "@/server/services/password-reset.service"
 import { getDefaultTrialDays, getTrialHistory, getUserTrialChanges, setUserTrialDays, updateDefaultTrialDays } from "@/server/services/trial.service"
 import { adminDeleteUser, adminRestoreUser, listDeletedUsers } from "@/server/services/user-admin.service"
 import { getRevenue } from "@/server/services/revenue.service"
+import { getAccountTrend, getAdminStats } from "@/server/services/admin-stats.service"
 
 export const adminRouter = createTRPCRouter({
   overview: adminProcedure.query(({ ctx }) => getAdminOverview(ctx.db)),
   pendingCount: adminProcedure.query(({ ctx }) => getPendingCount(ctx.db)),
   orderHistory: adminProcedure.query(({ ctx }) => getOrderHistory(ctx.db)),
+  stats: adminProcedure.query(({ ctx }) => getAdminStats(ctx.db)),
+  accountTrend: adminProcedure.input(accountTrendSchema).query(({ ctx, input }) => getAccountTrend(ctx.db, input.days)),
   revenue: adminProcedure.input(revenueQuerySchema).query(({ ctx, input }) => getRevenue(ctx.db, input)),
 
   prices: adminProcedure.query(async ({ ctx }) => {

@@ -66,3 +66,5 @@ export const revenueQuerySchema = z
   .refine((d) => rangeError(d.from, d.to) !== "order", { message: "Tháng kết thúc phải sau tháng bắt đầu", path: ["to"] })
   .refine((d) => rangeError(d.from, d.to) !== "too_long", { message: "Tối đa 36 tháng", path: ["to"] })
 export type RevenueQueryInput = z.infer<typeof revenueQuerySchema>
+
+export const accountTrendSchema = z.object({ days: z.union([z.literal(7), z.literal(14), z.literal(30)]) })
