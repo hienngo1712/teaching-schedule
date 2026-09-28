@@ -148,10 +148,11 @@ export async function importStudents(
 }
 
 // Link HS ↔ ca CHƯA kết thúc theo giờ VN; ca đã dạy (kể cả sáng nay) là lịch sử, không được đụng.
+// Gồm cả ca đang ở Thùng rác: khôi phục ca không được đưa HS đã nghỉ / khối cũ quay lại.
 async function findUnfinishedLinks(tx: Prisma.TransactionClient, userId: number, studentIds: number[], now: Date) {
   if (studentIds.length === 0) return []
   const links = await tx.sessionStudent.findMany({
-    where: { studentId: { in: studentIds }, student: { isDeleted: false }, session: { userId, isDeleted: false, sessionDate: { gte: vnToday(now) } } },
+    where: { studentId: { in: studentIds }, student: { isDeleted: false }, session: { userId, sessionDate: { gte: vnToday(now) } } },
     select: { id: true, studentId: true, session: { select: { sessionDate: true, endTime: true } } },
   })
   return links.filter((l) => !hasSessionEnded(l.session, now))

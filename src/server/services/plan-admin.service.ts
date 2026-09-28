@@ -135,7 +135,7 @@ export async function approveOrder(db: PrismaClient, admin: string, id: number):
 // Nhẹ hơn overview (không tải user, không tính computeApproval): sidebar + tab bar gọi ở mọi trang admin (spec P J5).
 export async function getPendingCount(db: PrismaClient): Promise<{ count: number }> {
   await expireStaleOrders(db, new Date())
-  return { count: await db.planOrder.count({ where: { status: "pending" } }) }
+  return { count: await db.planOrder.count({ where: { status: "pending", user: { isDeleted: false } } }) }
 }
 
 export async function rejectOrder(db: PrismaClient, admin: string, id: number, note?: string): Promise<{ success: true }> {

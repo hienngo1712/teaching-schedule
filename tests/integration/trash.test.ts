@@ -80,6 +80,17 @@ describe("Thùng rác (spec Q mục 7)", () => {
     expect(month.map((x) => x.id)).toEqual(expect.arrayContaining([s.id, s2.id]))
   })
 
+  it("ca tương lai đang ở thùng rác cũng gỡ HS cho nghỉ → khôi phục ca không đưa HS nghỉ quay lại", async () => {
+    const caller = await getAuthedCaller()
+    const subjectId = await defaultSubjectId(caller)
+    const a = await caller.student.create({ fullName: "HS A", grade: 3 })
+    const s = await caller.session.create({ sessionDate: D, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id] })
+    await caller.session.delete({ id: s.id })
+    await caller.student.deactivate({ id: a.id })
+    await caller.trash.restore({ type: "session", id: s.id })
+    expect(await db.sessionStudent.count({ where: { sessionId: s.id, studentId: a.id } })).toBe(0)
+  })
+
   it("ca huỷ không bị kiểm trùng; ca bù: ca gốc đã khôi phục (không còn huỷ) → CONFLICT", async () => {
     const caller = await getAuthedCaller()
     const subjectId = await defaultSubjectId(caller)

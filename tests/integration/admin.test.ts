@@ -252,4 +252,17 @@ describe("đơn quá hạn và admin.pendingCount (spec P7, J5)", () => {
     expect(count).toBeGreaterThanOrEqual(1)
     await expect(std.admin.pendingCount()).rejects.toMatchObject({ code: "FORBIDDEN" })
   })
+
+  it("pendingCount không đếm đơn của tài khoản đã xoá (khớp overview, spec Q)", async () => {
+    const std = await getAuthedCaller("teacher_std")
+    await std.plan.createOrder({ plan: "plus", period: "year" })
+    const admin = await getAuthedCaller("admin_test")
+    await db.user.update({ where: { id: userId }, data: { isDeleted: true, deletedAt: new Date() } })
+    try {
+      const { count } = await admin.admin.pendingCount()
+      expect(count).toBe((await admin.admin.overview()).pendingOrders.length)
+    } finally {
+      await db.user.update({ where: { id: userId }, data: { isDeleted: false, deletedAt: null } })
+    }
+  })
 })
