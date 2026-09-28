@@ -10,6 +10,7 @@ import {
 import {
   checkImportDuplicates,
   createStudent,
+  deactivateStudent,
   importStudents,
   listStudents,
   softDeleteStudent,
@@ -35,6 +36,12 @@ export const studentRouter = createTRPCRouter({
     .input(studentUpdateSchema)
     .mutation(({ ctx, input }) =>
       updateStudent(ctx.db, ctx.userId, input.id, input.data)
+    ),
+
+  deactivate: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      deactivateStudent(ctx.db, ctx.userId, input.id)
     ),
 
   delete: protectedProcedure

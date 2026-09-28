@@ -13,6 +13,7 @@ import { adminSetPlan, approveOrder, getAdminOverview, getOrderHistory, getPendi
 import { getMonthlyPrices, getPriceHistory, updatePrices } from "@/server/services/plan-price.service"
 import { adminResetPassword } from "@/server/services/password-reset.service"
 import { getDefaultTrialDays, getTrialHistory, getUserTrialChanges, setUserTrialDays, updateDefaultTrialDays } from "@/server/services/trial.service"
+import { adminDeleteUser, adminRestoreUser, listDeletedUsers } from "@/server/services/user-admin.service"
 
 export const adminRouter = createTRPCRouter({
   overview: adminProcedure.query(({ ctx }) => getAdminOverview(ctx.db)),
@@ -58,4 +59,14 @@ export const adminRouter = createTRPCRouter({
   resetPassword: adminProcedure
     .input(resetPasswordSchema)
     .mutation(({ ctx, input }) => adminResetPassword(ctx.db, ctx.session.user.username, input.userId)),
+
+  deleteUser: adminProcedure
+    .input(userIdSchema)
+    .mutation(({ ctx, input }) => adminDeleteUser(ctx.db, ctx.session.user.username, input.userId)),
+
+  restoreUser: adminProcedure
+    .input(userIdSchema)
+    .mutation(({ ctx, input }) => adminRestoreUser(ctx.db, ctx.session.user.username, input.userId)),
+
+  deletedUsers: adminProcedure.query(({ ctx }) => listDeletedUsers(ctx.db)),
 })

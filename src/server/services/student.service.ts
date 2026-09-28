@@ -4,6 +4,7 @@ import { getLevel } from "@/lib/utils"
 import { hasSessionEnded, vnToday } from "@/lib/session-time"
 import { assertOwnership } from "./_base.service"
 import { assertCanActivateStudents } from "./plan.service"
+import { softDeleteData } from "@/server/soft-delete"
 import type {
   StudentCreateInput,
   StudentFilterInput,
@@ -147,10 +148,11 @@ export async function importStudents(
 }
 
 // Link HS ↔ ca CHƯA kết thúc theo giờ VN; ca đã dạy (kể cả sáng nay) là lịch sử, không được đụng.
+// Gồm cả ca đang ở Thùng rác: khôi phục ca không được đưa HS đã nghỉ / khối cũ quay lại.
 async function findUnfinishedLinks(tx: Prisma.TransactionClient, userId: number, studentIds: number[], now: Date) {
   if (studentIds.length === 0) return []
   const links = await tx.sessionStudent.findMany({
-    where: { studentId: { in: studentIds }, session: { userId, sessionDate: { gte: vnToday(now) } } },
+    where: { studentId: { in: studentIds }, student: { isDeleted: false }, session: { userId, sessionDate: { gte: vnToday(now) } } },
     select: { id: true, studentId: true, session: { select: { sessionDate: true, endTime: true } } },
   })
   return links.filter((l) => !hasSessionEnded(l.session, now))
@@ -198,7 +200,8 @@ export async function updateStudent(
   return withLevel(student)
 }
 
-export async function softDeleteStudent(
+// Cho nghỉ: gỡ khỏi ca chưa kết thúc, giữ lịch sử (spec Q mục 5).
+export async function deactivateStudent(
   db: PrismaClient,
   userId: number,
   id: number
@@ -214,6 +217,18 @@ export async function softDeleteStudent(
     }
     await tx.student.update({ where: { id }, data: { isActive: false } })
   })
+  return { success: true }
+}
+
+// Xoá mềm: không đụng isActive/ca/link phụ huynh để khôi phục trả nguyên trạng (spec Q Q4).
+export async function softDeleteStudent(
+  db: PrismaClient,
+  userId: number,
+  id: number
+): Promise<{ success: true }> {
+  const existing = await db.student.findUnique({ where: { id } })
+  assertOwnership(existing, userId)
+  await db.student.update({ where: { id }, data: softDeleteData() })
   return { success: true }
 }
 
@@ -253,12 +268,12 @@ export async function upgradeAllClasses(
           select: { id: true, grade: true },
         })
         const upgraded = await tx.student.updateMany({
-          where: { id: { in: upgrading.map((s) => s.id) } },
+          where: { id: { in: upgrading.map((s) => s.id) }, isDeleted: false },
           data: { grade: { increment: 1 } },
         })
         const deactivated = graduatingIds.length > 0
           ? await tx.student.updateMany({
-              where: { id: { in: graduatingIds } },
+              where: { id: { in: graduatingIds }, isDeleted: false },
               data: { isActive: false },
             })
           : { count: 0 }

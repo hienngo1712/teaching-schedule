@@ -141,7 +141,7 @@ test.describe('Cảnh báo Dashboard (390px)', () => {
       attendances: [{ studentId: student.id, attendance: 'present', fee }],
     });
     // Cho nghỉ học: ca tháng trước đã qua nên vẫn giữ điểm danh → vẫn còn nợ.
-    await trpcMutation(page, 'student.delete', { id: student.id });
+    await trpcMutation(page, 'student.deactivate', { id: student.id });
 
     await page.goto('/dashboard');
     const debtGroup = page.getByTestId('alert-group-debt');

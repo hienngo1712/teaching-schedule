@@ -158,7 +158,7 @@ describe("Session CRUD + overlap", () => {
   })
 
   // ── Delete ───────────────────────────────────────────────────
-  it("✓ delete → xóa ca + cascade session_students", async () => {
+  it("✓ delete → xóa mềm ca, link HS giữ để khôi phục", async () => {
     const caller = await getAuthedCaller()
     const st = await caller.student.create({ fullName: "Bình", grade: 4 })
     const s = await caller.session.create({
@@ -174,7 +174,8 @@ describe("Session CRUD + overlap", () => {
     const links = await db.sessionStudent.findMany({
       where: { sessionId: s.id },
     })
-    expect(links).toEqual([])
+    // Spec Q X1: xoá mềm ca giữ link HS để khôi phục
+    expect(links).toHaveLength(1)
     // HS vẫn còn
     const stillThere = await db.student.findUnique({ where: { id: st.id } })
     expect(stillThere).not.toBeNull()

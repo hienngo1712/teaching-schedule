@@ -89,6 +89,7 @@ export async function getMonthlyTuitionStatus(
                   some: {
                     grade,
                     session: {
+                      isDeleted: false,
                       sessionDate: {
                         gte: new Date(Date.UTC(year, month - 1, 1)),
                         lt: new Date(Date.UTC(year, month, 1)),
@@ -104,6 +105,7 @@ export async function getMonthlyTuitionStatus(
                     sessionStudents: {
                       some: {
                         session: {
+                          isDeleted: false,
                           sessionDate: {
                             gte: new Date(Date.UTC(year, month - 1, 1)),
                             lt: new Date(Date.UTC(year, month, 1)),
@@ -133,7 +135,7 @@ export async function getMonthlyTuitionStatus(
     db.sessionStudent.findMany({
       where: {
         studentId: { in: studentIds },
-        session: { sessionDate: { gte: startDate, lt: endDate }, userId, status: { not: "cancelled" } },
+        session: { sessionDate: { gte: startDate, lt: endDate }, userId, status: { not: "cancelled" }, isDeleted: false },
       },
       include: { session: true },
     }),
@@ -179,7 +181,7 @@ export async function getMonthlyTuitionStatus(
         by: ["studentId"],
         where: {
           studentId: { in: sIds },
-          session: { sessionDate: { lt: startDate }, userId, status: { not: "cancelled" } },
+          session: { sessionDate: { lt: startDate }, userId, status: { not: "cancelled" }, isDeleted: false },
           attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] },
         },
         _sum: { fee: true },

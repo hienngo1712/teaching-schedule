@@ -73,7 +73,7 @@ describe("Nhập học sinh từ Excel", () => {
     const caller = await getAuthedCaller()
     const an = await caller.student.create({ fullName: "Nguyễn Văn An", grade: 5 })
     const binh = await caller.student.create({ fullName: "Trần Bình", grade: 3 })
-    await caller.student.delete({ id: binh.id })
+    await caller.student.deactivate({ id: binh.id })
 
     const { matches } = await caller.student.importCheck({
       rows: [
@@ -90,7 +90,7 @@ describe("Nhập học sinh từ Excel", () => {
   it("✓ importCheck: có cả HS đã nghỉ và đang học cùng khóa → trả HS đang học", async () => {
     const caller = await getAuthedCaller()
     const old = await caller.student.create({ fullName: "Nguyễn An", grade: 5 })
-    await caller.student.delete({ id: old.id })
+    await caller.student.deactivate({ id: old.id })
     const current = await caller.student.create({ fullName: "Nguyễn An", grade: 5 })
     const { matches } = await caller.student.importCheck({ rows: [{ fullName: "Nguyễn An", grade: 5 }] })
     expect(matches[0]).toMatchObject({ id: current.id, isActive: true })

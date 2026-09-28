@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Eye, EyeOff, MoreHorizontal, Pencil, Plus, Star } from "lucide-react"
+import { Eye, EyeOff, MoreHorizontal, Pencil, Plus, Star, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -32,8 +32,18 @@ type Subject = RouterOutputs["subject"]["list"][number]
 
 export function SubjectList() {
   const { t } = useTranslation()
+  const utils = trpc.useUtils()
   const query = trpc.subject.list.useQuery({})
   const updateMut = trpc.subject.update.useMutation({
+    onSuccess: () => utils.subject.list.invalidate(),
+    onError: (e) => toast.error(e.message),
+  })
+  const deleteMut = trpc.subject.delete.useMutation({
+    onSuccess: () => {
+      toast.success(t("subject_deleted"))
+      setDeleteTarget(null)
+      utils.subject.list.invalidate()
+    },
     onError: (e) => toast.error(e.message),
   })
 
@@ -41,6 +51,7 @@ export function SubjectList() {
     open: false,
   })
   const [hideTarget, setHideTarget] = useState<Subject | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Subject | null>(null)
 
   const subjects = query.data ?? []
   const active = subjects.filter((s) => s.isActive)
@@ -87,6 +98,12 @@ export function SubjectList() {
             <DropdownMenuItem onSelect={() => updateMut.mutate({ id: s.id, data: { isActive: true } })}>
               <Eye className="mr-2 size-4" />
               {t("unhide")}
+            </DropdownMenuItem>
+          )}
+          {!s.isDefault && (
+            <DropdownMenuItem className="text-red-600 focus:text-red-700" onSelect={() => setDeleteTarget(s)}>
+              <Trash2 className="mr-2 size-4" />
+              {t("delete")}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -161,6 +178,29 @@ export function SubjectList() {
               }}
             >
               {t("hide")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("delete")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("delete_subject_confirm").replace("{name}", deleteTarget?.name ?? "")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMut.isPending}>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMut.isPending}
+              onClick={() => {
+                if (deleteTarget) deleteMut.mutate({ id: deleteTarget.id })
+              }}
+            >
+              {deleteMut.isPending ? t("deleting") : t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

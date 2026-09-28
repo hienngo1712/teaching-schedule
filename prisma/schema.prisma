@@ -26,6 +26,10 @@ model User {
   // Tăng khi đổi/reset mật khẩu → mọi JWT mang số cũ hết hiệu lực (spec N Q10).
   sessionVersion     Int               @default(0) @map("session_version")
   mustChangePassword Boolean           @default(false) @map("must_change_password")
+  // Xoá mềm tài khoản (spec Q mục 8): giữ username để khôi phục; deletedBy = tên admin.
+  isDeleted          Boolean           @default(false) @map("is_deleted")
+  deletedAt          DateTime?         @map("deleted_at")
+  deletedBy          String?           @map("deleted_by") @db.VarChar(50)
   loginAttempts LoginAttempt[]
   students      Student[]
   subjects      Subject[]
@@ -58,6 +62,8 @@ model Subject {
   isDefault Boolean           @default(false) @map("is_default")
   isActive  Boolean           @default(true) @map("is_active")
   sortOrder Int               @default(0) @map("sort_order")
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
   createdAt DateTime          @default(now()) @map("created_at")
   user      User              @relation(fields: [userId], references: [id])
   sessions  TeachingSession[]
@@ -78,6 +84,8 @@ model Student {
   isActive        Boolean          @default(true) @map("is_active")
   tuitionFee      Int              @default(0) @map("tuition_fee")
   parentLinkToken String?          @unique @map("parent_link_token") @db.VarChar(43)
+  isDeleted       Boolean          @default(false) @map("is_deleted")
+  deletedAt       DateTime?        @map("deleted_at")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   sessionStudents SessionStudent[]
@@ -119,6 +127,8 @@ model Payment {
   paidAt           DateTime       @map("paid_at") @db.Date
   method           String         @default("cash") @db.VarChar(10)
   note             String?        @db.Text
+  isDeleted        Boolean        @default(false) @map("is_deleted")
+  deletedAt        DateTime?      @map("deleted_at")
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
   monthlyTuition   MonthlyTuition @relation(fields: [monthlyTuitionId], references: [id], onDelete: Cascade)
@@ -141,6 +151,8 @@ model TeachingSession {
   cancelReason    String?          @map("cancel_reason")
   cancelledAt     DateTime?        @map("cancelled_at")
   makeupOfId      Int?             @map("makeup_of_id")
+  isDeleted       Boolean          @default(false) @map("is_deleted")
+  deletedAt       DateTime?        @map("deleted_at")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   sessionStudents SessionStudent[]

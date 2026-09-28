@@ -25,8 +25,8 @@ export async function adminResetPassword(
   adminUsername: string,
   userId: number
 ): Promise<{ username: string; tempPassword: string }> {
-  const user = await db.user.findUnique({ where: { id: userId }, select: { id: true, username: true } })
-  if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
+  const user = await db.user.findUnique({ where: { id: userId }, select: { id: true, username: true, isDeleted: true } })
+  if (!user || user.isDeleted) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
   if (isAdminUsername(user.username)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Không reset mật khẩu tài khoản quản trị" })
   }

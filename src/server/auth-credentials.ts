@@ -98,7 +98,8 @@ export async function authorizeCredentials(
 
   const user = await db.user.findUnique({ where: { username } })
 
-  if (!user || !user.isActive) {
+  // Tài khoản đã xoá đi cùng nhánh sai mật khẩu để không lộ tên tồn tại (spec Q Q6).
+  if (!user || !user.isActive || user.isDeleted) {
     await db.loginAttempt.create({
       data: { username, ipAddress, success: false, userId: user?.id ?? null },
     })
@@ -145,8 +146,8 @@ export async function getSessionUserState(
   if (!Number.isInteger(userId) || userId <= 0 || sessionVersion === undefined) return null
   const u = await db.user.findUnique({
     where: { id: userId },
-    select: { isActive: true, sessionVersion: true, mustChangePassword: true },
+    select: { isActive: true, isDeleted: true, sessionVersion: true, mustChangePassword: true },
   })
-  if (!u || !u.isActive || u.sessionVersion !== sessionVersion) return null
+  if (!u || !u.isActive || u.isDeleted || u.sessionVersion !== sessionVersion) return null
   return { mustChangePassword: u.mustChangePassword }
 }

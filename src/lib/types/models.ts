@@ -19,10 +19,11 @@ export type StudentReportInfo = {
 /**
  * Student with enhanced UI fields
  */
-export interface StudentDTO extends Omit<Student, "createdAt" | "updatedAt"> {
+export interface StudentDTO extends Omit<Student, "createdAt" | "updatedAt" | "deletedAt"> {
   level: SchoolLevel
   createdAt: Date | string
   updatedAt: Date | string
+  deletedAt: Date | string | null
 }
 
 /**
@@ -35,7 +36,7 @@ export interface SubjectDTO extends Pick<Subject, "id" | "name" | "color"> {
 /**
  * Teaching Session basic info for list view
  */
-export interface SessionListDTO extends Omit<TeachingSession, "startTime" | "endTime" | "createdAt" | "updatedAt" | "cancelledAt"> {
+export interface SessionListDTO extends Omit<TeachingSession, "startTime" | "endTime" | "createdAt" | "updatedAt" | "cancelledAt" | "deletedAt"> {
   startTime: string
   endTime: string
   durationMins: number
@@ -43,6 +44,7 @@ export interface SessionListDTO extends Omit<TeachingSession, "startTime" | "end
   studentCount: number
   level: SchoolLevel | "mixed"
   cancelledAt: Date | string | null
+  deletedAt: Date | string | null
   makeupInfo?: { id: number; sessionDate: Date | string } | null
   originalInfo?: { id: number; sessionDate: Date | string } | null
 }
@@ -154,3 +156,9 @@ export type ParentViewDTO = {
   attendance: ParentSessionDTO[]
   upcoming: ParentSessionDTO[]
 }
+
+export type TrashItemDTO =
+  | { type: "session"; id: number; deletedAt: Date | string; sessionDate: string; startTime: string; endTime: string; subjectName: string; title: string | null; isMakeup: boolean }
+  | { type: "student"; id: number; deletedAt: Date | string; fullName: string; grade: number }
+  | { type: "payment"; id: number; deletedAt: Date | string; amount: number; paidAt: string; studentName: string; year: number; month: number }
+  | { type: "subject"; id: number; deletedAt: Date | string; name: string; color: string }

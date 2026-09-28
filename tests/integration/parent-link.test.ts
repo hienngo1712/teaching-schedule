@@ -308,7 +308,7 @@ describe("getParentView", () => {
     const caller = await getAuthedCaller()
     const { subject, student, token } = await setup(caller)
     await addSession(caller, subject.id, [student.id], vnDay(3), "18:00", "19:00")
-    await caller.student.delete({ id: student.id }) // softDelete gỡ HS khỏi ca chưa kết thúc
+    await caller.student.deactivate({ id: student.id }) // deactivate gỡ HS khỏi ca chưa kết thúc
 
     const view = await getParentView(db, token)
     expect(view).not.toBeNull()

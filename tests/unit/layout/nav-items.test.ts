@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { MANAGE_ITEMS, MORE_ITEMS, NAV_ITEMS, isMoreActive } from "@/components/layout/nav-items"
 
 describe("isMoreActive", () => {
-  it.each(["/reports", "/subjects", "/settings", "/settings/x", "/plan"])("%s → true", (path) => {
+  it.each(["/reports", "/subjects", "/settings", "/settings/x", "/plan", "/trash"])("%s → true", (path) => {
     expect(isMoreActive(path)).toBe(true)
   })
 
@@ -18,12 +18,14 @@ describe("danh sách mục điều hướng", () => {
       ["/subjects", "subject"],
       ["/settings", "settings"],
       ["/plan", "my_plan"],
+      ["/trash", "trash"],
     ])
     expect(MORE_ITEMS.map((i) => [i.href, i.labelKey, i.descKey])).toEqual([
       ["/reports", "reports", "more_reports_desc"],
       ["/subjects", "subject", "more_subjects_desc"],
       ["/settings", "settings", "more_settings_desc"],
       ["/plan", "my_plan", "more_plan_desc"],
+      ["/trash", "trash", "more_trash_desc"],
     ])
   })
 

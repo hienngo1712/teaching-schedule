@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server"
 import { type PrismaClient } from "@prisma/client"
 import { assertOwnership } from "./_base.service"
+import { LIVE_LINK } from "@/server/soft-delete"
 import type { AttendanceUpdateInput } from "@/lib/schemas/attendance"
 import { getLevel } from "@/lib/utils"
 import type { AttendanceDTO } from "@/lib/types/models"
@@ -14,6 +15,7 @@ export async function getAttendance(
     where: { id: sessionId },
     include: {
       sessionStudents: {
+        where: LIVE_LINK,
         include: {
           student: true,
         },
@@ -42,7 +44,9 @@ export async function updateAttendance(
   const session = await db.teachingSession.findUnique({
     where: { id: input.sessionId },
     include: {
-      sessionStudents: true,
+      sessionStudents: {
+        where: LIVE_LINK,
+      },
     },
   })
 

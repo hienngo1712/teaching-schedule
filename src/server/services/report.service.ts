@@ -3,6 +3,7 @@ import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { calcAttendanceRate, getLevel, vnDateParts } from "@/lib/utils"
 import type { SessionDTO } from "@/lib/types/models"
 import { assertOwnership } from "./_base.service"
+import { LIVE_LINK } from "@/server/soft-delete"
 import { getCancelledWithoutMakeup, getMonthSessions } from "./session.service"
 import { getMonthlyOutstanding, getMonthlyTuitionStatus } from "./tuition.service"
 
@@ -103,17 +104,18 @@ export async function getMonthlySummary(
     ? {
         student: {
           userId,
+          isDeleted: false,
           sessionStudents: {
             some: {
               grade,
-              session: { sessionDate: { gte: startDate, lt: endDate } },
+              session: { sessionDate: { gte: startDate, lt: endDate }, isDeleted: false },
             },
           },
         },
         year: { gte: year, lte: effToYear },
       }
     : {
-        student: { userId },
+        student: { userId, isDeleted: false },
         year: { gte: year, lte: effToYear },
       }
 
@@ -123,10 +125,11 @@ export async function getMonthlySummary(
         userId,
         sessionDate: { gte: startDate, lt: endDate },
         status: { not: "cancelled" },
-        ...(grade ? { sessionStudents: { some: { grade } } } : {})
+        isDeleted: false,
+        ...(grade ? { sessionStudents: { some: { grade, ...LIVE_LINK } } } : {})
       },
       include: {
-        sessionStudents: { include: { student: true } }
+        sessionStudents: { where: LIVE_LINK, include: { student: true } }
       }
     }),
     db.monthlyTuition.findMany({ where: monthlyTuitionsWhere })
@@ -231,8 +234,8 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
 
     // 3. This month's sessions
     db.teachingSession.findMany({
-      where: { userId, sessionDate: { gte: startOfMonth, lt: endOfMonth }, status: { not: "cancelled" } },
-      include: { sessionStudents: true }
+      where: { userId, sessionDate: { gte: startOfMonth, lt: endOfMonth }, status: { not: "cancelled" }, isDeleted: false },
+      include: { sessionStudents: { where: LIVE_LINK } }
     }),
 
     // 5. Outstanding tuition — same per-student carry-over math as the tuition page
@@ -243,7 +246,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
 
     // Tiền đã ghi nhận trong tháng — cùng nguồn monthlyTuition.paidAmount với Báo cáo
     db.monthlyTuition.aggregate({
-      where: { student: { userId }, year: vnYear, month: vnMonth },
+      where: { student: { userId, isDeleted: false }, year: vnYear, month: vnMonth },
       _sum: { paidAmount: true },
     }),
   ])
@@ -362,6 +365,7 @@ export async function getDashboardAlerts(
             session: {
               userId,
               status: { not: "cancelled" },
+              isDeleted: false,
               sessionDate: { gte: idleFrom, lte: idleTo },
             },
           },

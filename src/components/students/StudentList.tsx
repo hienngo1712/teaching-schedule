@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { CalendarDays, Link2, MoreHorizontal, Pencil, Phone, Trash2 } from "lucide-react"
+import { CalendarDays, Link2, MoreHorizontal, Pencil, Phone, Trash2, UserX } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
+import { DeleteStudentDialog } from "./DeleteStudentDialog"
 import { GRADES } from "@/lib/constants"
 import { formatCurrency } from "@/lib/utils"
 import type { SchoolLevel } from "@/lib/types/models"
@@ -115,13 +116,16 @@ export function StudentList() {
   >({ open: false })
 
   const [deleteTarget, setDeleteTarget] = useState<StudentRow | null>(null)
+  const [deactivateTarget, setDeactivateTarget] = useState<StudentRow | null>(null)
   const [parentLinkTarget, setParentLinkTarget] = useState<StudentRow | null>(null)
   const [importOpen, setImportOpen] = useState(false)
 
-  const deleteMut = trpc.student.delete.useMutation({
+  const utils = trpc.useUtils()
+  const deactivateMut = trpc.student.deactivate.useMutation({
     onSuccess: () => {
-      toast.success(t("delete_success"))
-      setDeleteTarget(null)
+      toast.success(t("deactivate_success"))
+      setDeactivateTarget(null)
+      utils.student.list.invalidate()
     },
     onError: (e) => toast.error(e.message),
   })
@@ -174,6 +178,12 @@ export function StudentList() {
           <Pencil className="mr-2 size-4" />
           {t("edit")}
         </DropdownMenuItem>
+        {s.isActive && (
+          <DropdownMenuItem onSelect={() => setDeactivateTarget(s)}>
+            <UserX className="mr-2 size-4" />
+            {t("deactivate")}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem className="text-red-600 focus:text-red-700" onSelect={() => setDeleteTarget(s)}>
           <Trash2 className="mr-2 size-4" />
           {t("delete")}
@@ -343,33 +353,41 @@ export function StudentList() {
         />
       )}
 
+      {deleteTarget && (
+        <DeleteStudentDialog
+          student={deleteTarget}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteTarget(null)
+              utils.student.list.invalidate()
+            }
+          }}
+        />
+      )}
+
       <AlertDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        open={deactivateTarget !== null}
+        onOpenChange={(open) => !open && setDeactivateTarget(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("delete_student")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("deactivate_student")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("student")}{" "}
-              <span className="font-medium text-slate-900">
-                {deleteTarget?.fullName}
-              </span>{" "}
-              {t("delete_student_desc")}
+              <strong className="text-slate-900">{deactivateTarget?.fullName}</strong>{" "}
+              {t("deactivate_student_desc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMut.isPending}>
+            <AlertDialogCancel disabled={deactivateMut.isPending}>
               {t("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={deleteMut.isPending}
+              disabled={deactivateMut.isPending}
               onClick={() =>
-                deleteTarget && deleteMut.mutate({ id: deleteTarget.id })
+                deactivateTarget && deactivateMut.mutate({ id: deactivateTarget.id })
               }
-              className="bg-red-600 hover:bg-red-700"
             >
-              {deleteMut.isPending ? t("deleting") : t("delete")}
+              {deactivateMut.isPending ? t("processing") : t("deactivate")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

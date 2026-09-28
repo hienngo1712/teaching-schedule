@@ -99,10 +99,10 @@ export async function getParentView(
       fullName: true,
       grade: true,
       createdAt: true,
-      user: { select: { isActive: true, fullName: true, plan: true, planExpiresAt: true, trialEndsAt: true } },
+      user: { select: { isActive: true, isDeleted: true, fullName: true, plan: true, planExpiresAt: true, trialEndsAt: true } },
     },
   })
-  if (!student || !student.user.isActive) return null
+  if (!student || !student.user.isActive || student.user.isDeleted) return null
   // D9: chủ TK hết Pro thì link tạm 404 như token sai; token giữ nguyên để gia hạn là sống lại.
   if (!hasFeature(effectivePlan(student.user, new Date()).plan, "parentLink")) return null
 
@@ -124,7 +124,7 @@ export async function getParentView(
   // Cùng điều kiện với currentAttendance trong getMonthlyTuitionStatus để số buổi khớp phiếu.
   const where = (sessionDate: Prisma.DateTimeFilter) => ({
     studentId: student.id,
-    session: { userId: student.userId, sessionDate, status: { not: "cancelled" as const } },
+    session: { userId: student.userId, sessionDate, status: { not: "cancelled" as const }, isDeleted: false },
   })
   const [monthRows, upcomingRows] = await Promise.all([
     db.sessionStudent.findMany({

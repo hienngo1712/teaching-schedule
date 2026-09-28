@@ -66,16 +66,17 @@ describe("BottomTabBar", () => {
     expect(moreButton().getAttribute("aria-current")).toBe("page")
   })
 
-  it("bấm Thêm → dialog 'Thêm' có 4 mục kèm mô tả; bấm mục thì sheet đóng", async () => {
+  it("bấm Thêm → dialog 'Thêm' có 5 mục kèm mô tả; bấm mục thì sheet đóng", async () => {
     renderBar()
     fireEvent.click(moreButton())
     const dialog = await screen.findByRole("dialog", { name: "Thêm" })
     const links = within(dialog).getAllByRole("link")
-    expect(links.map((l) => l.getAttribute("href"))).toEqual(["/reports", "/subjects", "/settings", "/plan"])
+    expect(links.map((l) => l.getAttribute("href"))).toEqual(["/reports", "/subjects", "/settings", "/plan", "/trash"])
     expect(within(dialog).getByText("Doanh thu, công nợ theo tháng và năm")).toBeTruthy()
     expect(within(dialog).getByText("Thêm, đổi màu, ẩn môn")).toBeTruthy()
     expect(within(dialog).getByText("Tài khoản ngân hàng nhận học phí")).toBeTruthy()
     expect(within(dialog).getByText("Gói hiện tại, nâng cấp, gia hạn")).toBeTruthy()
+    expect(within(dialog).getByText("Khôi phục ca, học sinh, lần thu, môn đã xoá")).toBeTruthy()
 
     fireEvent.click(within(dialog).getByRole("link", { name: /Cài đặt/ }))
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())

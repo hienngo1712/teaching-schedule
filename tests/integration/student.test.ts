@@ -97,14 +97,15 @@ describe("Student CRUD", () => {
     expect(new Date(updated.updatedAt).getTime()).toBeGreaterThan(before)
   })
 
-  it("✓ delete (soft) → isActive=false, vẫn còn trong DB", async () => {
+  it("✓ delete (soft) → isDeleted=true, isActive giữ nguyên, vẫn còn trong DB", async () => {
     const caller = await getAuthedCaller()
     const s = await caller.student.create({ fullName: "An", grade: 3 })
     await caller.student.delete({ id: s.id })
 
-    const inDb = await db.student.findUnique({ where: { id: s.id } })
+    const inDb = await db.student.findUnique({ where: { id: s.id, isDeleted: true } })
     expect(inDb).not.toBeNull()
-    expect(inDb!.isActive).toBe(false)
+    expect(inDb!.isActive).toBe(true)
+    expect(inDb!.isDeleted).toBe(true)
   })
 
   it("✓ delete → HS đã xóa không xuất hiện trong list mặc định", async () => {
@@ -115,10 +116,10 @@ describe("Student CRUD", () => {
     expect(list.items.find((x) => x.id === s.id)).toBeUndefined()
   })
 
-  it("✓ list { isActive: false } → thấy HS đã xóa", async () => {
+  it("✓ list { isActive: false } → thấy HS cho nghỉ", async () => {
     const caller = await getAuthedCaller()
     const s = await caller.student.create({ fullName: "An", grade: 3 })
-    await caller.student.delete({ id: s.id })
+    await caller.student.deactivate({ id: s.id })
     const list = await caller.student.list({ isActive: false })
     expect(list.items.find((x) => x.id === s.id)).toBeDefined()
   })

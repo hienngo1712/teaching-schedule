@@ -81,7 +81,7 @@ test('thẻ học phí 390px, tiếng Anh, 100.000.000 đ không làm trang cu�
   await page.goto('/students');
   const studentCard = page.getByTestId('list-card').filter({ hasText: studentName });
   await studentCard.getByRole('button', { name: 'Menu hành động' }).click();
-  await page.getByRole('menuitem', { name: 'Xóa' }).click();
+  await page.getByRole('menuitem', { name: 'Xóa', exact: true }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa' }).click();
-  await expect(page.getByText('Đã xóa học sinh')).toBeVisible();
+  await expect(page.getByText('Đã chuyển học sinh vào Thùng rác')).toBeVisible();
 });
