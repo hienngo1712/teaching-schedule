@@ -1,5 +1,7 @@
 # O — Bảo mật dữ liệu cá nhân (mã hoá trường nhạy cảm, ô đồng ý, rà soát bảo mật) — Implementation Plan
 
+> **CẬP NHẬT 2026-09-28 (Claude Code, người dùng chốt): R chen giữa K và O.** Thứ tự merge mới: P → Q → K → **R** (Đã nghỉ/Xoá rõ ràng + Dọn Thùng rác, spec `docs/superpowers/specs/2026-09-28-r-da-nghi-don-thung-rac-design.md`, v0.7.0) → O. Vì vậy **mọi chỗ trong file này: `0.7.0` đọc là `0.8.0`, `0.7.1` đọc là `0.8.1`, `0.6.x` đọc là `0.7.x`** (đã thay sẵn bên dưới). Task 1 phải thấy thêm commit merge R (`feat: merge feat/r-… → main`); thiếu → DỪNG. R thêm cột `purged_at` ở `students`/`subjects` và ẩn danh HS khi dọn Thùng rác (`fullName` = "Học sinh đã xoá", `parentPhone`/`parentName`/`notes`/`parentLinkToken` = null): HS đã dọn vẫn đi qua mã hoá như mọi HS (chuỗi "Học sinh đã xoá" cũng được mã hoá khi ghi); backfill O2 xử lý cả HS `purged_at` khác null.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Người đọc được DB không đọc được họ tên HS, SĐT/tên phụ huynh, ghi chú, họ tên GV, số TK/tên chủ TK, link phụ huynh (AES-256-GCM ở tầng Prisma extension, khoá trong env Vercel); mọi chức năng tìm/sắp/phân trang chạy như cũ; lưu TK ngân hàng / tạo-sửa HS / nhập Excel phải tick ô đồng ý (server từ chối nếu thiếu, ghi bằng chứng); thêm trang `/privacy`, cảnh báo + nhật ký khi tải sao lưu, header bảo mật; script mã hoá dữ liệu cũ có dry-run/verify/rollback.
@@ -14,9 +16,9 @@
 
 | Giai đoạn | Nhánh | Task | Deploy | Điều kiện bắt đầu | Điều kiện kết thúc / chuyển tiếp |
 |---|---|---|---|---|---|
-| **O1** | `feat/o-bao-mat-du-lieu` (từ `main` sau khi P, Q, K đã merge) | 1 → 10 | merge `--no-ff` + push → `0.7.0`, Vercel tự `prisma migrate deploy` | P, Q, K đã merge vào `main` | Người dùng đã đặt khoá prod ở Vercel Production + lưu dự phòng 2 nơi; Neon branch `backup-before-O1-<ngày>`; review cuối xanh. Sau deploy: kiểm spec mục 10 "Kiểm sau deploy O1" |
+| **O1** | `feat/o-bao-mat-du-lieu` (từ `main` sau khi P, Q, K đã merge) | 1 → 10 | merge `--no-ff` + push → `0.8.0`, Vercel tự `prisma migrate deploy` | P, Q, K đã merge vào `main` | Người dùng đã đặt khoá prod ở Vercel Production + lưu dự phòng 2 nơi; Neon branch `backup-before-O1-<ngày>`; review cuối xanh. Sau deploy: kiểm spec mục 10 "Kiểm sau deploy O1" |
 | **O2** | không có nhánh (không code) | — (runbook spec mục 10) | không deploy | O1 chạy ổn ≥ 24h, log không có `FieldDecryptError`/`FieldCryptoConfigError`/`EncryptedFieldQueryError`, người dùng duyệt | Người điều phối chạy `--dry-run` → `--apply` → `--verify` (mã thoát 0, checksum khớp), `--apply` lần 2 `changed = 0`; người dùng kiểm web |
-| **O3** | `feat/o3-don-dep-ma-hoa` (từ `main` sau O2) | 11 | merge + push → `0.7.1` | O2 `--verify` mã thoát 0 trên prod | Sau deploy: người dùng xoá Neon branch chứa bản rõ theo lịch (spec 6.12) |
+| **O3** | `feat/o3-don-dep-ma-hoa` (từ `main` sau O2) | 11 | merge + push → `0.8.1` | O2 `--verify` mã thoát 0 trên prod | Sau deploy: người dùng xoá Neon branch chứa bản rõ theo lịch (spec 6.12) |
 
 **Agent thực hiện task KHÔNG merge, KHÔNG push, KHÔNG chạy script lên prod.** Merge/deploy và O2 là việc của người điều phối sau khi người dùng duyệt.
 
@@ -56,7 +58,7 @@
 9. **Codemod test** (Task 6): script tạm trong scratchpad thêm `consent: CONSENT_ACCEPTED` vào mọi lời gọi caller `.student.create({` / `.student.update({` / `.student.importMany({` (không phải lời gọi Prisma có `data:`/`where:` ngay sau) và `'student.create', {` trong e2e; `updateBankAccount(` sửa tay. Thêm `consent: CONSENT_ACCEPTED` cho mọi `student.update` của caller là vô hại (spec Q10 cho phép gửi khi không cần).
 10. **Matcher `/privacy`**: thêm `privacy` giống `login|register` (cũng mở `/privacyx` — không có route nên 404, vô hại); tránh nhóm con trong lookahead mà path-to-regexp có thể không nhận.
 11. **E2E**: chỉ `parent-link.spec.ts` đổi (ghi thêm `parentLinkTokenHash`). Các e2e khác tạo dữ liệu bằng `new PrismaClient()` ghi bản rõ → vẫn đọc được (định dạng cũ), giữ nguyên; `plan-locks.spec.ts` còn `deleteMany({ where: { fullName: { startsWith } } })` trên client thường → không bị chặn, chạy được.
-12. **Version**: Task 10 nâng `0.7.0` bằng commit riêng trước lượt e2e/build cuối; Task 11 nâng `0.7.1`.
+12. **Version**: Task 10 nâng `0.8.0` bằng commit riêng trước lượt e2e/build cuối; Task 11 nâng `0.8.1`.
 13. Spec + plan O đang untracked trên `main` → Task 1 commit cả hai lên nhánh O1 trước khi code.
 14. Plan có **11 task** (O1: 1–10, O3: 11). O2 không có task code (runbook ở spec mục 10, người điều phối chạy).
 
@@ -127,7 +129,7 @@
 | `src/server/crypto/backfill.ts`, `scripts/crypto-backfill.ts` | Mới | Mã hoá dữ liệu cũ | 9 |
 | `tests/integration/crypto-backfill.test.ts` | Mới | | 9 |
 | `tests/e2e/consent-privacy.spec.ts` | Mới | Luồng đồng ý, `/privacy`, cảnh báo sao lưu | 10 |
-| `package.json` | Sửa | `0.7.0` (T10), `0.7.1` (T11) | 10, 11 |
+| `package.json` | Sửa | `0.8.0` (T10), `0.8.1` (T11) | 10, 11 |
 | `docs/05-deploy.md` | Sửa | Mục "Khoá mã hoá dữ liệu" | 11 |
 
 Thứ tự bắt buộc (tuần tự, mỗi task 1 agent mới): Task 1 → 2 → … → 10 (O1) → [merge O1, O2 của người điều phối] → Task 11 (O3). T2 cần không gì (nhưng chung nhánh T1); T3 cần không gì của T1/T2 về code nhưng chạy trên schema T2; T4 cần `field-crypto` (T1), cột TEXT (T2), không còn lọc DB theo tên (T3); T5 cần extension (T4) + cột hash (T2); T6 cần bảng `consent_records`/`security_events` (T2); T7 cần schema cờ `consent` (T6); T8 cần `logSecurityEvent` (T6); T9 cần `field-crypto` + `ENCRYPTED_FIELDS` (T1, T4); T10 cần tất cả; T11 cần O1 đã merge + O2 xong.
@@ -165,7 +167,7 @@ git log --oneline -25 main
 grep '"version"' package.json
 git status --short
 ```
-Expected: log `main` có commit merge của cả 3 phần theo thứ tự P (sửa backlog) → Q (xoá mềm, kiểu `feat: merge feat/q-… → main`) → K (Tổng quan + Doanh thu admin, kiểu `feat: merge feat/k-… → main`). Thiếu merge K (hoặc Q) → **DỪNG, báo người điều phối "K (hoặc Q) chưa merge", không tạo nhánh.** Ghi `version` hiện tại vào báo cáo (theo spec Q/K: Q `0.5.0`, K `0.6.0` → mong đợi `0.6.x`; Task 10 nâng lên `0.7.0`; nếu version hiện tại đã ≥ `0.7.0` → DỪNG, hỏi người điều phối số version). `git status --short` có 2 file untracked của O (spec + plan O); file khác của người dùng thì kệ, KHÔNG add.
+Expected: log `main` có commit merge của cả 3 phần theo thứ tự P (sửa backlog) → Q (xoá mềm, kiểu `feat: merge feat/q-… → main`) → K (Tổng quan + Doanh thu admin, kiểu `feat: merge feat/k-… → main`) → R (Đã nghỉ/Dọn Thùng rác, kiểu `feat: merge feat/r-… → main`). Thiếu merge R, K (hoặc Q) → **DỪNG, báo người điều phối "K (hoặc Q) chưa merge", không tạo nhánh.** Ghi `version` hiện tại vào báo cáo (theo spec Q/K: Q `0.5.0`, K `0.6.0`, R `0.7.0` → mong đợi `0.7.x`; Task 10 nâng lên `0.8.0`; nếu version hiện tại đã ≥ `0.8.0` → DỪNG, hỏi người điều phối số version). `git status --short` có 2 file untracked của O (spec + plan O); file khác của người dùng thì kệ, KHÔNG add.
 
 Ghi vào báo cáo: (a) Q thêm những cột/bảng nào (tên cột xoá mềm, bảng thùng rác, có cột chữ tự do nào chứa dữ liệu cá nhân không — spec O 6.13 ý 5), Q có sửa `src/server/db.ts` (thêm extension) không; (b) K có thêm procedure/trang admin nào đọc dữ liệu học sinh / tài khoản ngân hàng của GV không (`git log -p` của commit merge K, tìm `db.student`, `bankAccount` trong `src/server/services/*admin*`, `src/server/trpc/routers/admin.ts`). Có → ghi "Phát hiện F17b" để người điều phối báo người dùng (không tự sửa).
 
@@ -2789,7 +2791,7 @@ Claude-Session: https://claude.ai/code/session_0128L55kVDRGjUqDDqt8RXmg"
 
 ---
 
-### Task 10: Version 0.7.0, e2e luồng đồng ý / `/privacy` / sao lưu, hồi quy toàn bộ
+### Task 10: Version 0.8.0, e2e luồng đồng ý / `/privacy` / sao lưu, hồi quy toàn bộ
 
 **Đọc trước:** Global Constraints (E2E, CẤM `pnpm build`); "Giai đoạn triển khai" (O1); "Review Focus"; spec mục 2 (tiêu chí), 10 (O1: trước/sau merge), 11 (E2E).
 
@@ -2803,10 +2805,10 @@ Claude-Session: https://claude.ai/code/session_0128L55kVDRGjUqDDqt8RXmg"
 
 - [ ] **Step 1: Nâng version (commit riêng)**
 
-Sửa `package.json` `"version": "0.7.0"`.
+Sửa `package.json` `"version": "0.8.0"`.
 ```bash
 git add package.json
-git commit -m "chore(o): nâng version 0.7.0 (epoch 0.7, mọi người đăng nhập lại 1 lần khi O lên)
+git commit -m "chore(o): nâng version 0.8.0 (epoch 0.7, mọi người đăng nhập lại 1 lần khi O lên)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_0128L55kVDRGjUqDDqt8RXmg"
@@ -2942,7 +2944,7 @@ Theo spec mục 10 "O2": backup Neon `backup-before-O2-backfill-<ngày>` → `--
 
 ---
 
-### Task 11 (O3): Cảnh báo bản rõ còn sót, tài liệu vận hành khoá, version 0.7.1
+### Task 11 (O3): Cảnh báo bản rõ còn sót, tài liệu vận hành khoá, version 0.8.1
 
 **Đọc trước:** Global Constraints; "Giai đoạn triển khai" (O3); spec mục 6.2, 6.11, 6.12, 10 (O3); `src/server/crypto/prisma-encryption.ts` (`decryptResult`); `docs/05-deploy.md`.
 
@@ -2963,7 +2965,7 @@ git pull --ff-only
 git log --oneline -10 main
 grep '"version"' package.json
 ```
-Expected: có commit merge O1 (`feat: merge feat/o-bao-mat-du-lieu → main`), version `0.7.0`. Người điều phối đã xác nhận trong lời dặn task rằng O2 `--verify` trên prod mã thoát 0. Chưa có xác nhận → **DỪNG, hỏi người điều phối.**
+Expected: có commit merge O1 (`feat: merge feat/o-bao-mat-du-lieu → main`), version `0.8.0`. Người điều phối đã xác nhận trong lời dặn task rằng O2 `--verify` trên prod mã thoát 0. Chưa có xác nhận → **DỪNG, hỏi người điều phối.**
 ```bash
 git checkout -b feat/o3-don-dep-ma-hoa
 ```
@@ -3022,7 +3024,7 @@ Thêm mục cuối "Khoá mã hoá dữ liệu cá nhân (spec O)": 2 biến env
 
 - [ ] **Step 4: Version + test + commit**
 
-`package.json` → `"version": "0.7.1"`.
+`package.json` → `"version": "0.8.1"`.
 
 Run: `pnpm test tests/unit/crypto/prisma-encryption.test.ts tests/integration/field-encryption.test.ts tests/integration/crypto-backfill.test.ts`
 Expected: PASS (ca "bản rõ cũ vẫn đọc được" của Task 4 vẫn xanh, chỉ thêm 1 dòng warn).
@@ -3031,7 +3033,7 @@ Expected: sạch, PASS.
 
 ```bash
 git add src/server/crypto/prisma-encryption.ts tests/unit/crypto/prisma-encryption.test.ts docs/05-deploy.md package.json
-git commit -m "feat(o3): cảnh báo bản rõ còn sót ở trường mã hoá, tài liệu vận hành khoá, version 0.7.1
+git commit -m "feat(o3): cảnh báo bản rõ còn sót ở trường mã hoá, tài liệu vận hành khoá, version 0.8.1
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_0128L55kVDRGjUqDDqt8RXmg"

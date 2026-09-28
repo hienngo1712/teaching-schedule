@@ -1,8 +1,10 @@
 # O — Bảo mật dữ liệu cá nhân: mã hoá trường nhạy cảm trong DB, ô đồng ý chia sẻ, rà soát bảo mật
 
+> **CẬP NHẬT 2026-09-28 (Claude Code, người dùng chốt): R chen giữa K và O.** Thứ tự merge mới: P → Q → K → **R** (Đã nghỉ/Xoá rõ ràng + Dọn Thùng rác, spec `docs/superpowers/specs/2026-09-28-r-da-nghi-don-thung-rac-design.md`, v0.7.0) → O. Vì vậy **mọi chỗ trong file này: `0.7.0` đọc là `0.8.0`, `0.7.1` đọc là `0.8.1`, `0.6.x` đọc là `0.7.x`** (đã thay sẵn bên dưới). Task 1 phải thấy thêm commit merge R (`feat: merge feat/r-… → main`); thiếu → DỪNG. R thêm cột `purged_at` ở `students`/`subjects` và ẩn danh HS khi dọn Thùng rác (`fullName` = "Học sinh đã xoá", `parentPhone`/`parentName`/`notes`/`parentLinkToken` = null): HS đã dọn vẫn đi qua mã hoá như mọi HS (chuỗi "Học sinh đã xoá" cũng được mã hoá khi ghi); backfill O2 xử lý cả HS `purged_at` khác null.
+
 > Phần O. Thứ tự merge (người dùng chốt): **P** (sửa backlog) → **Q** (xoá mềm toàn app: cột `is_deleted`/`deleted_at` cho `users` và các bảng dữ liệu, thùng rác giáo viên; spec `docs/superpowers/specs/2026-09-27-q-xoa-mem-design.md`) → **K** (Tổng quan + Doanh thu admin, bảng `user_activity_days`) → **O**. Spec này đọc code trên `main` = `86b37ff` (N `0.4.0`), lúc Q/K chưa có code; P/Q/K có thể đã đổi file dùng chung (schema, `db.ts`, service student/tuition/session/report/backup, admin, i18n) — khi code phải đối chiếu code thật (mục 6.13 nói riêng về Q). Người dùng dặn: "lên plan THẬT KỸ về phần bảo mật, dữ liệu cá nhân khách hàng rất nhạy cảm".
 >
-> O chia **3 giai đoạn**: **O1** (code + 1 migration không destructive, deploy `0.7.0`) → **O2** (người điều phối chạy script mã hoá dữ liệu cũ trên prod, không deploy) → **O3** (dọn dẹp, deploy `0.7.1`). Mỗi giai đoạn có điều kiện chuyển riêng (mục 10).
+> O chia **3 giai đoạn**: **O1** (code + 1 migration không destructive, deploy `0.8.0`) → **O2** (người điều phối chạy script mã hoá dữ liệu cũ trên prod, không deploy) → **O3** (dọn dẹp, deploy `0.8.1`). Mỗi giai đoạn có điều kiện chuyển riêng (mục 10).
 
 ## 1. Bối cảnh (đã đọc code)
 
@@ -60,7 +62,7 @@
 | U2 | Ô đồng ý "đã đồng ý chia sẻ dữ liệu cá nhân" bắt buộc tick mới cho Lưu ở form ngân hàng, form HS (tạo + sửa), nhập Excel HS. Lưu bằng chứng. Server từ chối nếu thiếu cờ. Văn bản vi/en ngắn, link trang chính sách. |
 | U3 | Rà soát bảo mật khác (backup Excel, trang phụ huynh, log, audit log, header, rate limit, quyền admin, xoá tài khoản, Neon backup branch còn bản rõ). |
 | U4 | Lỗi server tiếng Anh: ngoài phạm vi. |
-| U5 | Version: giai đoạn đầu của O là `0.7.0`. |
+| U5 | Version: giai đoạn đầu của O là `0.8.0`. |
 
 ## 4. Quyết định do người viết spec chọn (cần duyệt)
 
@@ -85,7 +87,7 @@
 | Q17 | Dữ liệu cũ | Mã hoá **tại chỗ** (cùng cột), không thêm cột `_enc` rồi drop cột cũ. Bước 1 (O1): nới cột VarChar → TEXT (không destructive, Postgres không viết lại bảng), code mới ghi mã hoá + đọc được cả 2 định dạng. Bước 2 (O2): script `scripts/crypto-backfill.ts` mã hoá dòng cũ. Bước 3 (O3): kiểm 0 bản rõ, cảnh báo khi gặp bản rõ, dọn backup branch | Tiền tố `enc:v1:` cho đọc 2 định dạng mà không cần cột mới → không có bước drop cột. Rollback = script chạy ngược `--decrypt` |
 | Q18 | Script chạy prod | Không tự đọc `.env`; phải truyền `DATABASE_URL` + khoá qua env của lệnh và `CONFIRM_HOST=<host>` khớp host trong `DATABASE_URL` mới cho `--apply`/`--decrypt`/`--rotate`; mặc định `--dry-run`. Ghi bằng raw SQL `UPDATE … WHERE id = $2 AND <cột> = $3` (không bump `updated_at`, bỏ qua dòng vừa bị sửa đồng thời) | Chống chạy nhầm DB; idempotent; không đổi "Cập nhật lần cuối" trong file sao lưu |
 | Q19 | Kiểm trước/sau | Script in số dòng theo trường: `null/rỗng`, `bản rõ`, `mã hoá theo kid`, `lỗi giải mã` và **checksum SHA-256** của danh sách `(id, giá trị rõ)` sắp theo id. `--verify` giải mã toàn bộ, checksum phải bằng checksum in ở dry-run trước `--apply` | Chứng minh giải mã lại ra đúng dữ liệu cũ, không in dữ liệu |
-| Q20 | Version | O1 nâng `0.7.0` (mọi người đăng nhập lại 1 lần theo luật epoch của N). O3 nâng `0.7.1` | U5; O3 không cần ép đăng nhập lại |
+| Q20 | Version | O1 nâng `0.8.0` (mọi người đăng nhập lại 1 lần theo luật epoch của N). O3 nâng `0.8.1` | U5; O3 không cần ép đăng nhập lại |
 | Q21 | Tìm theo tên học sinh trên URL / log | Giữ như cũ (ngoài phạm vi) | Chữ tìm (một phần tên) nằm trong URL query → log request Vercel (giữ ngắn hạn). Sửa triệt để phải bỏ đồng bộ ô tìm lên URL + tRPC POST; ghi ở mục 7 |
 
 ## 5. Kiểm kê trường và quyết định mã hoá
@@ -363,7 +365,7 @@ CLI `scripts/crypto-backfill.ts`:
 
 ### 6.13 Quan hệ với Q (xoá mềm + thùng rác) — đối chiếu code sau khi Q merge
 
-Q (merge trước K và O) thêm `is_deleted`/`deleted_at` cho `users` và các bảng dữ liệu, thùng rác cho giáo viên. Spec O viết khi Q chưa có code (đã đọc spec Q: cột `isDeleted` + `deletedAt` ở `students`, `subjects`, `teaching_sessions`, `payments`; `users` thêm `isDeleted`/`deletedAt`/`deletedBy`; extension trong `db.ts` tự thêm `isDeleted: false` vào `where` của thao tác đọc cấp cao 4 model đó, `User` kiểm tay; `trash.list` sắp `deletedAt desc` không sắp theo tên; **không** có xoá vĩnh viễn (Q13); version Q `0.5.0`, K `0.6.0`, O `0.7.0`). Các luật sau là **bất biến** phải giữ, cách làm cụ thể theo code thật của Q:
+Q (merge trước K và O) thêm `is_deleted`/`deleted_at` cho `users` và các bảng dữ liệu, thùng rác cho giáo viên. Spec O viết khi Q chưa có code (đã đọc spec Q: cột `isDeleted` + `deletedAt` ở `students`, `subjects`, `teaching_sessions`, `payments`; `users` thêm `isDeleted`/`deletedAt`/`deletedBy`; extension trong `db.ts` tự thêm `isDeleted: false` vào `where` của thao tác đọc cấp cao 4 model đó, `User` kiểm tay; `trash.list` sắp `deletedAt desc` không sắp theo tên; **không** có xoá vĩnh viễn (Q13); version Q `0.5.0`, K `0.6.0`, O `0.8.0`). Các luật sau là **bất biến** phải giữ, cách làm cụ thể theo code thật của Q:
 
 1. **Dữ liệu trong thùng rác vẫn là dữ liệu cá nhân → mã hoá như dữ liệu thường.** Ghi qua `db` (kể cả thao tác xoá mềm/khôi phục của Q) đi qua extension nên tự mã hoá. Script backfill đọc bằng raw SQL **mọi dòng** (không lọc `is_deleted`/`deleted_at`) → dòng đã xoá mềm cũng được mã hoá/giải mã/checksum. Test backfill có ca dòng đã xoá mềm (Task 9).
 2. **Thứ tự extension trong `db.ts`**: nếu Q thêm extension (vd tự thêm điều kiện `deletedAt: null`, đổi `delete` thành `update`), giữ nguyên extension của Q và bọc `withFieldEncryption` **ngoài cùng** (áp cuối). Chặn lọc của O chỉ xét khoá thuộc tập trường mã hoá nên không đụng điều kiện `is_deleted`/`deleted_at`.
@@ -411,7 +413,7 @@ Q (merge trước K và O) thêm `is_deleted`/`deleted_at` cho `users` và các 
 - 1 migration O1 (mục 13).
 - `scripts/crypto-backfill.ts` (MỚI), bọc extension cho `scripts/create-user.ts`, `list-users.ts`, `prisma/seed.ts`.
 - `.env.test` (cục bộ, không commit), `.env.test.example`, `.env.example`, `playwright.config.ts`.
-- i18n vi/en; test unit/integration/e2e; `package.json` `0.7.0` (O1), `0.7.1` (O3); `docs/05-deploy.md` (O3).
+- i18n vi/en; test unit/integration/e2e; `package.json` `0.8.0` (O1), `0.8.1` (O3); `docs/05-deploy.md` (O3).
 
 ### Ngoài phạm vi (YAGNI / để sau)
 - **Phần R (sau O, người dùng đã chốt làm — H4)**: admin xoá hẳn tài khoản đã xoá mềm; giáo viên dọn thùng rác (xoá vĩnh viễn). Yêu cầu cho R: (1) dữ liệu lúc đó đã mã hoá, xoá hẳn = `DELETE` dòng (kèm quan hệ con: ca, điểm danh, học phí, lần thu, `consent_records`/`security_events` theo quyết định giữ bằng chứng của R); (2) Neon PITR và các branch backup vẫn giữ bản cũ tới hết thời gian giữ → ghi rõ trong `/privacy` và thông báo cho người yêu cầu; muốn xoá tức thì cả trong backup thì cần khoá riêng từng giáo viên (crypto-shredding), R tự quyết; (3) audit: ghi ai xoá, lúc nào, xoá gì (không ghi giá trị), không cho xoá tài khoản admin; (4) xác nhận 2 bước, không hoàn tác; (5) tuân thủ AN TOÀN DB (script/migration không destructive trên prod ngoài thao tác xoá theo yêu cầu).
@@ -438,11 +440,11 @@ Q (merge trước K và O) thêm `is_deleted`/`deleted_at` cho `users` và các 
 | Đăng nhập | JWT lấy `fullName` đã giải mã; `username` không đổi → tra cứu như cũ |
 | Hiệu năng | Mỗi lần đọc/ghi thêm AES-GCM (micro giây/trường) + đi cây kết quả; `student.list` O(số HS của GV) |
 | Scripts vận hành | `create-user`/`list-users`/seed dùng extension; `reset-password`/`deactivate-user`/`activate-default-subjects` không chạm trường mã hoá — giữ |
-| Deploy | Khoá phải có trong env Production **trước** merge O1. `0.7.0` → mọi người đăng nhập lại 1 lần |
+| Deploy | Khoá phải có trong env Production **trước** merge O1. `0.8.0` → mọi người đăng nhập lại 1 lần |
 
 ## 10. Giai đoạn triển khai và điều kiện chuyển
 
-### O1 — code + migration (nhánh `feat/o-bao-mat-du-lieu`, `0.7.0`)
+### O1 — code + migration (nhánh `feat/o-bao-mat-du-lieu`, `0.8.0`)
 Nội dung: mọi thứ ở mục 8 trừ phần O3. Sau deploy: bản ghi **mới/sửa** được mã hoá; bản ghi cũ vẫn bản rõ (đọc bình thường); link phụ huynh tra theo hash.
 
 **Trước khi merge O1 (người điều phối + người dùng):**
@@ -484,7 +486,7 @@ Kiểm trước/sau (ghi vào báo cáo cho người dùng, không kèm dữ li�
 
 **Điều kiện chuyển sang O3**: `--verify` mã thoát 0 trên prod, người dùng kiểm web ổn.
 
-### O3 — dọn dẹp (nhánh `feat/o3-don-dep-ma-hoa`, `0.7.1`)
+### O3 — dọn dẹp (nhánh `feat/o3-don-dep-ma-hoa`, `0.8.1`)
 Code: cảnh báo bản rõ còn sót (6.12), tài liệu vận hành. Sau deploy: người dùng xoá Neon branch chứa bản rõ theo lịch ở 6.12, chạy `--verify` lần cuối.
 
 ## 11. Kiểm thử
@@ -521,7 +523,7 @@ Code: cảnh báo bản rõ còn sót (6.12), tài liệu vận hành. Sau deplo
 | R4 | Raw SQL mới đọc/ghi cột mã hoá bỏ qua extension | Review Focus; hiện không có |
 | R5 | `student.list` chậm khi GV có rất nhiều HS | Q8: ổn tới ~5.000; theo dõi log `[tRPC] … ms` |
 | R6 | Thứ tự tên đổi nhẹ so với trước | Chấp nhận (Q8), theo quy tắc tiếng Việt |
-| R7 | Tab cũ (bản trước O1) gửi form không có `consent` → lỗi `CONSENT_REQUIRED` | `0.7.0` ép đăng nhập lại (epoch N) → tải lại trang; thông báo `consent_required` |
+| R7 | Tab cũ (bản trước O1) gửi form không có `consent` → lỗi `CONSENT_REQUIRED` | `0.8.0` ép đăng nhập lại (epoch N) → tải lại trang; thông báo `consent_required` |
 | R8 | Backfill chạy nhầm DB | `CONFIRM_HOST`, không tự đọc `.env`, mặc định dry-run |
 | R9 | Backfill chạy lúc GV đang sửa → ghi đè | `UPDATE … WHERE <cột> = <giá trị cũ>` bỏ qua dòng vừa đổi; lượt sau (hoặc `--verify`) bắt nốt |
 | R10 | Bản rõ vẫn nằm trong Neon backup/PITR, log cũ | O3 quy trình xoá; Vercel log giữ ngắn hạn |
