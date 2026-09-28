@@ -9,13 +9,14 @@ import {
   userIdSchema,
 } from "@/lib/schemas/plan"
 import { resetPasswordSchema } from "@/lib/schemas/auth"
-import { adminSetPlan, approveOrder, getAdminOverview, getOrderHistory, rejectOrder } from "@/server/services/plan-admin.service"
+import { adminSetPlan, approveOrder, getAdminOverview, getOrderHistory, getPendingCount, rejectOrder } from "@/server/services/plan-admin.service"
 import { getMonthlyPrices, getPriceHistory, updatePrices } from "@/server/services/plan-price.service"
 import { adminResetPassword } from "@/server/services/password-reset.service"
 import { getDefaultTrialDays, getTrialHistory, getUserTrialChanges, setUserTrialDays, updateDefaultTrialDays } from "@/server/services/trial.service"
 
 export const adminRouter = createTRPCRouter({
   overview: adminProcedure.query(({ ctx }) => getAdminOverview(ctx.db)),
+  pendingCount: adminProcedure.query(({ ctx }) => getPendingCount(ctx.db)),
   orderHistory: adminProcedure.query(({ ctx }) => getOrderHistory(ctx.db)),
 
   prices: adminProcedure.query(async ({ ctx }) => {

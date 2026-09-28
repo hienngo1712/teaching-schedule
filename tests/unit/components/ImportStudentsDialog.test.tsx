@@ -5,7 +5,7 @@
 //   (đọc file lớn vào bộ nhớ trước khi biết là sẽ báo lỗi, tốn tài nguyên vô ích).
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
-import { ImportStudentsButton } from "@/components/students/ImportStudentsDialog"
+import { ImportStudentsDialog } from "@/components/students/ImportStudentsDialog"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { MAX_IMPORT_FILE_BYTES } from "@/lib/student-import"
 
@@ -36,10 +36,9 @@ describe("ImportStudentsDialog", () => {
   it("file > 2MB → báo lỗi size, KHÔNG gọi file.arrayBuffer()", async () => {
     render(
       <LanguageProvider>
-        <ImportStudentsButton />
+        <ImportStudentsDialog onClose={() => {}} />
       </LanguageProvider>
     )
-    fireEvent.click(screen.getByLabelText("Nhập Excel"))
     const input = screen.getByTestId("import-file-input") as HTMLInputElement
     const file = makeFile(MAX_IMPORT_FILE_BYTES + 1)
     Object.defineProperty(input, "files", { value: [file] })

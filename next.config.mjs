@@ -5,7 +5,10 @@ const pkg = JSON.parse(readFileSync("./package.json", "utf8"))
 // Dấu vân tay của bản build, hiển thị ở sidebar để biết web đang chạy commit nào.
 // Vercel set VERCEL_GIT_COMMIT_SHA lúc build; chạy local thì ghi "local".
 const sha = (process.env.VERCEL_GIT_COMMIT_SHA || "local").slice(0, 7)
-const vn = new Date(Date.now() + 7 * 60 * 60 * 1000)
+// next build nạp file này lại trong từng worker (server/client): tính giờ riêng mỗi nơi sẽ lệch → React #418 ở sidebar.
+// Chốt 1 mốc ở tiến trình chính, worker con thừa hưởng qua env.
+process.env.APP_BUILD_TIMESTAMP ||= String(Date.now())
+const vn = new Date(Number(process.env.APP_BUILD_TIMESTAMP) + 7 * 60 * 60 * 1000)
 const pad = (n) => String(n).padStart(2, "0")
 const buildTime = `${pad(vn.getUTCDate())}/${pad(vn.getUTCMonth() + 1)}/${vn.getUTCFullYear()} ${pad(vn.getUTCHours())}:${pad(vn.getUTCMinutes())}`
 

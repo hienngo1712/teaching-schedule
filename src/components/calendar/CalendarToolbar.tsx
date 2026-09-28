@@ -119,18 +119,19 @@ export function CalendarToolbar({
           )}
         </div>
 
-        {/* Dưới md lưới 2 cột: Lịch lặp | Chép lịch tháng, Xuất Excel | Tạo ca dạy; từ md giữ 1 hàng như cũ. */}
-        <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-1 md:flex md:flex-wrap md:items-center md:justify-end md:border-t-0 md:pt-0">
+        {/* Dưới md: hàng 1 Lịch lặp | Chép lịch tháng chia đôi, hàng 2 nút Xuất Excel vuông + Tạo ca dạy giãn hết; từ md 1 hàng như cũ. */}
+        <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-1 md:flex-wrap md:items-center md:justify-end md:border-t-0 md:pt-0">
           <ExportExcelButton
             sessions={sessions}
             students={students}
-            className="order-3 h-11 w-full md:order-1 md:h-9 md:w-auto"
+            iconOnly
+            className="order-3 size-11 shrink-0 md:order-1 md:size-10"
           />
 
           <Button
             variant="outline"
             onClick={onBulkCreateClick}
-            className="order-1 h-11 w-full gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 md:order-2 md:h-10 md:w-auto"
+            className="order-1 h-11 min-w-0 basis-[calc(50%-0.25rem)] grow gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 md:order-2 md:h-10 md:w-auto md:basis-auto md:grow-0"
           >
             <Repeat className="size-4" />
             <span>{t("bulk_schedule")}</span>
@@ -141,14 +142,14 @@ export function CalendarToolbar({
             variant="outline"
             data-testid="copy-month-button"
             onClick={copyGate.guard(onCopyMonthClick)}
-            className="order-2 h-11 w-full min-w-0 gap-2 border-slate-200 px-2 text-slate-600 hover:bg-slate-50 md:order-3 md:h-10 md:w-auto md:px-4"
+            className="order-2 h-11 min-w-0 basis-[calc(50%-0.25rem)] grow gap-2 border-slate-200 px-2 text-slate-600 hover:bg-slate-50 md:order-3 md:h-10 md:w-auto md:basis-auto md:grow-0 md:px-4"
           >
             <CalendarPlus className="size-4 shrink-0" />
             <span className="truncate">{t("copy_month")}</span>
             {copyGate.locked && <LockBadge plan={copyGate.requiredPlan} />}
           </Button>
 
-          <Button onClick={onCreateClick} className="order-4 h-11 w-full gap-2 px-4 md:ml-2 md:h-10 md:w-auto md:px-6">
+          <Button onClick={onCreateClick} className="order-4 h-11 min-w-0 flex-1 gap-2 px-4 md:ml-2 md:h-10 md:w-auto md:flex-none md:px-6">
             <Plus className="size-4 md:size-5" />
             <span>{t("create_session")}</span>
           </Button>

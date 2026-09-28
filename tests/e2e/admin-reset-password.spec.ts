@@ -1,7 +1,13 @@
-import { test, expect, type Browser, type Page } from '@playwright/test';
+import { test, expect, type Browser, type Page, type Locator } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { EXPECTED_TEST_ENDPOINT } from '../env-setup';
+
+// Từ spec P9 các thao tác tài khoản nằm trong menu Hành động của từng dòng/thẻ.
+async function openUserMenu(scope: Locator, username: string) {
+  await scope.getByRole('button', { name: `Menu hành động ${username}` }).click();
+  return scope.page().getByRole('menu');
+}
 
 const db = new PrismaClient();
 const TARGET = 'reset_e2e';
@@ -59,7 +65,7 @@ test('admin reset → mật khẩu tạm hiện 1 lần → phiên cũ bị đá
   await expect(admin).toHaveURL(/\/admin\/orders$/);
   await admin.goto('/admin/accounts');
   const row = admin.getByRole('row').filter({ hasText: TARGET });
-  await row.getByRole('button', { name: 'Reset mật khẩu' }).click();
+  await (await openUserMenu(row, TARGET)).getByRole('menuitem', { name: 'Reset mật khẩu' }).click();
   const dlg = admin.getByRole('alertdialog');
   await expect(dlg).toContainText(TARGET);
   await dlg.getByRole('button', { name: 'Reset mật khẩu' }).click();
@@ -69,7 +75,7 @@ test('admin reset → mật khẩu tạm hiện 1 lần → phiên cũ bị đá
   await dlg.getByRole('button', { name: 'Tôi đã lưu mật khẩu' }).click();
   await expect(admin.getByRole('alertdialog')).toHaveCount(0);
   // Mở lại dialog chỉ thấy bước xác nhận, không còn mật khẩu cũ.
-  await row.getByRole('button', { name: 'Reset mật khẩu' }).click();
+  await (await openUserMenu(row, TARGET)).getByRole('menuitem', { name: 'Reset mật khẩu' }).click();
   await expect(admin.getByRole('alertdialog')).toBeVisible();
   await expect(admin.getByTestId('temp-password')).toHaveCount(0);
   await admin.getByRole('alertdialog').getByRole('button', { name: 'Hủy' }).click();
@@ -99,21 +105,32 @@ test('admin reset → mật khẩu tạm hiện 1 lần → phiên cũ bị đá
   await admin.context().close();
 });
 
-test('390px: thẻ tài khoản có nút Reset mật khẩu cao ≥44px, hàng nút và dialog không tràn, tài khoản admin không có nút', async ({ browser }) => {
+test('390px: thẻ tài khoản có nút Menu hành động cao ≥44px, mục menu ≥44px, dialog không tràn, tài khoản admin không có mục Reset mật khẩu', async ({ browser }) => {
   const admin = await newPage(browser, MOBILE);
   await login(admin, 'admin_test', 'teacher123');
   await expect(admin).toHaveURL(/\/admin\/orders$/);
   await admin.goto('/admin/accounts');
+
+  const adminCard = admin.getByTestId('admin-user-card').filter({ hasText: 'admin_test' });
+  const adminMenu = await openUserMenu(adminCard, 'admin_test');
+  await expect(adminMenu.getByRole('menuitem', { name: 'Reset mật khẩu' })).toHaveCount(0);
+  await admin.keyboard.press('Escape');
+
   const card = admin.getByTestId('admin-user-card').filter({ hasText: TARGET });
-  const btn = card.getByRole('button', { name: 'Reset mật khẩu' });
+  const btn = card.getByRole('button', { name: `Menu hành động ${TARGET}` });
   const box = (await btn.boundingBox())!;
   const cardBox = (await card.boundingBox())!;
   expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.width).toBeGreaterThanOrEqual(44);
   expect(box.x + box.width).toBeLessThanOrEqual(cardBox.x + cardBox.width);
-  const adminCard = admin.getByTestId('admin-user-card').filter({ hasText: 'admin_test' });
-  await expect(adminCard.getByRole('button', { name: 'Reset mật khẩu' })).toHaveCount(0);
 
   await btn.click();
+  const menu = admin.getByRole('menu');
+  await menu.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  const item = menu.getByRole('menuitem', { name: 'Reset mật khẩu' });
+  expect((await item.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await item.click();
+
   const dlg = admin.getByRole('alertdialog');
   // Dialog đang zoom-in thì boundingBox thấp hơn thật: chờ animation xong mới đo.
   await dlg.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));

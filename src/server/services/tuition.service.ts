@@ -68,36 +68,26 @@ export async function getMonthlyTuitionStatus(
   userId: number,
   filter: MonthlyTuitionFilterInput,
   // persist=false cho đường chỉ đọc (dashboard/report): kết quả vẫn đúng, chỉ không ghi.
-  persist = true
+  persist = true,
+  // Dashboard (spec P1): chỉ tính cho các HS này, bỏ lọc isActive/grade của danh sách màn Học phí.
+  onlyStudentIds?: number[]
 ): Promise<PaginatedResponse<TuitionStatusDTO>> {
   const { year, month, grade, search, studentId, status, page, limit } = filter
+  if (onlyStudentIds && onlyStudentIds.length === 0) return { items: [], totalCount: 0, totalPages: 0 }
 
   // 1. Lấy toàn bộ học sinh active theo filter
   const students = await db.student.findMany({
-    where: {
-      userId,
-      ...(studentId
-        ? { id: studentId }
-        : grade
-        ? {
-            sessionStudents: {
-              some: {
-                grade,
-                session: {
-                  sessionDate: {
-                    gte: new Date(Date.UTC(year, month - 1, 1)),
-                    lt: new Date(Date.UTC(year, month, 1)),
-                  },
-                },
-              },
-            },
-          }
-        : {
-            OR: [
-              { isActive: true },
-              {
+    where: onlyStudentIds
+      ? { userId, id: { in: onlyStudentIds } }
+      : {
+          userId,
+          ...(studentId
+            ? { id: studentId }
+            : grade
+            ? {
                 sessionStudents: {
                   some: {
+                    grade,
                     session: {
                       sessionDate: {
                         gte: new Date(Date.UTC(year, month - 1, 1)),
@@ -106,11 +96,26 @@ export async function getMonthlyTuitionStatus(
                     },
                   },
                 },
-              },
-            ],
-          }),
-      ...(search ? { fullName: { contains: search, mode: "insensitive" as const } } : {}),
-    },
+              }
+            : {
+                OR: [
+                  { isActive: true },
+                  {
+                    sessionStudents: {
+                      some: {
+                        session: {
+                          sessionDate: {
+                            gte: new Date(Date.UTC(year, month - 1, 1)),
+                            lt: new Date(Date.UTC(year, month, 1)),
+                          },
+                        },
+                      },
+                    },
+                  },
+                ],
+              }),
+          ...(search ? { fullName: { contains: search, mode: "insensitive" as const } } : {}),
+        },
     orderBy: [{ grade: "asc" }, { fullName: "asc" }],
   })
 

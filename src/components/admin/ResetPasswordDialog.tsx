@@ -35,8 +35,9 @@ export function ResetPasswordDialog({ user, onClose }: { user: UserRow; onClose:
     }
   }
 
+  // Đóng lúc đang chạy là mất mật khẩu tạm vừa sinh (không có đường xem lại).
   return (
-    <AlertDialog open onOpenChange={(open) => !open && onClose()}>
+    <AlertDialog open onOpenChange={(open) => !open && !mut.isPending && onClose()}>
       <AlertDialogContent className="max-w-[calc(100%-2rem)] rounded-xl sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>{`${t("admin_reset_password")} · ${user.username}`}</AlertDialogTitle>

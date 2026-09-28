@@ -17,7 +17,7 @@ export const ATTENDANCE_LABEL: Record<string, string> = {
 export const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"] as const
 
 export const COLORS = {
-  primary: "#4F46E5",
+  primary: "#0F766E",
   tieuHoc: "#3B82F6",
   thcs: "#10B981",
   present: "#22C55E",

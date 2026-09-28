@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { CalendarDays, FileSpreadsheet, Link2, MoreHorizontal, Pencil, Phone, Trash2, UserPlus } from "lucide-react"
+import { CalendarDays, Link2, MoreHorizontal, Pencil, Phone, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
@@ -39,7 +39,8 @@ import {
 import { StudentFormDialog } from "./StudentFormDialog"
 import { ParentLinkDialog } from "./ParentLinkDialog"
 import { UpgradeAllClassesButton } from "./UpgradeAllClassesButton"
-import { ImportStudentsButton } from "./ImportStudentsDialog"
+import { ImportStudentsDialog } from "./ImportStudentsDialog"
+import { AddStudentSplitButton } from "./AddStudentSplitButton"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -67,7 +68,6 @@ export function StudentList() {
   const { t } = useTranslation()
   const { selectedGrade, searchStudentName, setGrade, setSearch } = useFilters()
   const { me } = usePlan()
-  const importGate = useFeatureGate("studentImport")
   const linkGate = useFeatureGate("parentLink")
   const limit = me?.studentLimit ?? null
   const atLimit = !!me && limit !== null && me.activeStudents >= limit
@@ -116,6 +116,7 @@ export function StudentList() {
 
   const [deleteTarget, setDeleteTarget] = useState<StudentRow | null>(null)
   const [parentLinkTarget, setParentLinkTarget] = useState<StudentRow | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   const deleteMut = trpc.student.delete.useMutation({
     onSuccess: () => {
@@ -203,30 +204,11 @@ export function StudentList() {
         actions={
           <>
             <UpgradeAllClassesButton />
-            {/* Chưa biết gói: nút tạm vô hiệu (không mở dialog nhập, cũng không popup nâng cấp nhầm). */}
-            {!importGate.allowed ? (
-              <Button
-                variant="outline"
-                disabled={!importGate.locked}
-                onClick={importGate.openUpgrade}
-                aria-label={t("import_excel")}
-                className="h-11 gap-1.5 px-3 md:h-10 md:px-4"
-              >
-                <FileSpreadsheet className="size-4 text-green-600" />
-                <span className="hidden sm:inline">{t("import_excel")}</span>
-                {importGate.locked && <LockBadge plan={importGate.requiredPlan} />}
-              </Button>
-            ) : (
-              <ImportStudentsButton />
-            )}
-            <Button
-              onClick={() => (atLimit ? openLimit() : setFormState({ open: true, mode: "create" }))}
-              className="h-11 md:h-10"
-            >
-              <UserPlus className="mr-2 size-4" />
-              {t("add_student")}
-              {atLimit && me && <LockBadge plan={minPlanForStudents(me.activeStudents + 1)} className="ml-1.5" />}
-            </Button>
+            <AddStudentSplitButton
+              onAdd={() => (atLimit ? openLimit() : setFormState({ open: true, mode: "create" }))}
+              onImport={() => setImportOpen(true)}
+              addLockPlan={atLimit && me ? minPlanForStudents(me.activeStudents + 1) : null}
+            />
           </>
         }
       />
@@ -392,6 +374,8 @@ export function StudentList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {importOpen && <ImportStudentsDialog onClose={() => setImportOpen(false)} />}
     </div>
   )
 }

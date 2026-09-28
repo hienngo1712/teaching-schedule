@@ -14,7 +14,9 @@ import {
   hasFeature,
   isMultiMonthReport,
   minPlanForStudents,
+  ORDER_TTL_DAYS,
   orderBlockedUntil,
+  orderExpiresAt,
   paidDaysLeft,
   PERIOD_PRICE_FACTOR,
   PLAN_FEATURES,
@@ -393,5 +395,12 @@ describe("renewOffer (spec 8.6)", () => {
     expect(renewOffer(u({ trialEndsAt: addDays(TODAY, 5) }), NOW, false)).toBeNull()
     expect(renewOffer(u(), NOW, false)).toBeNull()
     expect(renewOffer(paidLeft("plus", 0), NOW, false)).toBeNull()
+  })
+})
+
+describe("orderExpiresAt (spec P7)", () => {
+  it("đúng 7 × 24 giờ sau lúc tạo, không làm tròn ngày VN", () => {
+    expect(ORDER_TTL_DAYS).toBe(7)
+    expect(orderExpiresAt(new Date("2026-09-20T10:15:00.000Z")).toISOString()).toBe("2026-09-27T10:15:00.000Z")
   })
 })

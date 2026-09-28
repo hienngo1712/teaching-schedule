@@ -17,11 +17,21 @@ vi.mock("@/components/providers/SessionProvider", () => ({ SessionProvider: ({ c
 vi.mock("@/app/login/LoginForm", () => ({ LoginForm: () => null }))
 vi.mock("@/app/login/LoginHeader", () => ({ LoginHeader: () => null }))
 vi.mock("@/app/change-password/ForcedChangePassword", () => ({ ForcedChangePassword: () => null }))
+vi.mock("@/app/change-password/PasswordAlreadyChanged", () => ({ PasswordAlreadyChanged: () => null }))
 
 import AppGroupLayout from "@/app/(app)/layout"
 import AdminGroupLayout from "@/app/(admin)/admin/layout"
 import LoginPage from "@/app/login/page"
 import ChangePasswordPage from "@/app/change-password/page"
+import { ForcedChangePassword } from "@/app/change-password/ForcedChangePassword"
+import { PasswordAlreadyChanged } from "@/app/change-password/PasswordAlreadyChanged"
+
+function hasType(node: unknown, type: unknown): boolean {
+  if (!node || typeof node !== "object") return false
+  if (Array.isArray(node)) return node.some((n) => hasType(n, type))
+  const el = node as { type?: unknown; props?: { children?: unknown } }
+  return el.type === type || hasType(el.props?.children, type)
+}
 
 const original = process.env.ADMIN_USERNAMES
 const as = (username: string) => ({ user: { id: "1", username, fullName: null }, expires: "" })
@@ -88,12 +98,18 @@ describe("bắt đổi mật khẩu (spec N R2)", () => {
     await expect(AppGroupLayout({ children: "x" })).rejects.toThrow("REDIRECT /change-password")
   })
 
-  it("/change-password: chưa đăng nhập → /login?expired=1; không có cờ → /dashboard; có cờ → hiện form", async () => {
+  it("/change-password: chưa đăng nhập → /login?expired=1; không có cờ → PasswordAlreadyChanged; có cờ → hiện form", async () => {
     mocks.session = null
     await expect(ChangePasswordPage()).rejects.toThrow("REDIRECT /login?expired=1")
     mocks.session = as("teacher")
-    await expect(ChangePasswordPage()).rejects.toThrow("REDIRECT /dashboard")
+    mocks.redirect.mockClear()
+    // Cờ DB đã tắt nhưng cookie cũ còn cờ → middleware đẩy về đây; redirect đi sẽ thành vòng (spec P N1).
+    const el = await ChangePasswordPage()
+    expect(mocks.redirect).not.toHaveBeenCalled()
+    expect(hasType(el, PasswordAlreadyChanged)).toBe(true)
+    expect(hasType(el, ForcedChangePassword)).toBe(false)
     mocks.session = flagged
-    await expect(ChangePasswordPage()).resolves.toBeTruthy()
+    const el2 = await ChangePasswordPage()
+    expect(hasType(el2, ForcedChangePassword)).toBe(true)
   })
 })

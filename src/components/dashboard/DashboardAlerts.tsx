@@ -144,6 +144,15 @@ export function DashboardAlerts() {
                     <span className="font-medium text-slate-900">{d.fullName}</span>
                     <span className="text-slate-500"> · {t("grade")} {d.grade}</span>
                   </p>
+                  {!d.isActive && (
+                    <Badge
+                      variant="outline"
+                      data-testid="alert-debt-inactive"
+                      className="shrink-0 whitespace-nowrap border-slate-200 bg-slate-100 text-slate-600"
+                    >
+                      {t("dropped")}
+                    </Badge>
+                  )}
                   <div className="shrink-0 text-right">
                     <p className="whitespace-nowrap text-sm font-semibold text-debt">{formatCurrency(d.amount)}</p>
                     <p className="whitespace-nowrap text-xs text-slate-500">

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller, publicCaller } from "../helpers/trpc"
 import { addDays, daysLeft, effectivePlan, planBanner, trialEndFor, vnStartOfDay } from "@/lib/plans"
+import { getDefaultTrialDays } from "@/server/services/trial.service"
 
 const FAKE = "trial_test_"
 const FAR = new Date("2099-12-31T17:00:00.000Z")
@@ -95,6 +96,17 @@ describe("số ngày dùng thử mặc định (T1, T2)", () => {
     }
     expect(await db.trialDayChange.count({ where: { changedBy: { not: "migration" } } })).toBe(0)
   })
+
+  it("hiện hành = dòng id lớn nhất dù createdAt sớm hơn (spec P L3)", async () => {
+    const row = await db.trialDayChange.create({
+      data: { userId: null, days: 45, previousDays: 60, changedBy: "test-p-l3", createdAt: new Date("2000-01-01T00:00:00Z") },
+    })
+    try {
+      expect(await getDefaultTrialDays(db)).toBe(45)
+    } finally {
+      await db.trialDayChange.delete({ where: { id: row.id } })
+    }
+  })
 })
 
 describe("đặt riêng từng tài khoản (T3)", () => {
@@ -151,5 +163,24 @@ describe("đặt riêng từng tài khoản (T3)", () => {
     await expect(admin.admin.setUserTrial({ userId: 999999, days: 90 })).rejects.toMatchObject({ code: "NOT_FOUND" })
     const u = await makeUser("range", 10, 60)
     await expect(admin.admin.setUserTrial({ userId: u.id, days: 3651 })).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  })
+
+  it("đặt dùng thử cho tài khoản admin → FORBIDDEN, không ghi lịch sử (spec P L1)", async () => {
+    const admin = await getAuthedCaller("admin_test")
+    const adminUser = await db.user.findUniqueOrThrow({ where: { username: "admin_test" } })
+    const before = await db.trialDayChange.count({ where: { userId: adminUser.id } })
+    await expect(admin.admin.setUserTrial({ userId: adminUser.id, days: 30 })).rejects.toMatchObject({ code: "FORBIDDEN" })
+    expect(await db.trialDayChange.count({ where: { userId: adminUser.id } })).toBe(before)
+  })
+
+  it("2 lần đặt cùng lúc → lịch sử nối tiếp đúng (previousDays lần sau = days lần trước) (spec P L2)", async () => {
+    const admin = await getAuthedCaller("admin_test")
+    const std = await db.user.findUniqueOrThrow({ where: { username: "teacher_std" } })
+    await Promise.all([
+      admin.admin.setUserTrial({ userId: std.id, days: 30 }),
+      admin.admin.setUserTrial({ userId: std.id, days: 90 }),
+    ])
+    const rows = await db.trialDayChange.findMany({ where: { userId: std.id }, orderBy: { id: "desc" }, take: 2 })
+    expect(rows[0].previousDays).toBe(rows[1].days)
   })
 })

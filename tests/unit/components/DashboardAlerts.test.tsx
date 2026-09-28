@@ -10,7 +10,7 @@ import { formatCurrency } from "@/lib/utils"
 const alerts = {
   year: 2026,
   month: 9,
-  debts: [{ studentId: 1, fullName: "Nguyễn Văn An", grade: 5, amount: 1800000, months: 2 }],
+  debts: [{ studentId: 1, fullName: "Nguyễn Văn An", grade: 5, amount: 1800000, months: 2, isActive: true }],
   idleStudents: [{ studentId: 2, fullName: "Trần Bình", grade: 3 }],
   unrescheduled: [],
 }
@@ -70,3 +70,24 @@ describe("DashboardAlerts — màu", () => {
     expect(mockPlan.alertsCalls.every((opts) => (opts as { enabled?: boolean })?.enabled === false)).toBe(true)
   })
 })
+
+describe("DashboardAlerts — HS đã nghỉ còn nợ (spec P1)", () => {
+  it("dòng HS đã nghỉ có nhãn xám Đã nghỉ; HS đang học không có", () => {
+    alerts.debts.push({ studentId: 9, fullName: "Lê Cường", grade: 7, amount: 900000, months: 1, isActive: false })
+    try {
+      render(
+        <LanguageProvider forcedLanguage="vi">
+          <DashboardAlerts />
+        </LanguageProvider>
+      )
+      const rows = within(screen.getByTestId("alert-group-debt")).getAllByTestId("alert-row")
+      expect(within(rows[0]).queryByTestId("alert-debt-inactive")).toBeNull()
+      const badge = within(rows[1]).getByTestId("alert-debt-inactive")
+      expect(badge.textContent).toBe("Đã nghỉ")
+      expect(badge.className).toContain("bg-slate-100")
+    } finally {
+      alerts.debts.pop()
+    }
+  })
+})
+

@@ -123,4 +123,37 @@ test.describe('Cảnh báo Dashboard (390px)', () => {
     await idleGroup.getByRole('button', { name: 'Thu gọn' }).click();
     await expect(idleGroup.getByTestId('alert-row')).toHaveCount(3);
   });
+
+  test('HS đã nghỉ còn nợ → vẫn ở nhóm nợ, có nhãn Đã nghỉ, bấm mở đúng HS ở Học phí', async ({ page }) => {
+    const name = `E2E HS đã nghỉ còn nợ ${Date.now()}`;
+    const fee = 8_800_000;
+    const subjects = await trpcQuery<{ id: number }[]>(page, 'subject.list', { isActive: true });
+    const student = await trpcMutation<{ id: number }>(page, 'student.create', { fullName: name, grade: 7, tuitionFee: fee });
+    createdStudentIds.push(student.id);
+    const hour = String(Math.floor(Math.random() * 12) + 6).padStart(2, '0');
+    const session = await trpcMutation<{ id: number }>(page, 'session.create', {
+      sessionDate: dayInPreviousVnMonth(), startTime: `${hour}:10`, endTime: `${hour}:50`, subjectId: subjects[0].id,
+    });
+    createdSessionIds.push(session.id);
+    await trpcMutation(page, 'session.addStudents', { sessionId: session.id, studentIds: [student.id] });
+    await trpcMutation(page, 'attendance.update', {
+      sessionId: session.id,
+      attendances: [{ studentId: student.id, attendance: 'present', fee }],
+    });
+    // Cho nghỉ học: ca tháng trước đã qua nên vẫn giữ điểm danh → vẫn còn nợ.
+    await trpcMutation(page, 'student.delete', { id: student.id });
+
+    await page.goto('/dashboard');
+    const debtGroup = page.getByTestId('alert-group-debt');
+    const viewAll = debtGroup.getByRole('button', { name: /Xem tất cả/ });
+    if (await viewAll.isVisible()) await viewAll.click();
+    const row = debtGroup.getByTestId('alert-row').filter({ hasText: name });
+    await expect(row.getByTestId('alert-debt-inactive')).toHaveText('Đã nghỉ');
+    await expect(row).toContainText('8.800.000');
+    await expectNoHorizontalScroll(page);
+    await row.getByRole('link').click();
+    await expect(page).toHaveURL(new RegExp(`/tuition\\?.*studentId=${student.id}`));
+    await expect(page.getByRole('dialog')).toContainText(name);
+  });
 });
+

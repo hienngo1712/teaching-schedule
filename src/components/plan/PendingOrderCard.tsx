@@ -9,6 +9,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { isPeriod, planLabel } from "@/lib/plans"
 import { formatCurrency } from "@/lib/utils"
+import { dateTimeVn } from "@/components/admin/admin-format"
 
 type Order = NonNullable<RouterOutputs["plan"]["me"]["pendingOrder"]>
 
@@ -103,6 +104,7 @@ export function PendingOrderCard({
       )}
 
       <p className="text-xs text-slate-500">{t("plan_pending_hint")}</p>
+      <p className="text-xs text-slate-500">{t("plan_order_expires").replace("{date}", dateTimeVn(order.expiresAt))}</p>
       <Button type="button" variant="outline" className="h-11 md:h-10" disabled={cancel.isPending} onClick={() => cancel.mutate({ id: order.id })}>
         {t("plan_cancel_order")}
       </Button>

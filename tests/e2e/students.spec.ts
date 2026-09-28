@@ -55,4 +55,19 @@ test.describe('Student management', () => {
     await expect(page.locator('text=Đã xóa học sinh')).toBeVisible();
     await expect(page.getByText(name)).toHaveCount(0);
   });
+
+  test('390px: split button Thêm học sinh 2 phần ≥44px, không chồng, mũi tên mở đúng 1 mục Nhập Excel (spec P11)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/students');
+    const main = (await page.getByRole('button', { name: 'Thêm học sinh', exact: true }).boundingBox())!;
+    const more = (await page.getByTestId('add-student-more').boundingBox())!;
+    for (const b of [main, more]) expect(b.height).toBeGreaterThanOrEqual(44);
+    expect(more.width).toBeGreaterThanOrEqual(44);
+    expect(main.x + main.width).toBeLessThanOrEqual(more.x + 1);
+    expect(await page.getByRole('button', { name: 'Nhập Excel' }).count()).toBe(0);
+    await page.getByTestId('add-student-more').click();
+    await expect(page.getByRole('menuitem')).toHaveText([/Nhập Excel/]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    await page.keyboard.press('Escape');
+  });
 });

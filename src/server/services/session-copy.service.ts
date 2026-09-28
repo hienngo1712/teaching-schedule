@@ -3,6 +3,7 @@ import type { Prisma, PrismaClient } from "@prisma/client"
 import { formatTime, parseTimeToDate } from "@/lib/utils"
 import {
   COPY_MONTH_MAX_SESSIONS,
+  capConflictsPerPattern,
   conflictLabel,
   deriveWeeklyPatterns,
   planMonthCopy,
@@ -20,7 +21,7 @@ type CopyRange = { source: MonthRef; from: MonthRef; months: number }
 
 // Dạng 2 khóa int4 để không chung khóa bigint userId của plan/student; 7401 là khóa bảng giá (L).
 export const COPY_MONTH_LOCK_NS = 7402
-const MAX_PREVIEW_CONFLICTS = 50
+const MAX_PREVIEW_CONFLICTS_PER_PATTERN = 20 // khớp slice(0, 20) của PatternRow
 
 const monthStart = (m: MonthRef) => new Date(Date.UTC(m.year, m.month - 1, 1))
 const nextMonthStart = (m: MonthRef) => new Date(Date.UTC(m.year, m.month, 1))
@@ -101,7 +102,7 @@ export async function previewCopyMonth(db: PrismaClient, userId: number, input: 
     })),
     months: plan.months,
     totals: plan.totals,
-    conflicts: plan.conflicts.slice(0, MAX_PREVIEW_CONFLICTS),
+    conflicts: capConflictsPerPattern(plan.conflicts, MAX_PREVIEW_CONFLICTS_PER_PATTERN),
   }
 }
 

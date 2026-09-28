@@ -1,6 +1,7 @@
 "use client"
 
 import { FileSpreadsheet, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -23,9 +24,10 @@ interface ExportExcelButtonProps {
   sessions: SessionDTO[]
   students?: StudentDTO[]
   className?: string
+  iconOnly?: boolean
 }
 
-export function ExportExcelButton({ sessions, students = [], className }: ExportExcelButtonProps) {
+export function ExportExcelButton({ sessions, students = [], className, iconOnly = false }: ExportExcelButtonProps) {
   const { t } = useTranslation()
   const { data: session } = useSession()
   const { isExporting, exportMonthlySchedule, exportStudentSchedule, exportGradeReport, exportAttendanceSummary } = useExcelExport()
@@ -90,13 +92,21 @@ export function ExportExcelButton({ sessions, students = [], className }: Export
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={isExporting} className={className}>
+        <Button
+          variant="outline"
+          size={iconOnly ? "icon" : "sm"}
+          disabled={isExporting}
+          className={className}
+          // Màn Lịch chỉ hiện icon (spec P10): giữ tên cho trình đọc màn hình + tooltip.
+          aria-label={iconOnly ? t("export_excel") : undefined}
+          title={iconOnly ? t("export_excel") : undefined}
+        >
           {isExporting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className={cn("h-4 w-4 animate-spin", !iconOnly && "mr-2")} />
           ) : (
-            <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+            <FileSpreadsheet className={cn("h-4 w-4 text-green-600", !iconOnly && "mr-2")} />
           )}
-          {t("export_excel")}
+          {!iconOnly && t("export_excel")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

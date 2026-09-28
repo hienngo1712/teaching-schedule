@@ -218,3 +218,38 @@ describe("admin.orderHistory", () => {
     expect(times).toEqual([...times].sort((a, b) => b - a))
   })
 })
+
+describe("đơn quá hạn và admin.pendingCount (spec P7, J5)", () => {
+  const DAY = 24 * 60 * 60 * 1000
+
+  it("duyệt đơn quá 7 ngày (chưa ai đọc để expire) → BAD_REQUEST, gói không đổi; overview không có đơn, history có expired", async () => {
+    const std = await getAuthedCaller("teacher_std")
+    const { id } = await std.plan.createOrder({ plan: "plus", period: "year" })
+    await db.planOrder.update({ where: { id }, data: { createdAt: new Date(Date.now() - 7 * DAY - 60_000) } })
+    const admin = await getAuthedCaller("admin_test")
+
+    await expect(admin.admin.approveOrder({ id })).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect((await db.user.findUniqueOrThrow({ where: { id: userId } })).plan).toBe("standard")
+    expect((await admin.admin.overview()).pendingOrders.map((o) => o.id)).not.toContain(id)
+    expect((await admin.admin.orderHistory()).find((o) => o.id === id)?.status).toBe("expired")
+  })
+
+  it("đơn còn hạn vẫn duyệt được; overview có expiresAt", async () => {
+    const std = await getAuthedCaller("teacher_std")
+    const { id } = await std.plan.createOrder({ plan: "plus", period: "year" })
+    const admin = await getAuthedCaller("admin_test")
+    const row = (await admin.admin.overview()).pendingOrders.find((o) => o.id === id)!
+    expect(new Date(row.expiresAt).getTime() - new Date(row.createdAt).getTime()).toBe(7 * DAY)
+    await expect(admin.admin.approveOrder({ id })).resolves.toMatchObject({ creditDays: 0 })
+  })
+
+  it("pendingCount = số đơn chờ còn hạn (khớp overview); giáo viên gọi → FORBIDDEN", async () => {
+    const std = await getAuthedCaller("teacher_std")
+    await std.plan.createOrder({ plan: "plus", period: "year" })
+    const admin = await getAuthedCaller("admin_test")
+    const { count } = await admin.admin.pendingCount()
+    expect(count).toBe((await admin.admin.overview()).pendingOrders.length)
+    expect(count).toBeGreaterThanOrEqual(1)
+    await expect(std.admin.pendingCount()).rejects.toMatchObject({ code: "FORBIDDEN" })
+  })
+})

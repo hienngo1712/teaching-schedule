@@ -20,28 +20,8 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { buildPreview, toImportPayload, MAX_IMPORT_FILE_BYTES, type PreviewRow } from "@/lib/student-import"
 import { buildImportTemplate, readImportWorkbook, type ImportReadError } from "@/lib/student-import-excel"
 
-export function ImportStudentsButton() {
-  const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
-
-  return (
-    <>
-      <Button
-        variant="outline"
-        onClick={() => setOpen(true)}
-        aria-label={t("import_excel")}
-        className="h-11 px-3 md:h-10 md:px-4"
-      >
-        <FileSpreadsheet className="size-4 text-green-600 sm:mr-2" />
-        <span className="hidden sm:inline">{t("import_excel")}</span>
-      </Button>
-      {open && <ImportStudentsDialog onClose={() => setOpen(false)} />}
-    </>
-  )
-}
-
 // Chỉ mount khi mở nên mỗi lần mở là state mới, không cần effect reset.
-function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
+export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<PreviewRow[] | null>(null)

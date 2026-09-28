@@ -9,13 +9,13 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { AdminTabBar } from "@/components/admin/AdminTabBar"
 
 vi.mock("next/navigation", () => ({ usePathname: vi.fn() }))
-const overview = vi.hoisted(() => ({ data: undefined as undefined | { pendingOrders: { id: number }[]; users: never[] } }))
+const pending = vi.hoisted(() => ({ data: undefined as undefined | { count: number } }))
 vi.mock("@/lib/trpc", () => ({
-  trpc: { admin: { overview: { useQuery: () => ({ data: overview.data }) } } },
+  trpc: { admin: { pendingCount: { useQuery: () => ({ data: pending.data }) } } },
 }))
 
 beforeEach(() => {
-  overview.data = undefined
+  pending.data = undefined
 })
 
 function renderVi(ui: React.ReactNode) {
@@ -25,7 +25,7 @@ function renderVi(ui: React.ReactNode) {
 describe("AdminSidebar", () => {
   it("logo Lịch dạy + nhãn Quản trị; đúng 4 mục admin, mục đang mở aria-current; số đơn chờ; không có mục giáo viên", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/history")
-    overview.data = { pendingOrders: [{ id: 1 }, { id: 2 }], users: [] }
+    pending.data = { count: 2 }
     renderVi(<AdminSidebar />)
     expect(screen.getByText("Lịch dạy")).toBeTruthy()
     expect(screen.getByText("Quản trị")).toBeTruthy()
@@ -64,5 +64,19 @@ describe("AdminTabBar", () => {
     expect(screen.getByRole("link", { name: "Tài khoản" }).getAttribute("aria-current")).toBe("page")
     expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).className).toContain("md:hidden")
     expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).querySelector("ul")?.className).toContain("grid-cols-4")
+  })
+
+  it("tab Đơn chờ có số đơn chờ ở góc icon; 0 đơn → không có", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/history")
+    pending.data = { count: 3 }
+    const { unmount } = renderVi(<AdminTabBar />)
+    const badge = screen.getByTestId("admin-tab-pending-count")
+    expect(badge.textContent).toBe("3")
+    expect(badge.className).toContain("bg-amber-100")
+    expect(screen.getByRole("link", { name: /Đơn chờ/ }).contains(badge)).toBe(true)
+    unmount()
+    pending.data = { count: 0 }
+    renderVi(<AdminTabBar />)
+    expect(screen.queryByTestId("admin-tab-pending-count")).toBeNull()
   })
 })

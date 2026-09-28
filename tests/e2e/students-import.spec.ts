@@ -27,7 +27,8 @@ test.describe('Nhập học sinh từ Excel (390px)', () => {
     const nameB = `${tag} Bình`;
 
     await page.goto('/students');
-    await page.getByRole('button', { name: 'Nhập Excel' }).click();
+    await page.getByTestId('add-student-more').click();
+    await page.getByRole('menuitem', { name: 'Nhập Excel' }).click();
     const dialog = page.getByRole('dialog');
 
     const downloadPromise = page.waitForEvent('download');
@@ -58,7 +59,8 @@ test.describe('Nhập học sinh từ Excel (390px)', () => {
     await expect(page.getByText(`${tag} Lỗi`)).toHaveCount(0);
 
     // Nhập lại đúng file → 2 dòng trùng, mặc định không nhập được gì
-    await page.getByRole('button', { name: 'Nhập Excel' }).click();
+    await page.getByTestId('add-student-more').click();
+    await page.getByRole('menuitem', { name: 'Nhập Excel' }).click();
     await page.getByRole('dialog').getByTestId('import-file-input').setInputFiles(filePath);
     const again = page.getByRole('dialog');
     await expect(again.getByTestId('import-summary')).toHaveText('0 hợp lệ · 2 trùng · 1 lỗi');

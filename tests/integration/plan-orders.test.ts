@@ -235,3 +235,57 @@ describe("giá từ DB (spec L)", () => {
     }
   })
 })
+
+const DAY = 24 * 60 * 60 * 1000
+async function backdate(id: number, ms: number) {
+  await db.planOrder.update({ where: { id }, data: { createdAt: new Date(Date.now() - ms) } })
+}
+
+describe("đơn chờ hết hạn sau 7 ngày (spec P7)", () => {
+  it("quá 7 ngày → plan.me không còn pendingOrder; đơn thành expired, decidedAt = createdAt + 7 ngày, decidedBy null", async () => {
+    const c = await getAuthedCaller("teacher_std")
+    const { id } = await c.plan.createOrder({ plan: "plus", period: "year" })
+    await backdate(id, 7 * DAY + 60_000)
+    const me = await c.plan.me()
+    expect(me.pendingOrder).toBeNull()
+    expect(me.orders.find((o) => o.id === id)?.status).toBe("expired")
+    const row = await db.planOrder.findUniqueOrThrow({ where: { id } })
+    expect(row.status).toBe("expired")
+    expect(row.decidedAt?.getTime()).toBe(row.createdAt.getTime() + 7 * DAY)
+    expect(row.decidedBy).toBeNull()
+  })
+
+  it("6 ngày 23 giờ → vẫn pending, pendingOrder.expiresAt = createdAt + 7 ngày", async () => {
+    const c = await getAuthedCaller("teacher_std")
+    const { id } = await c.plan.createOrder({ plan: "plus", period: "year" })
+    await backdate(id, 7 * DAY - 60 * 60 * 1000)
+    const me = await c.plan.me()
+    const row = await db.planOrder.findUniqueOrThrow({ where: { id } })
+    expect(me.pendingOrder?.id).toBe(id)
+    expect(new Date(me.pendingOrder!.expiresAt).getTime()).toBe(row.createdAt.getTime() + 7 * DAY)
+  })
+
+  it("tạo đơn mới khi đơn cũ đã quá hạn → đơn cũ expired (không phải cancelled)", async () => {
+    const c = await getAuthedCaller("teacher_std")
+    const first = await c.plan.createOrder({ plan: "plus", period: "year" })
+    await backdate(first.id, 8 * DAY)
+    await c.plan.createOrder({ plan: "plus", period: "month" })
+    expect((await db.planOrder.findUniqueOrThrow({ where: { id: first.id } })).status).toBe("expired")
+  })
+
+  it("hủy đơn đã quá hạn → NOT_FOUND, trạng thái expired", async () => {
+    const c = await getAuthedCaller("teacher_std")
+    const { id } = await c.plan.createOrder({ plan: "plus", period: "year" })
+    await backdate(id, 8 * DAY)
+    await expect(c.plan.cancelOrder({ id })).rejects.toMatchObject({ code: "NOT_FOUND" })
+    expect((await db.planOrder.findUniqueOrThrow({ where: { id } })).status).toBe("expired")
+  })
+
+  it("plan.me của user này không expire đơn quá hạn của user khác", async () => {
+    const other = await getAuthedCaller("teacher")
+    const { id } = await other.plan.createOrder({ plan: "pro", period: "year" })
+    await backdate(id, 8 * DAY)
+    await (await getAuthedCaller("teacher_std")).plan.me()
+    expect((await db.planOrder.findUniqueOrThrow({ where: { id } })).status).toBe("pending")
+  })
+})

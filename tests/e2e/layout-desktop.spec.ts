@@ -88,6 +88,16 @@ test.describe('Sidebar desktop 1280px', () => {
     await page.getByRole('button', { name: 'Thêm môn' }).click();
     await expect(page.getByRole('dialog').getByRole('checkbox')).toHaveCSS('border-radius', '4px');
   });
+
+  test('màn Lịch: nút Xuất Excel chỉ icon, cao bằng nút Lịch lặp (spec P10)', async ({ page }) => {
+    await page.goto('/calendar');
+    const exp = page.getByRole('button', { name: 'Xuất Excel' });
+    await expect(exp).toHaveAttribute('title', 'Xuất Excel');
+    await expect(exp).toHaveText('');
+    const h = (await exp.boundingBox())!.height;
+    const bulk = (await page.getByRole('button', { name: 'Lịch lặp' }).boundingBox())!.height;
+    expect(Math.abs(h - bulk)).toBeLessThanOrEqual(1);
+  });
 });
 
 // Biến --font-geist-sans gắn ở <body>; nếu font-family chỉ đặt ở <html> (preflight) thì var() rỗng → rơi về serif.

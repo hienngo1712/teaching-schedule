@@ -47,3 +47,19 @@ describe("SessionCard — màu viền theo cấp học", () => {
     expect(css).toMatch(/\.session-card--thpt\s*\{\s*@apply border-amber-600 bg-amber-50;\s*\}/)
   })
 })
+
+describe("SessionCard — ca đã huỷ luôn đỏ, không bị màu cấp học đè (spec P4)", () => {
+  it.each(["tieu_hoc", "thcs", "thpt", "mixed"] as const)("%s + cancelled", (level) => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <SessionCard session={{ ...base, level, status: "cancelled", cancelledAt: new Date() }} />
+      </LanguageProvider>
+    )
+    const cls = screen.getByRole("button").className
+    expect(cls).not.toMatch(/session-card--/)
+    expect(cls).not.toContain("bg-slate-100")
+    expect(cls).toContain("bg-red-50")
+    expect(cls).toContain("border-red-300")
+  })
+})
+

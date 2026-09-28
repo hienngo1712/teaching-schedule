@@ -110,6 +110,15 @@ test('mobile 390px: nút toolbar ≥44px không chồng nhau, dialog toàn màn 
   expect(intersects(copyBtn, createBtn)).toBe(false);
   expect(intersects(bulkBtn, createBtn)).toBe(false);
 
+  const exportBtn = (await page.getByRole('button', { name: 'Xuất Excel' }).boundingBox())!;
+  expect(exportBtn.height).toBeGreaterThanOrEqual(44);
+  expect(exportBtn.width).toBeGreaterThanOrEqual(44);
+  for (const b of [copyBtn, bulkBtn, createBtn]) expect(intersects(exportBtn, b)).toBe(false);
+  // Hàng 1 chia đôi; hàng 2: icon + Tạo ca dạy cùng hàng.
+  expect(Math.abs(copyBtn.y - bulkBtn.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(exportBtn.y - createBtn.y)).toBeLessThanOrEqual(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+
   await page.getByTestId('copy-month-button').click();
   const dlg = page.getByTestId('copy-month-dialog');
   await expect(dlg.getByTestId('copy-total')).toHaveText('Sẽ tạo 12 ca');

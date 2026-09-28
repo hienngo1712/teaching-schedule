@@ -14,6 +14,7 @@ const STATUS_KEY = {
   approved: "plan_status_approved",
   rejected: "plan_status_rejected",
   cancelled: "plan_status_cancelled",
+  expired: "plan_status_expired",
 } as const
 
 export function AdminOrderHistory() {

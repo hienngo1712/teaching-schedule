@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { isAdminUsername } from "@/lib/admin"
 import {
+  ORDER_TTL_DAYS,
   addDays,
   computeNewExpiry,
   computeUpgradeCredit,
@@ -10,9 +11,10 @@ import {
   isPaidPlan,
   isPeriod,
   orderBlockedUntil,
+  orderExpiresAt,
 } from "@/lib/plans"
 import type { SetPlanInput } from "@/lib/schemas/plan"
-import { PLAN_SELECT, findLastPlusOrder, type Db } from "./plan.service"
+import { PLAN_SELECT, expireStaleOrders, findLastPlusOrder, type Db } from "./plan.service"
 
 // Hạn mới khi duyệt = mốc D6 + (kỳ + tháng tặng đã chốt) + ngày quy đổi D7 (tính theo lúc duyệt).
 // null = không duyệt được (D7: user đang có Pro trả phí mà đơn là Plus).
@@ -35,6 +37,7 @@ export async function computeApproval(
 
 export async function getAdminOverview(db: PrismaClient) {
   const now = new Date()
+  await expireStaleOrders(db, now)
   const [users, counts, pending] = await Promise.all([
     db.user.findMany({
       orderBy: { id: "asc" },
@@ -79,6 +82,7 @@ export async function getAdminOverview(db: PrismaClient) {
     pendingOrders: await Promise.all(
       pending.map(async ({ user, ...o }) => ({
         ...o,
+        expiresAt: orderExpiresAt(o.createdAt),
         username: user.username,
         fullName: user.fullName,
         preview: await computeApproval(db, o, now),
@@ -94,11 +98,21 @@ export async function approveOrder(db: PrismaClient, admin: string, id: number):
     const owner = await tx.planOrder.findUnique({ where: { id }, select: { userId: true } })
     if (owner) await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(owner.userId)})`
     // Chốt trạng thái trước: bấm 2 lần / 2 tab thì lần sau count = 0.
+    // Đơn quá hạn chưa kịp expire vẫn không duyệt được: điều kiện nằm ngay trong câu chốt (spec P7).
     const claimed = await tx.planOrder.updateMany({
-      where: { id, status: "pending" },
+      where: { id, status: "pending", createdAt: { gt: addDays(now, -ORDER_TTL_DAYS) } },
       data: { status: "approved", decidedBy: admin, decidedAt: now },
     })
-    if (claimed.count === 0) throw new TRPCError({ code: "CONFLICT", message: "Đơn không còn ở trạng thái chờ" })
+    if (claimed.count === 0) {
+      const cur = await tx.planOrder.findUnique({ where: { id }, select: { status: true } })
+      if (cur?.status === "pending") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Đơn đã quá 7 ngày chưa xác nhận nên đã hết hạn. Nếu khách đã chuyển khoản, hãy dùng Đặt gói",
+        })
+      }
+      throw new TRPCError({ code: "CONFLICT", message: "Đơn không còn ở trạng thái chờ" })
+    }
     const order = await tx.planOrder.findUniqueOrThrow({
       where: { id },
       select: { userId: true, plan: true, period: true, bonusMonths: true, amount: true },
@@ -113,6 +127,12 @@ export async function approveOrder(db: PrismaClient, admin: string, id: number):
   })
   console.info(`[admin] ${admin} duyệt đơn ${id} (user ${result.userId}) tới ${result.grantedUntil.toISOString()}`)
   return { grantedUntil: result.grantedUntil, creditDays: result.creditDays }
+}
+
+// Nhẹ hơn overview (không tải user, không tính computeApproval): sidebar + tab bar gọi ở mọi trang admin (spec P J5).
+export async function getPendingCount(db: PrismaClient): Promise<{ count: number }> {
+  await expireStaleOrders(db, new Date())
+  return { count: await db.planOrder.count({ where: { status: "pending" } }) }
 }
 
 export async function rejectOrder(db: PrismaClient, admin: string, id: number, note?: string): Promise<{ success: true }> {
@@ -152,6 +172,7 @@ export async function adminSetPlan(db: PrismaClient, admin: string, input: SetPl
 
 // Lịch sử để đối soát chuyển khoản sai nội dung (spec I-11). Vài chục tài khoản nên 100 đơn gần nhất là đủ, chưa phân trang.
 export async function getOrderHistory(db: PrismaClient) {
+  await expireStaleOrders(db, new Date())
   const rows = await db.planOrder.findMany({
     where: { status: { not: "pending" } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],

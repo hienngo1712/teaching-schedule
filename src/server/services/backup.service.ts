@@ -6,7 +6,7 @@ import type { PAYMENT_METHODS } from "@/lib/schemas/payment"
 import { findBank } from "@/lib/vn-banks"
 
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000
-const HEADER_BG = "FFE0E7FF"
+const HEADER_BG = "FFCCFBF1"
 
 type Kind = "text" | "phone" | "money" | "date" | "datetime"
 type CellValue = string | number | Date | null | undefined

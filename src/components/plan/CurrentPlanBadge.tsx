@@ -17,11 +17,12 @@ export function CurrentPlanBadge({ className }: { className?: string }) {
   const { t } = useTranslation()
   const { me } = usePlan()
   if (!me) return null
-  // Q16: sidebar 232px không đủ chỗ cho "Pro · Dùng thử" → icon đồng hồ + nhãn đọc màn hình.
+  // Q16: sidebar hẹp → icon đồng hồ; role img để aria-label "Pro dùng thử" được đọc (span trơn bị bỏ qua).
   const trialLabel = me.source === "trial" ? t("plan_badge_trial") : undefined
   return (
     <span
       data-testid="current-plan-badge"
+      role={trialLabel ? "img" : undefined}
       title={trialLabel}
       aria-label={trialLabel}
       className={cn(

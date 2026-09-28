@@ -51,6 +51,16 @@ export type CopyCandidate = {
 
 export type MonthCount = { year: number; month: number; slots: number; created: number; existing: number; conflict: number; past: number }
 export type CopyConflict = { patternKey: string; date: string; conflict: string }
+
+// Xem trước chỉ cần vài xung đột mỗi mẫu; cắt chung sẽ làm mẫu sắp sau mất hết danh sách chi tiết (spec P M1).
+export function capConflictsPerPattern(conflicts: CopyConflict[], max: number): CopyConflict[] {
+  const seen = new Map<string, number>()
+  return conflicts.filter((c) => {
+    const n = seen.get(c.patternKey) ?? 0
+    seen.set(c.patternKey, n + 1)
+    return n < max
+  })
+}
 export type CopyTotals = { created: number; existing: number; conflict: number; past: number }
 export type MonthCopyPlan = {
   selectedKeys: string[]
