@@ -27,8 +27,13 @@ export async function purgeTrash(db: PrismaClient, userId: number, type: TrashTy
     }
     // Môn còn ca (kể cả ca đã xoá) không xoá cứng được vì khoá ngoại → chỉ ẩn vĩnh viễn.
     const free = await tx.subject.deleteMany({ where: { userId, isDeleted: true, purgedAt: null, sessions: { none: {} } } })
-    const kept = await tx.subject.updateMany({ where: { userId, isDeleted: true, purgedAt: null }, data: { purgedAt: now } })
-    return free.count + kept.count
+    const kept = await tx.subject.findMany({ where: { userId, isDeleted: true, purgedAt: null }, select: { id: true, name: true } })
+    // Đổi tên để nhả ràng buộc unique (userId, name): môn đã dọn không khôi phục được nên không được giữ tên.
+    for (const s of kept) {
+      const suffix = ` (đã xoá #${s.id})`
+      await tx.subject.update({ where: { id: s.id }, data: { name: s.name.slice(0, 100 - suffix.length) + suffix, purgedAt: now } })
+    }
+    return free.count + kept.length
   }, TX_OPTIONS)
   console.info(`[trash] user ${userId} dọn ${type}: ${n}`)
   return n

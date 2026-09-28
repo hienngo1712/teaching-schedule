@@ -102,6 +102,17 @@ describe("Dọn Thùng rác (spec R4–R7)", () => {
     expect(await caller.trash.purgeAll()).toEqual({ purged: { session: 0, student: 0, payment: 0, subject: 0 } })
   })
 
+  it("môn đã dọn (còn ca đã xoá giữ lại) không chiếm tên: tạo lại môn cùng tên được", async () => {
+    const caller = await getAuthedCaller()
+    const hoa = await caller.subject.create({ name: "Hoá", color: "#16A34A" })
+    const s = await caller.session.create({ sessionDate: D, startTime: "13:00", endTime: "14:00", subjectId: hoa.id })
+    await caller.session.delete({ id: s.id })
+    await caller.subject.delete({ id: hoa.id })
+    await caller.trash.purge({ type: "subject" })
+    const again = await caller.subject.create({ name: "Hoá", color: "#16A34A" })
+    expect(again.id).not.toBe(hoa.id)
+  })
+
   it("chỉ dọn của mình", async () => {
     const caller = await getAuthedCaller()
     const other = await getAuthedCaller("teacher2")

@@ -67,4 +67,14 @@ describe("Tiền của HS đã xoá vẫn tính (spec R8)", () => {
     await caller.student.delete({ id: st.id })
     expect(await caller.report.monthlySummary({ year: y, month: m, grade: 8 })).toMatchObject({ totalPaid: 90_000, totalRevenue: 90_000, totalStudents: 1 })
   })
+
+  it("HS nhập nhầm bị xoá khi còn trong ca sắp tới (chưa điểm danh) → không tính vào dự kiến / số HS", async () => {
+    const caller = await getAuthedCaller()
+    const st = await caller.student.create({ fullName: "HS Trùng", grade: 5, tuitionFee: 120_000 })
+    const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
+    await caller.session.create({ sessionDate: "2031-04-07", startTime: "08:00", endTime: "09:00", subjectId, studentIds: [st.id] })
+    expect(await caller.report.monthlySummary({ year: 2031, month: 4 })).toMatchObject({ expectedRevenue: 120_000, totalStudents: 1 })
+    await caller.student.delete({ id: st.id })
+    expect(await caller.report.monthlySummary({ year: 2031, month: 4 })).toMatchObject({ expectedRevenue: 0, totalStudents: 0 })
+  })
 })
