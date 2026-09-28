@@ -20,6 +20,11 @@ async function trpcQuery<T>(page: Page, path: string, input?: unknown): Promise<
   return (await res.json()).result.data as T;
 }
 
+async function getDefaultSubjectId(page: Page): Promise<number> {
+  const subjects = await trpcQuery<{ id: number; isDefault?: boolean }[]>(page, 'subject.list');
+  return (subjects.find((s) => s.isDefault) ?? subjects[0]).id;
+}
+
 async function loginTeacher(page: Page) {
   await page.addInitScript(() => {
     document.addEventListener('DOMContentLoaded', () => {
@@ -36,8 +41,24 @@ async function loginTeacher(page: Page) {
 }
 
 test.describe('Thùng rác & Xoá mềm (E2E)', () => {
+  const createdStudentIds: number[] = [];
+  const createdSessionIds: number[] = [];
+
   test.beforeEach(async ({ page }) => {
     await loginTeacher(page);
+  });
+
+  test.afterEach(async ({ page }) => {
+    for (const id of createdSessionIds.splice(0)) {
+      try {
+        await trpcMutation(page, 'session.delete', { id });
+      } catch {}
+    }
+    for (const id of createdStudentIds.splice(0)) {
+      try {
+        await trpcMutation(page, 'student.delete', { id });
+      } catch {}
+    }
   });
 
   test('1. Desktop 1280px: tạo HS qua UI → xoá HS → vào /trash khôi phục → xuất hiện lại trong /students', async ({ page }) => {
@@ -90,20 +111,21 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     const stamp = Math.floor(Math.random() * 100_000);
     const title = `E2E Ca rác ${stamp}`;
-    const subjectList = await trpcQuery<{ items: { id: number; isDefault: boolean }[] }>(page, 'subject.list');
-    const subjectId = (subjectList.items.find((s) => s.isDefault) ?? subjectList.items[0]).id;
+    const subjectId = await getDefaultSubjectId(page);
 
-    // Tạo ca tương lai
+    // Tạo ca hôm nay theo giờ VN
+    const vnNow = new Date(Date.now() + 7 * 3600_000);
+    const today = vnNow.toISOString().slice(0, 10);
     const session = await trpcMutation<{ id: number }>(page, 'session.create', {
-      sessionDate: '2031-10-15',
-      startTime: '10:00',
-      endTime: '11:00',
+      sessionDate: today,
+      startTime: '22:00',
+      endTime: '23:00',
       subjectId,
       title,
     });
 
     // Mở lịch và xoá ca
-    await page.goto('/calendar?view=month&date=2031-10-01');
+    await page.goto('/calendar');
     await page.getByText(title).filter({ visible: true }).first().click();
     await page.getByRole('dialog').getByRole('button', { name: 'Menu hành động' }).click();
     await page.getByRole('menuitem', { name: 'Xóa ca dạy' }).click();
@@ -137,8 +159,7 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
     const stamp = Math.floor(Math.random() * 100_000);
     const titleA = `Ca A trùng ${stamp}`;
     const titleB = `Ca B trùng ${stamp}`;
-    const subjectList = await trpcQuery<{ items: { id: number; isDefault: boolean }[] }>(page, 'subject.list');
-    const subjectId = (subjectList.items.find((s) => s.isDefault) ?? subjectList.items[0]).id;
+    const subjectId = await getDefaultSubjectId(page);
     const sessionDate = '2031-11-20';
 
     // Tạo ca A 08:00–09:00, xoá A
@@ -177,28 +198,31 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
   test('4. HS còn nợ: cảnh báo nợ, Cho nghỉ thay chuyển sang Đã nghỉ, bấm Xoá tiếp vào Thùng rác', async ({ page }) => {
     const stamp = Math.floor(Math.random() * 100_000);
     const nameDebt = `E2E Nợ ${stamp}`;
-    const subjectList = await trpcQuery<{ items: { id: number; isDefault: boolean }[] }>(page, 'subject.list');
-    const subjectId = (subjectList.items.find((s) => s.isDefault) ?? subjectList.items[0]).id;
+    const subjectId = await getDefaultSubjectId(page);
 
     // Tạo HS có học phí 100.000
     const st = await trpcMutation<{ id: number }>(page, 'student.create', {
       fullName: nameDebt,
       grade: 6,
-      defaultTuitionFee: 100_000,
+      tuitionFee: 100_000,
     });
+    createdStudentIds.push(st.id);
 
-    // Tạo ca hôm nay theo giờ VN và điểm danh present
-    const vnToday = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+    // Tạo ca trong tháng hiện tại theo giờ VN và điểm danh present
+    const vnNow = new Date(Date.now() + 7 * 3600_000);
+    const vnMonthDay = `${vnNow.toISOString().slice(0, 7)}-03`;
+    const h = String(Math.floor(Math.random() * 8) + 6).padStart(2, '0');
     const sess = await trpcMutation<{ id: number }>(page, 'session.create', {
-      sessionDate: vnToday,
-      startTime: '19:00',
-      endTime: '20:00',
+      sessionDate: vnMonthDay,
+      startTime: `${h}:00`,
+      endTime: `${h}:45`,
       subjectId,
       studentIds: [st.id],
     });
+    createdSessionIds.push(sess.id);
     await trpcMutation(page, 'attendance.update', {
       sessionId: sess.id,
-      records: [{ studentId: st.id, status: 'present' }],
+      attendances: [{ studentId: st.id, attendance: 'present', fee: 100_000 }],
     });
 
     // Vào /students -> mở menu -> Xoá

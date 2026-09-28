@@ -116,7 +116,9 @@ test.describe('Admin xoá / khôi phục tài khoản (E2E)', () => {
   test('6. Mobile 390px: item Xoá tài khoản cao ≥44px, đóng bằng Escape, không xoá', async ({ browser }) => {
     const admin = await newPage(browser, MOBILE);
     await login(admin, 'admin_test', 'teacher123');
+    await expect(admin).toHaveURL(/\/admin\/orders$/);
     await admin.goto('/admin/accounts');
+    await expect(admin.getByRole('heading', { level: 1, name: 'Tài khoản & gói' })).toBeVisible();
 
     const card = admin.getByTestId('admin-user-card').filter({ hasText: 'teacher_std' });
     await card.getByRole('button', { name: 'Menu hành động teacher_std' }).click();
