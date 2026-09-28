@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server"
 import { Prisma, type PrismaClient, type Subject } from "@prisma/client"
 import { assertOwnership } from "./_base.service"
+import { WITH_DELETED, softDeleteData } from "@/server/soft-delete"
 import type {
   SubjectCreateInput,
   SubjectFilterInput,
@@ -22,9 +23,18 @@ export async function listSubjects(
 }
 
 const DUPLICATE_NAME = "Tên môn học đã tồn tại"
+export const SUBJECT_IN_TRASH = "Môn này đang ở Thùng rác. Hãy khôi phục trong Thùng rác."
 
 function badRequest(message: string) {
   return new TRPCError({ code: "BAD_REQUEST", message })
+}
+
+// Tên môn đã xoá vẫn giữ unique (spec Q Q2) → P2002 có thể do môn trong thùng rác.
+async function duplicateNameError(db: PrismaClient, userId: number, name: string) {
+  const clash = await db.subject.findUnique({ where: { userId_name: { userId, name }, ...WITH_DELETED } })
+  if (clash?.isDeleted) return badRequest(SUBJECT_IN_TRASH)
+  if (clash && !clash.isActive) return badRequest("Môn này đang bị ẩn. Hãy bấm Hiện lại trong danh sách môn đã ẩn.")
+  return badRequest(DUPLICATE_NAME)
 }
 
 export async function createSubject(
@@ -56,14 +66,7 @@ export async function createSubject(
     })
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      // Trùng với môn đã ẩn thì người dùng không thấy môn đó ở đâu → chỉ cách bật lại
-      const clash = await db.subject.findUnique({
-        where: { userId_name: { userId, name: input.name } },
-      })
-      if (clash && !clash.isActive) {
-        throw badRequest("Môn này đang bị ẩn. Hãy bấm Hiện lại trong danh sách môn đã ẩn.")
-      }
-      throw badRequest(DUPLICATE_NAME)
+      throw await duplicateNameError(db, userId, input.name)
     }
     throw e
   }
@@ -121,7 +124,7 @@ export async function updateSubject(
       e instanceof Prisma.PrismaClientKnownRequestError &&
       e.code === "P2002"
     ) {
-      throw badRequest(DUPLICATE_NAME)
+      throw await duplicateNameError(db, userId, data.name ?? existing.name)
     }
     throw e
   }
@@ -134,27 +137,16 @@ export async function softDeleteSubject(
 ): Promise<{ success: true }> {
   const existing = await db.subject.findUnique({ where: { id } })
   assertOwnership(existing, userId)
-
-  // Không cho xóa nếu đang có session dùng môn này
+  if (existing.isDefault) {
+    throw badRequest("Không thể xoá môn mặc định. Hãy chọn môn mặc định khác trước.")
+  }
+  // Ca đã xoá không tính: khôi phục ca đó sau này sẽ bị chặn cho tới khi khôi phục môn.
   const inUse = await db.teachingSession.count({ where: { subjectId: id, userId } })
-  if (inUse > 0) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Không thể xóa môn đang được dùng bởi ca dạy",
-    })
+  if (inUse > 0) throw badRequest("Không thể xoá môn đang có ca dạy. Hãy xoá các ca đó hoặc chỉ ẩn môn.")
+  if (existing.isActive) {
+    const remaining = await db.subject.count({ where: { userId, isActive: true, NOT: { id } } })
+    if (remaining === 0) throw badRequest("Không thể xoá môn cuối cùng")
   }
-
-  // Không cho xóa subject active cuối cùng
-  const remaining = await db.subject.count({
-    where: { userId, isActive: true, NOT: { id } },
-  })
-  if (remaining === 0) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Không thể xóa môn cuối cùng",
-    })
-  }
-
-  await db.subject.update({ where: { id }, data: { isActive: false } })
+  await db.subject.update({ where: { id }, data: softDeleteData() })
   return { success: true }
 }

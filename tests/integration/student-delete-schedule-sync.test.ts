@@ -16,7 +16,7 @@ function daysFromNow(delta: number): string {
   return ymd(d)
 }
 
-describe("Xóa học sinh ↔ đồng bộ lịch & giữ điểm danh", () => {
+describe("Cho nghỉ học sinh ↔ đồng bộ lịch & giữ điểm danh", () => {
   let subjectId: number
 
   beforeAll(async () => {
@@ -50,7 +50,7 @@ describe("Xóa học sinh ↔ đồng bộ lịch & giữ điểm danh", () => {
     })
     expect(future.studentCount).toBe(2)
 
-    await caller.student.delete({ id: a.id })
+    await caller.student.deactivate({ id: a.id })
 
     const detail = await caller.session.getDetail({ id: future.id })
     expect(detail.studentCount).toBe(1)
@@ -71,7 +71,7 @@ describe("Xóa học sinh ↔ đồng bộ lịch & giữ điểm danh", () => {
       studentIds: [a.id, b.id],
     })
 
-    await caller.student.delete({ id: a.id })
+    await caller.student.deactivate({ id: a.id })
 
     const detail = await caller.session.getDetail({ id: past.id })
     expect(detail.studentCount).toBe(2)
@@ -159,7 +159,7 @@ describe("Xóa học sinh ↔ đồng bộ lịch & giữ điểm danh", () => {
       const ended = await caller.session.create({ sessionDate: "2099-03-10", startTime: "16:00", endTime: "17:00", subjectId, studentIds: [a.id] })
       const upcoming = await caller.session.create({ sessionDate: "2099-03-10", startTime: "19:00", endTime: "20:00", subjectId, studentIds: [a.id] })
 
-      await caller.student.delete({ id: a.id })
+      await caller.student.deactivate({ id: a.id })
 
       expect((await caller.session.getDetail({ id: ended.id })).studentCount).toBe(1)
       expect((await caller.session.getDetail({ id: upcoming.id })).studentCount).toBe(0)
@@ -173,7 +173,7 @@ describe("Xóa học sinh ↔ đồng bộ lịch & giữ điểm danh", () => {
       const lastNight = await caller.session.create({ sessionDate: "2099-03-10", startTime: "20:00", endTime: "21:00", subjectId, studentIds: [a.id] })
       const morning = await caller.session.create({ sessionDate: "2099-03-11", startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id] })
 
-      await caller.student.delete({ id: a.id })
+      await caller.student.deactivate({ id: a.id })
 
       expect((await caller.session.getDetail({ id: lastNight.id })).studentCount).toBe(1)
       expect((await caller.session.getDetail({ id: morning.id })).studentCount).toBe(0)
