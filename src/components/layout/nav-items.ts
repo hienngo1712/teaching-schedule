@@ -5,6 +5,7 @@ import {
   Crown,
   LayoutDashboard,
   Settings,
+  Trash2,
   Users,
   Wallet,
   type LucideIcon,
@@ -30,6 +31,7 @@ export const MANAGE_ITEMS: NavItem[] = [
   { href: "/subjects", labelKey: "subject", icon: BookOpen },
   { href: "/settings", labelKey: "settings", icon: Settings },
   { href: "/plan", labelKey: "my_plan", icon: Crown },
+  { href: "/trash", labelKey: "trash", icon: Trash2 },
 ]
 
 // Tab "Thêm" trên mobile gom các màn không có tab riêng.
@@ -38,6 +40,7 @@ export const MORE_ITEMS: (NavItem & { descKey: keyof typeof vi })[] = [
   { href: "/subjects", labelKey: "subject", icon: BookOpen, descKey: "more_subjects_desc" },
   { href: "/settings", labelKey: "settings", icon: Settings, descKey: "more_settings_desc" },
   { href: "/plan", labelKey: "my_plan", icon: Crown, descKey: "more_plan_desc" },
+  { href: "/trash", labelKey: "trash", icon: Trash2, descKey: "more_trash_desc" },
 ]
 
 export function isMoreActive(pathname: string) {

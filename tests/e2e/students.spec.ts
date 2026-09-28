@@ -30,7 +30,7 @@ test.describe('Student management', () => {
     await page.click('text=Xóa');
     await page.click('button:has-text("Xóa")'); // Confirm in AlertDialog
     
-    await expect(page.locator('text=Đã xóa học sinh')).toBeVisible();
+    await expect(page.locator('text=Đã chuyển học sinh vào Thùng rác')).toBeVisible();
     await expect(page.getByText('Học sinh E2E')).toHaveCount(0);
   });
 
@@ -52,7 +52,7 @@ test.describe('Student management', () => {
     await page.click(`tr:has-text("${name}") button:has(svg)`);
     await page.click('text=Xóa');
     await page.click('button:has-text("Xóa")');
-    await expect(page.locator('text=Đã xóa học sinh')).toBeVisible();
+    await expect(page.locator('text=Đã chuyển học sinh vào Thùng rác')).toBeVisible();
     await expect(page.getByText(name)).toHaveCount(0);
   });
 

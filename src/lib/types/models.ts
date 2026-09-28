@@ -158,7 +158,7 @@ export type ParentViewDTO = {
 }
 
 export type TrashItemDTO =
-  | { type: "session"; id: number; deletedAt: Date; sessionDate: string; startTime: string; endTime: string; subjectName: string; title: string | null; isMakeup: boolean }
-  | { type: "student"; id: number; deletedAt: Date; fullName: string; grade: number }
-  | { type: "payment"; id: number; deletedAt: Date; amount: number; paidAt: string; studentName: string; year: number; month: number }
-  | { type: "subject"; id: number; deletedAt: Date; name: string; color: string }
+  | { type: "session"; id: number; deletedAt: Date | string; sessionDate: string; startTime: string; endTime: string; subjectName: string; title: string | null; isMakeup: boolean }
+  | { type: "student"; id: number; deletedAt: Date | string; fullName: string; grade: number }
+  | { type: "payment"; id: number; deletedAt: Date | string; amount: number; paidAt: string; studentName: string; year: number; month: number }
+  | { type: "subject"; id: number; deletedAt: Date | string; name: string; color: string }
