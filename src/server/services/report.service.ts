@@ -3,7 +3,7 @@ import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { calcAttendanceRate, getLevel, vnDateParts } from "@/lib/utils"
 import type { SessionDTO } from "@/lib/types/models"
 import { assertOwnership } from "./_base.service"
-import { LIVE_LINK } from "@/server/soft-delete"
+import { HISTORY_LINK } from "@/server/soft-delete"
 import { getCancelledWithoutMakeup, getMonthSessions } from "./session.service"
 import { getMonthlyOutstanding, getMonthlyTuitionStatus } from "./tuition.service"
 
@@ -104,7 +104,6 @@ export async function getMonthlySummary(
     ? {
         student: {
           userId,
-          isDeleted: false,
           sessionStudents: {
             some: {
               grade,
@@ -115,7 +114,7 @@ export async function getMonthlySummary(
         year: { gte: year, lte: effToYear },
       }
     : {
-        student: { userId, isDeleted: false },
+        student: { userId },
         year: { gte: year, lte: effToYear },
       }
 
@@ -126,10 +125,10 @@ export async function getMonthlySummary(
         sessionDate: { gte: startDate, lt: endDate },
         status: { not: "cancelled" },
         isDeleted: false,
-        ...(grade ? { sessionStudents: { some: { grade, ...LIVE_LINK } } } : {})
+        ...(grade ? { sessionStudents: { some: { grade, ...HISTORY_LINK } } } : {})
       },
       include: {
-        sessionStudents: { where: LIVE_LINK, include: { student: true } }
+        sessionStudents: { where: HISTORY_LINK, include: { student: true } }
       }
     }),
     db.monthlyTuition.findMany({ where: monthlyTuitionsWhere })
@@ -235,7 +234,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
     // 3. This month's sessions
     db.teachingSession.findMany({
       where: { userId, sessionDate: { gte: startOfMonth, lt: endOfMonth }, status: { not: "cancelled" }, isDeleted: false },
-      include: { sessionStudents: { where: LIVE_LINK } }
+      include: { sessionStudents: { where: HISTORY_LINK } }
     }),
 
     // 5. Outstanding tuition — same per-student carry-over math as the tuition page
@@ -246,7 +245,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
 
     // Tiền đã ghi nhận trong tháng — cùng nguồn monthlyTuition.paidAmount với Báo cáo
     db.monthlyTuition.aggregate({
-      where: { student: { userId, isDeleted: false }, year: vnYear, month: vnMonth },
+      where: { student: { userId }, year: vnYear, month: vnMonth },
       _sum: { paidAmount: true },
     }),
   ])

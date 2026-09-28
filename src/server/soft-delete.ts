@@ -8,6 +8,8 @@ const READ_OPS: ReadonlySet<string> = new Set([
 export const LIVE = { isDeleted: false } as const
 // Lọc danh sách sessionStudents: HS đã xoá không hiện ở ca/điểm danh/học phí.
 export const LIVE_LINK = { student: { isDeleted: false } } as const
+// Số liệu tiền/điểm danh lịch sử (Báo cáo, Tổng quan) tính cả HS đã xoá: tiền đã thu là tiền thật (spec R8).
+export const HISTORY_LINK = {} as const
 // Có khoá isDeleted nên extension không đè; Prisma bỏ qua undefined → đọc cả bản đã xoá.
 export const WITH_DELETED = { isDeleted: undefined }
 export const RESTORE_DATA = { isDeleted: false, deletedAt: null } as const

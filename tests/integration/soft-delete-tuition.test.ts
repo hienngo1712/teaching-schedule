@@ -6,9 +6,9 @@ import { getParentView } from "@/server/services/parent-link.service"
 import { getAuthedCaller } from "../helpers/trpc"
 
 // Tháng quá khứ cố định để phiếu/phụ huynh (giới hạn 12 tháng) không đụng; học phí tính mọi tháng.
-const Y = 2030
+const Y = 2024
 const M = 5
-const DAY = "2030-05-06"
+const DAY = "2024-05-06"
 const TOKEN = "q".repeat(43)
 
 async function clean() {
@@ -25,7 +25,7 @@ async function setup() {
   const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
   const s = await caller.session.create({ sessionDate: DAY, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [st.id] })
   await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present" }] })
-  const p = await caller.payment.create({ studentId: st.id, year: Y, month: M, amount: 40_000, paidAt: "2030-05-20", method: "cash" })
+  const p = await caller.payment.create({ studentId: st.id, year: Y, month: M, amount: 40_000, paidAt: "2024-05-20", method: "cash" })
   return { caller, st, s, p }
 }
 
@@ -58,15 +58,19 @@ describe("Học phí khi xoá / khôi phục (spec Q mục 6)", () => {
     expect(await db.payment.findUnique({ where: { id: p.id, isDeleted: true } })).not.toBeNull()
   })
 
-  it("xoá HS → biến khỏi học phí, báo cáo tháng, sao lưu; ghi tiền cho HS đã xoá → NOT_FOUND", async () => {
+  it("xoá HS (đã nghỉ, hết nợ) → biến khỏi học phí + sao lưu, Báo cáo vẫn giữ tiền; ghi tiền cho HS đã xoá → NOT_FOUND", async () => {
     const { caller, st } = await setup()
     const userId = (await db.user.findUniqueOrThrow({ where: { username: "teacher" } })).id
+    // R2: HS có dữ liệu phải Đã nghỉ + hết nợ (đã thu 40.000 / phí 100.000 → trả nốt 60.000).
+    await caller.payment.create({ studentId: st.id, year: Y, month: M, amount: 60_000, paidAt: "2024-05-21", method: "cash" })
+    await caller.student.deactivate({ id: st.id })
     await caller.student.delete({ id: st.id })
 
     expect(await row(caller, st.id)).toBeUndefined()
     const sum = await caller.report.monthlySummary({ year: Y, month: M })
-    expect(sum).toMatchObject({ totalRevenue: 0, totalPaid: 0, totalStudents: 0 })
-    await expect(caller.payment.create({ studentId: st.id, year: Y, month: M, amount: 1, paidAt: "2030-05-21", method: "cash" }))
+    // R8: tiền đã thu + học phí đã dạy của HS đã xoá vẫn tính.
+    expect(sum).toMatchObject({ totalRevenue: 100_000, totalPaid: 100_000, totalStudents: 1 })
+    await expect(caller.payment.create({ studentId: st.id, year: Y, month: M, amount: 1, paidAt: "2024-05-22", method: "cash" }))
       .rejects.toMatchObject({ code: "NOT_FOUND" })
 
     const wb = await buildBackupWorkbook(db, userId, new Date())
