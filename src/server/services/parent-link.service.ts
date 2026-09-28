@@ -124,7 +124,7 @@ export async function getParentView(
   // Cùng điều kiện với currentAttendance trong getMonthlyTuitionStatus để số buổi khớp phiếu.
   const where = (sessionDate: Prisma.DateTimeFilter) => ({
     studentId: student.id,
-    session: { userId: student.userId, sessionDate, status: { not: "cancelled" as const } },
+    session: { userId: student.userId, sessionDate, status: { not: "cancelled" as const }, isDeleted: false },
   })
   const [monthRows, upcomingRows] = await Promise.all([
     db.sessionStudent.findMany({

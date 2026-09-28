@@ -34,7 +34,7 @@ export async function getTuitionNotice(
       where: {
         studentId,
         attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] },
-        session: { userId, sessionDate: { gte: startDate, lt: endDate }, status: { not: "cancelled" } },
+        session: { userId, sessionDate: { gte: startDate, lt: endDate }, status: { not: "cancelled" }, isDeleted: false },
       },
       select: { fee: true, session: { select: { sessionDate: true } } },
       orderBy: [{ session: { sessionDate: "asc" } }, { session: { startTime: "asc" } }],

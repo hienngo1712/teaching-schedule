@@ -4,6 +4,7 @@ import { ATTENDANCE_LABEL } from "@/lib/constants"
 import { formatDayOfWeek, formatTime } from "@/lib/utils"
 import type { PAYMENT_METHODS } from "@/lib/schemas/payment"
 import { findBank } from "@/lib/vn-banks"
+import { LIVE_LINK } from "@/server/soft-delete"
 
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const HEADER_BG = "FFCCFBF1"
@@ -113,11 +114,11 @@ export async function buildBackupWorkbook(
         id: true, sessionDate: true, startTime: true, endTime: true, subjectId: true, title: true,
         status: true, cancelReason: true, cancelledAt: true, makeupOfId: true, notes: true, createdAt: true,
         subject: { select: { name: true } },
-        _count: { select: { sessionStudents: true } },
+        _count: { select: { sessionStudents: { where: LIVE_LINK } } },
       },
     }),
     db.sessionStudent.findMany({
-      where: { session: { userId } },
+      where: { session: { userId, isDeleted: false }, student: { isDeleted: false } },
       orderBy: [{ session: { sessionDate: "asc" } }, { session: { startTime: "asc" } }, { id: "asc" }],
       select: {
         id: true, sessionId: true, studentId: true, grade: true, attendance: true, fee: true, note: true,
@@ -126,7 +127,7 @@ export async function buildBackupWorkbook(
       },
     }),
     db.monthlyTuition.findMany({
-      where: { student: { userId } },
+      where: { student: { userId, isDeleted: false } },
       orderBy: [{ year: "asc" }, { month: "asc" }, { studentId: "asc" }],
       select: {
         id: true, studentId: true, year: true, month: true, totalSessions: true, presentSessions: true,
@@ -136,7 +137,7 @@ export async function buildBackupWorkbook(
       },
     }),
     db.payment.findMany({
-      where: { monthlyTuition: { student: { userId } } },
+      where: { monthlyTuition: { student: { userId, isDeleted: false } } },
       orderBy: [{ paidAt: "asc" }, { id: "asc" }],
       select: {
         id: true, monthlyTuitionId: true, amount: true, paidAt: true, method: true, note: true,
