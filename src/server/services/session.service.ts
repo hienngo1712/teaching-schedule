@@ -8,6 +8,7 @@ import {
   parseTimeToDate,
 } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
+import { LIVE, LIVE_LINK, softDeleteData } from "@/server/soft-delete"
 import {
   type SessionBulkCreateInput,
   type SessionCreateInput,
@@ -43,6 +44,7 @@ export async function checkOverlap(
     WHERE user_id      = ${userId}
       AND session_date = ${sessionDate}::date
       AND status      != 'cancelled'
+      AND is_deleted   = false
       AND id          != ${excludeId ?? 0}
       AND start_time   < ${endTime}::time
       AND end_time     > ${startTime}::time
@@ -66,6 +68,15 @@ export function parseSessionDate(dateStr: string): Date {
   return new Date(Date.UTC(y, m - 1, d))
 }
 
+// Ca chỉ hiện HS chưa xoá; ca bù/ca gốc đã xoá coi như không có (spec Q Q1).
+export const SESSION_DETAIL_INCLUDE = {
+  subject: true,
+  sessionStudents: { where: LIVE_LINK, include: { student: true }, orderBy: { student: { fullName: "asc" } } },
+  _count: { select: { sessionStudents: { where: LIVE_LINK } } },
+  makeupSessions: { where: LIVE, select: { id: true, sessionDate: true } },
+  makeupOf: { select: { id: true, sessionDate: true, isDeleted: true } },
+} satisfies Prisma.TeachingSessionInclude
+
 type SessionWithSubjectAndStudents = Prisma.TeachingSessionGetPayload<{
   include: {
     subject: true
@@ -74,7 +85,7 @@ type SessionWithSubjectAndStudents = Prisma.TeachingSessionGetPayload<{
 }> & {
   _count?: { sessionStudents: number }
   makeupSessions?: Array<{ id: number; sessionDate: Date }>
-  makeupOf?: { id: number; sessionDate: Date } | null
+  makeupOf?: { id: number; sessionDate: Date; isDeleted?: boolean } | null
 }
 
 function deriveLevel(students: Array<{ grade: number }>): SchoolLevel | "mixed" {
@@ -125,7 +136,7 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
       s.makeupSessions && s.makeupSessions.length > 0
         ? { id: s.makeupSessions[0].id, sessionDate: s.makeupSessions[0].sessionDate }
         : null,
-    originalInfo: s.makeupOf
+    originalInfo: s.makeupOf && !s.makeupOf.isDeleted
       ? { id: s.makeupOf.id, sessionDate: s.makeupOf.sessionDate }
       : null,
   }
@@ -150,10 +161,12 @@ export async function getMonthSessions(
         ? {
             sessionStudents: {
               some: {
+                ...LIVE_LINK,
                 ...(grade ? { grade } : {}),
                 ...(studentId || studentName
                   ? {
                       student: {
+                        isDeleted: false,
                         ...(studentId ? { id: studentId } : {}),
                         ...(studentName
                           ? { fullName: { contains: studentName, mode: "insensitive" as const } }
@@ -169,12 +182,12 @@ export async function getMonthSessions(
     include: {
       subject: true,
       ...(includeStudents
-        ? { sessionStudents: { include: { student: true }, orderBy: { student: { fullName: 'asc' } } } }
-        : { sessionStudents: { select: { id: true, studentId: true, grade: true, attendance: true, note: true, fee: true } } }
+        ? { sessionStudents: { where: LIVE_LINK, include: { student: true }, orderBy: { student: { fullName: "asc" } } } }
+        : { sessionStudents: { where: LIVE_LINK, select: { id: true, studentId: true, grade: true, attendance: true, note: true, fee: true } } }
       ),
-      _count: { select: { sessionStudents: true } },
-      makeupSessions: { select: { id: true, sessionDate: true } },
-      makeupOf: { select: { id: true, sessionDate: true } },
+      _count: { select: { sessionStudents: { where: LIVE_LINK } } },
+      makeupSessions: { where: LIVE, select: { id: true, sessionDate: true } },
+      makeupOf: { select: { id: true, sessionDate: true, isDeleted: true } },
     },
 
     orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }],
@@ -190,16 +203,7 @@ export async function getSessionDetail(
 ): Promise<SessionDTO> {
   const session = await db.teachingSession.findUnique({
     where: { id },
-    include: {
-      subject: true,
-      sessionStudents: {
-        include: { student: true },
-        orderBy: { student: { fullName: "asc" } },
-      },
-      _count: { select: { sessionStudents: true } },
-      makeupSessions: { select: { id: true, sessionDate: true } },
-      makeupOf: { select: { id: true, sessionDate: true } },
-    },
+    include: SESSION_DETAIL_INCLUDE,
   })
 
   assertOwnership(session, userId)
@@ -271,12 +275,9 @@ export async function createSession(
           }
         : {}),
     },
-    include: {
-      subject: true,
-      sessionStudents: { include: { student: true } },
-    },
+    include: SESSION_DETAIL_INCLUDE,
   })
-  return toDTO(created)
+  return toDTO(created as SessionWithSubjectAndStudents)
 }
 
 export type SessionUpdateData = {
@@ -300,7 +301,7 @@ async function syncSessionStudents(
   studentFees: Array<{ id: number; tuitionFee: number; grade: number }>
 ): Promise<void> {
   const current = await tx.sessionStudent.findMany({
-    where: { sessionId },
+    where: { sessionId, ...LIVE_LINK },
     select: { studentId: true },
   })
   const currentIds = new Set(current.map((c) => c.studentId))
@@ -308,6 +309,7 @@ async function syncSessionStudents(
 
   const toRemove = Array.from(currentIds).filter((sid) => !targetIds.has(sid))
   if (toRemove.length > 0) {
+    // Không đụng link của HS đã xoá để khôi phục HS còn nguyên ca.
     await tx.sessionStudent.deleteMany({
       where: { sessionId, studentId: { in: toRemove } },
     })
@@ -334,7 +336,7 @@ export async function updateSession(
 ): Promise<SessionDTO> {
   const existing = await db.teachingSession.findUnique({
     where: { id },
-    include: { sessionStudents: true },
+    include: { sessionStudents: { where: LIVE_LINK } },
   })
   assertOwnership(existing, userId)
 
@@ -400,14 +402,11 @@ export async function updateSession(
         ...(data.title !== undefined && { title: data.title }),
         ...(data.notes !== undefined && { notes: data.notes }),
       },
-      include: {
-        subject: true,
-        sessionStudents: { include: { student: true } },
-      },
+      include: SESSION_DETAIL_INCLUDE,
     })
   })
 
-  return toDTO(updated)
+  return toDTO(updated as SessionWithSubjectAndStudents)
 }
 
 export async function addStudentsToRecurringSessions(
@@ -491,7 +490,7 @@ export async function deleteSession(
 ): Promise<{ success: true }> {
   const existing = await db.teachingSession.findUnique({ where: { id } })
   assertOwnership(existing, userId)
-  await db.teachingSession.delete({ where: { id } })
+  await db.teachingSession.update({ where: { id }, data: softDeleteData() })
   return { success: true }
 }
 
@@ -514,12 +513,9 @@ export async function addStudentsToSession(
 
   const updated = await db.teachingSession.findUnique({
     where: { id: sessionId },
-    include: {
-      subject: true,
-      sessionStudents: { include: { student: true } },
-    },
+    include: SESSION_DETAIL_INCLUDE,
   })
-  return toDTO(updated!)
+  return toDTO(updated as SessionWithSubjectAndStudents)
 }
 
 export async function removeStudentFromSession(
@@ -537,12 +533,9 @@ export async function removeStudentFromSession(
 
   const updated = await db.teachingSession.findUnique({
     where: { id: sessionId },
-    include: {
-      subject: true,
-      sessionStudents: { include: { student: true } },
-    },
+    include: SESSION_DETAIL_INCLUDE,
   })
-  return toDTO(updated!)
+  return toDTO(updated as SessionWithSubjectAndStudents)
 }
 
 export async function checkBulkCreateConflicts(
@@ -719,12 +712,12 @@ export async function bulkDeleteFutureSessions(
   })
   assertOwnership(ref, userId)
 
-  // Dùng raw SQL để xử lý DOW (Day of Week) chính xác và nhanh
-  // Lưu ý: PostgreSQL DOW: 0=Sunday, 1=Monday...
-  // Chúng ta cần lấy DOW của reference date
+  // Một lệnh → mọi ca của đợt có cùng deleted_at (khôi phục cả đợt về sau dễ, spec Q U3).
   const result = await db.$executeRaw`
-    DELETE FROM teaching_sessions
+    UPDATE teaching_sessions
+    SET is_deleted = true, deleted_at = now(), updated_at = now()
     WHERE user_id = ${userId}
+      AND is_deleted = false
       AND subject_id = ${ref.subjectId}
       AND start_time = ${ref.startTime}::time
       AND end_time = ${ref.endTime}::time
@@ -773,6 +766,7 @@ export async function bulkUpdateFutureSessions(
   const sessions = await db.$queryRaw<Array<{ id: number; session_date: Date }>>`
     SELECT id, session_date FROM teaching_sessions
     WHERE user_id = ${userId}
+      AND is_deleted = false
       AND subject_id = ${ref.subjectId}
       AND start_time = ${ref.startTime}::time
       AND end_time = ${ref.endTime}::time
@@ -831,7 +825,7 @@ export async function duplicateSession(
 ): Promise<SessionDTO> {
   const existing = await db.teachingSession.findUnique({
     where: { id },
-    include: { sessionStudents: true },
+    include: { sessionStudents: { where: LIVE_LINK } },
   })
   assertOwnership(existing, userId)
 
@@ -868,13 +862,10 @@ export async function duplicateSession(
           }
         : {}),
     },
-    include: {
-      subject: true,
-      sessionStudents: { include: { student: true } },
-    },
+    include: SESSION_DETAIL_INCLUDE,
   })
 
-  return toDTO(duplicated)
+  return toDTO(duplicated as SessionWithSubjectAndStudents)
 }
 
 export async function createMakeupSession(
@@ -885,7 +876,7 @@ export async function createMakeupSession(
 ): Promise<{ makeup: SessionDTO; cancelled: SessionDTO }> {
   const original = await db.teachingSession.findUnique({
     where: { id: originalId },
-    include: { sessionStudents: true, makeupSessions: { select: { id: true } } },
+    include: { sessionStudents: { where: LIVE_LINK }, makeupSessions: { where: LIVE, select: { id: true } } },
   })
   assertOwnership(original, userId)
 
@@ -920,7 +911,7 @@ export async function createMakeupSession(
         cancelReason: input.cancelReason ?? null,
         cancelledAt: new Date(),
       },
-      include: { subject: true, sessionStudents: { include: { student: true } } },
+      include: SESSION_DETAIL_INCLUDE,
     })
 
     const makeupSession = await tx.teachingSession.create({
@@ -935,13 +926,16 @@ export async function createMakeupSession(
         makeupOfId: originalId,
         ...(studentData.length > 0 ? { sessionStudents: { create: studentData } } : {}),
       },
-      include: { subject: true, sessionStudents: { include: { student: true } } },
+      include: SESSION_DETAIL_INCLUDE,
     })
 
     return [cancelledSession, makeupSession]
   })
 
-  return { makeup: toDTO(makeup), cancelled: toDTO(cancelled) }
+  return {
+    makeup: toDTO(makeup as SessionWithSubjectAndStudents),
+    cancelled: toDTO(cancelled as SessionWithSubjectAndStudents),
+  }
 }
 
 export async function restoreSession(
@@ -951,7 +945,7 @@ export async function restoreSession(
 ): Promise<SessionDTO> {
   const original = await db.teachingSession.findUnique({
     where: { id },
-    include: { makeupSessions: { select: { id: true } } },
+    include: { makeupSessions: { where: LIVE, select: { id: true } } },
   })
   assertOwnership(original, userId)
 
@@ -971,17 +965,15 @@ export async function restoreSession(
   const restored = await db.$transaction(async (tx) => {
     const makeupIds = original.makeupSessions.map((m) => m.id)
     if (makeupIds.length > 0) {
-      await tx.teachingSession.deleteMany({ where: { id: { in: makeupIds } } })
+      await tx.teachingSession.updateMany({
+        where: { id: { in: makeupIds } },
+        data: softDeleteData(),
+      })
     }
     return tx.teachingSession.update({
       where: { id },
       data: { status: "scheduled", cancelReason: null, cancelledAt: null },
-      include: {
-        subject: true,
-        sessionStudents: { include: { student: true } },
-        makeupSessions: { select: { id: true, sessionDate: true } },
-        makeupOf: { select: { id: true, sessionDate: true } },
-      },
+      include: SESSION_DETAIL_INCLUDE,
     })
   })
 
@@ -999,18 +991,9 @@ export async function getCancelledWithoutMakeup(
       userId,
       status: "cancelled",
       sessionDate: { gte: params.from },
-      makeupSessions: { none: {} },
+      makeupSessions: { none: LIVE },
     },
-    include: {
-      subject: true,
-      sessionStudents: {
-        include: { student: true },
-        orderBy: { student: { fullName: "asc" } },
-      },
-      _count: { select: { sessionStudents: true } },
-      makeupSessions: { select: { id: true, sessionDate: true } },
-      makeupOf: { select: { id: true, sessionDate: true } },
-    },
+    include: SESSION_DETAIL_INCLUDE,
     orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }],
   })
 
