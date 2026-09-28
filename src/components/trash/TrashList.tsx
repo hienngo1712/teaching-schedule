@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { RotateCcw } from "lucide-react"
+import { useEffect, useState } from "react"
+import { RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc"
 import { TRASH_TYPES, type TrashType } from "@/lib/schemas/trash"
 import type { TrashItemDTO } from "@/lib/types/models"
 import { formatCurrency, formatDate, formatDayOfWeek, cn } from "@/lib/utils"
+import { PurgeDialog } from "./PurgeDialog"
 
 const TYPE_KEY = { session: "trash_type_session", student: "students", payment: "trash_type_payment", subject: "subject" } as const
 
@@ -27,9 +28,29 @@ export function TrashList() {
   const [type, setType] = useState<TrashType>("session")
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const [purgeTarget, setPurgeTarget] = useState<TrashType | "all" | null>(null)
   const utils = trpc.useUtils()
   const counts = trpc.trash.counts.useQuery()
   const list = trpc.trash.list.useQuery({ type, page, limit: pageSize })
+
+  const afterPurge = (r: { purged: Record<TrashType, number> }) => {
+    const n = Object.values(r.purged).reduce((a, b) => a + b, 0)
+    toast.success(t("purge_success").replace("{n}", String(n)))
+    setPurgeTarget(null)
+    setPage(1)
+    utils.trash.counts.invalidate()
+    utils.trash.list.invalidate()
+  }
+  const purge = trpc.trash.purge.useMutation({ onSuccess: afterPurge, onError: (e) => toast.error(e.message) })
+  const purgeAll = trpc.trash.purgeAll.useMutation({ onSuccess: afterPurge, onError: (e) => toast.error(e.message) })
+  const total = counts.data ? Object.values(counts.data).reduce((a, b) => a + b, 0) : 0
+  const tabCount = counts.data?.[type] ?? 0
+
+  const totalPages = list.data?.totalPages ?? 0
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
+
   const restore = trpc.trash.restore.useMutation({
     onSuccess: () => {
       toast.success(t("restored"))
@@ -91,23 +112,49 @@ export function TrashList() {
 
   return (
     <div className="space-y-4 pb-14">
-      <PageHeader title={t("trash")} description={t("trash_hint")} />
-      <div role="tablist" aria-label={t("trash")} className="flex flex-wrap gap-2">
-        {TRASH_TYPES.map((k) => (
-          <button
-            key={k}
+      <PageHeader
+        title={t("trash")}
+        description={t("trash_hint")}
+        actions={
+          <Button
             type="button"
-            role="tab"
-            aria-selected={type === k}
-            onClick={() => { setType(k); setPage(1) }}
-            className={cn(
-              "min-h-11 rounded-full border px-4 text-sm font-medium md:min-h-9",
-              type === k ? "border-primary bg-primary text-primary-foreground" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-            )}
+            variant="outline"
+            className="h-11 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 md:h-10"
+            disabled={total === 0}
+            onClick={() => setPurgeTarget("all")}
           >
-            {t(TYPE_KEY[k])} {counts.data?.[k] ?? 0}
-          </button>
-        ))}
+            <Trash2 className="mr-2 size-4" />
+            {t("purge_all")}
+          </Button>
+        }
+      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div role="tablist" aria-label={t("trash")} className="flex flex-wrap gap-2">
+          {TRASH_TYPES.map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={type === k}
+              onClick={() => { setType(k); setPage(1) }}
+              className={cn(
+                "min-h-11 rounded-full border px-4 text-sm font-medium md:min-h-9",
+                type === k ? "border-primary bg-primary text-primary-foreground" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              )}
+            >
+              {t(TYPE_KEY[k])} {counts.data?.[k] ?? 0}
+            </button>
+          ))}
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700 md:h-9"
+          disabled={tabCount === 0}
+          onClick={() => setPurgeTarget(type)}
+        >
+          {t("purge_tab").replace("{n}", String(tabCount))}
+        </Button>
       </div>
       <ResponsiveList
         isLoading={list.isPending}
@@ -129,7 +176,7 @@ export function TrashList() {
           </div>
         )}
       />
-      {(list.data?.totalCount ?? 0) > pageSize && (
+      {(list.data?.totalCount ?? 0) > 20 && (
         <DataTablePagination
           currentPage={page}
           totalPages={list.data?.totalPages ?? 0}
@@ -139,6 +186,15 @@ export function TrashList() {
           totalItems={list.data?.totalCount ?? 0}
         />
       )}
+      <PurgeDialog
+        open={purgeTarget !== null}
+        count={purgeTarget === "all" ? total : tabCount}
+        typeLabel={purgeTarget === "all" || purgeTarget === null ? null : t(TYPE_KEY[purgeTarget])}
+        isStudent={purgeTarget === "all" ? (counts.data?.student ?? 0) > 0 : purgeTarget === "student"}
+        pending={purge.isPending || purgeAll.isPending}
+        onConfirm={() => (purgeTarget === "all" ? purgeAll.mutate() : purgeTarget && purge.mutate({ type: purgeTarget }))}
+        onOpenChange={(o) => !o && setPurgeTarget(null)}
+      />
     </div>
   )
 }
