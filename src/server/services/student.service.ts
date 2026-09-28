@@ -1,8 +1,9 @@
 import { Prisma, type PrismaClient, type ClassUpgradeLog } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
-import { getLevel } from "@/lib/utils"
+import { getLevel, formatCurrency } from "@/lib/utils"
 import { hasSessionEnded, vnToday } from "@/lib/session-time"
 import { assertOwnership } from "./_base.service"
+import { checkStudentDeletable } from "./student-delete-rules"
 import { assertCanActivateStudents } from "./plan.service"
 import { softDeleteData } from "@/server/soft-delete"
 import type {
@@ -220,7 +221,7 @@ export async function deactivateStudent(
   return { success: true }
 }
 
-// Xoá mềm: không đụng isActive/ca/link phụ huynh để khôi phục trả nguyên trạng (spec Q Q4).
+// Xoá mềm: không đụng isActive/ca/link phụ huynh để khôi phục trả nguyên trạng (spec Q Q4). Chỉ HS "sạch" (spec R2).
 export async function softDeleteStudent(
   db: PrismaClient,
   userId: number,
@@ -228,8 +229,24 @@ export async function softDeleteStudent(
 ): Promise<{ success: true }> {
   const existing = await db.student.findUnique({ where: { id } })
   assertOwnership(existing, userId)
+  const check = await checkStudentDeletable(db, userId, existing)
+  if (!check.allowed) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        check.reason === "debt"
+          ? `Không xoá được: học sinh còn nợ ${formatCurrency(check.debt)}. Thu hết nợ trước khi xoá.`
+          : "Không xoá được: học sinh đang học và đã có buổi học hoặc lần thu. Hãy chọn Đã nghỉ trước.",
+    })
+  }
   await db.student.update({ where: { id }, data: softDeleteData() })
   return { success: true }
+}
+
+export async function getStudentDeleteCheck(db: PrismaClient, userId: number, id: number) {
+  const existing = await db.student.findUnique({ where: { id } })
+  assertOwnership(existing, userId)
+  return checkStudentDeletable(db, userId, existing)
 }
 
 export async function upgradeAllClasses(

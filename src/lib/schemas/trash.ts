@@ -15,3 +15,7 @@ export const trashRestoreSchema = z.object({
   id: z.number().int().positive(),
 })
 export type TrashRestoreInput = z.infer<typeof trashRestoreSchema>
+
+export const trashPurgeSchema = z.object({ type: z.enum(TRASH_TYPES) })
+export type TrashPurgeInput = z.infer<typeof trashPurgeSchema>
+

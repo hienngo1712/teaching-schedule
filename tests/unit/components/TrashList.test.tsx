@@ -34,6 +34,9 @@ const mockRestore = vi.hoisted(() => ({
   isPending: false,
 }))
 
+const mockPurge = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }))
+const mockPurgeAll = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }))
+
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
@@ -71,6 +74,24 @@ vi.mock("@/lib/trpc", () => ({
             isPending: mockRestore.isPending,
           }
         },
+      },
+      purge: {
+        useMutation: (opts?: { onSuccess?: (r: { purged: Record<string, number> }) => void; onError?: (e: Error) => void }) => ({
+          mutate: (args: { type: string }) => {
+            mockPurge.mutate(args)
+            opts?.onSuccess?.({ purged: { [args.type]: 1, session: 0, student: 0, payment: 0, subject: 0, [args.type]: 1 } })
+          },
+          isPending: mockPurge.isPending,
+        }),
+      },
+      purgeAll: {
+        useMutation: (opts?: { onSuccess?: (r: { purged: Record<string, number> }) => void; onError?: (e: Error) => void }) => ({
+          mutate: () => {
+            mockPurgeAll.mutate()
+            opts?.onSuccess?.({ purged: { session: 1, student: 0, payment: 2, subject: 0 } })
+          },
+          isPending: mockPurgeAll.isPending,
+        }),
       },
     },
   },
@@ -182,5 +203,38 @@ describe("TrashList", () => {
 
     renderTrash()
     expect(screen.getByText("Thùng rác trống")).toBeTruthy()
+  })
+
+  it("nút Dọn tab này có số mục của tab, bấm → popup cảnh báo, Xóa vĩnh viễn gọi purge đúng loại", () => {
+    mockCounts.data = { session: 1, student: 0, payment: 2, subject: 0 }
+    renderTrash()
+    fireEvent.click(screen.getByRole("button", { name: "Dọn tab này (1)" }))
+    expect(screen.getByText(/vĩnh viễn không lấy lại được/)).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Xóa vĩnh viễn" }))
+    expect(mockPurge.mutate).toHaveBeenCalledWith({ type: "session" })
+  })
+
+  it("Dọn sạch thùng rác → popup tổng 3 mục → gọi purgeAll", () => {
+    mockCounts.data = { session: 1, student: 0, payment: 2, subject: 0 }
+    renderTrash()
+    fireEvent.click(screen.getByRole("button", { name: "Dọn sạch thùng rác" }))
+    expect(screen.getByText("Xóa vĩnh viễn 3 mục?")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Xóa vĩnh viễn" }))
+    expect(mockPurgeAll.mutate).toHaveBeenCalled()
+  })
+
+  it("thùng rác trống → 2 nút dọn disabled", () => {
+    mockCounts.data = { session: 0, student: 0, payment: 0, subject: 0 }
+    renderTrash()
+    expect((screen.getByRole("button", { name: "Dọn sạch thùng rác" }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole("button", { name: "Dọn tab này (0)" }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it("tab Học sinh: popup có dòng tiền vẫn giữ trong Báo cáo", () => {
+    mockCounts.data = { session: 0, student: 2, payment: 0, subject: 0 }
+    renderTrash()
+    fireEvent.click(screen.getByRole("tab", { name: /Học sinh/ }))
+    fireEvent.click(screen.getByRole("button", { name: "Dọn tab này (2)" }))
+    expect(screen.getByText(/vẫn được giữ trong Báo cáo/)).toBeTruthy()
   })
 })

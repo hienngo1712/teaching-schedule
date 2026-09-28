@@ -69,6 +69,7 @@ model Subject {
   sortOrder Int               @default(0) @map("sort_order")
   isDeleted Boolean   @default(false) @map("is_deleted")
   deletedAt DateTime? @map("deleted_at")
+  purgedAt  DateTime? @map("purged_at")
   createdAt DateTime          @default(now()) @map("created_at")
   user      User              @relation(fields: [userId], references: [id])
   sessions  TeachingSession[]
@@ -91,6 +92,7 @@ model Student {
   parentLinkToken String?          @unique @map("parent_link_token") @db.VarChar(43)
   isDeleted       Boolean          @default(false) @map("is_deleted")
   deletedAt       DateTime?        @map("deleted_at")
+  purgedAt        DateTime?        @map("purged_at")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   sessionStudents SessionStudent[]
