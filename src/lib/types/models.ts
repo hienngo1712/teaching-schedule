@@ -19,11 +19,12 @@ export type StudentReportInfo = {
 /**
  * Student with enhanced UI fields
  */
-export interface StudentDTO extends Omit<Student, "createdAt" | "updatedAt" | "deletedAt"> {
+export interface StudentDTO extends Omit<Student, "createdAt" | "updatedAt" | "deletedAt" | "purgedAt"> {
   level: SchoolLevel
   createdAt: Date | string
   updatedAt: Date | string
   deletedAt: Date | string | null
+  purgedAt?: Date | string | null
 }
 
 /**
