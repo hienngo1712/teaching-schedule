@@ -68,3 +68,10 @@ export const revenueQuerySchema = z
 export type RevenueQueryInput = z.infer<typeof revenueQuerySchema>
 
 export const accountTrendSchema = z.object({ days: z.union([z.literal(7), z.literal(14), z.literal(30)]) })
+
+export const markAccountsSeenSchema = z.union([
+  z.object({ userIds: z.array(z.number().int().positive()).min(1).max(200) }),
+  z.object({ all: z.literal(true) }),
+])
+export type MarkAccountsSeenInput = z.infer<typeof markAccountsSeenSchema>
+

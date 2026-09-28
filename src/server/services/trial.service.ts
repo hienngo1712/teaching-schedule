@@ -5,6 +5,7 @@ import { isAdminUsername } from "@/lib/admin"
 import type { SetUserTrialInput, UpdateTrialDaysInput } from "@/lib/schemas/plan"
 import type { Db } from "./plan.service"
 import { SETTINGS_LOCK_CLASS } from "./plan-price.service"
+import { markSeenIfNew } from "./new-accounts.service"
 
 const TRIAL_LOCK_KEY = 1
 const CHANGE_SELECT = { id: true, days: true, previousDays: true, changedBy: true, createdAt: true } as const
@@ -60,6 +61,7 @@ export async function setUserTrialDays(db: PrismaClient, admin: string, input: S
     if (isAdminUsername(user.username)) throw new TRPCError({ code: "FORBIDDEN", message: "Tài khoản admin không dùng gói" })
     const next = trialEndFor(user.createdAt, input.days)
     await tx.user.update({ where: { id: input.userId }, data: { trialEndsAt: next } })
+    await markSeenIfNew(tx, input.userId, new Date())
     await tx.trialDayChange.create({
       data: { userId: input.userId, days: input.days, previousDays: trialDaysOf(user.createdAt, user.trialEndsAt), changedBy: admin },
     })

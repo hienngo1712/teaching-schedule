@@ -683,5 +683,17 @@
   "admin_trend_returning_note": "Quay lại = tài khoản cũ có dùng app trong ngày (không chỉ đăng nhập, vì phiên được ghi nhớ 30 ngày).",
   "admin_trend_tracking_since": "Lượt quay lại được ghi từ {date}",
   "admin_trend_no_tracking": "Chưa có dữ liệu hoạt động",
-  "admin_chart_empty": "Chưa có số liệu trong khoảng này"
+  "admin_chart_empty": "Chưa có số liệu trong khoảng này",
+  "admin_new_accounts": "Tài khoản mới",
+  "admin_new_accounts_hint": "Đăng ký gần đây, bạn chưa xem. Tài khoản đã dùng được ngay.",
+  "admin_new_accounts_seen": "Đã xem",
+  "admin_new_accounts_seen_all": "Đánh dấu tất cả đã xem",
+  "admin_new_accounts_seen_all_confirm": "Đánh dấu {n} tài khoản là đã xem?",
+  "admin_new_accounts_set_plan": "Đặt gói",
+  "admin_new_accounts_set_trial": "Đặt dùng thử",
+  "admin_new_accounts_registered": "Đăng ký lúc",
+  "admin_new_accounts_current_plan": "Gói hiện tại",
+  "admin_new_accounts_empty": "Không có tài khoản mới",
+  "admin_new_accounts_count_label": "{n} tài khoản mới chưa xem",
+  "admin_new_accounts_marked": "Đã đánh dấu đã xem"
 }

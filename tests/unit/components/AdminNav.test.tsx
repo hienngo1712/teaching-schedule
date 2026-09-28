@@ -2,14 +2,14 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, cleanup } from "@testing-library/react"
 import { usePathname } from "next/navigation"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { AdminTabBar } from "@/components/admin/AdminTabBar"
 
 vi.mock("next/navigation", () => ({ usePathname: vi.fn() }))
-const pending = vi.hoisted(() => ({ data: undefined as undefined | { count: number } }))
+const pending = vi.hoisted(() => ({ data: undefined as undefined | { count: number; newAccounts?: number } }))
 vi.mock("@/lib/trpc", () => ({
   trpc: { admin: { pendingCount: { useQuery: () => ({ data: pending.data }) } } },
 }))
@@ -81,4 +81,24 @@ describe("AdminTabBar", () => {
     renderVi(<AdminTabBar />)
     expect(screen.queryByTestId("admin-tab-pending-count")).toBeNull()
   })
+
+  it("có tài khoản mới: sidebar thêm pill số riêng, tab bar thêm chấm; 0 thì không có", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/orders")
+    pending.data = { count: 2, newAccounts: 3 }
+    renderVi(<AdminSidebar />)
+    expect(screen.getByTestId("admin-new-accounts-count").textContent).toBe("3")
+    expect(screen.getByTestId("admin-new-accounts-count").getAttribute("aria-label")).toBe("3 tài khoản mới chưa xem")
+    cleanup()
+    renderVi(<AdminTabBar />)
+    expect(screen.getByTestId("admin-tab-new-dot")).toBeTruthy()
+    expect(screen.getByTestId("admin-tab-pending-count").textContent).toBe("2")
+    cleanup()
+    pending.data = { count: 0, newAccounts: 0 }
+    renderVi(<AdminSidebar />)
+    expect(screen.queryByTestId("admin-new-accounts-count")).toBeNull()
+    cleanup()
+    renderVi(<AdminTabBar />)
+    expect(screen.queryByTestId("admin-tab-new-dot")).toBeNull()
+  })
 })
+

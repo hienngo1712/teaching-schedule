@@ -13,7 +13,9 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const { t } = useTranslation()
   // Query nhẹ dùng chung với tab bar (spec P J5).
-  const pendingCount = trpc.admin.pendingCount.useQuery().data?.count ?? 0
+  const pendingData = trpc.admin.pendingCount.useQuery().data
+  const pendingCount = pendingData?.count ?? 0
+  const newAccounts = pendingData?.newAccounts ?? 0
 
   return (
     <aside className="flex h-full w-[232px] shrink-0 flex-col gap-7 border-r bg-white px-3.5 py-5">
@@ -51,6 +53,15 @@ export function AdminSidebar() {
                   className="rounded-full bg-amber-100 px-1.5 text-[11px] font-semibold leading-5 text-amber-800"
                 >
                   {pendingCount}
+                </span>
+              )}
+              {item.href === "/admin/orders" && newAccounts > 0 && (
+                <span
+                  data-testid="admin-new-accounts-count"
+                  aria-label={t("admin_new_accounts_count_label").replace("{n}", String(newAccounts))}
+                  className="ml-1 rounded-full border border-primary px-1.5 text-xs font-semibold text-primary"
+                >
+                  {newAccounts}
                 </span>
               )}
             </Link>

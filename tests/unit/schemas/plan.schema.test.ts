@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { accountTrendSchema, createOrderSchema, revenueQuerySchema, setUserTrialSchema, updatePricesSchema, updateTrialDaysSchema } from "@/lib/schemas/plan"
+import { accountTrendSchema, createOrderSchema, markAccountsSeenSchema, revenueQuerySchema, setUserTrialSchema, updatePricesSchema, updateTrialDaysSchema } from "@/lib/schemas/plan"
 
 describe("createOrderSchema (spec L Q6)", () => {
   it("expectedAmount tùy chọn; có thì giữ nguyên số", () => {
@@ -76,3 +76,14 @@ describe("accountTrendSchema (spec K T1)", () => {
     for (const days of [0, 1, 15, 31, "7"]) expect(accountTrendSchema.safeParse({ days }).success).toBe(false)
   })
 })
+
+describe("markAccountsSeenSchema (spec K R5)", () => {
+  it("nhận { userIds } 1..200 phần tử hoặc { all: true }", () => {
+    expect(markAccountsSeenSchema.safeParse({ userIds: [1, 2] }).success).toBe(true)
+    expect(markAccountsSeenSchema.safeParse({ all: true }).success).toBe(true)
+    for (const bad of [{ userIds: [] }, { userIds: Array.from({ length: 201 }, (_, i) => i + 1) }, { userIds: [0] }, { all: false }, {}]) {
+      expect(markAccountsSeenSchema.safeParse(bad).success).toBe(false)
+    }
+  })
+})
+

@@ -1,6 +1,7 @@
 import { adminProcedure, createTRPCRouter } from "@/server/trpc"
 import {
   accountTrendSchema,
+  markAccountsSeenSchema,
   orderIdSchema,
   rejectOrderSchema,
   revenueQuerySchema,
@@ -18,6 +19,7 @@ import { getDefaultTrialDays, getTrialHistory, getUserTrialChanges, setUserTrial
 import { adminDeleteUser, adminRestoreUser, listDeletedUsers } from "@/server/services/user-admin.service"
 import { getRevenue } from "@/server/services/revenue.service"
 import { getAccountTrend, getAdminStats } from "@/server/services/admin-stats.service"
+import { getNewAccounts, markAccountsSeen } from "@/server/services/new-accounts.service"
 
 export const adminRouter = createTRPCRouter({
   overview: adminProcedure.query(({ ctx }) => getAdminOverview(ctx.db)),
@@ -26,6 +28,10 @@ export const adminRouter = createTRPCRouter({
   stats: adminProcedure.query(({ ctx }) => getAdminStats(ctx.db)),
   accountTrend: adminProcedure.input(accountTrendSchema).query(({ ctx, input }) => getAccountTrend(ctx.db, input.days)),
   revenue: adminProcedure.input(revenueQuerySchema).query(({ ctx, input }) => getRevenue(ctx.db, input)),
+  newAccounts: adminProcedure.query(({ ctx }) => getNewAccounts(ctx.db)),
+  markAccountsSeen: adminProcedure
+    .input(markAccountsSeenSchema)
+    .mutation(({ ctx, input }) => markAccountsSeen(ctx.db, ctx.session.user.username, input)),
 
   prices: adminProcedure.query(async ({ ctx }) => {
     const [monthly, history] = await Promise.all([getMonthlyPrices(ctx.db), getPriceHistory(ctx.db)])

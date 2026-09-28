@@ -683,5 +683,17 @@
   "admin_trend_returning_note": "Returning = existing accounts that used the app that day (not just signed in, since sessions last 30 days).",
   "admin_trend_tracking_since": "Returning visits recorded since {date}",
   "admin_trend_no_tracking": "No activity data yet",
-  "admin_chart_empty": "No data in this period"
+  "admin_chart_empty": "No data in this period",
+  "admin_new_accounts": "New accounts",
+  "admin_new_accounts_hint": "Recent sign-ups you have not reviewed. They can already use the app.",
+  "admin_new_accounts_seen": "Mark seen",
+  "admin_new_accounts_seen_all": "Mark all as seen",
+  "admin_new_accounts_seen_all_confirm": "Mark {n} accounts as seen?",
+  "admin_new_accounts_set_plan": "Set plan",
+  "admin_new_accounts_set_trial": "Set trial",
+  "admin_new_accounts_registered": "Signed up",
+  "admin_new_accounts_current_plan": "Current plan",
+  "admin_new_accounts_empty": "No new accounts",
+  "admin_new_accounts_count_label": "{n} new accounts not reviewed",
+  "admin_new_accounts_marked": "Marked as seen"
 }
