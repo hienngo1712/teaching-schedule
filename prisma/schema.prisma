@@ -15,6 +15,10 @@ model User {
   fullName      String?           @map("full_name") @db.VarChar(100)
   isActive      Boolean           @default(true) @map("is_active")
   lastLoginAt   DateTime?         @map("last_login_at")
+  // Lần cuối dùng app (cập nhật ≤ 1 lần/giờ ở nodeJwt), khác lastLoginAt vì phiên ghi nhớ 30 ngày (spec K B2).
+  lastActiveAt  DateTime?         @map("last_active_at")
+  // null = admin chưa xem tài khoản mới này (spec K nhóm R).
+  adminSeenAt   DateTime?         @map("admin_seen_at")
   createdAt     DateTime          @default(now()) @map("created_at")
   updatedAt     DateTime          @updatedAt @map("updated_at")
   bankBin           String?           @map("bank_bin") @db.VarChar(8)
@@ -36,6 +40,7 @@ model User {
   sessions      TeachingSession[]
   classUpgradeLogs ClassUpgradeLog[]
   planOrders    PlanOrder[]
+  activityDays  UserActivityDay[]
 
   @@map("users")
 }
@@ -261,4 +266,16 @@ model PasswordResetLog {
 
   @@index([userId, createdAt])
   @@map("password_reset_logs")
+}
+
+// 1 dòng / tài khoản / ngày VN có dùng app (spec K B7). CASCADE để tests/setup.ts xóa users không vỡ.
+model UserActivityDay {
+  userId      Int      @map("user_id")
+  day         DateTime @db.Date
+  firstSeenAt DateTime @map("first_seen_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@index([day])
+  @@map("user_activity_days")
 }

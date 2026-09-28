@@ -142,12 +142,12 @@ export async function authorizeCredentials(
 export async function getSessionUserState(
   userId: number,
   sessionVersion: number | undefined
-): Promise<{ mustChangePassword: boolean } | null> {
+): Promise<{ mustChangePassword: boolean; username: string; lastActiveAt: Date | null } | null> {
   if (!Number.isInteger(userId) || userId <= 0 || sessionVersion === undefined) return null
   const u = await db.user.findUnique({
     where: { id: userId },
-    select: { isActive: true, isDeleted: true, sessionVersion: true, mustChangePassword: true },
+    select: { isActive: true, isDeleted: true, sessionVersion: true, mustChangePassword: true, username: true, lastActiveAt: true },
   })
   if (!u || !u.isActive || u.isDeleted || u.sessionVersion !== sessionVersion) return null
-  return { mustChangePassword: u.mustChangePassword }
+  return { mustChangePassword: u.mustChangePassword, username: u.username, lastActiveAt: u.lastActiveAt }
 }
