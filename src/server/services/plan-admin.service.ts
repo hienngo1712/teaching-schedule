@@ -40,12 +40,13 @@ export async function getAdminOverview(db: PrismaClient) {
   await expireStaleOrders(db, now)
   const [users, counts, pending] = await Promise.all([
     db.user.findMany({
+      where: { isDeleted: false },
       orderBy: { id: "asc" },
       select: { id: true, username: true, fullName: true, createdAt: true, lastLoginAt: true, ...PLAN_SELECT },
     }),
     db.student.groupBy({ by: ["userId"], where: { isActive: true }, _count: { _all: true } }),
     db.planOrder.findMany({
-      where: { status: "pending" },
+      where: { status: "pending", user: { isDeleted: false } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       select: {
         id: true,
@@ -97,6 +98,8 @@ export async function approveOrder(db: PrismaClient, admin: string, id: number):
     // Khóa user trước khi chốt đơn (cùng thứ tự với createOrder, tránh deadlock): 2 đơn duyệt cùng lúc không ghi đè hạn nhau.
     const owner = await tx.planOrder.findUnique({ where: { id }, select: { userId: true } })
     if (owner) await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(owner.userId)})`
+    const alive = owner && (await tx.user.findUnique({ where: { id: owner.userId }, select: { isDeleted: true } }))
+    if (!alive || alive.isDeleted) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
     // Chốt trạng thái trước: bấm 2 lần / 2 tab thì lần sau count = 0.
     // Đơn quá hạn chưa kịp expire vẫn không duyệt được: điều kiện nằm ngay trong câu chốt (spec P7).
     const claimed = await tx.planOrder.updateMany({
@@ -149,8 +152,8 @@ export async function rejectOrder(db: PrismaClient, admin: string, id: number, n
 export async function adminSetPlan(db: PrismaClient, admin: string, input: SetPlanInput): Promise<{ success: true }> {
   const planExpiresAt = input.plan === "standard" || !input.lastDay ? null : expiryFromLastDay(input.lastDay)
   await db.$transaction(async (tx) => {
-    const exists = await tx.user.findUnique({ where: { id: input.userId }, select: { id: true } })
-    if (!exists) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
+    const exists = await tx.user.findUnique({ where: { id: input.userId }, select: { id: true, isDeleted: true } })
+    if (!exists || exists.isDeleted) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
     await tx.user.update({ where: { id: input.userId }, data: { plan: input.plan, planExpiresAt } })
     await tx.planOrder.create({
       data: {

@@ -54,9 +54,9 @@ export async function setUserTrialDays(db: PrismaClient, admin: string, input: S
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(input.userId)})`
     const user = await tx.user.findUnique({
       where: { id: input.userId },
-      select: { username: true, createdAt: true, trialEndsAt: true },
+      select: { username: true, createdAt: true, trialEndsAt: true, isDeleted: true },
     })
-    if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
+    if (!user || user.isDeleted) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
     if (isAdminUsername(user.username)) throw new TRPCError({ code: "FORBIDDEN", message: "Tài khoản admin không dùng gói" })
     const next = trialEndFor(user.createdAt, input.days)
     await tx.user.update({ where: { id: input.userId }, data: { trialEndsAt: next } })
