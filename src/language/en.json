@@ -636,5 +636,15 @@
   "delete_student_debt_desc": "{name} still owes {amount}. Deleting hides the student from Tuition, Dashboard and reports. To keep the record, choose Mark as left.",
   "checking": "Checking…",
   "delete_subject_confirm": "Delete subject {name}? It goes to Trash. Only subjects without sessions can be deleted.",
-  "subject_deleted": "Subject moved to Trash"
+  "subject_deleted": "Subject moved to Trash",
+  "admin_delete_account": "Delete account",
+  "admin_delete_account_title": "Delete account {username}?",
+  "admin_delete_account_desc": "The account is signed out immediately, cannot sign in, and parent links stop working. Data is kept and can be restored from the Deleted tab.",
+  "admin_account_deleted": "Account {username} deleted",
+  "admin_tab_active": "Active",
+  "admin_tab_deleted": "Deleted ({count})",
+  "admin_col_deleted_at": "Deleted at",
+  "admin_col_deleted_by": "Deleted by",
+  "admin_account_restored": "Account {username} restored",
+  "admin_no_deleted": "No deleted accounts"
 }

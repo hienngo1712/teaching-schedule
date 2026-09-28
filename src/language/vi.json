@@ -636,5 +636,15 @@
   "delete_student_debt_desc": "Học sinh {name} còn nợ {amount}. Xoá sẽ ẩn học sinh khỏi Học phí, Tổng quan và báo cáo. Muốn cho nghỉ thì chọn Cho nghỉ.",
   "checking": "Đang kiểm tra…",
   "delete_subject_confirm": "Xoá môn {name}? Môn sẽ vào Thùng rác. Chỉ xoá được môn không còn ca dạy.",
-  "subject_deleted": "Đã chuyển môn vào Thùng rác"
+  "subject_deleted": "Đã chuyển môn vào Thùng rác",
+  "admin_delete_account": "Xoá tài khoản",
+  "admin_delete_account_title": "Xoá tài khoản {username}?",
+  "admin_delete_account_desc": "Tài khoản bị đăng xuất ngay, không đăng nhập được và link phụ huynh ngừng hoạt động. Dữ liệu giữ nguyên, khôi phục được ở tab Đã xoá.",
+  "admin_account_deleted": "Đã xoá tài khoản {username}",
+  "admin_tab_active": "Đang dùng",
+  "admin_tab_deleted": "Đã xoá ({count})",
+  "admin_col_deleted_at": "Xoá lúc",
+  "admin_col_deleted_by": "Người xoá",
+  "admin_account_restored": "Đã khôi phục tài khoản {username}",
+  "admin_no_deleted": "Chưa có tài khoản nào bị xoá"
 }

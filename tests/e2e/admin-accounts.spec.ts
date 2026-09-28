@@ -40,7 +40,7 @@ test('1280px: cột Hành động gọn, tiêu đề 1 dòng, bảng không trà
 
   const row = page.getByRole('row').filter({ hasText: 'teacher_std' });
   await row.getByRole('button', { name: 'Menu hành động teacher_std' }).click();
-  await expect(page.getByRole('menuitem')).toHaveText(['Đặt gói', 'Đặt dùng thử', 'Reset mật khẩu']);
+  await expect(page.getByRole('menuitem')).toHaveText(['Đặt gói', 'Đặt dùng thử', 'Reset mật khẩu', 'Xoá tài khoản']);
   await page.getByRole('menuitem', { name: 'Đặt gói' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('teacher_std');

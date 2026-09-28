@@ -147,7 +147,7 @@ describe("TrashList", () => {
     const tabs = screen.getAllByRole("tab")
     fireEvent.click(tabs[2]) // Tab Lần thu
 
-    expect(mockListArgs.lastInput.type).toBe("payment")
+    expect(mockListArgs.lastInput?.type).toBe("payment")
     expect(screen.getAllByText("70.000 đ · HS Thu").length).toBeGreaterThan(0)
     expect(screen.getAllByText("Thu ngày 20/05/2030 · tháng 5/2030").length).toBeGreaterThan(0)
   })
