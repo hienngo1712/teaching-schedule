@@ -424,3 +424,10 @@ Chỉ chạy trên `.env.test` (Postgres local Docker). DB test phải `migrate 
 5. B8: backfill `last_active_at = last_login_at` (giữ mặc định).
 6. R7: sidebar **2 số riêng**; tab bar số đơn chờ + chấm tài khoản mới.
 7. K16: doanh thu **vẫn tính** đơn của tài khoản đã xóa mềm; chỉ số liệu tài khoản bỏ qua `isDeleted`.
+
+## 15. Bổ sung 2026-09-28 — căn hàng bộ lọc
+
+Người dùng báo (ảnh màn Học sinh, Học phí, Báo cáo): tiêu đề + nút hành động ở hàng trên (nút sát phải), hàng bộ lọc ở dưới dồn hết sang trái → lệch "trái thấp, phải cao".
+- Desktop (`md:`+): cụm ô chọn của `FilterBar` (dùng chung 3 màn) đẩy sát mép phải, thẳng mép với nút hành động và bảng; ô tìm kiếm vẫn bên trái. Báo cáo không có ô tìm kiếm → 2 ô chọn nằm sát phải.
+- Mobile giữ nguyên (ô tìm kiếm + nút "Lọc" mở sheet).
+- Kiểm bằng e2e ở 1280px: mép phải ô chọn cuối cách mép phải hàng tiêu đề ≤ 2px trên cả 3 màn. Plan K Task 6b.
