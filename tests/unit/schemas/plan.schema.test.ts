@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { createOrderSchema, setUserTrialSchema, updatePricesSchema, updateTrialDaysSchema } from "@/lib/schemas/plan"
+import { createOrderSchema, revenueQuerySchema, setUserTrialSchema, updatePricesSchema, updateTrialDaysSchema } from "@/lib/schemas/plan"
 
 describe("createOrderSchema (spec L Q6)", () => {
   it("expectedAmount tùy chọn; có thì giữ nguyên số", () => {
@@ -47,5 +47,25 @@ describe("schema số ngày dùng thử (spec L mục 15)", () => {
     expect(setUserTrialSchema.safeParse({ userId: 1, days: 3650 }).success).toBe(true)
     expect(setUserTrialSchema.safeParse({ userId: 1, days: 3651 }).success).toBe(false)
     expect(setUserTrialSchema.safeParse({ userId: 0, days: 90 }).success).toBe(false)
+  })
+})
+
+describe("revenueQuerySchema (spec K C7)", () => {
+  const ym = (year: number, month: number) => ({ year, month })
+  it("hợp lệ: 1 tháng, 36 tháng", () => {
+    expect(revenueQuerySchema.safeParse({ from: ym(2026, 10), to: ym(2026, 10) }).success).toBe(true)
+    expect(revenueQuerySchema.safeParse({ from: ym(2026, 1), to: ym(2028, 12) }).success).toBe(true)
+  })
+  it("lỗi: tháng 13, tháng 0, năm 2019, số lẻ, ngược, 37 tháng", () => {
+    for (const bad of [
+      { from: ym(2026, 13), to: ym(2026, 13) },
+      { from: ym(2026, 0), to: ym(2026, 1) },
+      { from: ym(2019, 1), to: ym(2019, 2) },
+      { from: ym(2026, 1.5), to: ym(2026, 2) },
+      { from: ym(2026, 5), to: ym(2026, 3) },
+      { from: ym(2026, 1), to: ym(2029, 1) },
+    ]) {
+      expect(revenueQuerySchema.safeParse(bad).success).toBe(false)
+    }
   })
 })

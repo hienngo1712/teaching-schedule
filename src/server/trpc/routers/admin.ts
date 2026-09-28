@@ -2,6 +2,7 @@ import { adminProcedure, createTRPCRouter } from "@/server/trpc"
 import {
   orderIdSchema,
   rejectOrderSchema,
+  revenueQuerySchema,
   setPlanSchema,
   setUserTrialSchema,
   updatePricesSchema,
@@ -14,11 +15,13 @@ import { getMonthlyPrices, getPriceHistory, updatePrices } from "@/server/servic
 import { adminResetPassword } from "@/server/services/password-reset.service"
 import { getDefaultTrialDays, getTrialHistory, getUserTrialChanges, setUserTrialDays, updateDefaultTrialDays } from "@/server/services/trial.service"
 import { adminDeleteUser, adminRestoreUser, listDeletedUsers } from "@/server/services/user-admin.service"
+import { getRevenue } from "@/server/services/revenue.service"
 
 export const adminRouter = createTRPCRouter({
   overview: adminProcedure.query(({ ctx }) => getAdminOverview(ctx.db)),
   pendingCount: adminProcedure.query(({ ctx }) => getPendingCount(ctx.db)),
   orderHistory: adminProcedure.query(({ ctx }) => getOrderHistory(ctx.db)),
+  revenue: adminProcedure.input(revenueQuerySchema).query(({ ctx, input }) => getRevenue(ctx.db, input)),
 
   prices: adminProcedure.query(async ({ ctx }) => {
     const [monthly, history] = await Promise.all([getMonthlyPrices(ctx.db), getPriceHistory(ctx.db)])
