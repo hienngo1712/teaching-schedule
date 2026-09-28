@@ -21,9 +21,9 @@ function conflict(message: string): never {
 export async function getTrashCounts(db: PrismaClient, userId: number): Promise<Record<TrashType, number>> {
   const [session, student, payment, subject] = await Promise.all([
     db.teachingSession.count({ where: { userId, ...DELETED } }),
-    db.student.count({ where: { userId, ...DELETED } }),
+    db.student.count({ where: { userId, ...DELETED, purgedAt: null } }),
     db.payment.count({ where: { ...DELETED, monthlyTuition: { student: { userId } } } }),
-    db.subject.count({ where: { userId, ...DELETED } }),
+    db.subject.count({ where: { userId, ...DELETED, purgedAt: null } }),
   ])
   return { session, student, payment, subject }
 }
@@ -70,7 +70,7 @@ export async function listTrash(
     }))
     totalCount = n
   } else if (type === "student") {
-    const where = { userId, ...DELETED }
+    const where = { userId, ...DELETED, purgedAt: null }
     const [rows, n] = await Promise.all([
       db.student.findMany({
         where,
@@ -125,7 +125,7 @@ export async function listTrash(
     }))
     totalCount = n
   } else {
-    const where = { userId, ...DELETED }
+    const where = { userId, ...DELETED, purgedAt: null }
     const [rows, n] = await Promise.all([
       db.subject.findMany({
         where,
@@ -184,7 +184,7 @@ export async function undeleteSession(db: PrismaClient, userId: number, id: numb
 }
 
 export async function undeleteStudent(db: PrismaClient, userId: number, id: number): Promise<void> {
-  const st = await db.student.findUnique({ where: { id, ...DELETED } })
+  const st = await db.student.findFirst({ where: { id, ...DELETED, purgedAt: null } })
   assertOwnership(st, userId)
   if (st.isActive) await assertCanActivateStudents(db, userId, 1)
   await db.student.update({ where: { id }, data: RESTORE_DATA })
@@ -214,7 +214,7 @@ export async function undeletePayment(db: PrismaClient, userId: number, id: numb
 }
 
 export async function undeleteSubject(db: PrismaClient, userId: number, id: number): Promise<void> {
-  const s = await db.subject.findUnique({ where: { id, ...DELETED } })
+  const s = await db.subject.findFirst({ where: { id, ...DELETED, purgedAt: null } })
   assertOwnership(s, userId)
   await db.subject.update({ where: { id }, data: RESTORE_DATA })
 }
