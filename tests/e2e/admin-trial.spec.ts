@@ -34,7 +34,7 @@ async function loginAs(browser: Browser, username: string, viewport: { width: nu
   await page.fill('input[name="username"]', username);
   await page.fill('input[name="password"]', 'teacher123');
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(username === 'admin_test' ? /\/admin\/orders$/ : /.*dashboard/);
+  await expect(page).toHaveURL(username === 'admin_test' ? /\/admin\/overview$/ : /.*dashboard/);
   return page;
 }
 

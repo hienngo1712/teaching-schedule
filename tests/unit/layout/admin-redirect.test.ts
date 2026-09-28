@@ -48,9 +48,9 @@ afterEach(() => {
 
 // Lớp 2 (spec J Q3): middleware bị bỏ qua hoặc Edge thiếu env thì server vẫn chuyển admin.
 describe("(app)/layout", () => {
-  it("admin → redirect /admin/orders", async () => {
+  it("admin → redirect /admin/overview", async () => {
     mocks.session = as("admin_test")
-    await expect(AppGroupLayout({ children: "x" })).rejects.toThrow("REDIRECT /admin/orders")
+    await expect(AppGroupLayout({ children: "x" })).rejects.toThrow("REDIRECT /admin/overview")
   })
 
   it("giáo viên → render bình thường, không redirect", async () => {
@@ -61,9 +61,9 @@ describe("(app)/layout", () => {
 })
 
 describe("/login khi đã đăng nhập", () => {
-  it("admin → /admin/orders, giáo viên → /dashboard", async () => {
+  it("admin → /admin/overview, giáo viên → /dashboard", async () => {
     mocks.session = as("admin_test")
-    await expect(LoginPage()).rejects.toThrow("REDIRECT /admin/orders")
+    await expect(LoginPage()).rejects.toThrow("REDIRECT /admin/overview")
     mocks.session = as("teacher")
     await expect(LoginPage()).rejects.toThrow("REDIRECT /dashboard")
   })

@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { auth } from "@/server/auth"
-import { isAdminUsername } from "@/lib/admin"
+import { ADMIN_HOME, isAdminUsername } from "@/lib/admin"
 import { LoginForm } from "./LoginForm"
 import { LoginHeader } from "./LoginHeader"
 
 export default async function LoginPage() {
   const session = await auth()
   if (session?.user) {
-    redirect(isAdminUsername(session.user.username) ? "/admin/orders" : "/dashboard")
+    redirect(isAdminUsername(session.user.username) ? ADMIN_HOME : "/dashboard")
   }
 
   return (

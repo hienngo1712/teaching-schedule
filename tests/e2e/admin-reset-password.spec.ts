@@ -62,7 +62,7 @@ test('admin reset → mật khẩu tạm hiện 1 lần → phiên cũ bị đá
 
   const admin = await newPage(browser);
   await login(admin, 'admin_test', 'teacher123');
-  await expect(admin).toHaveURL(/\/admin\/orders$/);
+  await expect(admin).toHaveURL(/\/admin\/overview$/);
   await admin.goto('/admin/accounts');
   const row = admin.getByRole('row').filter({ hasText: TARGET });
   await (await openUserMenu(row, TARGET)).getByRole('menuitem', { name: 'Reset mật khẩu' }).click();
@@ -108,7 +108,7 @@ test('admin reset → mật khẩu tạm hiện 1 lần → phiên cũ bị đá
 test('390px: thẻ tài khoản có nút Menu hành động cao ≥44px, mục menu ≥44px, dialog không tràn, tài khoản admin không có mục Reset mật khẩu', async ({ browser }) => {
   const admin = await newPage(browser, MOBILE);
   await login(admin, 'admin_test', 'teacher123');
-  await expect(admin).toHaveURL(/\/admin\/orders$/);
+  await expect(admin).toHaveURL(/\/admin\/overview$/);
   await admin.goto('/admin/accounts');
 
   const adminCard = admin.getByTestId('admin-user-card').filter({ hasText: 'admin_test' });

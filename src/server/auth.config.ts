@@ -2,7 +2,7 @@
 // KHÔNG import gì kéo theo native module (bcrypt, prisma, ...).
 // File `auth.ts` extend config này thêm Credentials provider cho route handler Node.
 import type { NextAuthConfig, DefaultSession } from "next-auth"
-import { isAdminUsername } from "@/lib/admin"
+import { ADMIN_HOME, isAdminUsername } from "@/lib/admin"
 import { REMEMBER_MAX_AGE_S, currentEpoch, isSessionExpired } from "@/lib/session-policy"
 
 declare module "next-auth" {
@@ -64,7 +64,7 @@ export const authConfig = {
       // J1: admin chỉ dùng khu quản trị. So chặt để "/administration" không bị coi là khu quản trị.
       const inAdminArea = pathname === "/admin" || pathname.startsWith("/admin/")
       if (isAdminUsername(auth.user.username) && !inAdminArea) {
-        return Response.redirect(new URL("/admin/orders", request.nextUrl.origin))
+        return Response.redirect(new URL(ADMIN_HOME, request.nextUrl.origin))
       }
       return true
     },

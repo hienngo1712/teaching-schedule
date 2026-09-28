@@ -16,6 +16,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
 import { RenewOffer } from "@/components/plan/RenewOffer"
 import { CurrentPlanBadge } from "@/components/plan/CurrentPlanBadge"
+import { ADMIN_HOME } from "@/lib/admin"
 
 function getInitials(name?: string | null) {
   if (!name) return "GV"
@@ -79,7 +80,7 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
           <DropdownMenuContent align="end" className="w-48">
             {admin ? (
               <DropdownMenuItem asChild>
-                <Link href="/admin/orders">
+                <Link href={ADMIN_HOME}>
                   <ShieldCheck className="size-4 mr-2" />
                   {t("admin_page")}
                 </Link>

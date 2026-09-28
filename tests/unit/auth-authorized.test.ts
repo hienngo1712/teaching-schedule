@@ -38,17 +38,17 @@ describe("authConfig.callbacks.authorized", () => {
     expect(call({ error: "Configuration" })).toBe(false)
   })
 
-  it("admin vào route ngoài khu quản trị (kể cả /administration, /api/backup) → 302 về /admin/orders", () => {
+  it("admin vào route ngoài khu quản trị (kể cả /administration, /api/backup) → 302 về /admin/overview", () => {
     for (const path of ["/", "/dashboard", "/students/5", "/plan", "/api/backup", "/administration", "/adminx"]) {
       const res = call(ADMIN, path)
       expect(res, path).toBeInstanceOf(Response)
       expect((res as Response).status, path).toBe(302)
-      expect((res as Response).headers.get("location"), path).toBe("http://localhost:3000/admin/orders")
+      expect((res as Response).headers.get("location"), path).toBe("http://localhost:3000/admin/overview")
     }
   })
 
   it("admin trong khu quản trị → cho qua, không vòng redirect", () => {
-    for (const path of ["/admin", "/admin/orders", "/admin/accounts", "/admin/history"]) {
+    for (const path of ["/admin", "/admin/overview", "/admin/orders", "/admin/accounts", "/admin/history"]) {
       expect(call(ADMIN, path), path).toBe(true)
     }
   })

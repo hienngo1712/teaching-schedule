@@ -37,12 +37,12 @@ describe("AppHeader", () => {
     expect(items.map((i) => i.textContent)).toEqual(["Sao lưu dữ liệu", "Đổi mật khẩu", "Đăng xuất"])
   })
 
-  it("admin: không RenewOffer; menu Quản trị (link /admin/orders), Đổi mật khẩu, Đăng xuất; không Sao lưu", async () => {
+  it("admin: không RenewOffer; menu Quản trị (link /admin/overview), Đổi mật khẩu, Đăng xuất; không Sao lưu", async () => {
     renderHeader("admin")
     expect(screen.queryByTestId("renew-offer-slot")).toBeNull()
     const items = await screen.findAllByRole("menuitem")
     expect(items.map((i) => i.textContent)).toEqual(["Quản trị", "Đổi mật khẩu", "Đăng xuất"])
-    expect(screen.getByRole("menuitem", { name: "Quản trị" }).getAttribute("href")).toBe("/admin/orders")
+    expect(screen.getByRole("menuitem", { name: "Quản trị" }).getAttribute("href")).toBe("/admin/overview")
   })
 
   it("giáo viên: nhãn gói nằm trong nút menu tài khoản, chỉ hiện ở mobile", () => {
