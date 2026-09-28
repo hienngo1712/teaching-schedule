@@ -23,13 +23,15 @@ function ActiveBar() {
 export function AdminTabBar() {
   const pathname = usePathname()
   const { t } = useTranslation()
-  const pendingCount = trpc.admin.pendingCount.useQuery().data?.count ?? 0
+  const pendingData = trpc.admin.pendingCount.useQuery().data
+  const pendingCount = pendingData?.count ?? 0
+  const newAccounts = pendingData?.newAccounts ?? 0
   return (
     <nav
       aria-label={t("main_navigation")}
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-6">
         {ADMIN_NAV_ITEMS.map((item) => {
           const Icon = item.icon
           const active = isNavActive(pathname, item.href)
@@ -37,6 +39,11 @@ export function AdminTabBar() {
             <li key={item.href}>
               <Link href={item.href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
                 {active && <ActiveBar />}
+                {item.href === "/admin/orders" && newAccounts > 0 && (
+                  <span data-testid="admin-tab-new-dot" className="absolute left-[calc(50%-14px)] top-2 size-2 rounded-full bg-teal-500">
+                    <span className="sr-only">{t("admin_new_accounts_count_label").replace("{n}", String(newAccounts))}</span>
+                  </span>
+                )}
                 <span className="relative">
                   <Icon className="size-5" />
                   {item.href === "/admin/orders" && pendingCount > 0 && (

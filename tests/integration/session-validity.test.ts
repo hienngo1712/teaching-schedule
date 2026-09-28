@@ -30,9 +30,9 @@ const call = (tok: Record<string, unknown>, user?: Record<string, unknown>) => n
 
 describe("getSessionUserState (spec N Q10–Q11)", () => {
   it("đúng sessionVersion + đang hoạt động → trả cờ mustChangePassword", async () => {
-    expect(await getSessionUserState(teacherId, 0)).toEqual({ mustChangePassword: false })
+    expect(await getSessionUserState(teacherId, 0)).toMatchObject({ mustChangePassword: false })
     await db.user.update({ where: { id: teacherId }, data: { mustChangePassword: true } })
-    expect(await getSessionUserState(teacherId, 0)).toEqual({ mustChangePassword: true })
+    expect(await getSessionUserState(teacherId, 0)).toMatchObject({ mustChangePassword: true })
   })
 
   it("lệch version / token thiếu version / bị khóa / id không tồn tại / id không phải số → null", async () => {

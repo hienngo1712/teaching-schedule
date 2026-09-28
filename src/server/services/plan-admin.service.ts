@@ -15,6 +15,7 @@ import {
 } from "@/lib/plans"
 import type { SetPlanInput } from "@/lib/schemas/plan"
 import { PLAN_SELECT, expireStaleOrders, findLastPlusOrder, type Db } from "./plan.service"
+import { countNewAccounts, markSeenIfNew } from "./new-accounts.service"
 
 // Hạn mới khi duyệt = mốc D6 + (kỳ + tháng tặng đã chốt) + ngày quy đổi D7 (tính theo lúc duyệt).
 // null = không duyệt được (D7: user đang có Pro trả phí mà đơn là Plus).
@@ -133,9 +134,13 @@ export async function approveOrder(db: PrismaClient, admin: string, id: number):
 }
 
 // Nhẹ hơn overview (không tải user, không tính computeApproval): sidebar + tab bar gọi ở mọi trang admin (spec P J5).
-export async function getPendingCount(db: PrismaClient): Promise<{ count: number }> {
+export async function getPendingCount(db: PrismaClient): Promise<{ count: number; newAccounts: number }> {
   await expireStaleOrders(db, new Date())
-  return { count: await db.planOrder.count({ where: { status: "pending", user: { isDeleted: false } } }) }
+  const [count, newAccounts] = await Promise.all([
+    db.planOrder.count({ where: { status: "pending", user: { isDeleted: false } } }),
+    countNewAccounts(db),
+  ])
+  return { count, newAccounts }
 }
 
 export async function rejectOrder(db: PrismaClient, admin: string, id: number, note?: string): Promise<{ success: true }> {
@@ -155,6 +160,7 @@ export async function adminSetPlan(db: PrismaClient, admin: string, input: SetPl
     const exists = await tx.user.findUnique({ where: { id: input.userId }, select: { id: true, isDeleted: true } })
     if (!exists || exists.isDeleted) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
     await tx.user.update({ where: { id: input.userId }, data: { plan: input.plan, planExpiresAt } })
+    await markSeenIfNew(tx, input.userId, new Date())
     await tx.planOrder.create({
       data: {
         userId: input.userId,

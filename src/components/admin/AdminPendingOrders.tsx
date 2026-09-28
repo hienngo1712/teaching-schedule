@@ -20,6 +20,7 @@ import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { formatValidUntil, planLabel } from "@/lib/plans"
 import { formatCurrency } from "@/lib/utils"
 import { dateOrDash, dateTimeVn, periodKey } from "./admin-format"
+import { NewAccounts } from "./NewAccounts"
 
 type PendingRow = RouterOutputs["admin"]["overview"]["pendingOrders"][number]
 
@@ -160,6 +161,8 @@ export function AdminPendingOrders() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <NewAccounts users={query.data?.users ?? []} />
     </div>
   )
 }

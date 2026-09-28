@@ -16,7 +16,7 @@ async function openAccounts(browser: Browser, viewport: { width: number; height:
   await page.fill('input[name="username"]', 'admin_test');
   await page.fill('input[name="password"]', 'teacher123');
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/admin\/orders$/);
+  await expect(page).toHaveURL(/\/admin\/overview$/);
   await page.goto('/admin/accounts');
   await expect(page.getByRole('heading', { level: 1, name: 'Tài khoản & gói' })).toBeVisible();
   return page;

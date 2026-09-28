@@ -2,14 +2,14 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, cleanup } from "@testing-library/react"
 import { usePathname } from "next/navigation"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { AdminTabBar } from "@/components/admin/AdminTabBar"
 
 vi.mock("next/navigation", () => ({ usePathname: vi.fn() }))
-const pending = vi.hoisted(() => ({ data: undefined as undefined | { count: number } }))
+const pending = vi.hoisted(() => ({ data: undefined as undefined | { count: number; newAccounts?: number } }))
 vi.mock("@/lib/trpc", () => ({
   trpc: { admin: { pendingCount: { useQuery: () => ({ data: pending.data }) } } },
 }))
@@ -23,23 +23,25 @@ function renderVi(ui: React.ReactNode) {
 }
 
 describe("AdminSidebar", () => {
-  it("logo Lịch dạy + nhãn Quản trị; đúng 4 mục admin, mục đang mở aria-current; số đơn chờ; không có mục giáo viên", () => {
+  it("logo Lịch dạy + nhãn Quản trị; đúng 6 mục admin, mục đang mở aria-current; số đơn chờ; không có mục giáo viên", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/history")
     pending.data = { count: 2 }
     renderVi(<AdminSidebar />)
     expect(screen.getByText("Lịch dạy")).toBeTruthy()
     expect(screen.getByText("Quản trị")).toBeTruthy()
     expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual([
+      "/admin/overview",
       "/admin/orders",
       "/admin/accounts",
       "/admin/history",
       "/admin/prices",
+      "/admin/revenue",
     ])
     expect(screen.getByRole("link", { name: "Lịch sử đơn" }).getAttribute("aria-current")).toBe("page")
     expect(screen.getByRole("link", { name: /Tài khoản & gói/ }).getAttribute("aria-current")).toBeNull()
     expect(screen.getByRole("link", { name: "Bảng giá" }).getAttribute("aria-current")).toBeNull()
     expect(screen.getByTestId("admin-pending-count").textContent).toBe("2")
-    expect(screen.queryByText("Tổng quan")).toBeNull()
+    expect(screen.queryByText("Học sinh")).toBeNull()
     expect(screen.queryByText("Học phí")).toBeNull()
   })
 
@@ -51,19 +53,21 @@ describe("AdminSidebar", () => {
 })
 
 describe("AdminTabBar", () => {
-  it("4 tab nhãn ngắn, tab đang mở aria-current", () => {
+  it("6 tab nhãn ngắn, tab đang mở aria-current", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/accounts")
     renderVi(<AdminTabBar />)
     const links = screen.getAllByRole("link")
     expect(links.map((l) => [l.getAttribute("href"), l.textContent])).toEqual([
+      ["/admin/overview", "Tổng quan"],
       ["/admin/orders", "Đơn chờ"],
       ["/admin/accounts", "Tài khoản"],
       ["/admin/history", "Lịch sử"],
       ["/admin/prices", "Bảng giá"],
+      ["/admin/revenue", "Doanh thu"],
     ])
     expect(screen.getByRole("link", { name: "Tài khoản" }).getAttribute("aria-current")).toBe("page")
     expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).className).toContain("md:hidden")
-    expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).querySelector("ul")?.className).toContain("grid-cols-4")
+    expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).querySelector("ul")?.className).toContain("grid-cols-6")
   })
 
   it("tab Đơn chờ có số đơn chờ ở góc icon; 0 đơn → không có", () => {
@@ -79,4 +83,24 @@ describe("AdminTabBar", () => {
     renderVi(<AdminTabBar />)
     expect(screen.queryByTestId("admin-tab-pending-count")).toBeNull()
   })
+
+  it("có tài khoản mới: sidebar thêm pill số riêng, tab bar thêm chấm; 0 thì không có", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/orders")
+    pending.data = { count: 2, newAccounts: 3 }
+    renderVi(<AdminSidebar />)
+    expect(screen.getByTestId("admin-new-accounts-count").textContent).toBe("3")
+    expect(screen.getByTestId("admin-new-accounts-count").getAttribute("aria-label")).toBe("3 tài khoản mới chưa xem")
+    cleanup()
+    renderVi(<AdminTabBar />)
+    expect(screen.getByTestId("admin-tab-new-dot")).toBeTruthy()
+    expect(screen.getByTestId("admin-tab-pending-count").textContent).toBe("2")
+    cleanup()
+    pending.data = { count: 0, newAccounts: 0 }
+    renderVi(<AdminSidebar />)
+    expect(screen.queryByTestId("admin-new-accounts-count")).toBeNull()
+    cleanup()
+    renderVi(<AdminTabBar />)
+    expect(screen.queryByTestId("admin-tab-new-dot")).toBeNull()
+  })
 })
+

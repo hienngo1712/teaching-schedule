@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { PERIODS, PLANS } from "@/lib/plans"
+import { rangeError } from "@/lib/revenue"
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/
 
@@ -55,3 +56,22 @@ export type SetPlanInput = z.infer<typeof setPlanSchema>
 export type UpdatePricesInput = z.infer<typeof updatePricesSchema>
 export type UpdateTrialDaysInput = z.infer<typeof updateTrialDaysSchema>
 export type SetUserTrialInput = z.infer<typeof setUserTrialSchema>
+
+const yearMonthSchema = z.object({
+  year: z.number().int().min(2020).max(2100),
+  month: z.number().int().min(1).max(12),
+})
+export const revenueQuerySchema = z
+  .object({ from: yearMonthSchema, to: yearMonthSchema })
+  .refine((d) => rangeError(d.from, d.to) !== "order", { message: "Tháng kết thúc phải sau tháng bắt đầu", path: ["to"] })
+  .refine((d) => rangeError(d.from, d.to) !== "too_long", { message: "Tối đa 36 tháng", path: ["to"] })
+export type RevenueQueryInput = z.infer<typeof revenueQuerySchema>
+
+export const accountTrendSchema = z.object({ days: z.union([z.literal(7), z.literal(14), z.literal(30)]) })
+
+export const markAccountsSeenSchema = z.union([
+  z.object({ userIds: z.array(z.number().int().positive()).min(1).max(200) }),
+  z.object({ all: z.literal(true) }),
+])
+export type MarkAccountsSeenInput = z.infer<typeof markAccountsSeenSchema>
+

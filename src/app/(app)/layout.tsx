@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/server/auth"
-import { isAdminUsername } from "@/lib/admin"
+import { ADMIN_HOME, isAdminUsername } from "@/lib/admin"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { SessionProvider } from "@/components/providers/SessionProvider"
 
@@ -16,7 +16,7 @@ export default async function AppGroupLayout({
   if (!session?.user) redirect("/login?expired=1")
   if (session.user.mustChangePassword === true) redirect("/change-password")
   // Lưới thứ 2 nếu middleware bị bỏ qua: admin không dùng màn giáo viên (spec J Q3).
-  if (isAdminUsername(session.user.username)) redirect("/admin/orders")
+  if (isAdminUsername(session.user.username)) redirect(ADMIN_HOME)
 
   return (
     <SessionProvider session={session}>

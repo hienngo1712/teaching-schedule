@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest"
-import { isAdminUsername } from "@/lib/admin"
+import { adminUsernames, isAdminUsername } from "@/lib/admin"
 
 const original = process.env.ADMIN_USERNAMES
 
@@ -31,5 +31,14 @@ describe("isAdminUsername", () => {
     expect(isAdminUsername(null)).toBe(false)
     expect(isAdminUsername(undefined)).toBe(false)
     expect(isAdminUsername("b")).toBe(true)
+  })
+})
+
+describe("adminUsernames", () => {
+  it("tách, bỏ khoảng trắng và phần tử rỗng; không có env → []", () => {
+    process.env.ADMIN_USERNAMES = " a , b,,"
+    expect(adminUsernames()).toEqual(["a", "b"])
+    delete process.env.ADMIN_USERNAMES
+    expect(adminUsernames()).toEqual([])
   })
 })

@@ -21,8 +21,8 @@ async function loginAs(browser: Browser, username: string, viewport = MOBILE): P
   await page.fill('input[name="username"]', username);
   await page.fill('input[name="password"]', 'teacher123');
   await page.click('button[type="submit"]');
-  // Admin bị middleware chuyển thẳng về khu quản trị (spec J Q3).
-  await expect(page).toHaveURL(username === 'admin_test' ? /\/admin\/orders$/ : /.*dashboard/);
+  // Admin bị middleware chuyển thẳng về khu quản trị (spec J Q3, spec K N2).
+  await expect(page).toHaveURL(username === 'admin_test' ? /\/admin\/overview$/ : /.*dashboard/);
   return page;
 }
 
@@ -95,14 +95,14 @@ test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin/
   await std2.context().close();
 });
 
-test('/admin → /admin/orders; teacher vào /admin, /admin/orders, /admin/accounts, /admin/history, /admin/prices → 404', async ({ browser }) => {
+test('/admin → /admin/overview; teacher vào /admin, /admin/overview, /admin/orders, /admin/accounts, /admin/history, /admin/prices, /admin/revenue → 404', async ({ browser }) => {
   const admin = await loginAs(browser, 'admin_test');
   await admin.goto('/admin');
-  await expect(admin).toHaveURL(/\/admin\/orders$/);
+  await expect(admin).toHaveURL(/\/admin\/overview$/);
   await admin.context().close();
 
   const teacher = await loginAs(browser, 'teacher');
-  for (const path of ['/admin', '/admin/orders', '/admin/accounts', '/admin/history', '/admin/prices']) {
+  for (const path of ['/admin', '/admin/overview', '/admin/orders', '/admin/accounts', '/admin/history', '/admin/prices', '/admin/revenue']) {
     const res = await teacher.goto(path);
     expect(res!.status(), path).toBe(404);
   }
@@ -133,19 +133,20 @@ test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn ch�
   await admin.context().close();
 });
 
-test('desktop: sidebar khu quản trị 4 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
+test('desktop: sidebar khu quản trị 6 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
   await createPendingForStd('SB');
   const admin = await loginAs(browser, 'admin_test', DESKTOP);
   await admin.goto('/admin/orders');
   const aside = admin.locator('aside');
   await expect(aside.getByText('Quản trị', { exact: true })).toBeVisible();
   expect(await aside.getByRole('link').evaluateAll((els) => els.map((e) => e.getAttribute('href')))).toEqual([
+    '/admin/overview',
     '/admin/orders',
     '/admin/accounts',
     '/admin/history',
     '/admin/prices',
+    '/admin/revenue',
   ]);
-  await expect(aside).not.toContainText('Tổng quan');
   await expect(aside).not.toContainText('Học phí');
   const pendingCount = await db.planOrder.count({ where: { status: 'pending' } });
   await expect(aside.getByTestId('admin-pending-count')).toHaveText(String(pendingCount));
@@ -155,7 +156,7 @@ test('desktop: sidebar khu quản trị 4 mục, nhãn Quản trị, số đơn 
   await admin.context().close();
 });
 
-test('admin_test: route giáo viên → /admin/orders; tab bar và menu avatar chỉ của khu quản trị; không gọi plan.me; không tràn ngang', async ({ browser }) => {
+test('admin_test: route giáo viên → /admin/overview; tab bar và menu avatar chỉ của khu quản trị; không gọi plan.me; không tràn ngang', async ({ browser }) => {
   const admin = await loginAs(browser, 'admin_test');
   const planMe: string[] = [];
   admin.on('request', (r) => {
@@ -164,17 +165,16 @@ test('admin_test: route giáo viên → /admin/orders; tab bar và menu avatar c
 
   for (const path of ['/dashboard', '/students', '/plan', '/', '/admin', '/api/backup']) {
     await admin.goto(path);
-    await expect(admin, path).toHaveURL(/\/admin\/orders$/);
+    await expect(admin, path).toHaveURL(/\/admin\/overview$/);
   }
-  await expect(admin.getByRole('heading', { level: 1, name: 'Chờ xác nhận' })).toBeVisible();
+  await expect(admin.getByRole('heading', { level: 1, name: 'Tổng quan' })).toBeVisible();
   await expect(admin.getByRole('banner').getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
 
   const tabs = admin.getByRole('navigation', { name: 'Điều hướng chính' });
-  await expect(tabs.getByRole('link')).toHaveCount(4);
+  await expect(tabs.getByRole('link')).toHaveCount(6);
   for (const link of await tabs.getByRole('link').all()) {
     expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }
-  await expect(tabs).not.toContainText('Tổng quan');
   await expect(tabs).not.toContainText('Học phí');
   await tabs.getByRole('link', { name: 'Lịch sử' }).click();
   await expect(admin).toHaveURL(/\/admin\/history$/);
@@ -183,7 +183,7 @@ test('admin_test: route giáo viên → /admin/orders; tab bar và menu avatar c
   const menu = admin.getByRole('menu');
   await expect(menu.getByRole('menuitem')).toHaveText(['Quản trị', 'Đổi mật khẩu', 'Đăng xuất']);
   await menu.getByRole('menuitem', { name: 'Quản trị' }).click();
-  await expect(admin).toHaveURL(/\/admin\/orders$/);
+  await expect(admin).toHaveURL(/\/admin\/overview$/);
 
   const overflow = await admin.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
