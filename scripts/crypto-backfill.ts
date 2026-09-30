@@ -2,7 +2,7 @@
 //   DATABASE_URL=... DATA_ENCRYPTION_KEYS=... DATA_ENCRYPTION_ACTIVE_KID=... \
 //   [CONFIRM_HOST=<host>] pnpm exec tsx scripts/crypto-backfill.ts [--dry-run|--apply|--verify|--decrypt|--rotate] [--batch 200]
 import { PrismaClient } from "@prisma/client"
-import { runBackfill, type BackfillMode } from "../src/server/crypto/backfill"
+import { reconcileParentLinkHashes, runBackfill, type BackfillMode } from "../src/server/crypto/backfill"
 import { loadKeyring } from "../src/server/crypto/field-crypto"
 
 const MODES: BackfillMode[] = ["dry-run", "apply", "verify", "decrypt", "rotate"]
@@ -54,7 +54,12 @@ async function main(): Promise<number> {
       }))
     )
     for (const r of reports) console.log(`checksum ${r.table}.${r.column} ${r.checksum}`)
-    const dirty = reports.some((r) => r.undecryptable > 0 || (mode === "verify" && r.plain > 0))
+    // Hash link phụ huynh lệch token (đổi link trong lúc deploy O1): apply sửa, chế độ khác chỉ đếm.
+    const links = await reconcileParentLinkHashes(raw, { fix: mode === "apply" })
+    console.log(`link phụ huynh lệch hash: ${links.mismatched}, đã sửa: ${links.fixed}`)
+    const dirty =
+      reports.some((r) => r.undecryptable > 0 || (mode === "verify" && r.plain > 0)) ||
+      (mode === "verify" && links.mismatched > 0)
     return dirty ? 2 : 0
   } finally {
     await raw.$disconnect()

@@ -2,6 +2,7 @@ import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getParentView } from "@/server/services/parent-link.service"
+import { hashParentToken } from "@/server/crypto/parent-token"
 import { getAuthedCaller } from "../helpers/trpc"
 
 const D = "2031-04-07"
@@ -55,7 +56,7 @@ describe("Dọn Thùng rác (spec R4–R7)", () => {
     const s = await caller.session.create({ sessionDate: "2024-05-06", startTime: "08:00", endTime: "09:00", subjectId: sid, studentIds: [st.id] })
     await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present" }] })
     await caller.payment.create({ studentId: st.id, year: 2024, month: 5, amount: 80_000, paidAt: "2024-05-20", method: "cash" })
-    await db.student.update({ where: { id: st.id }, data: { parentLinkToken: TOKEN } })
+    await db.student.update({ where: { id: st.id }, data: { parentLinkToken: TOKEN, parentLinkTokenHash: hashParentToken(TOKEN) } })
     await caller.student.deactivate({ id: st.id })
     await caller.student.delete({ id: st.id })
 

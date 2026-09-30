@@ -456,6 +456,7 @@ Nội dung: mọi thứ ở mục 8 trừ phần O3. Sau deploy: bản ghi **m�
 - Mở Học sinh, Học phí, Lịch, Báo cáo, trang phụ huynh có sẵn (link cũ còn mở được) → hiển thị bình thường.
 - Tạo 1 HS thử (tick đồng ý) → hiện đúng tên; tìm theo một phần tên ra đúng.
 - Người điều phối chạy `--dry-run` lên prod (O2 bước 2) → thấy `encrypted k1 ≥ 1` ở `students.full_name` (bản ghi vừa tạo) và giải mã được (`undecryptable = 0`) → **khoá prod đúng và bản dự phòng đúng** (chạy bằng khoá dán từ bản dự phòng).
+- Cùng lần `--dry-run` đó xem dòng `link phụ huynh lệch hash`: phải = 0. Khác 0 = có GV tắt/tạo lại link lúc code cũ còn chạy trong deploy → báo người dùng; `--apply` ở O2 sẽ sửa (tính lại hash từ token), trước đó link đã tắt có thể còn mở.
 
 **Điều kiện chuyển sang O2**: O1 chạy ổn ≥ 24 giờ, không lỗi `FieldDecryptError`/`FieldCryptoConfigError`/`EncryptedFieldQueryError` trong log Vercel, người dùng duyệt chạy script.
 
@@ -482,7 +483,7 @@ Kiểm trước/sau (ghi vào báo cáo cho người dùng, không kèm dữ li�
 - Mở web bằng `qa_test`: danh sách HS, tìm tên, phiếu học phí, trang phụ huynh, sao lưu Excel → đúng dữ liệu.
 
 **Rollback O2** (nếu có sự cố hiển thị): `--decrypt` (cùng env + `CONFIRM_HOST`) đưa dữ liệu về bản rõ; code O1 vẫn đọc được. Hỏng nặng: đổi `DATABASE_URL` sang branch `backup-before-O2-backfill-…` (mất dữ liệu phát sinh sau thời điểm backup — chỉ dùng khi bất đắc dĩ).
-**Rollback O1** (hiếm): chạy `--decrypt` trước, rồi revert commit merge O1 và deploy. Migration O1 chỉ nới cột + thêm cột/bảng, code cũ chạy được với schema mới (không cần gỡ migration).
+**Rollback O1** (hiếm): chạy `--decrypt` trước, rồi revert commit merge O1 và deploy. Migration O1 chỉ nới cột + thêm cột/bảng, code cũ chạy được với schema mới (không cần gỡ migration). Khi deploy lại O1 sau rollback: link tạo trong lúc code cũ chạy chưa có hash → chạy `--dry-run` xem `link phụ huynh lệch hash`, rồi `--apply` để tính lại.
 
 **Điều kiện chuyển sang O3**: `--verify` mã thoát 0 trên prod, người dùng kiểm web ổn.
 

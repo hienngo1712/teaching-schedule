@@ -115,7 +115,7 @@ describe("Backfill mã hoá dữ liệu cũ (spec O 6.11)", () => {
 
     await runBackfill(raw, "apply")
     expect(await reconcileParentLinkHashes(raw, { fix: true })).toEqual({ mismatched: 2, fixed: 2 })
-    expect((await getParentView(db, TOKEN))?.student.id).toBe(renewed.id)
+    expect((await getParentView(db, TOKEN))?.student.fullName).toBe(renewed.fullName)
     expect(await getParentView(db, OLD)).toBeNull()
     expect((await raw.student.findUniqueOrThrow({ where: { id: revoked.id } })).parentLinkTokenHash).toBeNull()
     expect(await reconcileParentLinkHashes(raw, { fix: false })).toEqual({ mismatched: 0, fixed: 0 })

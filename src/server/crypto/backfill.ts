@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import type { PrismaClient } from "@prisma/client"
 import { decryptField, encryptField, isEncrypted, loadKeyring, readKid } from "./field-crypto"
+import { hashParentToken } from "./parent-token"
 
 export type FieldTarget = { model: string; table: string; column: string; field: string }
 
@@ -113,4 +114,28 @@ export async function runBackfill(
     reports.push(r)
   }
   return reports
+}
+
+// Hash link phụ huynh chỉ được tính 1 lần lúc migration O1; code cũ còn chạy trong lúc deploy có thể tắt/tạo lại
+// link mà không cập nhật hash → link đã tắt mở lại, link mới 404. Phải chạy trước O2 (sau O2 SQL không tính được).
+export async function reconcileParentLinkHashes(
+  raw: PrismaClient,
+  opts: { fix: boolean }
+): Promise<{ mismatched: number; fixed: number }> {
+  const rows = await raw.$queryRaw<Array<{ id: number; tok: string | null; h: string | null }>>`
+    SELECT id, parent_link_token AS tok, parent_link_token_hash AS h FROM students
+    WHERE parent_link_token IS NOT NULL OR parent_link_token_hash IS NOT NULL ORDER BY id`
+  let mismatched = 0
+  let fixed = 0
+  for (const r of rows) {
+    const want = r.tok === null || r.tok === "" ? null : hashParentToken(decryptField(r.tok, "parentLinkToken"))
+    if (want === r.h) continue
+    mismatched++
+    if (!opts.fix) continue
+    const n = await raw.$executeRaw`
+      UPDATE students SET parent_link_token_hash = ${want}
+      WHERE id = ${r.id} AND parent_link_token IS NOT DISTINCT FROM ${r.tok}`
+    fixed += n
+  }
+  return { mismatched, fixed }
 }
