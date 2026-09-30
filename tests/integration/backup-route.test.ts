@@ -10,6 +10,8 @@ import { GET } from "@/app/api/backup/route"
 // `auth` của NextAuth có nhiều overload, ép về dạng đơn giản để mock.
 const authMock = auth as unknown as ReturnType<typeof vi.fn>
 
+const req = () => new Request("http://localhost/api/backup", { headers: { "x-forwarded-for": "203.0.113.9, 10.0.0.1" } })
+
 describe("GET /api/backup", () => {
   beforeEach(() => {
     authMock.mockReset()
@@ -17,20 +19,21 @@ describe("GET /api/backup", () => {
 
   it("không có phiên → 401", async () => {
     authMock.mockResolvedValue(null)
-    const res = await GET()
+    const res = await GET(req())
     expect(res.status).toBe(401)
+    expect(await db.securityEvent.count()).toBe(0)
   })
 
   it("phiên có user.id rỗng → 401, không chạy với userId 0", async () => {
     authMock.mockResolvedValue({ user: { id: "" } })
-    const res = await GET()
+    const res = await GET(req())
     expect(res.status).toBe(401)
   })
 
   it("đang bị bắt đổi mật khẩu → 403, không xuất dữ liệu (spec N R2)", async () => {
     const teacher = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
     authMock.mockResolvedValue({ user: { id: String(teacher.id), mustChangePassword: true } })
-    const res = await GET()
+    const res = await GET(req())
     expect(res.status).toBe(403)
   })
 
@@ -38,7 +41,7 @@ describe("GET /api/backup", () => {
     const teacher = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
     authMock.mockResolvedValue({ user: { id: String(teacher.id) } })
 
-    const res = await GET()
+    const res = await GET(req())
     expect(res.status).toBe(200)
     expect(res.headers.get("Content-Type")).toBe(
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -54,12 +57,23 @@ describe("GET /api/backup", () => {
     expect(wb.getWorksheet("Lần thu")).toBeDefined()
   })
 
+  it("tải thành công ghi 1 sự kiện backup_download kèm IP, không ghi khi 401", async () => {
+    await db.securityEvent.deleteMany()
+    const teacher = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    authMock.mockResolvedValue({ user: { id: String(teacher.id) } })
+    const res = await GET(req())
+    expect(res.status).toBe(200)
+    const ev = await db.securityEvent.findMany()
+    expect(ev).toHaveLength(1)
+    expect(ev[0]).toMatchObject({ event: "backup_download", ipAddress: "203.0.113.9" })
+  })
+
   it("lỗi bất ngờ (user không tồn tại) → 500, không lộ chi tiết", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {})
     authMock.mockResolvedValue({ user: { id: "999999999" } })
-    const res = await GET()
+    const res = await GET(req())
     expect(res.status).toBe(500)
-    expect(await res.text()).toBe("")
+    expect(await res.text()).toBe("Lỗi khi tạo file sao lưu")
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()
   })

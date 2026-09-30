@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DatabaseBackup, KeyRound, LogOut, Languages, ShieldCheck } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
+import { BackupConfirmDialog } from "./BackupConfirmDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
 import { RenewOffer } from "@/components/plan/RenewOffer"
@@ -31,6 +33,7 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
   const { data: session } = useSession()
   const { t, language, setLanguage } = useTranslation()
   const backup = useBackupDownload()
+  const [confirmBackup, setConfirmBackup] = useState(false)
   const fullName = session?.user?.fullName ?? session?.user?.username ?? t("teacher_fallback")
 
   return (
@@ -86,7 +89,7 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
                 </Link>
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem onSelect={backup.download} disabled={backup.isDownloading}>
+              <DropdownMenuItem onSelect={() => setConfirmBackup(true)} disabled={backup.isDownloading}>
                 <DatabaseBackup className="size-4 mr-2" />
                 {t("backup_data")}
               </DropdownMenuItem>
@@ -94,7 +97,7 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
             <ChangePasswordDialog
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <KeyRound className="size-4 mr-2" />
+                   <KeyRound className="size-4 mr-2" />
                   {t("change_password")}
                 </DropdownMenuItem>
               }
@@ -109,6 +112,15 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <BackupConfirmDialog
+          open={confirmBackup}
+          onOpenChange={setConfirmBackup}
+          onConfirm={() => {
+            setConfirmBackup(false)
+            backup.download()
+          }}
+        />
       </div>
     </header>
   )

@@ -752,5 +752,8 @@
   "privacy_teacher_body": "Chỉ nhập dữ liệu học sinh khi đã được phụ huynh cho phép. Không chia sẻ công khai link phụ huynh. Giữ kín file sao lưu.",
   "privacy_delete_title": "Lưu trữ và xoá",
   "privacy_delete_body": "Dữ liệu được giữ trong thời gian tài khoản còn hoạt động. Dữ liệu bạn xoá được chuyển vào thùng rác. Muốn xoá vĩnh viễn hoặc xoá tài khoản, liên hệ {contact}.",
-  "privacy_version": "Phiên bản: {v}"
+  "privacy_version": "Phiên bản: {v}",
+  "backup_confirm_title": "Tải file sao lưu",
+  "backup_confirm_desc": "File chứa toàn bộ dữ liệu cá nhân của học sinh, phụ huynh và tài khoản ngân hàng ở dạng chưa mã hoá. Chỉ lưu ở nơi an toàn, không gửi qua Zalo, Facebook hay email, xoá khi không còn cần.",
+  "backup_confirm_download": "Tôi hiểu, tải xuống"
 }

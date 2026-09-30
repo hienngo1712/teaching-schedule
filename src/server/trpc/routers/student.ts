@@ -8,6 +8,7 @@ import {
   studentUpdateSchema,
 } from "@/lib/schemas/student"
 import { recordConsent, assertUpdateConsent } from "@/server/services/consent.service"
+import { logSecurityEvent } from "@/server/services/security-event.service"
 import { updateTouchesPersonalData } from "@/lib/consent"
 import {
   checkImportDuplicates,
@@ -84,9 +85,17 @@ export const studentRouter = createTRPCRouter({
 
   generateParentLink: planProcedure("parentLink")
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(({ ctx, input }) => generateParentLink(ctx.db, ctx.userId, input.id)),
+    .mutation(async ({ ctx, input }) => {
+      const res = await generateParentLink(ctx.db, ctx.userId, input.id)
+      await logSecurityEvent(ctx.db, { userId: ctx.userId, event: "parent_link_create", ipAddress: ctx.ip })
+      return res
+    }),
 
   disableParentLink: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(({ ctx, input }) => disableParentLink(ctx.db, ctx.userId, input.id)),
+    .mutation(async ({ ctx, input }) => {
+      const res = await disableParentLink(ctx.db, ctx.userId, input.id)
+      await logSecurityEvent(ctx.db, { userId: ctx.userId, event: "parent_link_disable", ipAddress: ctx.ip })
+      return res
+    }),
 })

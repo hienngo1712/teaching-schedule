@@ -24,6 +24,18 @@ const nextConfig = {
   // Trang phụ huynh: chặn máy tìm kiếm và không để token rò qua header Referer.
   async headers() {
     return [
+      // Toàn trang (spec O Q16). CSP chỉ gồm chỉ thị không chặn script inline của Next.
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
+        ],
+      },
       {
         source: "/p/:path*",
         headers: [

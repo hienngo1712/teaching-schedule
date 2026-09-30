@@ -752,5 +752,8 @@
   "privacy_teacher_body": "Only enter student data with the parent's permission. Do not share parent links publicly. Keep backup files private.",
   "privacy_delete_title": "Retention and deletion",
   "privacy_delete_body": "Data is kept while your account is active. Data you delete goes to the trash. To delete it permanently or close your account, contact {contact}.",
-  "privacy_version": "Version: {v}"
+  "privacy_version": "Version: {v}",
+  "backup_confirm_title": "Download backup file",
+  "backup_confirm_desc": "The file contains all personal data of students, parents and your bank account, unencrypted. Keep it somewhere safe, do not send it via chat apps or email, and delete it when no longer needed.",
+  "backup_confirm_download": "I understand, download"
 }

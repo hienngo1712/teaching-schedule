@@ -29,6 +29,7 @@ const NUM_FMT: Partial<Record<Kind, string>> = {
 
 const NOTE_READONLY = "File chỉ để lưu trữ và đối chiếu. Ứng dụng không nhập lại file này."
 const NOTE_TUITION = "Học phí tháng là số đã lưu; tháng chưa mở trang Học phí có thể chưa có dòng."
+const NOTE_SENSITIVE = "File chứa dữ liệu cá nhân chưa mã hoá. Không gửi qua mạng xã hội hay email, xoá khi không còn cần."
 
 const SESSION_STATUS_LABEL: Record<string, string> = { scheduled: "Đã lên lịch", cancelled: "Đã hủy" }
 // Gắn kiểu theo PAYMENT_METHODS của B: B thêm hình thức mới thì tsc báo ở đây.
@@ -265,6 +266,7 @@ export async function buildBackupWorkbook(
   for (const [name, n] of counts) info.addRow([`Số dòng: ${name}`, n])
   info.addRow(["Lưu ý", NOTE_READONLY])
   info.addRow(["Lưu ý", NOTE_TUITION])
+  info.addRow(["Lưu ý", NOTE_SENSITIVE])
 
   // Chỉ các field hiện trên trang Cài đặt; không bao giờ thêm mật khẩu/token vào đây.
   const settings = wb.addWorksheet("Cài đặt", { views: [{ state: "frozen", ySplit: 1 }] })
