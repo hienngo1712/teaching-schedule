@@ -1,12 +1,13 @@
 import { PrismaClient } from "@prisma/client"
 import { withLiveFilter } from "./soft-delete"
+import { withFieldEncryption } from "./crypto/prisma-encryption"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
 function createPrismaClient(): PrismaClient {
-  return new PrismaClient({
+  const base = new PrismaClient({
     // Bỏ "query" log để tránh I/O stdout chậm 5–20ms mỗi query.
     log: ["error", "warn"],
   }).$extends({
@@ -23,6 +24,9 @@ function createPrismaClient(): PrismaClient {
       },
     },
   }) as unknown as PrismaClient
+
+  // Mã hoá bọc ngoài cùng (spec O 6.3, 6.13): mọi đường ghi qua db đều mã hoá, kể cả thao tác xoá mềm.
+  return withFieldEncryption(base)
 }
 
 // $extends chỉ áp một lần lúc tạo, tránh bọc chồng lớp qua mỗi lần HMR.

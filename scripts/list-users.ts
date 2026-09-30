@@ -1,8 +1,10 @@
 // Xem danh sách user.
 // Cách dùng: pnpm user:list
 import { PrismaClient } from "@prisma/client"
+import { withFieldEncryption } from "../src/server/crypto/prisma-encryption"
 
-const db = new PrismaClient()
+// Ghi/đọc họ tên qua extension mã hoá như app (spec O 6.3).
+const db = withFieldEncryption(new PrismaClient())
 
 async function main() {
   const users = await db.user.findMany({

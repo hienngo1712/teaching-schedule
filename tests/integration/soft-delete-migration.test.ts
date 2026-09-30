@@ -25,13 +25,16 @@ describe("Migration add_soft_delete (spec Q mục 12)", () => {
 })
 
 describe("Extension lọc bản đã xoá (spec Q Q1)", () => {
+  let createdId: number | null = null
+
   afterAll(async () => {
-    await db.student.deleteMany({ where: { fullName: { startsWith: "SD-MIG " } } })
+    if (createdId) await db.student.deleteMany({ where: { id: createdId } })
   })
 
   it("đọc cấp cao bỏ bản đã xoá; isDeleted:true / WITH_DELETED đọc được; deleteMany vẫn xoá sạch", async () => {
     const userId = (await db.user.findUniqueOrThrow({ where: { username: "teacher" } })).id
     const s = await db.student.create({ data: { userId, fullName: "SD-MIG An", grade: 5 } })
+    createdId = s.id
     expect(s.isDeleted).toBe(false)
 
     await db.student.update({ where: { id: s.id }, data: softDeleteData() })
