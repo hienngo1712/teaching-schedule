@@ -1,0 +1,116 @@
+import { createHash } from "node:crypto"
+import type { PrismaClient } from "@prisma/client"
+import { decryptField, encryptField, isEncrypted, loadKeyring, readKid } from "./field-crypto"
+
+export type FieldTarget = { model: string; table: string; column: string; field: string }
+
+// Tên bảng/cột thật (@@map/@map) là hằng, không nhận từ input nên nối vào SQL an toàn.
+export const FIELD_TARGETS: readonly FieldTarget[] = [
+  { model: "User", table: "users", column: "full_name", field: "fullName" },
+  { model: "User", table: "users", column: "bank_account_number", field: "bankAccountNumber" },
+  { model: "User", table: "users", column: "bank_account_name", field: "bankAccountName" },
+  { model: "Student", table: "students", column: "full_name", field: "fullName" },
+  { model: "Student", table: "students", column: "parent_name", field: "parentName" },
+  { model: "Student", table: "students", column: "parent_phone", field: "parentPhone" },
+  { model: "Student", table: "students", column: "notes", field: "notes" },
+  { model: "Student", table: "students", column: "parent_link_token", field: "parentLinkToken" },
+  { model: "SessionStudent", table: "session_students", column: "note", field: "note" },
+  { model: "TeachingSession", table: "teaching_sessions", column: "notes", field: "notes" },
+  { model: "TeachingSession", table: "teaching_sessions", column: "cancel_reason", field: "cancelReason" },
+  { model: "MonthlyTuition", table: "monthly_tuition", column: "notes", field: "notes" },
+  { model: "Payment", table: "payments", column: "note", field: "note" },
+  { model: "PlanOrder", table: "plan_orders", column: "note", field: "note" },
+]
+
+export type BackfillMode = "dry-run" | "apply" | "verify" | "decrypt" | "rotate"
+
+export type FieldReport = {
+  table: string
+  column: string
+  total: number
+  empty: number
+  plain: number
+  encrypted: Record<string, number>
+  undecryptable: number
+  changed: number
+  checksum: string
+}
+
+function nextValue(mode: BackfillMode, stored: string, plain: string, field: string, active: string): string {
+  if (isEncrypted(stored)) {
+    if (mode === "decrypt") return plain
+    if (mode === "rotate" && readKid(stored) !== active) return encryptField(plain, field)
+    return stored
+  }
+  return mode === "apply" ? encryptField(stored, field) : stored
+}
+
+// Đọc MỌI dòng (kể cả đã xoá mềm của Q). Ghi bằng raw SQL để không bump updated_at.
+export async function runBackfill(
+  raw: PrismaClient,
+  mode: BackfillMode,
+  opts: { batchSize?: number; log?: (line: string) => void } = {}
+): Promise<FieldReport[]> {
+  const batch = opts.batchSize ?? 200
+  const log = opts.log ?? (() => {})
+  const { active } = loadKeyring()
+  const reports: FieldReport[] = []
+  for (const t of FIELD_TARGETS) {
+    const r: FieldReport = { table: t.table, column: t.column, total: 0, empty: 0, plain: 0, encrypted: {}, undecryptable: 0, changed: 0, checksum: "" }
+    const hash = createHash("sha256")
+    let lastId = 0
+    for (;;) {
+      const rows = await raw.$queryRawUnsafe<Array<{ id: number; v: string | null }>>(
+        `SELECT id, "${t.column}" AS v FROM "${t.table}" WHERE id > $1 ORDER BY id LIMIT $2`,
+        lastId,
+        batch
+      )
+      if (rows.length === 0) break
+      for (const row of rows) {
+        lastId = row.id
+        r.total++
+        if (row.v === null || row.v === "") {
+          r.empty++
+          hash.update(`${row.id}\u0001${row.v === null ? "n" : "e"}\n`)
+          continue
+        }
+        let plain: string
+        try {
+          plain = decryptField(row.v, t.field)
+        } catch {
+          // Không in giá trị: có thể là bản rõ tình cờ bắt đầu bằng tiền tố.
+          r.undecryptable++
+          log(`${t.table}.${t.column} id=${row.id} không giải mã được`)
+          hash.update(`${row.id}\u0002\n`)
+          continue
+        }
+        hash.update(`${row.id}\u0000${plain}\n`)
+        let final = row.v
+        const next = nextValue(mode, row.v, plain, t.field, active)
+        if (next !== row.v) {
+          const n = await raw.$executeRawUnsafe(
+            `UPDATE "${t.table}" SET "${t.column}" = $1 WHERE id = $2 AND "${t.column}" = $3`,
+            next,
+            row.id,
+            row.v
+          )
+          if (n === 1) {
+            r.changed++
+            final = next
+          } else {
+            log(`${t.table}.${t.column} id=${row.id} bị sửa đồng thời, bỏ qua lượt này`)
+          }
+        }
+        if (isEncrypted(final)) {
+          const kid = readKid(final) ?? "?"
+          r.encrypted[kid] = (r.encrypted[kid] ?? 0) + 1
+        } else {
+          r.plain++
+        }
+      }
+    }
+    r.checksum = hash.digest("hex")
+    reports.push(r)
+  }
+  return reports
+}
