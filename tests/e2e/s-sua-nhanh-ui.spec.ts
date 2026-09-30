@@ -253,8 +253,13 @@ test.describe('Plan S — Sửa nhanh UI (S1–S5)', () => {
       await saveImgBtn.click();
 
       // Màn xem ảnh hiện ra
-      await expect(page.locator('img[src^="blob:"]')).toBeVisible();
-      await expect(page.getByText(/Nhấn giữ ảnh → chọn Lưu vào Ảnh/)).toBeVisible();
+      const img = page.locator('img[src^="blob:"]');
+      await expect(img).toBeVisible();
+      // toBeVisible vẫn qua khi phần tử lệch khỏi màn hình / ảnh hỏng: kiểm nằm trọn trong màn hình và ảnh tải được.
+      await expect(img).toBeInViewport({ ratio: 1 });
+      await expect.poll(() => img.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+      await expect(page.getByText(/Nhấn giữ ảnh → chọn Lưu vào Ảnh/)).toBeInViewport({ ratio: 1 });
+      await expect(page.getByRole('button', { name: 'Đóng' })).toBeInViewport({ ratio: 1 });
       await expectNoHorizontalScroll(page);
 
       await page.getByRole('button', { name: 'Đóng' }).click();

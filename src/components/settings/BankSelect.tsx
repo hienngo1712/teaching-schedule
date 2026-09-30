@@ -31,7 +31,8 @@ export function BankSelect({ id, value, onChange, placeholder }: Props) {
     setOpen(newOpen)
     if (newOpen) {
       setQuery("")
-      const idx = filteredBanks.findIndex((b) => b.bin === value)
+      // Tìm trong danh sách đầy đủ: query cũ (vd sau Esc) sẽ bị xoá, chỉ số phải khớp danh sách mới.
+      const idx = searchBanks("").findIndex((b) => b.bin === value)
       setActiveIndex(idx >= 0 ? idx : 0)
     }
   }

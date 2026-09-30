@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, type TouchEvent } from "react"
+import { useEffect, useMemo, useRef, type TouchEvent } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { SessionListDTO } from "@/lib/types/models"
@@ -15,7 +15,7 @@ export function sortSessions(list: SessionListDTO[]): SessionListDTO[] {
   })
 }
 
-const TYPING = "input, textarea, select, [role=combobox], [contenteditable=true]"
+const TYPING = "input, textarea, select, [role=combobox], [role=listbox], [role=menu], [role=menuitem], [contenteditable=true]"
 
 type Props = {
   siblings: SessionListDTO[]
@@ -27,7 +27,7 @@ type Props = {
 // Thanh điều hướng ← → xem ca trước/sau trong tháng, kèm phím mũi tên và vuốt cảm ứng.
 export function SessionNavBar({ siblings, current, onNavigate, blocked = false }: Props) {
   const { t } = useTranslation()
-  const sorted = sortSessions(siblings)
+  const sorted = useMemo(() => sortSessions(siblings), [siblings])
   const currentIndex = sorted.findIndex((s) => s.id === current.id)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
@@ -37,7 +37,8 @@ export function SessionNavBar({ siblings, current, onNavigate, blocked = false }
   // Phím mũi tên đổi ca, trừ khi đang gõ (ghi chú điểm danh) hoặc có hộp con mở.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (blocked) return
+      // Menu Radix xử lý ↑↓ bằng preventDefault nhưng không chặn nổi bọt; Alt+← là Quay lại của trình duyệt.
+      if (blocked || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
       const target = e.target as HTMLElement | null
       if (target?.closest?.(TYPING)) return
 

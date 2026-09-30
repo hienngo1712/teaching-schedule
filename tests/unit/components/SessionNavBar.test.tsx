@@ -106,6 +106,23 @@ describe("SessionNavBar (spec S4)", () => {
     expect(onNavigate).toHaveBeenCalledWith(s3)
   })
 
+  // Review S I1: menu "⋮" (Radix) xử lý ↑↓ bằng preventDefault, sự kiện vẫn nổi lên window.
+  it("phím đã bị thành phần khác xử lý (defaultPrevented) hoặc trong menu → KHÔNG đổi ca", () => {
+    const onNavigate = vi.fn()
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <div role="menu"><div role="menuitem" tabIndex={0} data-testid="mi">Thêm học sinh</div></div>
+        <SessionNavBar siblings={siblingsUnsorted} current={s2} onNavigate={onNavigate} />
+      </LanguageProvider>
+    )
+    const ev = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true })
+    ev.preventDefault()
+    window.dispatchEvent(ev)
+    fireEvent.keyDown(screen.getByTestId("mi"), { key: "ArrowDown" })
+    fireEvent.keyDown(window, { key: "ArrowLeft", altKey: true })
+    expect(onNavigate).not.toHaveBeenCalled()
+  })
+
   it("phím khi đang gõ trong input/textarea/combobox → KHÔNG đổi ca", () => {
     const onNavigate = vi.fn()
     render(

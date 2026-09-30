@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useEffect } from "react"
+import { useEffect, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -21,19 +21,21 @@ type Props = {
 
 export function NoticeImageViewer({ blob, filename, title, onClose }: Props) {
   const { t } = useTranslation()
-  const url = useMemo(() => URL.createObjectURL(blob), [blob])
+  const [url, setUrl] = useState<string>()
 
+  // Tạo và thu hồi trong cùng effect: StrictMode (dev) chạy effect 2 lần, useMemo sẽ giữ URL đã thu hồi.
   useEffect(() => {
-    return () => {
-      URL.revokeObjectURL(url)
-    }
-  }, [url])
+    const u = URL.createObjectURL(blob)
+    setUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [blob])
 
   const hasShare = canShareFiles()
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="fixed inset-0 z-50 flex h-full w-full max-w-none flex-col justify-between border-0 bg-black p-4 sm:rounded-none">
+      {/* DialogContent gốc canh giữa bằng left/top 50% + translate -50%: phải tắt cả hai để phủ kín màn hình. */}
+      <DialogContent className="left-0 top-0 z-50 flex h-full w-full max-w-none translate-x-0 translate-y-0 flex-col justify-between border-0 bg-black p-4 sm:rounded-none [&>button]:text-white">
         <DialogHeader className="sr-only">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{title}</DialogDescription>
@@ -42,11 +44,11 @@ export function NoticeImageViewer({ blob, filename, title, onClose }: Props) {
         <div className="flex flex-1 items-center justify-center overflow-auto py-2">
           {/* Dùng <img> thật vì menu nhấn giữ của trình duyệt cho phép lưu thẳng vào thư viện Ảnh. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          {url && <img
             src={url}
             alt={title}
             className="max-h-[75vh] w-auto max-w-full object-contain"
-          />
+          />}
         </div>
 
         <div className="flex flex-col gap-3 pb-2 pt-2">

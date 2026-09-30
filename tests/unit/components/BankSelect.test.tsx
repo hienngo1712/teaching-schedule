@@ -100,4 +100,22 @@ describe("BankSelect — combobox tìm ngân hàng (spec S2)", () => {
     expect(onChange).not.toHaveBeenCalled()
     expect(screen.queryByRole("listbox")).toBeNull()
   })
+
+  // Review S M3: tìm → Esc → mở lại → Enter phải giữ ngân hàng đã chọn, không nhảy sang dòng khác.
+  it("đã chọn VietinBank, tìm 'vietin' rồi Esc, mở lại Enter → vẫn VietinBank", () => {
+    const onChange = vi.fn()
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <label htmlFor="bank-bin">Ngân hàng</label>
+        <BankSelect id="bank-bin" value="970415" onChange={onChange} placeholder="Chọn ngân hàng" />
+      </LanguageProvider>
+    )
+    const btn = screen.getByRole("combobox", { name: "Ngân hàng" })
+    fireEvent.click(btn)
+    fireEvent.change(screen.getByPlaceholderText("Tìm ngân hàng…"), { target: { value: "vietin" } })
+    fireEvent.keyDown(screen.getByPlaceholderText("Tìm ngân hàng…"), { key: "Escape" })
+    fireEvent.click(screen.getByRole("combobox", { name: "Ngân hàng" }))
+    fireEvent.keyDown(screen.getByPlaceholderText("Tìm ngân hàng…"), { key: "Enter" })
+    expect(onChange).toHaveBeenLastCalledWith("970415")
+  })
 })
