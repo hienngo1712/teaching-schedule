@@ -49,6 +49,9 @@ export default defineConfig({
     env: {
       DATABASE_URL: requireEnv('DATABASE_URL'),
       DIRECT_URL: requireEnv('DIRECT_URL'),
+      // Truyền tường minh để Next không đọc nhầm khoá từ .env (spec O 6.2).
+      DATA_ENCRYPTION_KEYS: requireEnv('DATA_ENCRYPTION_KEYS'),
+      DATA_ENCRYPTION_ACTIVE_KID: requireEnv('DATA_ENCRYPTION_ACTIVE_KID'),
       NODE_ENV: 'development',
       // Env phân gói cho DB test: admin_test là admin, TK ngân hàng giả để trang Gói có QR.
       ADMIN_USERNAMES: 'admin_test',
