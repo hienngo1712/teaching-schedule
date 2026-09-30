@@ -3,6 +3,7 @@
 import { Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getSessionLabel } from "@/lib/session-label"
+import { formatGrades } from "@/lib/format-grades"
 import type { SessionListDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
@@ -13,6 +14,8 @@ type Props = {
 
 export function SessionListItem({ session, onClick }: Props) {
   const { t } = useTranslation()
+  const gradeText = formatGrades(session.grades ?? [], t("grade"), false)
+
   return (
     <button
       type="button"
@@ -28,6 +31,12 @@ export function SessionListItem({ session, onClick }: Props) {
             {session.startTime} - {session.endTime}
           </div>
           <span className="text-slate-300">|</span>
+          {gradeText && (
+            <>
+              <span className="font-medium">{gradeText}</span>
+              <span className="text-slate-300">|</span>
+            </>
+          )}
           <span className="font-medium">{session.studentCount} {t("students")}</span>
         </div>
       </div>

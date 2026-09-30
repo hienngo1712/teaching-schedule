@@ -43,6 +43,7 @@ export interface SessionListDTO extends Omit<TeachingSession, "startTime" | "end
   durationMins: number
   subject: SubjectDTO
   studentCount: number
+  grades: number[]
   level: SchoolLevel | "mixed"
   cancelledAt: Date | string | null
   deletedAt: Date | string | null

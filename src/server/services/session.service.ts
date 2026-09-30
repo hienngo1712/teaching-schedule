@@ -113,6 +113,8 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
       fee: ss.fee,
     }))
 
+  const grades = [...new Set(students.map((st) => st.grade).filter((g) => g > 0))].sort((a, b) => a - b)
+
   return {
     id: s.id,
     userId: s.userId,
@@ -130,6 +132,7 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
     notes: s.notes,
     status: s.status,
     studentCount: s._count?.sessionStudents ?? s.sessionStudents?.length ?? 0,
+    grades,
     level: deriveLevel(students),
     students,
     makeupOfId: s.makeupOfId,

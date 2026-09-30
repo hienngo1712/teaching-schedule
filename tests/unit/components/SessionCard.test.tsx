@@ -1,13 +1,22 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { render, screen } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { SessionCard } from "@/components/calendar/SessionCard"
 import type { SessionListDTO } from "@/lib/types/models"
+
+beforeEach(() => {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: true,
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  })) as unknown as typeof window.matchMedia
+})
 
 const base: SessionListDTO = {
   id: 1,
@@ -25,6 +34,7 @@ const base: SessionListDTO = {
   cancelledAt: null,
   makeupOfId: null,
   studentCount: 1,
+  grades: [],
   level: "tieu_hoc",
   isDeleted: false,
   deletedAt: null,
@@ -62,6 +72,26 @@ describe("SessionCard — ca đã huỷ luôn đỏ, không bị màu cấp họ
     expect(cls).not.toContain("bg-slate-100")
     expect(cls).toContain("bg-red-50")
     expect(cls).toContain("border-red-300")
+  })
+})
+
+describe("SessionCard — hiển thị lớp học (spec S5)", () => {
+  it("grades [5], 3 HS → text chứa Lớp 5 · 3 HS", () => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <SessionCard session={{ ...base, grades: [5], studentCount: 3 }} />
+      </LanguageProvider>
+    )
+    expect(screen.getByRole("button").textContent).toContain("Lớp 5 · 3 HS")
+  })
+
+  it("grades [] → không có chữ Lớp", () => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <SessionCard session={{ ...base, grades: [], studentCount: 3 }} />
+      </LanguageProvider>
+    )
+    expect(screen.getByRole("button").textContent).not.toContain("Lớp")
   })
 })
 
