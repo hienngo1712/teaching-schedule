@@ -118,13 +118,14 @@ test.describe('Phiếu báo học phí (390px)', () => {
     await page.getByRole('dialog', { name: 'Thêm' }).getByRole('link', { name: /Cài đặt/ }).click();
     await expect(page.getByRole('dialog', { name: 'Thêm' })).toBeHidden();
     await expect(page).toHaveURL(/\/settings/);
-    await page.getByLabel('Ngân hàng').click();
+    await page.getByRole('combobox', { name: 'Ngân hàng' }).click();
     await page.getByRole('option', { name: /^Vietcombank - / }).click();
     await page.getByLabel('Số tài khoản').fill('0011001234567');
     const holder = page.getByLabel('Tên chủ tài khoản');
     await holder.fill('nguyen van a');
     await holder.blur();
     await expect(holder).toHaveValue('NGUYEN VAN A');
+    await page.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await page.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByText('Đã lưu tài khoản ngân hàng')).toBeVisible();
     await expectNoHorizontalScroll(page);
