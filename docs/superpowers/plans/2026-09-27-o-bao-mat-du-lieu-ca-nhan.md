@@ -2,7 +2,7 @@
 
 > **CẬP NHẬT 2026-09-28 (Claude Code, người dùng chốt): R chen giữa K và O.** Thứ tự merge mới: P → Q → K → **R** (Đã nghỉ/Xoá rõ ràng + Dọn Thùng rác, spec `docs/superpowers/specs/2026-09-28-r-da-nghi-don-thung-rac-design.md`, v0.7.0) → O. Vì vậy **mọi chỗ trong file này: `0.7.0` đọc là `0.8.0`, `0.7.1` đọc là `0.8.1`, `0.6.x` đọc là `0.7.x`** (đã thay sẵn bên dưới). Task 1 phải thấy thêm commit merge R (`feat: merge feat/r-… → main`); thiếu → DỪNG. R thêm cột `purged_at` ở `students`/`subjects` và ẩn danh HS khi dọn Thùng rác (`fullName` = "Học sinh đã xoá", `parentPhone`/`parentName`/`notes`/`parentLinkToken` = null): HS đã dọn vẫn đi qua mã hoá như mọi HS (chuỗi "Học sinh đã xoá" cũng được mã hoá khi ghi); backfill O2 xử lý cả HS `purged_at` khác null.
 
-> **CẬP NHẬT 2026-10-01:** O1 đã merge (832ffad, 0.8.0). Phần S (sửa nhanh giao diện) lên **0.8.1** trước → **O3 (Task 11) là 0.8.2**, không phải 0.8.1.
+> **CẬP NHẬT 2026-10-01:** O1 đã merge (832ffad, 0.8.0). Phần S (sửa nhanh giao diện) lên **0.8.1** trước, hotfix chuyển ca + khung lọc lên **0.8.2** → **O3 (Task 11) là 0.8.3**.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

@@ -134,15 +134,15 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <PageHeader
         title={t("reports")}
+      />
+
+      <FilterBar
         actions={
           <>
             <ExportExcelButton sessions={sessions} students={students} />
             <ReportPeriodPicker multiMonthLocked={multiGate.locked} onLockedClick={multiGate.openUpgrade} />
           </>
         }
-      />
-
-      <FilterBar
         activeCount={activeFilterCount}
         filters={
           <>

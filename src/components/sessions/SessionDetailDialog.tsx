@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { CalendarClock, CalendarDays, Clock, Copy, Edit2, Loader2, MoreVertical, RotateCcw, Trash2, UserPlus } from "lucide-react"
 import dayjs from "dayjs"
 import { toast } from "sonner"
@@ -43,7 +43,7 @@ import { trpc } from "@/lib/trpc"
 import type { SessionListDTO, SessionDTO } from "@/lib/types/models"
 import { AttendancePanel } from "./AttendancePanel"
 import { StudentPicker } from "./StudentPicker"
-import { SessionNavBar } from "./SessionNavBar"
+import { SessionNavBar, sortSessions } from "./SessionNavBar"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
@@ -85,11 +85,42 @@ export function SessionDetailDialog({
   const [makeupReason, setMakeupReason] = useState("")
   const [isRestoreOpen, setIsRestoreOpen] = useState(false)
 
-  // Fetch full details (Lazy load)
-  const { data: session, isLoading } = trpc.session.getDetail.useQuery(
+  // Đổi ca bằng ‹ › giữ nguyên modal (không đóng/mở lại gây nháy): chỉ làm mới state riêng của ca.
+  const [shownId, setShownId] = useState(basicSession.id)
+  if (shownId !== basicSession.id) {
+    setShownId(basicSession.id)
+    setIsDeleteDialogOpen(false)
+    setIsDuplicateDialogOpen(false)
+    setIsAddStudentsOpen(false)
+    setIsRecurring(false)
+    setRecurEndDate(dayjs(basicSession.sessionDate).add(2, "month").format("YYYY-MM-DD"))
+    setTargetDate(dayjs(basicSession.sessionDate).add(7, "day").toDate())
+    setSelectedStudentIds([])
+    setIsDeleteFuture(false)
+    setIsMakeupOpen(false)
+    setMakeupDate(dayjs(basicSession.sessionDate).add(2, "day").toDate())
+    setMakeupStart(basicSession.startTime)
+    setMakeupEnd(basicSession.endTime)
+    setMakeupReason("")
+    setIsRestoreOpen(false)
+  }
+
+  // Chỉ giữ dữ liệu ca cũ trong lúc tải ca mới khi chuyển bằng ‹ ›; mở ca khác từ lịch thì hiện màn tải như cũ.
+  const navigatingRef = useRef(false)
+  useEffect(() => {
+    if (!open) navigatingRef.current = false
+  }, [open])
+
+  const { data: session, isLoading, isPlaceholderData } = trpc.session.getDetail.useQuery(
     { id: basicSession.id },
-    { enabled: open }
+    { enabled: open, placeholderData: (prev) => (navigatingRef.current ? prev : undefined) }
   )
+
+  const utils = trpc.useUtils()
+  const handleNavigate = (s: SessionListDTO) => {
+    navigatingRef.current = true
+    onNavigate?.(s)
+  }
 
   const deleteMutation = trpc.session.delete.useMutation({
     onSuccess: () => {
@@ -230,6 +261,18 @@ export function SessionDetailDialog({
     isDeleteDialogOpen
   const showNav = siblings && onNavigate && siblings.length > 1
 
+  // Tải trước chi tiết + điểm danh ca liền trước/sau để bấm ‹ › đổi ngay, không hiện màn đang tải.
+  useEffect(() => {
+    if (!open || !showNav || !siblings) return
+    const sorted = sortSessions(siblings)
+    const i = sorted.findIndex((s) => s.id === basicSession.id)
+    for (const n of [sorted[i - 1], sorted[i + 1]]) {
+      if (!n) continue
+      void utils.session.getDetail.prefetch({ id: n.id })
+      void utils.attendance.get.prefetch({ sessionId: n.id })
+    }
+  }, [open, showNav, siblings, basicSession.id, utils])
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -238,17 +281,19 @@ export function SessionDetailDialog({
             <SessionNavBar
               siblings={siblings}
               current={basicSession}
-              onNavigate={onNavigate}
+              onNavigate={handleNavigate}
               blocked={blocked}
             />
           )}
+          {isPlaceholderData && <div className="h-0.5 w-full animate-pulse bg-primary/60" role="progressbar" aria-label={t("loading_details")} />}
           {isLoading || !session ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Loader2 className="size-8 animate-spin text-primary" />
               <p className="text-sm text-slate-500 font-medium">{t("loading_details")}</p>
             </div>
           ) : (
-            <>
+            <div inert={isPlaceholderData || undefined} aria-busy={isPlaceholderData}>
+              {/* inert chặn cả chuột lẫn Tab/Enter: đang hiện ca cũ nhưng mọi thao tác sẽ ghi vào ca mới. */}
               <DialogHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pr-8">
                 <div className="min-w-0 space-y-1">
                   <DialogTitle className="text-xl flex items-center gap-2">
@@ -339,11 +384,12 @@ export function SessionDetailDialog({
                 </div>
 
                 <AttendancePanel
+                  key={session.id}
                   sessionId={session.id}
                   onSaveSuccess={() => onOpenChange(false)}
                 />
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>

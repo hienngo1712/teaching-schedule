@@ -273,10 +273,9 @@ export function MonthCalendar() {
         />
       )}
 
-      {/* key={selectedSession.id} để reset toàn bộ state con (học bù, chọn HS, điểm danh) khi đổi ca qua siblings. */}
+      {/* Không gắn key theo ca: đổi ca qua ‹ › giữ nguyên modal, dialog tự làm mới state riêng của ca. */}
       {selectedSession && (
         <SessionDetailDialog
-          key={selectedSession.id}
           open={isDetailOpen}
           onOpenChange={setIsDetailOpen}
           session={selectedSession}
