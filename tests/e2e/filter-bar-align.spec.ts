@@ -38,7 +38,7 @@ for (const path of ['/students', '/tuition']) {
   });
 }
 
-test('bộ lọc /reports (không ô tìm) dồn sát mép trái ở 1280px', async ({ page }) => {
+test('bộ lọc /reports (không ô tìm) dồn sát mép trái khung lọc ở 1280px', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await login(page);
   await page.goto('/reports');
@@ -51,7 +51,8 @@ test('bộ lọc /reports (không ô tìm) dồn sát mép trái ở 1280px', as
       .sort((a, b) => a.left - b.left)[0];
     return Math.abs(Math.round(first.left - h1.left));
   });
-  expect(diff).toBeLessThanOrEqual(2);
+  // Bộ lọc nằm trong khung trắng (viền 1px + padding 16px) như thanh Lịch dạy.
+  expect(diff).toBeLessThanOrEqual(20);
 });
 
 test('mobile 390px vẫn dùng nút Lọc, không hiện ô chọn ngoài trang', async ({ page }) => {
@@ -60,4 +61,18 @@ test('mobile 390px vẫn dùng nút Lọc, không hiện ô chọn ngoài trang'
   await page.goto('/students');
   await expect(page.getByRole('button', { name: /Lọc|Filter/ })).toBeVisible();
   await expect(page.locator('main [role="combobox"]:visible')).toHaveCount(0);
+});
+
+// Hotfix 0.8.2: như thanh Lịch dạy — ô tìm, bộ lọc và nút hành động cùng 1 hàng trong 1 khung.
+test('/students 1280px: nút Thêm học sinh cùng hàng với ô tìm, sát mép phải khung', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await login(page);
+  await page.goto('/students');
+  const search = page.getByPlaceholder(/Tìm tên học sinh/);
+  const add = page.getByRole('button', { name: /Thêm học sinh/ }).first();
+  await expect(search).toBeVisible();
+  await expect(add).toBeVisible();
+  const [sb, ab] = [await search.boundingBox(), await add.boundingBox()];
+  expect(Math.abs(sb!.y + sb!.height / 2 - (ab!.y + ab!.height / 2))).toBeLessThanOrEqual(4);
+  expect(ab!.x).toBeGreaterThan(sb!.x + sb!.width);
 });

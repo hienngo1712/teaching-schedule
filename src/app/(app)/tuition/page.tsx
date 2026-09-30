@@ -167,6 +167,9 @@ export default function TuitionPage() {
       <PageHeader
         title={t("manage_tuition")}
         description={t("manage_tuition_desc")}
+      />
+
+      <FilterBar
         actions={
           <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
             <Button variant="ghost" size="icon" onClick={prevMonth} className="size-9">
@@ -178,9 +181,6 @@ export default function TuitionPage() {
             </Button>
           </div>
         }
-      />
-
-      <FilterBar
         search={{ value: localSearch, onChange: setLocalSearch, placeholder: t("search_student") }}
         activeCount={activeFilterCount}
         filters={

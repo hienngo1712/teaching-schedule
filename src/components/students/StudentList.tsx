@@ -189,16 +189,6 @@ export function StudentList() {
     <div className="space-y-4">
       <PageHeader
         title={t("students")}
-        actions={
-          <>
-            <UpgradeAllClassesButton />
-            <AddStudentSplitButton
-              onAdd={() => (atLimit ? openLimit() : setFormState({ open: true, mode: "create" }))}
-              onImport={() => setImportOpen(true)}
-              addLockPlan={atLimit && me ? minPlanForStudents(me.activeStudents + 1) : null}
-            />
-          </>
-        }
       />
 
       {atLimit && me && limit !== null && (
@@ -219,6 +209,16 @@ export function StudentList() {
       )}
 
       <FilterBar
+        actions={
+          <>
+            <UpgradeAllClassesButton />
+            <AddStudentSplitButton
+              onAdd={() => (atLimit ? openLimit() : setFormState({ open: true, mode: "create" }))}
+              onImport={() => setImportOpen(true)}
+              addLockPlan={atLimit && me ? minPlanForStudents(me.activeStudents + 1) : null}
+            />
+          </>
+        }
         search={{ value: localSearch, onChange: setLocalSearch, placeholder: t("search_student") }}
         activeCount={activeFilterCount}
         filters={

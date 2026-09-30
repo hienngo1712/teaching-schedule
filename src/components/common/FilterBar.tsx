@@ -17,15 +17,17 @@ type Props = {
   search?: { value: string; onChange: (value: string) => void; placeholder: string }
   filters?: ReactNode
   activeCount?: number
+  actions?: ReactNode
 }
 
-export function FilterBar({ search, filters, activeCount = 0 }: Props) {
+export function FilterBar({ search, filters, activeCount = 0, actions }: Props) {
   const { t } = useTranslation()
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    // 1 khung như thanh Lịch dạy: ô tìm co lại để lọc + nút hành động vừa 1 hàng trên desktop (mobile nút xuống hàng riêng).
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-3 md:p-4">
       {search && (
-        <div className="relative flex-1 md:w-72 md:flex-none">
+        <div className="relative flex-1 md:min-w-44 md:max-w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={search.value}
@@ -38,7 +40,7 @@ export function FilterBar({ search, filters, activeCount = 0 }: Props) {
 
       {filters && (
         <>
-          <div className="hidden flex-wrap items-center gap-2 md:flex">{filters}</div>
+          <div className="hidden shrink-0 items-center gap-2 md:flex">{filters}</div>
 
           {/* SheetContent chỉ mount khi mở nên `filters` không bị render 2 lần cùng lúc */}
           <Sheet>
@@ -59,6 +61,9 @@ export function FilterBar({ search, filters, activeCount = 0 }: Props) {
             </SheetContent>
           </Sheet>
         </>
+      )}
+      {actions && (
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 md:ml-auto md:w-auto md:shrink-0 md:flex-nowrap">{actions}</div>
       )}
     </div>
   )

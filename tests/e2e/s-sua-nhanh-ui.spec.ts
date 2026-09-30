@@ -143,6 +143,19 @@ test.describe('Plan S — Sửa nhanh UI (S1–S5)', () => {
       await expect(nextBtn).toBeVisible();
       await expect(prevBtn).toBeVisible();
 
+      // Hotfix 0.8.2: chuyển ca không được đóng/mở lại modal (nháy) hay hiện màn đang tải.
+      await expect(detailDialog.getByText(`Ca điều hướng 1 ${stamp}`)).toBeVisible();
+      // Chờ tải trước ca lân cận xong, để lần tải còn sót (vd danh sách học sinh) lộ ra.
+      await page.waitForLoadState('networkidle');
+      await detailDialog.evaluate((el) => {
+        el.setAttribute('data-probe', '1');
+        const w = window as unknown as { __sawLoading: boolean };
+        w.__sawLoading = false;
+        new MutationObserver(() => {
+          if (/Đang tải chi tiết|Đang tải danh sách học sinh/.test(document.body.innerText)) w.__sawLoading = true;
+        }).observe(document.body, { childList: true, subtree: true, characterData: true });
+      });
+
       // Bấm Ca sau lần 1
       await nextBtn.click();
       await expect(detailDialog.getByText(`Ca điều hướng 2 ${stamp}`)).toBeVisible();
@@ -155,9 +168,48 @@ test.describe('Plan S — Sửa nhanh UI (S1–S5)', () => {
       await page.keyboard.press('ArrowLeft');
       await expect(detailDialog.getByText(`Ca điều hướng 2 ${stamp}`)).toBeVisible();
 
+      await expect(page.locator('[role="dialog"][data-probe="1"]')).toHaveCount(1);
+      expect(await page.evaluate(() => (window as unknown as { __sawLoading: boolean }).__sawLoading)).toBe(false);
+
       await page.keyboard.press('Escape');
     } finally {
       await db.teachingSession.deleteMany({ where: { id: { in: [s1.id, s2.id, s3.id] } } });
+    }
+  });
+
+  test('Hotfix 0.8.2: đang chờ tải ca mới thì nội dung ca cũ không thao tác được (kể cả bàn phím)', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await login(page);
+    const stamp = Date.now();
+    const today = dayjs().format('YYYY-MM-DD');
+    const mk = (h: string, e: string, n: number) =>
+      db.teachingSession.create({
+        data: { userId: teacherId, subjectId, sessionDate: D(today), startTime: T(h), endTime: T(e), title: `Ca chờ ${n} ${stamp}` },
+      });
+    const a = await mk('11:00', '11:30', 1);
+    const b = await mk('11:40', '12:10', 2);
+    const c = await mk('12:20', '12:50', 3);
+    try {
+      await page.goto('/calendar');
+      await page.getByRole('button').filter({ hasText: `Ca chờ 1 ${stamp}` }).first().click();
+      const dialog = page.getByRole('dialog');
+      await expect(dialog.getByText(`Ca chờ 1 ${stamp}`)).toBeVisible();
+      // Ca 2 đã tải trước lúc mở; làm chậm các lần tải sau để ca 3 (tải trước khi sang ca 2) còn đang chờ.
+      await page.route(/session\.getDetail/, async (route) => {
+        await new Promise((r) => setTimeout(r, 3000));
+        await route.continue();
+      });
+      await dialog.getByRole('button', { name: 'Ca sau' }).click();
+      await expect(dialog.getByText(`Ca chờ 2 ${stamp}`)).toBeVisible();
+      await dialog.getByRole('button', { name: 'Ca sau' }).click();
+      const busy = dialog.locator('[aria-busy="true"]');
+      await expect(busy).toBeVisible();
+      await expect(busy).toHaveAttribute('inert', '');
+      await expect(dialog.getByText(`Ca chờ 3 ${stamp}`)).toBeVisible({ timeout: 15000 });
+      await expect(dialog.locator('[inert]')).toHaveCount(0);
+    } finally {
+      await page.unroute(/session\.getDetail/);
+      await db.teachingSession.deleteMany({ where: { id: { in: [a.id, b.id, c.id] } } });
     }
   });
 

@@ -1,7 +1,7 @@
 # S — Sửa nhanh giao diện (bộ lọc, ngân hàng, lưu phiếu, xem ca liên tiếp, lớp trên thẻ ca)
 
 > Ngày: 2026-10-01 · Người duyệt: chủ ứng dụng · Phiên bản khi lên: **0.8.1** (patch — không bắt đăng nhập lại).
-> O3 (dọn dẹp mã hoá) đổi thành **0.8.2**. Phần T (học phí theo tháng) và V (đã gửi phiếu) có spec riêng, làm SAU S.
+> O3 (dọn dẹp mã hoá) đổi thành **0.8.3** (0.8.2 là hotfix chuyển ca + khung lọc). Phần T (học phí theo tháng) và V (đã gửi phiếu) có spec riêng, làm SAU S.
 
 ## 1. Mục tiêu
 
