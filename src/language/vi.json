@@ -361,6 +361,8 @@
   "bank_account_section": "Tài khoản nhận học phí",
   "bank_account_desc": "Dùng để tạo mã QR trên phiếu báo học phí",
   "bank": "Ngân hàng",
+  "bank_search_placeholder": "Tìm ngân hàng…",
+  "bank_not_found": "Không tìm thấy ngân hàng",
   "account_number": "Số tài khoản",
   "account_name": "Tên chủ tài khoản",
   "bank_saved": "Đã lưu tài khoản ngân hàng",

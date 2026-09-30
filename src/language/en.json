@@ -361,6 +361,8 @@
   "bank_account_section": "Tuition bank account",
   "bank_account_desc": "Used for the QR code on tuition notices",
   "bank": "Bank",
+  "bank_search_placeholder": "Search bank…",
+  "bank_not_found": "No bank found",
   "account_number": "Account number",
   "account_name": "Account holder",
   "bank_saved": "Bank account saved",
