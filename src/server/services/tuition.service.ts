@@ -11,8 +11,7 @@ type AttendanceRecord = SessionStudent & { session: { sessionDate: Date } }
 function calcStudentTuition(
   attendance: AttendanceRecord[],
   snapshot: MonthlyTuition | undefined,
-  prevSnapshot: MonthlyTuition | undefined,
-  historicalBalance: number,
+  previousBalance: number,
 ): {
   totalSessions: number
   presentSessions: number
@@ -32,22 +31,6 @@ function calcStudentTuition(
     return sum
   }, 0)
 
-  // Carry-over: prevSnapshot (tháng trước) là NGUỒN SỰ THẬT. Tính lại từ nó mỗi
-  // lần đọc thay vì tin previousBalance đã đông cứng trong snapshot tháng này —
-  // nhờ vậy thanh toán muộn cho tháng trước (và việc vá lỗi) tự phản ánh sang
-  // tháng sau. Chỉ khi KHÔNG có prevSnapshot mới dùng số đã lưu / lịch sử tồn đọng.
-  // isFullPaid = đã TẤT TOÁN tháng đó: không carry nợ DƯƠNG (GV có thể miễn/giảm
-  // phần còn lại), nhưng tín dụng trả dư (số ÂM) vẫn được carry.
-  let previousBalance = 0
-  if (prevSnapshot) {
-    const residual = prevSnapshot.totalAmountDue - prevSnapshot.paidAmount
-    previousBalance = prevSnapshot.isFullPaid ? Math.min(0, residual) : residual
-  } else if (snapshot) {
-    previousBalance = snapshot.previousBalance
-  } else {
-    previousBalance = historicalBalance
-  }
-
   const totalAmountDue = previousBalance + currentMonthFee
 
   // Ghi lại snapshot khi số tính ra lệch số đã lưu, kể cả tháng quá khứ —
@@ -61,6 +44,70 @@ function calcStudentTuition(
     snapshot.previousBalance !== previousBalance
 
   return { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert }
+}
+
+// Dư nợ CUỐI từng tháng (khoá year*12+month-1) trước tháng `month`, đi lại từ dữ liệu gốc (tiền buổi có mặt,
+// đã thu, tất toán); không tin previousBalance/totalAmountDue đã lưu: snapshot tháng HS không có trong danh sách
+// có thể đóng băng. Tất toán = miễn nợ DƯƠNG còn lại của tháng đó; tín dụng trả dư (số ÂM) vẫn chuyển sang.
+// Tháng trống giữa chừng mang nguyên dư nợ; khoá cuối luôn là tháng liền trước `month`.
+export async function computeClosingBalances(
+  db: PrismaClient,
+  userId: number,
+  studentIds: number[],
+  year: number,
+  month: number
+): Promise<Map<number, Map<number, number>>> {
+  const startDate = new Date(Date.UTC(year, month - 1, 1))
+  const [snaps, links] = await Promise.all([
+    db.monthlyTuition.findMany({
+      where: { studentId: { in: studentIds }, OR: [{ year: { lt: year } }, { year, month: { lt: month } }] },
+      select: { studentId: true, year: true, month: true, paidAmount: true, isFullPaid: true },
+    }),
+    db.sessionStudent.findMany({
+      where: {
+        studentId: { in: studentIds },
+        attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] },
+        session: { sessionDate: { lt: startDate }, userId, status: { not: "cancelled" }, isDeleted: false },
+      },
+      select: { studentId: true, fee: true, session: { select: { sessionDate: true } } },
+    }),
+  ])
+
+  type MonthData = { fee: number; paid: number; fullPaid: boolean }
+  const byStudent = new Map<number, Map<number, MonthData>>()
+  const slot = (studentId: number, key: number) => {
+    let months = byStudent.get(studentId)
+    if (!months) byStudent.set(studentId, (months = new Map()))
+    let d = months.get(key)
+    if (!d) months.set(key, (d = { fee: 0, paid: 0, fullPaid: false }))
+    return d
+  }
+  for (const s of snaps) {
+    const d = slot(s.studentId, s.year * 12 + s.month - 1)
+    d.paid = s.paidAmount
+    d.fullPaid = s.isFullPaid
+  }
+  for (const l of links) {
+    const date = l.session.sessionDate
+    slot(l.studentId, date.getUTCFullYear() * 12 + date.getUTCMonth()).fee += l.fee
+  }
+
+  const lastKey = year * 12 + month - 2
+  const result = new Map<number, Map<number, number>>()
+  for (const [studentId, months] of byStudent) {
+    const closing = new Map<number, number>()
+    let balance = 0
+    for (let key = Math.min(...months.keys()); key <= lastKey; key++) {
+      const d = months.get(key)
+      if (d) {
+        const residual = balance + d.fee - d.paid
+        balance = d.fullPaid ? Math.min(0, residual) : residual
+      }
+      closing.set(key, balance)
+    }
+    result.set(studentId, closing)
+  }
+  return result
 }
 
 export async function getMonthlyTuitionStatus(
@@ -127,11 +174,8 @@ export async function getMonthlyTuitionStatus(
   const startDate = new Date(Date.UTC(year, month - 1, 1))
   const endDate = new Date(Date.UTC(year, month, 1))
 
-  // 2. Fetch song song: điểm danh tháng hiện tại + snapshot tháng này + snapshot tháng trước
-  const prevMonth = month === 1 ? 12 : month - 1
-  const prevYear = month === 1 ? year - 1 : year
-
-  const [currentAttendance, existingSnapshots, prevSnapshots] = await Promise.all([
+  // 2. Fetch song song: điểm danh tháng hiện tại + snapshot tháng này + nợ đầu tháng
+  const [currentAttendance, existingSnapshots, closingBalances] = await Promise.all([
     db.sessionStudent.findMany({
       where: {
         studentId: { in: studentIds },
@@ -142,14 +186,11 @@ export async function getMonthlyTuitionStatus(
     db.monthlyTuition.findMany({
       where: { studentId: { in: studentIds }, year, month },
     }),
-    db.monthlyTuition.findMany({
-      where: { studentId: { in: studentIds }, year: prevYear, month: prevMonth },
-    }),
+    computeClosingBalances(db, userId, studentIds, year, month),
   ])
 
   // 3. Dùng Map để tra cứu O(1) thay vì .find() O(n) trong vòng lặp
   const snapshotMap = new Map(existingSnapshots.map(sn => [sn.studentId, sn]))
-  const prevSnapshotMap = new Map(prevSnapshots.map(ps => [ps.studentId, ps]))
   const attendanceMap = new Map<number, AttendanceRecord[]>()
   for (const a of currentAttendance) {
     const list = attendanceMap.get(a.studentId) ?? []
@@ -157,51 +198,12 @@ export async function getMonthlyTuitionStatus(
     attendanceMap.set(a.studentId, list)
   }
 
-  // 4. Học sinh chưa có snapshot nào cả → cần tính lịch sử tồn đọng
-  const existingSnapshotIds = new Set(existingSnapshots.map(sn => sn.studentId))
-  const prevSnapshotIds = new Set(prevSnapshots.map(ps => ps.studentId))
-  const studentsNeedingHistory = students.filter(
-    s => !existingSnapshotIds.has(s.id) && !prevSnapshotIds.has(s.id)
-  )
-
-  const historicalBalances: Record<number, number> = {}
-  if (studentsNeedingHistory.length > 0) {
-    const sIds = studentsNeedingHistory.map(s => s.id)
-    const [totalPaidBefore, totalExpectedBefore] = await Promise.all([
-      db.monthlyTuition.groupBy({
-        by: ["studentId"],
-        where: {
-          studentId: { in: sIds },
-          student: { userId }, // phòng vệ multi-tenant (sIds đã thuộc user, lọc tường minh)
-          OR: [{ year: { lt: year } }, { year, month: { lt: month } }],
-        },
-        _sum: { paidAmount: true },
-      }),
-      db.sessionStudent.groupBy({
-        by: ["studentId"],
-        where: {
-          studentId: { in: sIds },
-          session: { sessionDate: { lt: startDate }, userId, status: { not: "cancelled" }, isDeleted: false },
-          attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] },
-        },
-        _sum: { fee: true },
-      }),
-    ])
-
-    const paidMap = new Map(totalPaidBefore.map(t => [t.studentId, t._sum?.paidAmount ?? 0]))
-    const expectedMap = new Map(totalExpectedBefore.map(t => [t.studentId, t._sum?.fee ?? 0]))
-    for (const s of studentsNeedingHistory) {
-      historicalBalances[s.id] = (expectedMap.get(s.id) ?? 0) - (paidMap.get(s.id) ?? 0)
-    }
-  }
-
   // 5. Tính kết quả cho từng học sinh
   const results = students.map(student => {
     const attendance = attendanceMap.get(student.id) ?? []
     const snapshot = snapshotMap.get(student.id)
-    const prevSnapshot = prevSnapshotMap.get(student.id)
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
-      calcStudentTuition(attendance, snapshot, prevSnapshot, historicalBalances[student.id] ?? 0)
+      calcStudentTuition(attendance, snapshot, closingBalances.get(student.id)?.get(year * 12 + month - 2) ?? 0)
 
     return {
       studentId: student.id,
