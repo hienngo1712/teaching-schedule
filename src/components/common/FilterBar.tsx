@@ -23,9 +23,9 @@ export function FilterBar({ search, filters, activeCount = 0 }: Props) {
   const { t } = useTranslation()
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {search && (
-        <div className="relative flex-1 md:max-w-xs">
+        <div className="relative flex-1 md:w-72 md:flex-none">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={search.value}
@@ -38,7 +38,7 @@ export function FilterBar({ search, filters, activeCount = 0 }: Props) {
 
       {filters && (
         <>
-          <div className="hidden items-center gap-2 md:ml-auto md:flex">{filters}</div>
+          <div className="hidden flex-wrap items-center gap-2 md:flex">{filters}</div>
 
           {/* SheetContent chỉ mount khi mở nên `filters` không bị render 2 lần cùng lúc */}
           <Sheet>
