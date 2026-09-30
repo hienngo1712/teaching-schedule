@@ -61,7 +61,7 @@ describe("Dọn Thùng rác (spec R4–R7)", () => {
 
     expect(await caller.trash.purge({ type: "student" })).toMatchObject({ purged: { student: 1 } })
     const row = await db.student.findUniqueOrThrow({ where: { id: st.id, isDeleted: true } })
-    expect(row).toMatchObject({ fullName: "Học sinh đã xoá", parentPhone: null, parentName: null, notes: null, parentLinkToken: null })
+    expect(row).toMatchObject({ fullName: "Học sinh đã xoá", parentPhone: null, parentName: null, notes: null, parentLinkToken: null, parentLinkTokenHash: null })
     expect(row.purgedAt).toBeInstanceOf(Date)
     expect(await db.payment.count({ where: { monthlyTuition: { studentId: st.id } } })).toBe(1)
     expect(await db.sessionStudent.count({ where: { studentId: st.id } })).toBe(1)

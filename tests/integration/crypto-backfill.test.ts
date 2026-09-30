@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto"
 import { PrismaClient } from "@prisma/client"
 import { db } from "@/server/db"
 import { ENCRYPTED_FIELDS } from "@/server/crypto/prisma-encryption"
-import { FIELD_TARGETS, runBackfill, type FieldReport } from "@/server/crypto/backfill"
+import { FIELD_TARGETS, reconcileParentLinkHashes, runBackfill, type FieldReport } from "@/server/crypto/backfill"
 import { readKid } from "@/server/crypto/field-crypto"
 import { hashParentToken } from "@/server/crypto/parent-token"
 import { getParentView } from "@/server/services/parent-link.service"
@@ -99,6 +99,26 @@ describe("Backfill mã hoá dữ liệu cũ (spec O 6.11)", () => {
     const back = await runBackfill(raw, "decrypt")
     expect((await rawStudent(s.id)).fn).toBe("Bản Rõ Một")
     for (const r of back) expect(r.checksum).toBe(col(dry, r.table, r.column).checksum)
+  })
+
+  it("hash link phụ huynh lệch (code cũ tắt/tạo lại link lúc đang deploy) → dry-run chỉ đếm, apply sửa, link đúng mở được, link đã tắt chết", async () => {
+    const teacher = await raw.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    const OLD = "O".repeat(43)
+    // Tạo lại link bằng code cũ: token mới nhưng hash còn của token cũ.
+    const renewed = await raw.student.create({ data: { userId: teacher.id, fullName: "Tạo Lại", grade: 3, parentLinkToken: TOKEN, parentLinkTokenHash: hashParentToken(OLD) } })
+    // Tắt link bằng code cũ: token null nhưng hash còn.
+    const revoked = await raw.student.create({ data: { userId: teacher.id, fullName: "Đã Tắt", grade: 3, parentLinkToken: null, parentLinkTokenHash: hashParentToken("R".repeat(43)) } })
+    expect(await getParentView(db, TOKEN)).toBeNull()
+
+    expect(await reconcileParentLinkHashes(raw, { fix: false })).toEqual({ mismatched: 2, fixed: 0 })
+    expect((await raw.student.findUniqueOrThrow({ where: { id: revoked.id } })).parentLinkTokenHash).not.toBeNull()
+
+    await runBackfill(raw, "apply")
+    expect(await reconcileParentLinkHashes(raw, { fix: true })).toEqual({ mismatched: 2, fixed: 2 })
+    expect((await getParentView(db, TOKEN))?.student.id).toBe(renewed.id)
+    expect(await getParentView(db, OLD)).toBeNull()
+    expect((await raw.student.findUniqueOrThrow({ where: { id: revoked.id } })).parentLinkTokenHash).toBeNull()
+    expect(await reconcileParentLinkHashes(raw, { fix: false })).toEqual({ mismatched: 0, fixed: 0 })
   })
 
   it("chuỗi giả tiền tố enc:v1: không giải mã được → undecryptable, không bị ghi", async () => {
