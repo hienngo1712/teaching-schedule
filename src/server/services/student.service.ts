@@ -6,6 +6,7 @@ import { assertOwnership } from "./_base.service"
 import { checkStudentDeletable } from "./student-delete-rules"
 import { assertCanActivateStudents } from "./plan.service"
 import { softDeleteData } from "@/server/soft-delete"
+import { byGradeThenName, nameMatches } from "@/lib/name-search"
 import type {
   StudentCreateInput,
   StudentFilterInput,
@@ -26,36 +27,24 @@ export async function listStudents(
   filter: StudentFilterInput
 ): Promise<PaginatedResponse<StudentDTO>> {
   const { page, limit, grade, search, isActive, includeInactive } = filter
-  const skip = (page - 1) * limit
-  const take = limit
-
-  const where = {
-    userId,
-    ...(isActive !== undefined
-      ? { isActive }
-      : includeInactive
-      ? {}
-      : { isActive: true }),
-    ...(grade ? { grade } : {}),
-    ...(search
-      ? { fullName: { contains: search, mode: "insensitive" as const } }
-      : {}),
-  }
-
-  const [students, totalCount] = await Promise.all([
-    db.student.findMany({
-      where,
-      orderBy: [{ grade: "asc" }, { fullName: "asc" }],
-      skip,
-      take,
-    }),
-    db.student.count({ where }),
-  ])
-
+  const rows = await db.student.findMany({
+    where: {
+      userId,
+      ...(isActive !== undefined
+        ? { isActive }
+        : includeInactive
+        ? {}
+        : { isActive: true }),
+      ...(grade ? { grade } : {}),
+    },
+  })
+  // Tên mã hoá trong DB (spec O Q7): lọc/sắp/cắt trang sau khi giải mã; mỗi GV ít HS nên tải hết vẫn nhẹ.
+  const matched = rows.filter((s) => nameMatches(s.fullName, search)).sort(byGradeThenName)
+  const start = (page - 1) * limit
   return {
-    items: students.map(withLevel),
-    totalCount,
-    totalPages: Math.ceil(totalCount / limit),
+    items: matched.slice(start, start + limit).map(withLevel),
+    totalCount: matched.length,
+    totalPages: Math.ceil(matched.length / limit),
   }
 }
 
@@ -350,4 +339,10 @@ export async function getUpgradeLogThisYear(
     // getUTCFullYear để khớp năm mà upgradeAllClasses ghi log (tránh lệch local/UTC ở ranh giới năm)
     where: { userId_year: { userId, year: new Date().getUTCFullYear() } },
   })
+}
+
+// Lịch lọc theo tên HS: tìm id trước vì tên đã mã hoá (spec O 6.4). Gồm cả HS đã nghỉ như ILIKE cũ.
+export async function findStudentIdsByName(db: PrismaClient, userId: number, term: string): Promise<number[]> {
+  const rows = await db.student.findMany({ where: { userId }, select: { id: true, fullName: true } })
+  return rows.filter((s) => nameMatches(s.fullName, term)).map((s) => s.id)
 }

@@ -5,6 +5,7 @@ import { assertOwnership } from "./_base.service"
 import type { MonthlyTuitionFilterInput, UpdateSettlementInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
 import type { TuitionStatusDTO } from "@/lib/types/models"
+import { byGradeThenName, nameMatches } from "@/lib/name-search"
 
 type AttendanceRecord = SessionStudent & { session: { sessionDate: Date } }
 
@@ -76,7 +77,7 @@ export async function getMonthlyTuitionStatus(
   if (onlyStudentIds && onlyStudentIds.length === 0) return { items: [], totalCount: 0, totalPages: 0 }
 
   // 1. Lấy toàn bộ học sinh active theo filter
-  const students = await db.student.findMany({
+  const rows = await db.student.findMany({
     where: onlyStudentIds
       ? { userId, id: { in: onlyStudentIds } }
       : {
@@ -116,10 +117,10 @@ export async function getMonthlyTuitionStatus(
                   },
                 ],
               }),
-          ...(search ? { fullName: { contains: search, mode: "insensitive" as const } } : {}),
         },
-    orderBy: [{ grade: "asc" }, { fullName: "asc" }],
   })
+  // Tên mã hoá (spec O Q7): lọc + sắp trong bộ nhớ; hàm này vốn đã phân trang trong bộ nhớ.
+  const students = rows.filter((s) => nameMatches(s.fullName, search)).sort(byGradeThenName)
 
   if (students.length === 0) return { items: [], totalCount: 0, totalPages: 0 }
 

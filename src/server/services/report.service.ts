@@ -6,6 +6,7 @@ import { assertOwnership } from "./_base.service"
 import { HISTORY_LINK } from "@/server/soft-delete"
 import { getCancelledWithoutMakeup, getMonthSessions } from "./session.service"
 import { getMonthlyOutstanding, getMonthlyTuitionStatus } from "./tuition.service"
+import { byGradeThenName } from "@/lib/name-search"
 
 export async function getStudentReport(
   db: PrismaClient,
@@ -371,7 +372,6 @@ export async function getDashboardAlerts(
         },
       },
       select: { id: true, fullName: true, grade: true },
-      orderBy: [{ grade: "asc" }, { fullName: "asc" }],
     }),
     getCancelledWithoutMakeup(db, userId, { from: cancelFrom }),
   ])
@@ -406,7 +406,7 @@ export async function getDashboardAlerts(
     year,
     month,
     debts,
-    idleStudents: idle.map((s) => ({ studentId: s.id, fullName: s.fullName, grade: s.grade })),
+    idleStudents: [...idle].sort(byGradeThenName).map((s) => ({ studentId: s.id, fullName: s.fullName, grade: s.grade })),
     unrescheduled,
   }
 }

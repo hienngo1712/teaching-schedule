@@ -5,6 +5,7 @@ import { formatDayOfWeek, formatTime } from "@/lib/utils"
 import type { PAYMENT_METHODS } from "@/lib/schemas/payment"
 import { findBank } from "@/lib/vn-banks"
 import { LIVE_LINK } from "@/server/soft-delete"
+import { byGradeThenName } from "@/lib/name-search"
 
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const HEADER_BG = "FFCCFBF1"
@@ -93,7 +94,6 @@ export async function buildBackupWorkbook(
     }),
     db.student.findMany({
       where: { userId },
-      orderBy: [{ grade: "asc" }, { fullName: "asc" }, { id: "asc" }],
       select: {
         id: true, fullName: true, grade: true, parentName: true, parentPhone: true,
         tuitionFee: true, isActive: true, notes: true, createdAt: true, updatedAt: true,
@@ -161,6 +161,7 @@ export async function buildBackupWorkbook(
   const info = wb.addWorksheet("Thông tin", { views: [{ state: "frozen", ySplit: 1 }] })
   const counts: [string, number][] = []
 
+  students.sort(byGradeThenName)
   counts.push(["Học sinh", addDataSheet(wb, "Học sinh", students, [
     { header: "ID", width: 8, value: (s) => s.id },
     { header: "Họ tên", width: 26, value: (s) => s.fullName },
