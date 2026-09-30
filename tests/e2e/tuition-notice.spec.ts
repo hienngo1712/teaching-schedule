@@ -1,5 +1,17 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { readFileSync } from 'fs';
+import { PrismaClient } from '@prisma/client';
+
+const db = new PrismaClient();
+
+test.beforeAll(async () => {
+  await db.teachingSession.deleteMany({
+    where: { title: { startsWith: 'Ca phiếu' } },
+  });
+  await db.student.deleteMany({
+    where: { fullName: { startsWith: 'HS Phiếu' } },
+  });
+});
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -61,29 +73,41 @@ async function openNoticeFromCard(page: Page, studentName: string) {
 
 // Tải ảnh → kiểm tên file, rộng 720px (360 × scale 2), và ảnh không trắng trơn.
 async function downloadAndCheck(page: Page, notice: Locator) {
-  const btn = notice.getByRole('button', { name: 'Tải ảnh' });
-  await expect(btn).toBeEnabled();
-  await expectTouchTarget(btn);
-  const [download] = await Promise.all([page.waitForEvent('download'), btn.click()]);
-  expect(download.suggestedFilename()).toMatch(/^phieu-bao-hoc-phi-T\d{1,2}-\d{4}-.+\.png$/);
-  const png = readFileSync((await download.path())!);
-  expect(png.length).toBeGreaterThan(0);
-  expect(png.readUInt32BE(16)).toBe(720); // IHDR: bề rộng ảnh
-  const darkPixels = await page.evaluate(async (b64) => {
-    const img = new Image();
-    img.src = `data:image/png;base64,${b64}`;
-    await img.decode();
-    const c = document.createElement('canvas');
-    c.width = img.width;
-    c.height = img.height;
-    const ctx = c.getContext('2d')!;
-    ctx.drawImage(img, 0, 0);
-    const d = ctx.getImageData(0, 0, c.width, c.height).data;
-    let n = 0;
-    for (let i = 0; i < d.length; i += 4) if (d[i] < 100 && d[i + 1] < 100 && d[i + 2] < 100) n++;
-    return n;
-  }, png.toString('base64'));
-  expect(darkPixels).toBeGreaterThan(5000);
+  const saveBtn = notice.getByRole('button', { name: 'Lưu ảnh' });
+  const downloadBtn = notice.getByRole('button', { name: 'Tải ảnh' });
+  if (await saveBtn.isVisible()) {
+    await expect(saveBtn).toBeEnabled();
+    await expectTouchTarget(saveBtn);
+    await saveBtn.click();
+    const viewerImg = page.locator('img[src^="blob:"]');
+    await expect(viewerImg).toBeVisible();
+    await expect(page.getByText(/Nhấn giữ ảnh|Press and hold/)).toBeVisible();
+    await page.getByRole('button', { name: 'Đóng' }).click();
+    await expect(viewerImg).toBeHidden();
+  } else {
+    await expect(downloadBtn).toBeEnabled();
+    await expectTouchTarget(downloadBtn);
+    const [download] = await Promise.all([page.waitForEvent('download'), downloadBtn.click()]);
+    expect(download.suggestedFilename()).toMatch(/^phieu-bao-hoc-phi-T\d{1,2}-\d{4}-.+\.png$/);
+    const png = readFileSync((await download.path())!);
+    expect(png.length).toBeGreaterThan(0);
+    expect(png.readUInt32BE(16)).toBe(720); // IHDR: bề rộng ảnh
+    const darkPixels = await page.evaluate(async (b64) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${b64}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const d = ctx.getImageData(0, 0, c.width, c.height).data;
+      let n = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i] < 100 && d[i + 1] < 100 && d[i + 2] < 100) n++;
+      return n;
+    }, png.toString('base64'));
+    expect(darkPixels).toBeGreaterThan(5000);
+  }
 }
 
 test.describe('Phiếu báo học phí (390px)', () => {
