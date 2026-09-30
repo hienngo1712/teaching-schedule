@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -29,7 +30,7 @@ describe("Tuition ↔ Report money consistency", () => {
     const subjectId = subjects[0].id
 
     // Student X: 100k in May, pays 50k → owes 50k
-    const x = await caller.student.create({ fullName: "HS Thiếu", grade: 3, tuitionFee: 100000 })
+    const x = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thiếu", grade: 3, tuitionFee: 100000 })
     const mayX = await caller.session.create({
       sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId,
     })
@@ -41,7 +42,7 @@ describe("Tuition ↔ Report money consistency", () => {
     await recordPayment(caller, { studentId: x.id, year: 2026, month: 5, amount: 50000, isFullPaid: false })
 
     // Student Y: 100k in May, OVERPAYS 300k → owes 0 (must NOT offset X's debt)
-    const y = await caller.student.create({ fullName: "HS Trả Dư", grade: 3, tuitionFee: 100000 })
+    const y = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Trả Dư", grade: 3, tuitionFee: 100000 })
     const mayY = await caller.session.create({
       sessionDate: "2026-05-12", startTime: "08:00", endTime: "09:30", subjectId,
     })
@@ -65,7 +66,7 @@ describe("Tuition ↔ Report money consistency", () => {
     const subjectId = subjects[0].id
 
     // Student Z: 150k in April (unpaid). No May session, no May payment.
-    const z = await caller.student.create({ fullName: "HS Nợ Cũ", grade: 4, tuitionFee: 150000 })
+    const z = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nợ Cũ", grade: 4, tuitionFee: 150000 })
     const aprZ = await caller.session.create({
       sessionDate: "2026-04-10", startTime: "08:00", endTime: "09:30", subjectId,
     })

@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -66,7 +67,7 @@ describe("getCancelledWithoutMakeup", () => {
   it("ca bù bị xoá → ca gốc hiện; còn ca bù → không; khôi phục → biến mất", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Ca Nghỉ", grade: 4 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Ca Nghỉ", grade: 4 })
     const orig = await addSession(caller, { date: "2026-09-15", studentIds: [st.id] })
     const { makeup } = await caller.session.createMakeup({
       id: orig.id, sessionDate: "2026-09-18", startTime: "08:00", endTime: "09:00",
@@ -159,7 +160,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("số tiền khớp cột Dư nợ tháng trước của màn Học phí khi tháng này chưa thu", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Nợ", grade: 6, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nợ", grade: 6, tuitionFee: 100000 })
     await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: st.id, limit: 1 })
 
@@ -177,7 +178,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("thu 1 phần tháng này → trừ vào nợ cũ trước; thu đủ → hết cảnh báo", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Thu Dần", grade: 6, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thu Dần", grade: 6, tuitionFee: 100000 })
     await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: st.id, limit: 1 })
     await addSession(caller, { date: "2026-09-20", studentIds: [st.id], presentFee: 100000 })
@@ -194,7 +195,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("tháng trước đã tất toán (isFullPaid) dù còn thiếu → không mang nợ sang, không cảnh báo", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Miễn Giảm", grade: 6, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Miễn Giảm", grade: 6, tuitionFee: 100000 })
     await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     await setPaid(caller, st.id, 8, 50000, true)
 
@@ -204,7 +205,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("tháng này đã tất toán → không cảnh báo", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Tất Toán", grade: 6, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Tất Toán", grade: 6, tuitionFee: 100000 })
     await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: st.id, limit: 1 })
     await setPaid(caller, st.id, 9, 0, true)
@@ -215,8 +216,8 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("nợ liên tiếp 6, 7, 8 → 3 tháng; sắp theo số tiền giảm dần", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const a = await caller.student.create({ fullName: "HS Nợ Dài", grade: 6 })
-    const b = await caller.student.create({ fullName: "HS Nợ Ngắn", grade: 2 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nợ Dài", grade: 6 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nợ Ngắn", grade: 2 })
     await snapshot(a.id, 2026, 6, 100000)
     await snapshot(a.id, 2026, 7, 200000)
     await snapshot(a.id, 2026, 8, 300000)
@@ -232,7 +233,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("tháng 7 đã tất toán → đếm dừng, còn 1 tháng", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Ngắt Quãng", grade: 6 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Ngắt Quãng", grade: 6 })
     await snapshot(st.id, 2026, 6, 100000)
     await snapshot(st.id, 2026, 7, 200000, { isFullPaid: true })
     await snapshot(st.id, 2026, 8, 100000)
@@ -244,7 +245,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("nợ đủ 12 tháng trước → months = 12 (client hiện 12+)", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Nợ Lâu", grade: 6 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nợ Lâu", grade: 6 })
     for (let i = 0; i < 12; i++) {
       const m = 9 + i // 2025-09 .. 2026-08
       await snapshot(st.id, m > 12 ? 2026 : 2025, m > 12 ? m - 12 : m, 100000)
@@ -257,7 +258,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("HS đã nghỉ còn nợ, KHÔNG có ca tháng này → có trong nhóm nợ, isActive=false, số tiền khớp màn Học phí (spec P1)", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Đã Nghỉ", grade: 6, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Đã Nghỉ", grade: 6, tuitionFee: 100000 })
     await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: st.id, limit: 1 })
     await db.student.update({ where: { id: st.id }, data: { isActive: false } })
@@ -276,7 +277,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("HS đã nghỉ vẫn có ca tháng này → chỉ 1 dòng nợ", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Nghỉ Có Ca", grade: 6, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nghỉ Có Ca", grade: 6, tuitionFee: 100000 })
     await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: st.id, limit: 1 })
     await addSession(caller, { date: "2026-09-02", studentIds: [st.id], presentFee: 100000 })
@@ -291,7 +292,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
   it("HS đã nghỉ không còn nợ → không xuất hiện", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Nghỉ Sạch Nợ", grade: 6 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nghỉ Sạch Nợ", grade: 6 })
     await db.student.update({ where: { id: st.id }, data: { isActive: false } })
     expect((await getDashboardAlerts(db, userId, NOW)).debts).toEqual([])
   })
@@ -305,12 +306,12 @@ describe("getDashboardAlerts — lâu không có ca", () => {
   it("cửa sổ từ hôm nay −14 đến +7 ngày (gồm 2 đầu), bỏ ca huỷ, sắp theo lớp rồi tên", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const a = await caller.student.create({ fullName: "HS A", grade: 1 })
-    const b = await caller.student.create({ fullName: "HS B", grade: 1 })
-    const c = await caller.student.create({ fullName: "HS C", grade: 1 })
-    const d = await caller.student.create({ fullName: "HS D", grade: 2 })
-    const e = await caller.student.create({ fullName: "HS E", grade: 3 })
-    const f = await caller.student.create({ fullName: "HS F", grade: 3 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS A", grade: 1 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS B", grade: 1 })
+    const c = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS C", grade: 1 })
+    const d = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS D", grade: 2 })
+    const e = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS E", grade: 3 })
+    const f = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS F", grade: 3 })
     await addSession(caller, { date: "2026-09-11", studentIds: [a.id] }) // đúng −14 → có ca
     await addSession(caller, { date: "2026-09-10", studentIds: [b.id] }) // −15 → ngoài cửa sổ
     await addSession(caller, { date: "2026-10-02", studentIds: [c.id] }) // đúng +7 → có ca
@@ -331,8 +332,8 @@ describe("getDashboardAlerts — lâu không có ca", () => {
   it("tính theo ngày VN: 01:00 25/09 VN cho cùng kết quả; 23:00 24/09 VN thì cửa sổ lùi 1 ngày", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const a = await caller.student.create({ fullName: "HS A", grade: 1 })
-    const b = await caller.student.create({ fullName: "HS B", grade: 1 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS A", grade: 1 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS B", grade: 1 })
     await addSession(caller, { date: "2026-09-11", studentIds: [a.id] })
     await addSession(caller, { date: "2026-09-10", studentIds: [b.id] })
 
@@ -373,11 +374,11 @@ describe("getDashboardAlerts — an toàn", () => {
   it("không ghi DB: số dòng MonthlyTuition trước/sau bằng nhau", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
-    const st = await caller.student.create({ fullName: "HS Chỉ Đọc", grade: 6, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Chỉ Đọc", grade: 6, tuitionFee: 100000 })
     await addSession(caller, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     await addSession(caller, { date: "2026-09-20", studentIds: [st.id], presentFee: 100000 })
 
-    const stInactive = await caller.student.create({ fullName: "HS Đã Nghỉ Chỉ Đọc", grade: 6, tuitionFee: 100000 })
+    const stInactive = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Đã Nghỉ Chỉ Đọc", grade: 6, tuitionFee: 100000 })
     await addSession(caller, { date: "2026-08-11", studentIds: [stInactive.id], presentFee: 100000 })
     await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: stInactive.id, limit: 1 })
     await db.student.update({ where: { id: stInactive.id }, data: { isActive: false } })
@@ -390,12 +391,12 @@ describe("getDashboardAlerts — an toàn", () => {
 
   it("đa người dùng: dữ liệu của giáo viên khác không xuất hiện", async () => {
     const caller2 = await getAuthedCaller("teacher2")
-    const st = await caller2.student.create({ fullName: "HS Của GV2", grade: 5, tuitionFee: 100000 })
+    const st = await caller2.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Của GV2", grade: 5, tuitionFee: 100000 })
     await addSession(caller2, { date: "2026-08-10", studentIds: [st.id], presentFee: 100000 })
     const cancelled = await addSession(caller2, { date: "2026-09-20", start: "10:00", end: "11:00" })
     await cancelDirect(cancelled.id)
 
-    const stInactive2 = await caller2.student.create({ fullName: "HS GV2 Da Nghi", grade: 5, tuitionFee: 100000 })
+    const stInactive2 = await caller2.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS GV2 Da Nghi", grade: 5, tuitionFee: 100000 })
     await addSession(caller2, { date: "2026-08-11", studentIds: [stInactive2.id], presentFee: 100000 })
     await caller2.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: stInactive2.id, limit: 1 })
     await db.student.update({ where: { id: stInactive2.id }, data: { isActive: false } })

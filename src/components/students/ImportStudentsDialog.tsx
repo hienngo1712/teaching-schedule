@@ -19,6 +19,7 @@ import { cn, formatCurrency } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { buildPreview, toImportPayload, MAX_IMPORT_FILE_BYTES, type PreviewRow } from "@/lib/student-import"
 import { buildImportTemplate, readImportWorkbook, type ImportReadError } from "@/lib/student-import-excel"
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 
 // Chỉ mount khi mở nên mỗi lần mở là state mới, không cần effect reset.
 export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
@@ -214,7 +215,7 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
                 {t("choose_other_file")}
               </Button>
               <Button
-                onClick={() => importMut.mutate({ rows: payload })}
+                onClick={() => importMut.mutate({ consent: CONSENT_ACCEPTED, rows: payload })}
                 disabled={payload.length === 0 || importMut.isPending}
                 className="h-11 w-full sm:w-auto md:h-10"
               >

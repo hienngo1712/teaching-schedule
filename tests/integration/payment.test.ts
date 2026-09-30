@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -15,7 +16,7 @@ async function cleanup() {
 
 async function seedStudent(caller: Caller, sessions: Array<{ date: string; fee: number }>) {
   const subjectId = (await caller.subject.list({}))[0].id
-  const st = await caller.student.create({ fullName: "HS Thu Tiền", grade: 4, tuitionFee: 100000 })
+  const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thu Tiền", grade: 4, tuitionFee: 100000 })
   for (const s of sessions) {
     const created = await caller.session.create({
       sessionDate: s.date, startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],

@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect } from "vitest"
 import { publicCaller } from "../helpers/trpc"
 import { db } from "@/server/db"
@@ -8,6 +9,7 @@ describe("User Registration", () => {
     username: `test_reg_${Date.now()}`,
     password: "Password123!",
     fullName: "Test Registration",
+    consent: CONSENT_ACCEPTED,
   }
 
   it("✓ register successfully → create user + seed subjects", async () => {
@@ -38,19 +40,19 @@ describe("User Registration", () => {
   })
 
   it("✗ register with invalid username → throw validation error", async () => {
-    await expect(publicCaller.auth.register({
+    await expect(publicCaller.auth.register({ consent: CONSENT_ACCEPTED, 
       username: "ab", // too short
       password: "Password123!",
     })).rejects.toThrow()
     
-    await expect(publicCaller.auth.register({
+    await expect(publicCaller.auth.register({ consent: CONSENT_ACCEPTED, 
       username: "user@invalid", // invalid chars
       password: "Password123!",
     })).rejects.toThrow()
   })
 
   it("✗ register with invalid password → throw validation error", async () => {
-    await expect(publicCaller.auth.register({
+    await expect(publicCaller.auth.register({ consent: CONSENT_ACCEPTED, 
       username: "valid_user",
       password: "123", // too short
     })).rejects.toThrow()
@@ -59,7 +61,7 @@ describe("User Registration", () => {
   it("✓ đăng ký mới → Standard + dùng thử Pro 60 ngày (trialEndsAt = 00:00 VN ngày đăng ký + 60 ngày)", async () => {
     const username = `test_trial_${Date.now()}`
     const before = new Date()
-    await publicCaller.auth.register({ username, password: "Password123!", fullName: "Dùng Thử" })
+    await publicCaller.auth.register({ consent: CONSENT_ACCEPTED,  username, password: "Password123!", fullName: "Dùng Thử" })
     const u = await db.user.findUniqueOrThrow({ where: { username } })
     expect(u.plan).toBe("standard")
     expect(u.planExpiresAt).toBeNull()

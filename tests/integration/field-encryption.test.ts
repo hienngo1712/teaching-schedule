@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach, afterAll } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -18,7 +19,7 @@ type RawStudent = { fn: string; ph: string | null; pn: string | null; nt: string
 describe("Mã hoá trường cá nhân qua db (spec O 6.3)", () => {
   it("tạo HS qua caller: cột trong DB là ciphertext, đọc qua caller ra bản rõ", async () => {
     const t = await getAuthedCaller()
-    const s = await t.student.create({ fullName: "Nguyễn Thị Mai", grade: 4, parentPhone: "0901234567", parentName: "Nguyễn Văn Hùng", notes: "Dị ứng sữa" })
+    const s = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn Thị Mai", grade: 4, parentPhone: "0901234567", parentName: "Nguyễn Văn Hùng", notes: "Dị ứng sữa" })
     const [raw] = await db.$queryRaw<RawStudent[]>`
       SELECT full_name AS fn, parent_phone AS ph, parent_name AS pn, notes AS nt FROM students WHERE id = ${s.id}`
     for (const [v, plain] of [[raw.fn, "Nguyễn Thị Mai"], [raw.ph, "0901234567"], [raw.pn, "Nguyễn Văn Hùng"], [raw.nt, "Dị ứng sữa"]] as const) {
@@ -32,7 +33,7 @@ describe("Mã hoá trường cá nhân qua db (spec O 6.3)", () => {
   it("tài khoản ngân hàng: DB ciphertext, getBankAccount ra bản rõ", async () => {
     const t = await getAuthedCaller()
     const bank = { bankBin: "970436", bankAccountNumber: "0011001234567", bankAccountName: "NGUYEN VAN A" }
-    await t.settings.updateBankAccount(bank)
+    await t.settings.updateBankAccount({ ...bank, consent: CONSENT_ACCEPTED })
     const [raw] = await db.$queryRaw<Array<{ n: string; a: string; b: string }>>`
       SELECT bank_account_number AS n, bank_account_name AS a, bank_bin AS b FROM users WHERE username = 'teacher'`
     expect(raw.n.startsWith("enc:v1:") && raw.a.startsWith("enc:v1:")).toBe(true)
@@ -63,7 +64,7 @@ describe("Mã hoá trường cá nhân qua db (spec O 6.3)", () => {
 
   it("bản rõ cũ (trước O2) vẫn đọc và tìm được", async () => {
     const t = await getAuthedCaller()
-    const s = await t.student.create({ fullName: "Tạm", grade: 2 })
+    const s = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Tạm", grade: 2 })
     await db.$executeRaw`UPDATE students SET full_name = 'Hoàng Bản Rõ', notes = 'ghi chú cũ' WHERE id = ${s.id}`
     const list = await t.student.list({ search: "bản rõ" })
     expect(list.items.map((x) => [x.fullName, x.notes])).toEqual([["Hoàng Bản Rõ", "ghi chú cũ"]])

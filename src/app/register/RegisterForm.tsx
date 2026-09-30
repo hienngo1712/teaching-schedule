@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc"
 import { registerSchema, type RegisterInput } from "@/lib/schemas/auth"
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -44,7 +45,7 @@ export function RegisterForm() {
   })
 
   function onSubmit(values: RegisterInput) {
-    mutation.mutate(values)
+    mutation.mutate({ ...values, consent: CONSENT_ACCEPTED })
   }
 
   return (

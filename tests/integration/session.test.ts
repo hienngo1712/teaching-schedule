@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll, beforeEach } from "vitest"
 import { TRPCError } from "@trpc/server"
 import { db } from "@/server/db"
@@ -47,7 +48,7 @@ describe("Session CRUD + overlap", () => {
 
   it("✓ create với studentIds → tạo ca + gán HS", async () => {
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "An", grade: 3 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
     const s = await caller.session.create({
       sessionDate: "2026-04-11",
       startTime: "08:00",
@@ -87,8 +88,8 @@ describe("Session CRUD + overlap", () => {
 
   it("✓ getMonth: ca chỉ HS lớp 10 → level=thpt; ca lớp 9 + lớp 10 → mixed", async () => {
     const caller = await getAuthedCaller()
-    const g9 = await caller.student.create({ fullName: "HS Lớp 9", grade: 9 })
-    const g10 = await caller.student.create({ fullName: "HS Lớp 10", grade: 10 })
+    const g9 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lớp 9", grade: 9 })
+    const g10 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lớp 10", grade: 10 })
     await caller.session.create({
       sessionDate: "2026-04-06",
       startTime: "08:00",
@@ -128,8 +129,8 @@ describe("Session CRUD + overlap", () => {
 
   it("✓ update studentIds → thay thế danh sách HS", async () => {
     const caller = await getAuthedCaller()
-    const st1 = await caller.student.create({ fullName: "Student 1", grade: 5 })
-    const st2 = await caller.student.create({ fullName: "Student 2", grade: 5 })
+    const st1 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Student 1", grade: 5 })
+    const st2 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Student 2", grade: 5 })
     
     // Tạo ca với st1
     const s = await caller.session.create({
@@ -160,7 +161,7 @@ describe("Session CRUD + overlap", () => {
   // ── Delete ───────────────────────────────────────────────────
   it("✓ delete → xóa mềm ca, link HS giữ để khôi phục", async () => {
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "Bình", grade: 4 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Bình", grade: 4 })
     const s = await caller.session.create({
       sessionDate: "2026-04-13",
       startTime: "08:00",
@@ -343,7 +344,7 @@ describe("Session CRUD + overlap", () => {
 
     it("✓ bulkCreate với studentIds → gán HS cho tất cả ca", async () => {
       const caller = await getAuthedCaller()
-      const st = await caller.student.create({ fullName: "An", grade: 3 })
+      const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
       await caller.session.bulkCreate({
         startDate: "2026-04-01",
         endDate: "2026-04-03",
@@ -411,7 +412,7 @@ describe("Session CRUD + overlap", () => {
   describe("duplicate", () => {
     it("✓ duplicate → ca mới + cùng HS + attendance reset pending", async () => {
       const caller = await getAuthedCaller()
-      const st = await caller.student.create({ fullName: "Bình", grade: 4 })
+      const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Bình", grade: 4 })
       const s = await caller.session.create({
         sessionDate: "2026-04-20",
         startTime: "08:00",
@@ -452,7 +453,7 @@ describe("Session CRUD + overlap", () => {
 
     it("✗ addRecurringStudents thời gian/ngày sai định dạng → validation error", async () => {
       const caller = await getAuthedCaller()
-      const st = await caller.student.create({ fullName: "RecVal", grade: 3 })
+      const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "RecVal", grade: 3 })
       await expect(
         caller.session.addRecurringStudents({
           studentIds: [st.id],
@@ -509,8 +510,8 @@ describe("updateFuture (bulk)", () => {
 
   it("✓ updateFuture với studentIds (cùng danh sách) → KHÔNG reset điểm danh", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "An", grade: 5 })
-    const b = await caller.student.create({ fullName: "Bình", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 5 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Bình", grade: 5 })
 
     const s = await caller.session.create({
       sessionDate: "2026-09-07", // thứ 2
@@ -559,7 +560,7 @@ describe("updateFuture (bulk)", () => {
   it("✗ updateFuture với studentIds chứa HS của user khác → NOT_FOUND", async () => {
     const caller = await getAuthedCaller()
     const callerB = await getAuthedCaller("teacher2")
-    const stB = await callerB.student.create({ fullName: "HS của B", grade: 5 })
+    const stB = await callerB.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS của B", grade: 5 })
 
     const s = await caller.session.create({
       sessionDate: "2026-09-09",

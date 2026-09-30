@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -20,7 +21,7 @@ describe("Nhóm B — tài chính/báo cáo", () => {
   it("✓ report.monthlySummary là READ-ONLY: không tạo/ghi snapshot MonthlyTuition", async () => {
     const caller = await getAuthedCaller()
     const subjectId = (await caller.subject.list({}))[0].id
-    const st = await caller.student.create({ fullName: "HS ReadOnly", grade: 3, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS ReadOnly", grade: 3, tuitionFee: 100000 })
     const s = await caller.session.create({
       sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],
     })
@@ -36,7 +37,7 @@ describe("Nhóm B — tài chính/báo cáo", () => {
   it("✓ tuition.getMonthlyStatus VẪN materialize snapshot (persist mặc định)", async () => {
     const caller = await getAuthedCaller()
     const subjectId = (await caller.subject.list({}))[0].id
-    const st = await caller.student.create({ fullName: "HS Persist", grade: 3, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Persist", grade: 3, tuitionFee: 100000 })
     const s = await caller.session.create({
       sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],
     })
@@ -52,7 +53,7 @@ describe("Nhóm B — tài chính/báo cáo", () => {
   it("✓ monthlySummary: toMonth không kèm toYear cho cùng kết quả với bản chỉ rõ toYear", async () => {
     const caller = await getAuthedCaller()
     const subjectId = (await caller.subject.list({}))[0].id
-    const st = await caller.student.create({ fullName: "HS Range", grade: 3, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Range", grade: 3, tuitionFee: 100000 })
 
     const s4 = await caller.session.create({
       sessionDate: "2026-04-10", startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],
@@ -81,7 +82,7 @@ describe("Nhóm B — tài chính/báo cáo", () => {
   it("✓ monthlySummary theo grade: paidAmount không tính lẫn sang khối khác", async () => {
     const caller = await getAuthedCaller()
     const subjectId = (await caller.subject.list({}))[0].id
-    const st = await caller.student.create({ fullName: "HS Đổi Khối", grade: 5, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Đổi Khối", grade: 5, tuitionFee: 100000 })
 
     // Tháng 4: khối 5, thu 100k
     const s4 = await caller.session.create({
@@ -91,7 +92,7 @@ describe("Nhóm B — tài chính/báo cáo", () => {
     await recordPayment(caller, { studentId: st.id, year: 2026, month: 4, amount: 100000, isFullPaid: true })
 
     // Đổi khối 5 → 6 (buổi T4 giữ snapshot khối 5)
-    await caller.student.update({ id: st.id, data: { grade: 6 } })
+    await caller.student.update({ consent: CONSENT_ACCEPTED,  id: st.id, data: { grade: 6 } })
 
     // Tháng 5: khối 6, thu 200k
     const s5 = await caller.session.create({
@@ -111,7 +112,7 @@ describe("Nhóm B — tài chính/báo cáo", () => {
   it("✓ filter partial: HS có credit, đã trả vượt nợ thực tế → KHÔNG nằm trong 'partial'", async () => {
     const caller = await getAuthedCaller()
     const subjectId = (await caller.subject.list({}))[0].id
-    const st = await caller.student.create({ fullName: "HS Credit", grade: 3, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Credit", grade: 3, tuitionFee: 100000 })
 
     // T4: phí 100k, trả dư 150k → credit 50k sang T5
     const s4 = await caller.session.create({

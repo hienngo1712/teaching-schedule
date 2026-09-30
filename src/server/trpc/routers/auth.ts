@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/trpc"
-import { registerSchema } from "@/lib/schemas/auth"
+import { registerInputSchema } from "@/lib/schemas/auth"
+import { recordConsent } from "@/server/services/consent.service"
 import {
   isRegisterRateLimited,
   recordRegisterAttempt,
@@ -36,7 +37,7 @@ export const authRouter = createTRPCRouter({
   }),
 
   register: publicProcedure
-    .input(registerSchema)
+    .input(registerInputSchema)
     .mutation(async ({ ctx, input }) => {
       // Throttle theo IP để chặn spam tạo tài khoản (procedure công khai).
       if (await isRegisterRateLimited(ctx.ip)) {
@@ -47,6 +48,8 @@ export const authRouter = createTRPCRouter({
       }
       try {
         const user = await registerUser(ctx.db, input)
+        // Cần id user mới nên ghi sau khi tạo; cùng request nên vẫn là bằng chứng lúc bấm Đăng ký (bổ sung H2).
+        await recordConsent(ctx.db, { userId: user.id, scope: "register", ipAddress: ctx.ip })
         await recordRegisterAttempt(ctx.ip, true)
         return user
       } catch (err) {

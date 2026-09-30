@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -21,7 +22,7 @@ describe("Attendance Router", () => {
     const subject = await caller.subject.create({ name: "Tiếng Anh" })
     subjectId = subject.id
 
-    const student = await caller.student.create({ fullName: "Nguyễn An", grade: 3 })
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn An", grade: 3 })
     studentId = student.id
 
     const session = await caller.session.create({
@@ -58,7 +59,7 @@ describe("Attendance Router", () => {
 
   it("✗ update → lỗi nếu studentId không có trong session", async () => {
     const caller = await getAuthedCaller()
-    const otherStudent = await caller.student.create({ fullName: "Bình", grade: 4 })
+    const otherStudent = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Bình", grade: 4 })
     
     await expect(
       caller.attendance.update({
@@ -72,7 +73,7 @@ describe("Attendance Router", () => {
 
   it("✓ session.addStudents → HS mới có attendance mặc định pending", async () => {
     const caller = await getAuthedCaller()
-    const newStudent = await caller.student.create({ fullName: "Cường", grade: 5 })
+    const newStudent = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Cường", grade: 5 })
     
     // addStudents nay là sync (replace), nên cần truyền cả list nếu muốn giữ HS cũ
     await caller.session.addStudents({

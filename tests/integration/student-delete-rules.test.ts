@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -18,7 +19,7 @@ async function clean() {
 
 async function withPresent(fee = 100_000) {
   const caller = await getAuthedCaller()
-  const st = await caller.student.create({ fullName: "HS Quy tắc", grade: 6, tuitionFee: fee })
+  const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Quy tắc", grade: 6, tuitionFee: fee })
   const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
   const s = await caller.session.create({ sessionDate: PAST, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [st.id] })
   await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present" }] })
@@ -30,7 +31,7 @@ describe("Quy tắc xoá học sinh (spec R2)", () => {
 
   it("HS mới chưa có dữ liệu → xoá được", async () => {
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "HS Nhầm", grade: 3 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nhầm", grade: 3 })
     expect(await caller.student.deleteCheck({ id: st.id })).toEqual({ allowed: true })
     await caller.student.delete({ id: st.id })
     expect(await db.student.findUnique({ where: { id: st.id, isDeleted: true } })).not.toBeNull()
@@ -38,7 +39,7 @@ describe("Quy tắc xoá học sinh (spec R2)", () => {
 
   it("buổi vắng (absent) không tính là dữ liệu → xoá được", async () => {
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "HS Vắng", grade: 3, tuitionFee: 100_000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Vắng", grade: 3, tuitionFee: 100_000 })
     const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
     const s = await caller.session.create({ sessionDate: PAST, startTime: "10:00", endTime: "11:00", subjectId, studentIds: [st.id] })
     await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "absent" }] })
@@ -53,14 +54,14 @@ describe("Quy tắc xoá học sinh (spec R2)", () => {
 
   it("đang học + chỉ có lần thu → active_with_data", async () => {
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "HS Thu", grade: 6 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thu", grade: 6 })
     await caller.payment.create({ studentId: st.id, year: 2030, month: 5, amount: 10_000, paidAt: "2030-05-20", method: "cash" })
     expect(await caller.student.deleteCheck({ id: st.id })).toEqual({ allowed: false, reason: "active_with_data" })
   })
 
   it("lần thu đã ở Thùng rác không tính là dữ liệu", async () => {
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "HS Thu nhầm", grade: 6 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thu nhầm", grade: 6 })
     const p = await caller.payment.create({ studentId: st.id, year: 2030, month: 5, amount: 10_000, paidAt: "2030-05-20", method: "cash" })
     await caller.payment.delete({ id: p.id })
     expect(await caller.student.deleteCheck({ id: st.id })).toEqual({ allowed: true })
@@ -84,7 +85,7 @@ describe("Quy tắc xoá học sinh (spec R2)", () => {
   it("HS người khác → NOT_FOUND", async () => {
     const caller = await getAuthedCaller()
     const other = await getAuthedCaller("teacher2")
-    const st = await caller.student.create({ fullName: "HS Của tôi", grade: 3 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Của tôi", grade: 3 })
     await expect(other.student.deleteCheck({ id: st.id })).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
 })

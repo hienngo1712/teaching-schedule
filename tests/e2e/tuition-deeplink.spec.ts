@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "../../src/lib/consent"
 import { test, expect, type Page } from '@playwright/test';
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -38,14 +39,14 @@ test.describe('Deep link Học phí (?studentId=) khi HS đích nằm ngoài tra
     // 25 HS khác cùng lớp, tên chứa shortName làm chuỗi con, sắp xếp alphabet TRƯỚC HS đích
     // ("0" < các chữ cái) → chiếm hết trang 1 (20 dòng), đẩy HS đích sang trang 2.
     for (let i = 0; i < 25; i++) {
-      const s = await trpcMutation<{ id: number }>(page, 'student.create', {
+      const s = await trpcMutation<{ id: number }>(page, 'student.create', { consent: CONSENT_ACCEPTED, 
         fullName: `0${shortName} hs${i}`,
         grade: 1,
       });
       createdStudentIds.push(s.id);
     }
 
-    const target = await trpcMutation<{ id: number }>(page, 'student.create', {
+    const target = await trpcMutation<{ id: number }>(page, 'student.create', { consent: CONSENT_ACCEPTED, 
       fullName: shortName,
       grade: 1,
     });

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { studentCreateSchema, type StudentCreateInput } from "@/lib/schemas/student"
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { GRADES } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import {
@@ -106,9 +107,9 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
       return
     }
     if (mode === "create") {
-      createMut.mutate(data)
+      createMut.mutate({ ...data, consent: CONSENT_ACCEPTED })
     } else if (student) {
-      updateMut.mutate({ id: student.id, data })
+      updateMut.mutate({ id: student.id, data, consent: CONSENT_ACCEPTED })
     }
   }
 

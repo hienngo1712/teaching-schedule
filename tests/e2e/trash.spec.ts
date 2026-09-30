@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "../../src/lib/consent"
 import { test, expect, type Page } from '@playwright/test';
 
 async function expectNoHorizontalScroll(page: Page) {
@@ -198,7 +199,7 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
     const stamp = Math.floor(Math.random() * 100_000);
     const nameDebt = `E2E Nợ ${stamp}`;
     const subjectId = await getDefaultSubjectId(page);
-    const st = await trpcMutation<{ id: number }>(page, 'student.create', { fullName: nameDebt, grade: 6, tuitionFee: 100_000 });
+    const st = await trpcMutation<{ id: number }>(page, 'student.create', { consent: CONSENT_ACCEPTED,  fullName: nameDebt, grade: 6, tuitionFee: 100_000 });
     createdStudentIds.push(st.id);
     const vnNow = new Date(Date.now() + 7 * 3600_000);
     const vnMonthDay = `${vnNow.toISOString().slice(0, 7)}-03`;

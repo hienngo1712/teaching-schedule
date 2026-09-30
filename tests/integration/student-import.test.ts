@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import type { PrismaClient } from "@prisma/client"
 import { db } from "@/server/db"
@@ -21,7 +22,7 @@ describe("Nhập học sinh từ Excel", () => {
 
   it("✓ importMany dòng lớp 12 (THPT) → tạo thành công", async () => {
     const caller = await getAuthedCaller()
-    const res = await caller.student.importMany({ rows: [{ fullName: "Phạm Dũng", grade: 12 }] })
+    const res = await caller.student.importMany({ consent: CONSENT_ACCEPTED,  rows: [{ fullName: "Phạm Dũng", grade: 12 }] })
     expect(res).toEqual({ created: 1 })
     const list = await caller.student.list({ includeInactive: true, limit: 50 })
     expect(list.items.find((s) => s.fullName === "Phạm Dũng")?.grade).toBe(12)
@@ -29,7 +30,7 @@ describe("Nhập học sinh từ Excel", () => {
 
   it("✓ importMany 3 dòng hợp lệ → created 3, field đúng, isActive=true", async () => {
     const caller = await getAuthedCaller()
-    const res = await caller.student.importMany({
+    const res = await caller.student.importMany({ consent: CONSENT_ACCEPTED, 
       rows: [
         { fullName: "Nguyễn An", grade: 5, parentName: "Chị Hoa", parentPhone: "0912345678", tuitionFee: 150000, notes: "Yếu toán" },
         { fullName: "Trần Bình", grade: 3 },
@@ -59,10 +60,10 @@ describe("Nhập học sinh từ Excel", () => {
   it("✗ 1 dòng sai trong lô (lớp 0 / SĐT sai) → BAD_REQUEST, không tạo em nào", async () => {
     const caller = await getAuthedCaller()
     await expect(
-      caller.student.importMany({ rows: [{ fullName: "Nguyễn An", grade: 5 }, { fullName: "Trần Bình", grade: 0 }] })
+      caller.student.importMany({ consent: CONSENT_ACCEPTED,  rows: [{ fullName: "Nguyễn An", grade: 5 }, { fullName: "Trần Bình", grade: 0 }] })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" })
     await expect(
-      caller.student.importMany({
+      caller.student.importMany({ consent: CONSENT_ACCEPTED, 
         rows: [{ fullName: "Nguyễn An", grade: 5 }, { fullName: "Trần Bình", grade: 3, parentPhone: "12345" }],
       })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" })
@@ -71,8 +72,8 @@ describe("Nhập học sinh từ Excel", () => {
 
   it("✓ importCheck nhận ra trùng HS đang học và HS đã nghỉ; khác lớp không trùng", async () => {
     const caller = await getAuthedCaller()
-    const an = await caller.student.create({ fullName: "Nguyễn Văn An", grade: 5 })
-    const binh = await caller.student.create({ fullName: "Trần Bình", grade: 3 })
+    const an = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn Văn An", grade: 5 })
+    const binh = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Trần Bình", grade: 3 })
     await caller.student.deactivate({ id: binh.id })
 
     const { matches } = await caller.student.importCheck({
@@ -89,23 +90,23 @@ describe("Nhập học sinh từ Excel", () => {
 
   it("✓ importCheck: có cả HS đã nghỉ và đang học cùng khóa → trả HS đang học", async () => {
     const caller = await getAuthedCaller()
-    const old = await caller.student.create({ fullName: "Nguyễn An", grade: 5 })
+    const old = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn An", grade: 5 })
     await caller.student.deactivate({ id: old.id })
-    const current = await caller.student.create({ fullName: "Nguyễn An", grade: 5 })
+    const current = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn An", grade: 5 })
     const { matches } = await caller.student.importCheck({ rows: [{ fullName: "Nguyễn An", grade: 5 }] })
     expect(matches[0]).toMatchObject({ id: current.id, isActive: true })
   })
 
   it("✗/✓ importMany trùng HS có sẵn: allowDuplicate=false → CONFLICT; true → tạo", async () => {
     const caller = await getAuthedCaller()
-    await caller.student.create({ fullName: "Nguyễn An", grade: 5 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn An", grade: 5 })
 
     await expect(
-      caller.student.importMany({ rows: [{ fullName: "Trần Bình", grade: 3 }, { fullName: "nguyễn an", grade: 5 }] })
+      caller.student.importMany({ consent: CONSENT_ACCEPTED,  rows: [{ fullName: "Trần Bình", grade: 3 }, { fullName: "nguyễn an", grade: 5 }] })
     ).rejects.toMatchObject({ code: "CONFLICT", message: expect.stringContaining("chọn lại file") })
     expect(await countStudents()).toBe(1)
 
-    const res = await caller.student.importMany({
+    const res = await caller.student.importMany({ consent: CONSENT_ACCEPTED, 
       rows: [{ fullName: "Trần Bình", grade: 3 }, { fullName: "nguyễn an", grade: 5, allowDuplicate: true }],
     })
     expect(res.created).toBe(2)
@@ -115,7 +116,7 @@ describe("Nhập học sinh từ Excel", () => {
   it("✗ hai dòng cùng khóa trong lô, dòng 2 không allowDuplicate → CONFLICT", async () => {
     const caller = await getAuthedCaller()
     await expect(
-      caller.student.importMany({ rows: [{ fullName: "Nguyễn An", grade: 5 }, { fullName: "Nguyễn  An", grade: 5 }] })
+      caller.student.importMany({ consent: CONSENT_ACCEPTED,  rows: [{ fullName: "Nguyễn An", grade: 5 }, { fullName: "Nguyễn  An", grade: 5 }] })
     ).rejects.toMatchObject({ code: "CONFLICT" })
     expect(await countStudents()).toBe(0)
   })
@@ -123,8 +124,8 @@ describe("Nhập học sinh từ Excel", () => {
   it("✗ gọi importMany 2 lần cùng dữ liệu → lần 2 CONFLICT (chống nhập 2 lần)", async () => {
     const caller = await getAuthedCaller()
     const rows = [{ fullName: "Nguyễn An", grade: 5 }, { fullName: "Trần Bình", grade: 3 }]
-    await caller.student.importMany({ rows })
-    await expect(caller.student.importMany({ rows })).rejects.toMatchObject({ code: "CONFLICT" })
+    await caller.student.importMany({ consent: CONSENT_ACCEPTED,  rows })
+    await expect(caller.student.importMany({ consent: CONSENT_ACCEPTED,  rows })).rejects.toMatchObject({ code: "CONFLICT" })
     expect(await countStudents()).toBe(2)
   })
 
@@ -165,17 +166,17 @@ describe("Nhập học sinh từ Excel", () => {
 
   it("✓ multi-tenant: HS của user khác cùng tên + lớp không tính là trùng", async () => {
     const other = await getAuthedCaller("teacher2")
-    await other.student.create({ fullName: "Nguyễn An", grade: 5 })
+    await other.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn An", grade: 5 })
     const caller = await getAuthedCaller()
     const { matches } = await caller.student.importCheck({ rows: [{ fullName: "Nguyễn An", grade: 5 }] })
     expect(matches).toEqual([null])
-    expect((await caller.student.importMany({ rows: [{ fullName: "Nguyễn An", grade: 5 }] })).created).toBe(1)
+    expect((await caller.student.importMany({ consent: CONSENT_ACCEPTED,  rows: [{ fullName: "Nguyễn An", grade: 5 }] })).created).toBe(1)
   })
 
   it("✗ 501 dòng → BAD_REQUEST", async () => {
     const caller = await getAuthedCaller()
     const rows = Array.from({ length: 501 }, (_, i) => ({ fullName: `Học sinh ${i}`, grade: 1 }))
-    await expect(caller.student.importMany({ rows })).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    await expect(caller.student.importMany({ consent: CONSENT_ACCEPTED,  rows })).rejects.toMatchObject({ code: "BAD_REQUEST" })
     await expect(caller.student.importCheck({ rows })).rejects.toMatchObject({ code: "BAD_REQUEST" })
     expect(await countStudents()).toBe(0)
   })
@@ -183,7 +184,7 @@ describe("Nhập học sinh từ Excel", () => {
   it("✓ 300 dòng nhập trong 1 lần; kiểm tra lại → tất cả trùng", async () => {
     const caller = await getAuthedCaller()
     const rows = Array.from({ length: 300 }, (_, i) => ({ fullName: `Học sinh ${i}`, grade: (i % 9) + 1 }))
-    expect((await caller.student.importMany({ rows })).created).toBe(300)
+    expect((await caller.student.importMany({ consent: CONSENT_ACCEPTED,  rows })).created).toBe(300)
     const { matches } = await caller.student.importCheck({ rows })
     expect(matches.every((m) => m !== null)).toBe(true)
   })

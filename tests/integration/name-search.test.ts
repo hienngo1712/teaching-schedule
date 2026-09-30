@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach, afterAll } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -16,12 +17,12 @@ afterAll(cleanup)
 async function seed() {
   const t = await getAuthedCaller("teacher")
   const t2 = await getAuthedCaller("teacher2")
-  const an = await t.student.create({ fullName: "Nguyễn Văn An", grade: 3 })
-  const anh = await t.student.create({ fullName: "Trần Thị Ánh", grade: 3 })
-  const binh = await t.student.create({ fullName: "Lê Bình An", grade: 5 })
-  const duc = await t.student.create({ fullName: "Đức", grade: 3 })
-  const dung = await t.student.create({ fullName: "Dũng", grade: 3 })
-  await t2.student.create({ fullName: "An Của GV2", grade: 3 })
+  const an = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn Văn An", grade: 3 })
+  const anh = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Trần Thị Ánh", grade: 3 })
+  const binh = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Lê Bình An", grade: 5 })
+  const duc = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Đức", grade: 3 })
+  const dung = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Dũng", grade: 3 })
+  await t2.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An Của GV2", grade: 3 })
   return { t, an, anh, binh, duc, dung }
 }
 

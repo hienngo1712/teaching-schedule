@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -20,7 +21,7 @@ describe("tuition.getMonthlyStatusReadOnly", () => {
     const subjects = await caller.subject.list({})
     const subjectId = subjects[0].id
 
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Chỉ Xem", grade: 7, tuitionFee: 100000,
     })
     const s = await caller.session.create({
@@ -48,7 +49,7 @@ describe("tuition.getMonthlyStatusReadOnly", () => {
     const subjects = await caller.subject.list({})
     const subjectId = subjects[0].id
 
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Trang Học Phí", grade: 7, tuitionFee: 100000,
     })
     const s = await caller.session.create({

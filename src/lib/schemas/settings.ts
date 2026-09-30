@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { VN_BANKS } from "@/lib/vn-banks"
+import { consentPayload } from "@/lib/consent"
 
 export const bankAccountSchema = z.object({
   bankBin: z
@@ -16,7 +17,7 @@ export const bankAccountSchema = z.object({
     .max(50, "Tên chủ tài khoản tối đa 50 ký tự"),
 })
 
-// null = xoá thông tin ngân hàng
-export const updateBankAccountSchema = bankAccountSchema.nullable()
+// null = xoá thông tin ngân hàng (không cần đồng ý); lưu thì bắt buộc cờ đồng ý (spec O Q10).
+export const updateBankAccountSchema = bankAccountSchema.extend({ consent: consentPayload }).nullable()
 
 export type BankAccountInput = z.infer<typeof bankAccountSchema>

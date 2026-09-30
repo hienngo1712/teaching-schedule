@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -20,7 +21,7 @@ describe("Tuition — isFullPaid tất toán carry-over", () => {
   it("isFullPaid (paidAmount thiếu) tháng 5 → tháng 6 KHÔNG còn nợ", async () => {
     const caller = await getAuthedCaller()
     const subjectId = (await caller.subject.list({}))[0].id
-    const st = await caller.student.create({ fullName: "HS A", grade: 3, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS A", grade: 3, tuitionFee: 100000 })
 
     const s5 = await caller.session.create({
       sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],
@@ -44,7 +45,7 @@ describe("Tuition — isFullPaid tất toán carry-over", () => {
   it("isFullPaid + trả dư (credit) → tín dụng VẪN carry sang tháng sau", async () => {
     const caller = await getAuthedCaller()
     const subjectId = (await caller.subject.list({}))[0].id
-    const st = await caller.student.create({ fullName: "HS Credit", grade: 3, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Credit", grade: 3, tuitionFee: 100000 })
 
     const s5 = await caller.session.create({
       sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],
@@ -63,7 +64,7 @@ describe("Tuition — isFullPaid tất toán carry-over", () => {
   it("CHƯA tick đủ + đóng thiếu → nợ VẪN carry (không đổi hành vi)", async () => {
     const caller = await getAuthedCaller()
     const subjectId = (await caller.subject.list({}))[0].id
-    const st = await caller.student.create({ fullName: "HS Thiếu", grade: 3, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thiếu", grade: 3, tuitionFee: 100000 })
 
     const s5 = await caller.session.create({
       sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],
@@ -81,7 +82,7 @@ describe("Tuition — isFullPaid tất toán carry-over", () => {
   it("CHỮA LÀNH: snapshot tháng 6 đã lưu sai previousBalance → đọc lại tự sửa", async () => {
     const caller = await getAuthedCaller()
     const subjectId = (await caller.subject.list({}))[0].id
-    const st = await caller.student.create({ fullName: "HS Heal", grade: 3, tuitionFee: 100000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Heal", grade: 3, tuitionFee: 100000 })
 
     const s5 = await caller.session.create({
       sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId, studentIds: [st.id],

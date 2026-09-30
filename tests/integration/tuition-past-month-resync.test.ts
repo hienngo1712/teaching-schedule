@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -22,7 +23,7 @@ describe("Tuition — snapshot tháng quá khứ tự đồng bộ lại", () =>
     const subjects = await caller.subject.list({})
     const subjectId = subjects[0].id
 
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Sửa Điểm Danh",
       grade: 5,
       tuitionFee: 100000,
@@ -77,7 +78,7 @@ describe("Tuition — snapshot tháng quá khứ tự đồng bộ lại", () =>
     const subjects = await caller.subject.list({})
     const subjectId = subjects[0].id
 
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Xóa Buổi",
       grade: 6,
       tuitionFee: 100000,

@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -22,8 +23,8 @@ describe("Tuition — bộ lọc trạng thái khớp badge", () => {
     const subjects = await caller.subject.list({})
     const subjectId = subjects[0].id
 
-    const paid = await caller.student.create({ fullName: "HS Đóng Một Phần", grade: 4, tuitionFee: 100000 })
-    const owing = await caller.student.create({ fullName: "HS Chưa Đóng", grade: 4, tuitionFee: 100000 })
+    const paid = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Đóng Một Phần", grade: 4, tuitionFee: 100000 })
+    const owing = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Chưa Đóng", grade: 4, tuitionFee: 100000 })
 
     const s = await caller.session.create({
       sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30", subjectId,
@@ -52,7 +53,7 @@ describe("Tuition — bộ lọc trạng thái khớp badge", () => {
     const subjects = await caller.subject.list({})
     const subjectId = subjects[0].id
 
-    const over = await caller.student.create({ fullName: "HS Trả Dư", grade: 5, tuitionFee: 100000 })
+    const over = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Trả Dư", grade: 5, tuitionFee: 100000 })
 
     const s = await caller.session.create({
       sessionDate: "2026-05-11", startTime: "10:00", endTime: "11:30", subjectId,

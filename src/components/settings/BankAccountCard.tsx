@@ -28,6 +28,7 @@ import {
 import { trpc } from "@/lib/trpc"
 import { VN_BANKS } from "@/lib/vn-banks"
 import { bankAccountSchema, type BankAccountInput } from "@/lib/schemas/settings"
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 const BANK_OPTIONS = [...VN_BANKS].sort((a, b) => a.shortName.localeCompare(b.shortName))
@@ -78,7 +79,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
       setError(parsed.error.issues[0].message)
       return
     }
-    mutation.mutate(parsed.data)
+    mutation.mutate({ ...parsed.data, consent: CONSENT_ACCEPTED })
   }
 
   return (

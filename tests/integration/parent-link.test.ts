@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller, publicCaller } from "../helpers/trpc"
@@ -41,7 +42,7 @@ function viewYm(v: { year: number; month: number }): string {
 
 async function setup(caller: Caller, fullName = "HS Xem Link") {
   const subject = (await caller.subject.list({}))[0]
-  const student = await caller.student.create({ fullName, grade: 5, tuitionFee: 100000 })
+  const student = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName, grade: 5, tuitionFee: 100000 })
   const { token } = await caller.student.generateParentLink({ id: student.id })
   return { subject, student, token }
 }
@@ -68,7 +69,7 @@ async function addSession(
 describe("student.generateParentLink / disableParentLink", () => {
   it("tạo link → token 43 ký tự base64url, student.list trả đúng token", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "HS Có Link", grade: 5 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Có Link", grade: 5 })
     const { token } = await caller.student.generateParentLink({ id: s.id })
     expect(token).toMatch(PARENT_TOKEN_REGEX)
     const list = await caller.student.list({ search: "HS Có Link" })
@@ -77,7 +78,7 @@ describe("student.generateParentLink / disableParentLink", () => {
 
   it("tạo lại → token đổi, token cũ không còn trong DB", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "HS Tạo Lại", grade: 5 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Tạo Lại", grade: 5 })
     const first = await caller.student.generateParentLink({ id: s.id })
     const second = await caller.student.generateParentLink({ id: s.id })
     expect(second.token).not.toBe(first.token)
@@ -87,7 +88,7 @@ describe("student.generateParentLink / disableParentLink", () => {
 
   it("tắt link → parentLinkToken = null", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "HS Tắt Link", grade: 5 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Tắt Link", grade: 5 })
     await caller.student.generateParentLink({ id: s.id })
     expect(await caller.student.disableParentLink({ id: s.id })).toEqual({ success: true })
     expect((await db.student.findUniqueOrThrow({ where: { id: s.id } })).parentLinkToken).toBeNull()
@@ -96,7 +97,7 @@ describe("student.generateParentLink / disableParentLink", () => {
   it("HS của user khác → NOT_FOUND cho cả tạo và tắt, token giữ nguyên", async () => {
     const owner = await getAuthedCaller()
     const other = await getAuthedCaller("teacher2")
-    const s = await owner.student.create({ fullName: "HS Của Người Khác", grade: 5 })
+    const s = await owner.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Của Người Khác", grade: 5 })
     const { token } = await owner.student.generateParentLink({ id: s.id })
     await expect(other.student.generateParentLink({ id: s.id })).rejects.toMatchObject({ code: "NOT_FOUND" })
     await expect(other.student.disableParentLink({ id: s.id })).rejects.toMatchObject({ code: "NOT_FOUND" })
@@ -131,11 +132,11 @@ describe("getParentView", () => {
   it("chỉ chứa dữ liệu của HS này: không lộ HS khác, SĐT, ghi chú, tiêu đề ca; mọi note lần thu = null", async () => {
     const caller = await getAuthedCaller()
     const subject = (await caller.subject.list({}))[0]
-    const a = await caller.student.create({
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS An Riêng", grade: 5, tuitionFee: 100000,
       parentPhone: "0909111222", parentName: "PH Bí Mật", notes: "GhiChuHSBiMat",
     })
-    const b = await caller.student.create({ fullName: "HS Bình Khác", grade: 5, tuitionFee: 100000 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bình Khác", grade: 5, tuitionFee: 100000 })
     const s = await caller.session.create({
       sessionDate: vnDay(0), startTime: "06:00", endTime: "07:00", subjectId: subject.id,
       studentIds: [a.id, b.id], title: "TieuDeCaBiMat", notes: "GhiChuCaBiMat",
@@ -343,7 +344,7 @@ describe("getParentView", () => {
 describe("Link phụ huynh: tra theo hash, token mã hoá (spec O 6.5)", () => {
   it("tạo link: DB có hash SHA-256 + token ciphertext; list trả token rõ, không có hash", async () => {
     const t = await getAuthedCaller()
-    const s = await t.student.create({ fullName: "HS Link", grade: 4 })
+    const s = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Link", grade: 4 })
     const { token } = await t.student.generateParentLink({ id: s.id })
     const [raw] = await db.$queryRaw<Array<{ tok: string; h: string }>>`
       SELECT parent_link_token AS tok, parent_link_token_hash AS h FROM students WHERE id = ${s.id}`
@@ -358,7 +359,7 @@ describe("Link phụ huynh: tra theo hash, token mã hoá (spec O 6.5)", () => {
 
   it("token cũ chỉ có bản rõ + hash tính bằng SQL của migration → vẫn mở được", async () => {
     const t = await getAuthedCaller()
-    const s = await t.student.create({ fullName: "HS Link Cũ", grade: 4 })
+    const s = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Link Cũ", grade: 4 })
     const token = "Q".repeat(43)
     await db.$executeRaw`UPDATE students SET parent_link_token = ${token},
       parent_link_token_hash = encode(sha256(convert_to(${token}, 'UTF8')), 'hex') WHERE id = ${s.id}`
@@ -368,7 +369,7 @@ describe("Link phụ huynh: tra theo hash, token mã hoá (spec O 6.5)", () => {
 
   it("tắt link: cả 2 cột null, link cũ 404", async () => {
     const t = await getAuthedCaller()
-    const s = await t.student.create({ fullName: "HS Tắt", grade: 4 })
+    const s = await t.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Tắt", grade: 4 })
     const { token } = await t.student.generateParentLink({ id: s.id })
     await t.student.disableParentLink({ id: s.id })
     const [raw] = await db.$queryRaw<Array<{ tok: string | null; h: string | null }>>`

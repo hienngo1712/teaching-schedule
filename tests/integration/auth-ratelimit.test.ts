@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { authorizeCredentials, RateLimitedError } from "@/server/auth-credentials"
 import { db } from "@/server/db"
@@ -54,15 +55,15 @@ describe("Nhóm C — rate limit & bcrypt", () => {
     const dupName = `rl_dup_${Date.now()}`
 
     // 1 lần thành công + 4 lần trùng tên (đều tính vào throttle theo IP)
-    await caller.auth.register({ username: dupName, password: "Password123!", fullName: "" })
+    await caller.auth.register({ consent: CONSENT_ACCEPTED,  username: dupName, password: "Password123!", fullName: "" })
     for (let i = 0; i < 4; i++) {
       await caller.auth
-        .register({ username: dupName, password: "Password123!", fullName: "" })
+        .register({ consent: CONSENT_ACCEPTED, username: dupName, password: "Password123!", fullName: "" })
         .catch(() => {})
     }
 
     await expect(
-      caller.auth.register({ username: `rl_over_${Date.now()}`, password: "Password123!", fullName: "" })
+      caller.auth.register({ consent: CONSENT_ACCEPTED,  username: `rl_over_${Date.now()}`, password: "Password123!", fullName: "" })
     ).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" })
 
     await removeUsers("rl_")
@@ -72,11 +73,11 @@ describe("Nhóm C — rate limit & bcrypt", () => {
     const caller = callerWithIp(null)
     for (let i = 0; i < 6; i++) {
       await caller.auth
-        .register({ username: `rl_noip_${Date.now()}_${i}`, password: "Password123!", fullName: "" })
+        .register({ consent: CONSENT_ACCEPTED, username: `rl_noip_${Date.now()}_${i}`, password: "Password123!", fullName: "" })
         .catch(() => {})
     }
     // Lần thứ 7 vẫn không bị chặn vì IP null
-    const ok = await caller.auth.register({
+    const ok = await caller.auth.register({ consent: CONSENT_ACCEPTED, 
       username: `rl_noip_final_${Date.now()}`,
       password: "Password123!",
       fullName: "",
@@ -88,7 +89,7 @@ describe("Nhóm C — rate limit & bcrypt", () => {
   // ── #19: bcrypt cost nhất quán (test = 4, không hardcode 12) ─────────
   it("✓ register hash mật khẩu theo BCRYPT_COST (test=4), không hardcode 12", async () => {
     const username = `cost_${Date.now()}`
-    await callerWithIp(null).auth.register({ username, password: "Password123!", fullName: "" })
+    await callerWithIp(null).auth.register({ consent: CONSENT_ACCEPTED,  username, password: "Password123!", fullName: "" })
     const u = await db.user.findUniqueOrThrow({ where: { username } })
     // Định dạng bcrypt: $2a$<cost>$... — cost phải khớp BCRYPT_COST môi trường test (4)
     expect(u.passwordHash.split("$")[2]).toBe("04")

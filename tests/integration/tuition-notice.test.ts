@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -29,7 +30,7 @@ async function cleanup() {
 }
 
 async function createStudent(caller: Caller, fullName = "Trần Thị Bé") {
-  return caller.student.create({ fullName, grade: 5, tuitionFee: 100000 })
+  return caller.student.create({ consent: CONSENT_ACCEPTED,  fullName, grade: 5, tuitionFee: 100000 })
 }
 
 // Mỗi ca 1 khung giờ riêng để không vướng kiểm tra trùng giờ.
@@ -144,7 +145,7 @@ describe("tuition.getNotice", () => {
     expect(before.bankConfigured).toBe(false)
     expect(before.qr).toBeNull()
 
-    await caller.settings.updateBankAccount(BANK)
+    await caller.settings.updateBankAccount({ ...BANK, consent: CONSENT_ACCEPTED })
     const n = await caller.tuition.getNotice({ studentId: st.id, ...MAY })
     expect(n.bankConfigured).toBe(true)
     expect(n.qr).toMatchObject({
@@ -162,7 +163,7 @@ describe("tuition.getNotice", () => {
 
   it("✓ trả đủ → remaining 0, không QR", async () => {
     const caller = await getAuthedCaller()
-    await caller.settings.updateBankAccount(BANK)
+    await caller.settings.updateBankAccount({ ...BANK, consent: CONSENT_ACCEPTED })
     const st = await createStudent(caller)
     await addSession(caller, st.id, "2026-05-04", ATTENDANCE_STATUS.PRESENT)
     await pay(caller, st.id, 5, 100000, "2026-05-10")
@@ -173,7 +174,7 @@ describe("tuition.getNotice", () => {
 
   it("✓ trả dư → overpaid đúng, không QR", async () => {
     const caller = await getAuthedCaller()
-    await caller.settings.updateBankAccount(BANK)
+    await caller.settings.updateBankAccount({ ...BANK, consent: CONSENT_ACCEPTED })
     const st = await createStudent(caller)
     await addSession(caller, st.id, "2026-05-04", ATTENDANCE_STATUS.PRESENT)
     await pay(caller, st.id, 5, 150000, "2026-05-10")
@@ -184,7 +185,7 @@ describe("tuition.getNotice", () => {
 
   it("✓ tất toán khi còn thiếu → remaining 0, không QR, không trả dư", async () => {
     const caller = await getAuthedCaller()
-    await caller.settings.updateBankAccount(BANK)
+    await caller.settings.updateBankAccount({ ...BANK, consent: CONSENT_ACCEPTED })
     const st = await createStudent(caller)
     await addSession(caller, st.id, "2026-05-04", ATTENDANCE_STATUS.PRESENT)
     await pay(caller, st.id, 5, 40000, "2026-05-10")
@@ -197,7 +198,7 @@ describe("tuition.getNotice", () => {
 
   it("✓ dư tháng trước lớn hơn học phí tháng (tổng âm) → remaining 0, overpaid 0, không QR", async () => {
     const caller = await getAuthedCaller()
-    await caller.settings.updateBankAccount(BANK)
+    await caller.settings.updateBankAccount({ ...BANK, consent: CONSENT_ACCEPTED })
     const st = await createStudent(caller)
     await addSession(caller, st.id, "2026-04-20", ATTENDANCE_STATUS.PRESENT)
     await pay(caller, st.id, 4, 250000, "2026-04-25")
@@ -211,7 +212,7 @@ describe("tuition.getNotice", () => {
 
   it("✓ tháng không có buổi nào nhưng còn nợ cũ → vẫn có phiếu, QR = nợ cũ", async () => {
     const caller = await getAuthedCaller()
-    await caller.settings.updateBankAccount(BANK)
+    await caller.settings.updateBankAccount({ ...BANK, consent: CONSENT_ACCEPTED })
     const st = await createStudent(caller)
     await addSession(caller, st.id, "2026-04-20", ATTENDANCE_STATUS.PRESENT)
 

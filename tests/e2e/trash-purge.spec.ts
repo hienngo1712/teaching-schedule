@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "../../src/lib/consent"
 import { test, expect, type Page } from '@playwright/test';
 
 async function trpcMutation<T>(page: Page, path: string, input: unknown): Promise<T> {
@@ -26,7 +27,7 @@ for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await login(page);
     const name = `E2E Dọn ${width}-${Math.floor(Math.random() * 100_000)}`;
-    const st = await trpcMutation<{ id: number }>(page, 'student.create', { fullName: name, grade: 3 });
+    const st = await trpcMutation<{ id: number }>(page, 'student.create', { consent: CONSENT_ACCEPTED,  fullName: name, grade: 3 });
     await trpcMutation(page, 'student.delete', { id: st.id });
 
     await page.goto('/trash');

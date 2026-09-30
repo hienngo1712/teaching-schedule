@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { softDeleteData } from "@/server/soft-delete"
@@ -30,7 +31,7 @@ describe("Ca dạy xoá mềm (spec Q X1–X3)", () => {
 
   it("xoá ca lẻ: row còn, isDeleted + deletedAt, link HS giữ; biến khỏi lịch; getDetail/update → NOT_FOUND", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
     const s = await caller.session.create({ sessionDate: D1, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id] })
 
     await caller.session.delete({ id: s.id })
@@ -69,8 +70,8 @@ describe("Ca dạy xoá mềm (spec Q X1–X3)", () => {
 
   it("HS đã xoá: không hiện trong chi tiết ca / đếm / điểm danh; sửa ca không gỡ link của HS đó", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
-    const b = await caller.student.create({ fullName: "HS Bình", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bình", grade: 5 })
     const s = await caller.session.create({ sessionDate: D1, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id, b.id] })
     await db.student.update({ where: { id: a.id }, data: softDeleteData() })
 
@@ -89,8 +90,8 @@ describe("Ca dạy xoá mềm (spec Q X1–X3)", () => {
 
   it("nhân bản / tạo ca bù từ ca có HS đã xoá: không lỗi, chỉ chép HS còn", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
-    const b = await caller.student.create({ fullName: "HS Bình", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bình", grade: 5 })
     const s = await caller.session.create({ sessionDate: D1, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id, b.id] })
     await db.student.update({ where: { id: a.id }, data: softDeleteData() })
 

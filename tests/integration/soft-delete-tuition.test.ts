@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { RESTORE_DATA } from "@/server/soft-delete"
@@ -22,7 +23,7 @@ async function clean() {
 
 async function setup() {
   const caller = await getAuthedCaller()
-  const st = await caller.student.create({ fullName: "HS Phí", grade: 6, tuitionFee: 100_000 })
+  const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Phí", grade: 6, tuitionFee: 100_000 })
   const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
   const s = await caller.session.create({ sessionDate: DAY, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [st.id] })
   await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present" }] })

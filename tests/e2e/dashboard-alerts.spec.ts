@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "../../src/lib/consent"
 import { test, expect, type Page } from '@playwright/test';
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -61,7 +62,7 @@ test.describe('Cảnh báo Dashboard (390px)', () => {
     const fee = 9_000_000; // lớn để nằm trong 3 dòng đầu (nhóm nợ sắp theo số tiền giảm dần)
 
     const subjects = await trpcQuery<{ id: number }[]>(page, 'subject.list', { isActive: true });
-    const student = await trpcMutation<{ id: number }>(page, 'student.create', {
+    const student = await trpcMutation<{ id: number }>(page, 'student.create', { consent: CONSENT_ACCEPTED, 
       fullName: name, grade: 5, tuitionFee: fee,
     });
     createdStudentIds.push(student.id);
@@ -102,7 +103,7 @@ test.describe('Cảnh báo Dashboard (390px)', () => {
   test('nhóm có hơn 3 dòng → Xem tất cả mở đủ, Thu gọn về 3', async ({ page }) => {
     const stamp = Date.now();
     for (let i = 1; i <= 4; i++) {
-      const s = await trpcMutation<{ id: number }>(page, 'student.create', {
+      const s = await trpcMutation<{ id: number }>(page, 'student.create', { consent: CONSENT_ACCEPTED, 
         fullName: `E2E HS chưa xếp lịch ${stamp} ${i}`, grade: 1,
       });
       createdStudentIds.push(s.id);
@@ -128,7 +129,7 @@ test.describe('Cảnh báo Dashboard (390px)', () => {
     const name = `E2E HS đã nghỉ còn nợ ${Date.now()}`;
     const fee = 8_800_000;
     const subjects = await trpcQuery<{ id: number }[]>(page, 'subject.list', { isActive: true });
-    const student = await trpcMutation<{ id: number }>(page, 'student.create', { fullName: name, grade: 7, tuitionFee: fee });
+    const student = await trpcMutation<{ id: number }>(page, 'student.create', { consent: CONSENT_ACCEPTED,  fullName: name, grade: 7, tuitionFee: fee });
     createdStudentIds.push(student.id);
     const hour = String(Math.floor(Math.random() * 12) + 6).padStart(2, '0');
     const session = await trpcMutation<{ id: number }>(page, 'session.create', {

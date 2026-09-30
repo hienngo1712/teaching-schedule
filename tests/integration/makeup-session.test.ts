@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -49,7 +50,7 @@ describe("createMakeup", () => {
     const caller = await getAuthedCaller()
     const subject = await caller.subject.create({ name: "Toán", color: "#0891B2" })
     subjectId = subject.id
-    const st = await caller.student.create({ fullName: "An", grade: 3 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
     studentId = st.id
     await db.student.update({ where: { id: studentId }, data: { tuitionFee: 100000 } })
   })
@@ -156,7 +157,7 @@ describe("Loại ca cancelled khỏi doanh thu & học phí", () => {
     const caller = await getAuthedCaller()
     const subject = await caller.subject.create({ name: "Toán", color: "#0891B2" })
     subjectId = subject.id
-    const st = await caller.student.create({ fullName: "Bình", grade: 4 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Bình", grade: 4 })
     studentId = st.id
     await db.student.update({ where: { id: studentId }, data: { tuitionFee: 200000 } })
   })
