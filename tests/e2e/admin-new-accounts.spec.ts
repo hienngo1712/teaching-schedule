@@ -35,6 +35,7 @@ async function registerViaForm(browser: Browser, username: string) {
   await page.fill('input[name="username"]', username);
   await page.fill('input[name="fullName"]', 'GV ' + username);
   await page.fill('input[name="password"]', PASSWORD);
+  await page.getByRole('checkbox', { name: /đồng ý/i }).click();
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/\/login/);
   await page.context().close();

@@ -70,6 +70,7 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
     await page.fill('input[id="fullName"]', name);
     await page.click('button#grade');
     await page.getByRole('option', { name: 'Lớp 5' }).click();
+    await page.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await page.locator('button:has-text("Thêm")').last().click();
 
     await expect(page.locator('text=Đã thêm học sinh')).toBeVisible();

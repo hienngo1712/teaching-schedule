@@ -43,6 +43,7 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await page.click('button#grade');
     await page.getByRole('option', { name: 'Lớp 5' }).click();
     await page.fill('input[id="tuitionFee"]', '200000');
+    await page.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await page.locator('button:has-text("Thêm")').last().click();
     await expect(page.getByText('Đã thêm học sinh')).toBeVisible();
 

@@ -19,6 +19,7 @@ test.describe('Student management', () => {
     await page.click('button#grade');
     await page.getByRole('option', { name: 'Lớp 5' }).click();
     
+    await page.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await page.locator('button:has-text("Thêm")').last().click();
     
     await expect(page.locator('text=Đã thêm học sinh')).toBeVisible();
@@ -41,6 +42,7 @@ test.describe('Student management', () => {
     await page.click('button#grade');
     // exact: 'Lớp 1' / 'Lớp 12' là chuỗi con của nhau, thiếu exact sẽ khớp nhiều option.
     await page.getByRole('option', { name: 'Lớp 12', exact: true }).click();
+    await page.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await page.locator('button:has-text("Thêm")').last().click();
 
     await expect(page.locator('text=Đã thêm học sinh')).toBeVisible();

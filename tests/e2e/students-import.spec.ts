@@ -49,6 +49,7 @@ test.describe('Nhập học sinh từ Excel (390px)', () => {
     await expect(dialog.getByTestId('import-summary')).toHaveText('2 hợp lệ · 0 trùng · 1 lỗi');
     await expect(dialog.getByText('Lớp phải là số từ 1 đến 12')).toBeVisible();
 
+    await dialog.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await dialog.getByRole('button', { name: 'Nhập 2 học sinh' }).click();
     await expect(page.getByText('Đã nhập 2 học sinh')).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -68,6 +69,7 @@ test.describe('Nhập học sinh từ Excel (390px)', () => {
     await expect(again.getByRole('button', { name: 'Nhập 0 học sinh' })).toBeDisabled();
 
     // Tick "Vẫn nhập" 1 dòng → số trên nút đổi (không bấm nhập)
+    await again.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await again.getByRole('checkbox', { name: 'Vẫn nhập' }).first().click();
     await expect(again.getByRole('button', { name: 'Nhập 1 học sinh' })).toBeEnabled();
 

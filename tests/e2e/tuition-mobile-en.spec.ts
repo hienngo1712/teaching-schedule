@@ -36,6 +36,7 @@ test('thẻ học phí 390px, tiếng Anh, 100.000.000 đ không làm trang cu�
   await page.click('button#grade');
   await page.getByRole('option', { name: 'Lớp 5' }).click();
   await page.fill('input[id="tuitionFee"]', '100000000');
+  await page.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
   await page.locator('button:has-text("Thêm")').last().click();
   await expect(page.getByText('Đã thêm học sinh')).toBeVisible();
 

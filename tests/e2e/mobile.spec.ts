@@ -137,6 +137,7 @@ test.describe('Mobile 390px', () => {
     await page.fill('input[id="fullName"]', studentName);
     await page.click('button#grade');
     await page.getByRole('option', { name: 'Lớp 5' }).click();
+    await page.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await page.locator('button:has-text("Thêm")').last().click();
     await expect(page.getByText('Đã thêm học sinh')).toBeVisible();
 
