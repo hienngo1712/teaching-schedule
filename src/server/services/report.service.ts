@@ -5,7 +5,7 @@ import type { SessionDTO } from "@/lib/types/models"
 import { assertOwnership } from "./_base.service"
 import { HISTORY_LINK } from "@/server/soft-delete"
 import { getCancelledWithoutMakeup, getMonthSessions } from "./session.service"
-import { getMonthlyOutstanding, getMonthlyTuitionStatus } from "./tuition.service"
+import { computeClosingBalances, getMonthlyOutstanding, getMonthlyTuitionStatus } from "./tuition.service"
 import { byGradeThenName } from "@/lib/name-search"
 
 export async function getStudentReport(
@@ -298,42 +298,24 @@ export type DashboardAlerts = {
 
 const DEBT_LOOKBACK_MONTHS = 12
 
-// Đếm lùi từ tháng trước các tháng liên tiếp còn nợ theo snapshot đã lưu.
-// Chỉ để tham khảo: snapshot cũ có thể chưa tính lại sau khi sửa điểm danh (spec R1).
+// Đếm lùi từ tháng trước các tháng liên tiếp có dư nợ cuối tháng > 0 (cùng cách tính với màn Học phí).
 async function countDebtMonths(
   db: PrismaClient,
+  userId: number,
   studentIds: number[],
   year: number,
   month: number
 ): Promise<Map<number, number>> {
   const result = new Map<number, number>()
   if (studentIds.length === 0) return result
-
-  const rows = await db.monthlyTuition.findMany({
-    where: {
-      studentId: { in: studentIds },
-      OR: [{ year: year - 1, month: { gte: month } }, { year, month: { lt: month } }],
-    },
-    select: { studentId: true, year: true, month: true, totalAmountDue: true, paidAmount: true, isFullPaid: true },
-  })
-  const owing = new Set(
-    rows
-      .filter((r) => !r.isFullPaid && r.totalAmountDue - r.paidAmount > 0)
-      .map((r) => `${r.studentId}-${r.year}-${r.month}`)
-  )
-
+  const closings = await computeClosingBalances(db, userId, studentIds, year, month)
   for (const id of studentIds) {
+    const closing = closings.get(id)
     let count = 0
-    let y = year
-    let m = month
-    while (count < DEBT_LOOKBACK_MONTHS) {
-      m -= 1
-      if (m === 0) {
-        m = 12
-        y -= 1
-      }
-      if (!owing.has(`${id}-${y}-${m}`)) break
+    let key = year * 12 + month - 2
+    while (count < DEBT_LOOKBACK_MONTHS && (closing?.get(key) ?? 0) > 0) {
       count++
+      key--
     }
     result.set(id, Math.max(1, count))
   }
@@ -397,7 +379,7 @@ export async function getDashboardAlerts(
     }))
     .filter((d) => d.amount > 0)
 
-  const monthsById = await countDebtMonths(db, debtors.map((d) => d.studentId), year, month)
+  const monthsById = await countDebtMonths(db, userId, debtors.map((d) => d.studentId), year, month)
   const debts = debtors
     .map((d) => ({ ...d, months: monthsById.get(d.studentId) ?? 1 }))
     .sort((a, b) => b.amount - a.amount)
