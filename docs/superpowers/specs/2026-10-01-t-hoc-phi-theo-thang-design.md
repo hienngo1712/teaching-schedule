@@ -26,13 +26,13 @@ Hiện học phí chỉ tính **theo buổi**: mỗi buổi có mặt/đi muộn
 | id | serial PK | |
 | student_id | int FK → students (cascade) | |
 | from_key | int | `year*12 + month-1` của tháng bắt đầu hiệu lực; **0 = từ đầu** |
-| mode | enum `billing_mode` (`per_session`, `monthly`) | |
+| mode | varchar(20) `per_session` \| `monthly` | chuỗi như `attendance` (repo không dùng enum Postgres); zod kiểm giá trị |
 | monthly_fee | int ≥ 0 | 0 khi `per_session` |
 | created_at | timestamptz default now() | |
 
 Unique `(student_id, from_key)`. Index `(student_id)`.
 
-**Bảng `students` thêm:** `billing_mode billing_mode NOT NULL DEFAULT 'per_session'`, `monthly_fee int NOT NULL DEFAULT 0` — giá trị **hiện tại** để hiển thị danh sách/form nhanh; luôn khớp dòng lịch sử mới nhất.
+**Bảng `students` thêm:** `billing_mode varchar(20) NOT NULL DEFAULT 'per_session'`, `monthly_fee int NOT NULL DEFAULT 0` — giá trị **hiện tại** để hiển thị danh sách/form nhanh; luôn khớp dòng lịch sử mới nhất.
 
 Không backfill: HS cũ không có dòng lịch sử = theo buổi (đúng như trước). Không mã hoá (không phải dữ liệu cá nhân).
 
