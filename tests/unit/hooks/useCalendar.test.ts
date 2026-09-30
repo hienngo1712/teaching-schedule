@@ -63,6 +63,7 @@ describe("useCalendar grid", () => {
       cancelledAt: null,
       makeupOfId: null,
       studentCount: 0,
+      grades: [],
       level: "tieu_hoc" as const,
       isDeleted: false,
       deletedAt: null,

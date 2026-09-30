@@ -273,12 +273,16 @@ export function MonthCalendar() {
         />
       )}
 
+      {/* key={selectedSession.id} để reset toàn bộ state con (học bù, chọn HS, điểm danh) khi đổi ca qua siblings. */}
       {selectedSession && (
         <SessionDetailDialog
+          key={selectedSession.id}
           open={isDetailOpen}
           onOpenChange={setIsDetailOpen}
           session={selectedSession}
           onEdit={handleEditFromDetail}
+          siblings={sessions}
+          onNavigate={setSelectedSession}
         />
       )}
     </div>

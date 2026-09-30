@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react"
 import Link from "next/link"
 import { saveAs } from "file-saver"
-import { Download, Loader2, Share2 } from "lucide-react"
+import { Download, ImageDown, Loader2, Share2 } from "lucide-react"
 import { trpc } from "@/lib/trpc"
 import { removeVietnameseTones } from "@/lib/utils"
 import { canShareFiles, elementToPngBlob, shareOrDownloadPng } from "@/lib/share-image"
@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { TuitionNoticeCard } from "./TuitionNoticeCard"
+import { NoticeImageViewer } from "./NoticeImageViewer"
 
 type Props = { studentId: number; year: number; month: number; onClose: () => void }
 
@@ -26,6 +27,7 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
   const [blob, setBlob] = useState<Blob | null>(null)
   const [captureFailed, setCaptureFailed] = useState(false)
   const [shareable] = useState(canShareFiles)
+  const [viewerOpen, setViewerOpen] = useState(false)
 
   // Tạo sẵn ảnh ngay khi phiếu vẽ xong: Safari chặn navigator.share nếu gọi sau tác vụ bất đồng bộ (spec C S11).
   // Không phụ thuộc `t` (tạo mới mỗi render) để card không gọi lại onReady liên tục.
@@ -115,52 +117,77 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
           {t("share")}
         </Button>
       )}
-      <Button
-        className="h-11 flex-1 md:h-10 md:flex-none"
-        disabled={!blob}
-        onClick={() => blob && saveAs(blob, filename)}
-      >
-        {blob ? (
-          <Download className="mr-2 size-4" />
-        ) : captureFailed ? (
-          <Download className="mr-2 size-4 opacity-50" />
-        ) : (
-          <Loader2 className="mr-2 size-4 animate-spin" />
-        )}
-        {t("download_image")}
-      </Button>
+      {isDesktop ? (
+        <Button
+          className="h-11 flex-1 md:h-10 md:flex-none"
+          disabled={!blob}
+          onClick={() => blob && saveAs(blob, filename)}
+        >
+          {blob ? (
+            <Download className="mr-2 size-4" />
+          ) : captureFailed ? (
+            <Download className="mr-2 size-4 opacity-50" />
+          ) : (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          )}
+          {t("download_image")}
+        </Button>
+      ) : (
+        <Button
+          className="h-11 flex-1 md:h-10 md:flex-none"
+          disabled={!blob}
+          onClick={() => blob && setViewerOpen(true)}
+        >
+          {blob ? (
+            <ImageDown className="mr-2 size-4" />
+          ) : captureFailed ? (
+            <ImageDown className="mr-2 size-4 opacity-50" />
+          ) : (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          )}
+          {t("save_image")}
+        </Button>
+      )}
     </div>
   )
 
-  if (isDesktop) {
-    return (
-      <Dialog open onOpenChange={(open) => !open && onClose()}>
-        <DialogContent
-          data-testid="tuition-notice"
-          className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[460px]"
-        >
-          <DialogHeader className="border-b border-slate-200 p-4">
-            <DialogTitle>{t("tuition_notice")}</DialogTitle>
-          </DialogHeader>
-          {body}
-          {footer}
-        </DialogContent>
-      </Dialog>
-    )
-  }
-
   return (
-    <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent
-        data-testid="tuition-notice"
-        className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[450px]"
-      >
-        <SheetHeader className="border-b border-slate-200 p-4">
-          <SheetTitle>{t("tuition_notice")}</SheetTitle>
-        </SheetHeader>
-        {body}
-        {footer}
-      </SheetContent>
-    </Sheet>
+    <>
+      {isDesktop ? (
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
+          <DialogContent
+            data-testid="tuition-notice"
+            className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[460px]"
+          >
+            <DialogHeader className="border-b border-slate-200 p-4">
+              <DialogTitle>{t("tuition_notice")}</DialogTitle>
+            </DialogHeader>
+            {body}
+            {footer}
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Sheet open onOpenChange={(open) => !open && onClose()}>
+          <SheetContent
+            data-testid="tuition-notice"
+            className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[450px]"
+          >
+            <SheetHeader className="border-b border-slate-200 p-4">
+              <SheetTitle>{t("tuition_notice")}</SheetTitle>
+            </SheetHeader>
+            {body}
+            {footer}
+          </SheetContent>
+        </Sheet>
+      )}
+      {viewerOpen && blob && (
+        <NoticeImageViewer
+          blob={blob}
+          filename={filename}
+          title={title}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
+    </>
   )
 }

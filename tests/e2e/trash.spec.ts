@@ -203,7 +203,8 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
     const st = await trpcMutation<{ id: number }>(page, 'student.create', { consent: CONSENT_ACCEPTED,  fullName: nameDebt, grade: 6, tuitionFee: 100_000 });
     createdStudentIds.push(st.id);
     const vnNow = new Date(Date.now() + 7 * 3600_000);
-    const vnMonthDay = `${vnNow.toISOString().slice(0, 7)}-03`;
+    // Ngày hôm qua (giờ VN): ca đã dạy. Ngày cố định trong tháng có thể là tương lai (vd ngày 1–2) → Đã nghỉ gỡ HS khỏi ca, mất nợ.
+    const vnMonthDay = new Date(vnNow.getTime() - 24 * 3600_000).toISOString().slice(0, 10);
     const h = String(Math.floor(Math.random() * 8) + 6).padStart(2, '0');
     const sess = await trpcMutation<{ id: number }>(page, 'session.create', {
       sessionDate: vnMonthDay, startTime: `${h}:00`, endTime: `${h}:45`, subjectId, studentIds: [st.id],

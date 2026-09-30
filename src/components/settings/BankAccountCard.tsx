@@ -9,13 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -26,13 +19,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { trpc } from "@/lib/trpc"
-import { VN_BANKS } from "@/lib/vn-banks"
+import { BankSelect } from "@/components/settings/BankSelect"
 import { bankAccountSchema, type BankAccountInput } from "@/lib/schemas/settings"
 import { CONSENT_ACCEPTED, isConsentError } from "@/lib/consent"
 import { ConsentCheckbox } from "@/components/common/ConsentCheckbox"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-
-const BANK_OPTIONS = [...VN_BANKS].sort((a, b) => a.shortName.localeCompare(b.shortName))
 
 export function BankAccountCard() {
   const { t } = useTranslation()
@@ -93,18 +84,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
       <CardContent className="space-y-5">
         <div className="space-y-2">
           <Label htmlFor="bank-bin">{t("bank")}</Label>
-          <Select value={bankBin} onValueChange={setBankBin}>
-            <SelectTrigger id="bank-bin" className="h-11 md:h-10">
-              <SelectValue placeholder={t("bank")} />
-            </SelectTrigger>
-            <SelectContent>
-              {BANK_OPTIONS.map((b) => (
-                <SelectItem key={b.bin} value={b.bin}>
-                  {b.shortName} - {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <BankSelect id="bank-bin" value={bankBin} onChange={setBankBin} placeholder={t("bank")} />
         </div>
 
         <div className="space-y-2">

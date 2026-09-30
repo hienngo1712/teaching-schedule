@@ -5,7 +5,7 @@
 //   → phải chụp lại ảnh, không giữ blob cũ.
 // Review #4: QRCode.toDataURL lỗi → phải báo lên Dialog (captureFailed), nút không kẹt loading mãi.
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 
@@ -56,6 +56,8 @@ vi.mock("@/lib/trpc", () => ({
 beforeEach(() => {
   vi.clearAllMocks()
   toDataURLImpl = () => Promise.resolve("data:image/png;base64,x")
+  window.URL.createObjectURL = vi.fn().mockReturnValue("blob:x")
+  window.URL.revokeObjectURL = vi.fn()
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: true,
     media: query,
@@ -104,5 +106,39 @@ describe("TuitionNoticeDialog", () => {
     // Nút Tải ảnh không còn ở trạng thái loading (icon spin) mãi mãi.
     const downloadBtn = screen.getByRole("button", { name: /Tải ảnh/ })
     expect(downloadBtn.querySelector(".animate-spin")).toBeNull()
+  })
+
+  it("mobile: có nút Lưu ảnh thay vì Tải ảnh, bấm mở viewer khi có blob", async () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia
+
+    queryReturn = {
+      data: notice({ paidAmount: 400000 }),
+      isError: false,
+      dataUpdatedAt: 1000,
+      refetch: vi.fn(),
+    }
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+
+    // Khi ở mobile, có nút Lưu ảnh, không có Tải ảnh
+    expect(screen.queryByRole("button", { name: /Tải ảnh/ })).toBeNull()
+    const saveImgBtn = screen.getByRole("button", { name: /Lưu ảnh/ })
+    expect(saveImgBtn).toBeDefined()
+
+    // Chờ elementToPngBlob hoàn thành
+    await waitFor(() => expect(saveImgBtn.getAttribute("disabled")).toBeNull())
+
+    // Bấm nút Lưu ảnh → mở viewer
+    fireEvent.click(saveImgBtn)
+    expect(screen.getByText(/Nhấn giữ ảnh → chọn Lưu vào Ảnh/)).toBeDefined()
   })
 })

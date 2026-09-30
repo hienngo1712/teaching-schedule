@@ -1,5 +1,5 @@
 import { CONSENT_ACCEPTED } from "@/lib/consent"
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
 
@@ -21,9 +21,13 @@ function thisMonth() {
 
 describe("Tiền của HS đã xoá vẫn tính (spec R8)", () => {
   beforeEach(clean)
+  afterEach(() => {
+    vi.useRealTimers()
+  })
 
   it("Báo cáo + Tổng quan giữ nguyên sau khi xoá (và sau khi dọn) HS đã nghỉ hết nợ", async () => {
     const { y, m, day } = thisMonth()
+    vi.setSystemTime(new Date(Date.UTC(y, m - 1, 1, 12, 0, 0)))
     const caller = await getAuthedCaller()
     const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Doanh thu", grade: 7, tuitionFee: 150_000 })
     const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
@@ -58,6 +62,7 @@ describe("Tiền của HS đã xoá vẫn tính (spec R8)", () => {
 
   it("lọc theo khối vẫn tính HS đã xoá của khối đó", async () => {
     const { y, m, day } = thisMonth()
+    vi.setSystemTime(new Date(Date.UTC(y, m - 1, 1, 12, 0, 0)))
     const caller = await getAuthedCaller()
     const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Khối", grade: 8, tuitionFee: 90_000 })
     const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
