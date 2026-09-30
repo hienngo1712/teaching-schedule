@@ -5,6 +5,7 @@ import { formatDayOfWeek, formatTime } from "@/lib/utils"
 import type { PAYMENT_METHODS } from "@/lib/schemas/payment"
 import { findBank } from "@/lib/vn-banks"
 import { LIVE_LINK } from "@/server/soft-delete"
+import { byGradeThenName } from "@/lib/name-search"
 
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const HEADER_BG = "FFCCFBF1"
@@ -28,6 +29,7 @@ const NUM_FMT: Partial<Record<Kind, string>> = {
 
 const NOTE_READONLY = "File chỉ để lưu trữ và đối chiếu. Ứng dụng không nhập lại file này."
 const NOTE_TUITION = "Học phí tháng là số đã lưu; tháng chưa mở trang Học phí có thể chưa có dòng."
+const NOTE_SENSITIVE = "File chứa dữ liệu cá nhân chưa mã hoá. Không gửi qua mạng xã hội hay email, xoá khi không còn cần."
 
 const SESSION_STATUS_LABEL: Record<string, string> = { scheduled: "Đã lên lịch", cancelled: "Đã hủy" }
 // Gắn kiểu theo PAYMENT_METHODS của B: B thêm hình thức mới thì tsc báo ở đây.
@@ -93,7 +95,6 @@ export async function buildBackupWorkbook(
     }),
     db.student.findMany({
       where: { userId },
-      orderBy: [{ grade: "asc" }, { fullName: "asc" }, { id: "asc" }],
       select: {
         id: true, fullName: true, grade: true, parentName: true, parentPhone: true,
         tuitionFee: true, isActive: true, notes: true, createdAt: true, updatedAt: true,
@@ -161,6 +162,7 @@ export async function buildBackupWorkbook(
   const info = wb.addWorksheet("Thông tin", { views: [{ state: "frozen", ySplit: 1 }] })
   const counts: [string, number][] = []
 
+  students.sort(byGradeThenName)
   counts.push(["Học sinh", addDataSheet(wb, "Học sinh", students, [
     { header: "ID", width: 8, value: (s) => s.id },
     { header: "Họ tên", width: 26, value: (s) => s.fullName },
@@ -264,6 +266,7 @@ export async function buildBackupWorkbook(
   for (const [name, n] of counts) info.addRow([`Số dòng: ${name}`, n])
   info.addRow(["Lưu ý", NOTE_READONLY])
   info.addRow(["Lưu ý", NOTE_TUITION])
+  info.addRow(["Lưu ý", NOTE_SENSITIVE])
 
   // Chỉ các field hiện trên trang Cài đặt; không bao giờ thêm mật khẩu/token vào đây.
   const settings = wb.addWorksheet("Cài đặt", { views: [{ state: "frozen", ySplit: 1 }] })

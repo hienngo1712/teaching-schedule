@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach, afterAll } from "vitest"
 import { TRPCError } from "@trpc/server"
 import { db } from "@/server/db"
@@ -47,8 +48,8 @@ describe("Giới hạn HS đang học (spec I D8)", () => {
   it("Standard: 9 HS → tạo thêm được; đủ 10 → tạo bị chặn, planRequired=plus, message có số", async () => {
     await addStudents(9)
     const c = await getAuthedCaller("teacher_std")
-    await c.student.create({ fullName: "HS Thứ Mười", grade: 3 })
-    const e = await errorOf(c.student.create({ fullName: "HS Thứ Mười Một", grade: 3 }))
+    await c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thứ Mười", grade: 3 })
+    const e = await errorOf(c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thứ Mười Một", grade: 3 }))
     expect(e.code).toBe("FORBIDDEN")
     expect((e.cause as PlanRequiredError).plan).toBe("plus")
     expect(e.message).toBe("Gói Standard tối đa 10 học sinh đang học (hiện có 10)")
@@ -58,21 +59,21 @@ describe("Giới hạn HS đang học (spec I D8)", () => {
   it("đủ 10: tạo HS 'Đã nghỉ' vẫn được", async () => {
     await addStudents(10)
     const c = await getAuthedCaller("teacher_std")
-    const s = await c.student.create({ fullName: "HS Nghỉ Sẵn", grade: 3, isActive: false })
+    const s = await c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nghỉ Sẵn", grade: 3, isActive: false })
     expect(s.isActive).toBe(false)
   })
 
   it("đủ 10: bật lại HS nghỉ bị chặn; sửa HS đang học (kể cả gửi isActive:true) vẫn được", async () => {
     await addStudents(10)
     const c = await getAuthedCaller("teacher_std")
-    const dropped = await c.student.create({ fullName: "HS Đã Nghỉ", grade: 3, isActive: false })
-    const e = await errorOf(c.student.update({ id: dropped.id, data: { isActive: true } }))
+    const dropped = await c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Đã Nghỉ", grade: 3, isActive: false })
+    const e = await errorOf(c.student.update({ consent: CONSENT_ACCEPTED,  id: dropped.id, data: { isActive: true } }))
     expect(e.code).toBe("FORBIDDEN")
     expect((e.cause as PlanRequiredError).plan).toBe("plus")
     expect((await db.student.findUniqueOrThrow({ where: { id: dropped.id } })).isActive).toBe(false)
 
     const active = await db.student.findFirstOrThrow({ where: { userId, isActive: true } })
-    const renamed = await c.student.update({ id: active.id, data: { fullName: "Đổi Tên Được", isActive: true } })
+    const renamed = await c.student.update({ consent: CONSENT_ACCEPTED,  id: active.id, data: { fullName: "Đổi Tên Được", isActive: true } })
     expect(renamed.fullName).toBe("Đổi Tên Được")
   })
 
@@ -80,7 +81,7 @@ describe("Giới hạn HS đang học (spec I D8)", () => {
     await setPlan("plus")
     await addStudents(40)
     const c = await getAuthedCaller("teacher_std")
-    const e = await errorOf(c.student.create({ fullName: "HS Bốn Mốt", grade: 3 }))
+    const e = await errorOf(c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bốn Mốt", grade: 3 }))
     expect((e.cause as PlanRequiredError).plan).toBe("pro")
     expect(e.message).toBe("Gói Plus tối đa 40 học sinh đang học (hiện có 40)")
   })
@@ -89,7 +90,7 @@ describe("Giới hạn HS đang học (spec I D8)", () => {
     await setPlan("pro")
     await addStudents(45)
     const c = await getAuthedCaller("teacher_std")
-    await expect(c.student.create({ fullName: "HS Bốn Sáu", grade: 3 })).resolves.toMatchObject({ isActive: true })
+    await expect(c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bốn Sáu", grade: 3 })).resolves.toMatchObject({ isActive: true })
   })
 
   it("hạ gói còn 12 HS đang học: list đủ 12, điểm danh vẫn lưu, không HS nào bị tắt", async () => {
@@ -130,7 +131,7 @@ describe("Link phụ huynh khi chủ TK hết Pro (spec I D9)", () => {
   it("Standard → getParentView null, token giữ nguyên; trial hoặc Pro → cùng token sống lại", async () => {
     await setPlan("pro")
     const c = await getAuthedCaller("teacher_std")
-    const s = await c.student.create({ fullName: "HS Có Link", grade: 5 })
+    const s = await c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Có Link", grade: 5 })
     const { token } = await c.student.generateParentLink({ id: s.id })
     expect(await getParentView(db, token)).not.toBeNull()
 

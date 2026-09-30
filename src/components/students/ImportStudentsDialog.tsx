@@ -19,6 +19,8 @@ import { cn, formatCurrency } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { buildPreview, toImportPayload, MAX_IMPORT_FILE_BYTES, type PreviewRow } from "@/lib/student-import"
 import { buildImportTemplate, readImportWorkbook, type ImportReadError } from "@/lib/student-import-excel"
+import { CONSENT_ACCEPTED, isConsentError } from "@/lib/consent"
+import { ConsentCheckbox } from "@/components/common/ConsentCheckbox"
 
 // Chỉ mount khi mở nên mỗi lần mở là state mới, không cần effect reset.
 export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
@@ -29,14 +31,16 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
   const [readError, setReadError] = useState<ImportReadError | null>(null)
   const [reading, setReading] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [consent, setConsent] = useState(false)
 
   const checkMut = trpc.student.importCheck.useMutation()
   const importMut = trpc.student.importMany.useMutation({
     onSuccess: (data) => {
       toast.success(t("import_success").replace("{n}", String(data.created)))
+      setConsent(false)
       onClose()
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(isConsentError(e) ? t("consent_required") : e.message),
   })
 
   const downloadTemplate = async () => {
@@ -72,6 +76,7 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
             })
           : { matches: [] }
       setAllowed(new Set())
+      setConsent(false)
       setPreview(buildPreview(result.rows, matches))
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e))
@@ -204,18 +209,28 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
                 )
               })}
             </ul>
+            <ConsentCheckbox
+              id="import-consent"
+              label={t("consent_import")}
+              checked={consent}
+              onCheckedChange={setConsent}
+              disabled={importMut.isPending}
+            />
             <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 mt-auto gap-2 border-t bg-white px-6 py-3 sm:static sm:mx-0 sm:mb-0 sm:border-0 sm:p-0">
               <Button
                 variant="outline"
-                onClick={() => setPreview(null)}
+                onClick={() => {
+                  setConsent(false)
+                  setPreview(null)
+                }}
                 disabled={importMut.isPending}
                 className="h-11 md:h-10"
               >
                 {t("choose_other_file")}
               </Button>
               <Button
-                onClick={() => importMut.mutate({ rows: payload })}
-                disabled={payload.length === 0 || importMut.isPending}
+                onClick={() => importMut.mutate({ consent: CONSENT_ACCEPTED, rows: payload })}
+                disabled={payload.length === 0 || importMut.isPending || !consent}
                 className="h-11 w-full sm:w-auto md:h-10"
               >
                 {importMut.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}

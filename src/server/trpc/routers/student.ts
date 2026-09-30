@@ -1,12 +1,15 @@
 import { z } from "zod"
 import { createTRPCRouter, planProcedure, protectedProcedure } from "@/server/trpc"
 import {
-  studentCreateSchema,
+  studentCreateInputSchema,
   studentFilterSchema,
   studentImportCheckSchema,
   studentImportSchema,
   studentUpdateSchema,
 } from "@/lib/schemas/student"
+import { recordConsent, assertUpdateConsent } from "@/server/services/consent.service"
+import { logSecurityEvent } from "@/server/services/security-event.service"
+import { updateTouchesPersonalData } from "@/lib/consent"
 import {
   checkImportDuplicates,
   createStudent,
@@ -30,14 +33,21 @@ export const studentRouter = createTRPCRouter({
     .query(({ ctx, input }) => listStudents(ctx.db, ctx.userId, input)),
 
   create: protectedProcedure
-    .input(studentCreateSchema)
-    .mutation(({ ctx, input }) => createStudent(ctx.db, ctx.userId, input)),
+    .input(studentCreateInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      await recordConsent(ctx.db, { userId: ctx.userId, scope: "student", ipAddress: ctx.ip })
+      return createStudent(ctx.db, ctx.userId, input)
+    }),
 
   update: protectedProcedure
     .input(studentUpdateSchema)
-    .mutation(({ ctx, input }) =>
-      updateStudent(ctx.db, ctx.userId, input.id, input.data)
-    ),
+    .mutation(async ({ ctx, input }) => {
+      assertUpdateConsent(input.data, input.consent)
+      if (updateTouchesPersonalData(input.data)) {
+        await recordConsent(ctx.db, { userId: ctx.userId, scope: "student", studentId: input.id, ipAddress: ctx.ip })
+      }
+      return updateStudent(ctx.db, ctx.userId, input.id, input.data)
+    }),
 
   deactivate: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
@@ -68,13 +78,24 @@ export const studentRouter = createTRPCRouter({
 
   importMany: planProcedure("studentImport")
     .input(studentImportSchema)
-    .mutation(({ ctx, input }) => importStudents(ctx.db, ctx.userId, input.rows)),
+    .mutation(async ({ ctx, input }) => {
+      await recordConsent(ctx.db, { userId: ctx.userId, scope: "student_import", itemCount: input.rows.length, ipAddress: ctx.ip })
+      return importStudents(ctx.db, ctx.userId, input.rows)
+    }),
 
   generateParentLink: planProcedure("parentLink")
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(({ ctx, input }) => generateParentLink(ctx.db, ctx.userId, input.id)),
+    .mutation(async ({ ctx, input }) => {
+      const res = await generateParentLink(ctx.db, ctx.userId, input.id)
+      await logSecurityEvent(ctx.db, { userId: ctx.userId, event: "parent_link_create", ipAddress: ctx.ip })
+      return res
+    }),
 
   disableParentLink: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(({ ctx, input }) => disableParentLink(ctx.db, ctx.userId, input.id)),
+    .mutation(async ({ ctx, input }) => {
+      const res = await disableParentLink(ctx.db, ctx.userId, input.id)
+      await logSecurityEvent(ctx.db, { userId: ctx.userId, event: "parent_link_disable", ipAddress: ctx.ip })
+      return res
+    }),
 })

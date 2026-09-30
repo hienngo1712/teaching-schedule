@@ -5,6 +5,7 @@ import { getTuitionNotice } from "./tuition-notice.service"
 import { formatTime, vnDateParts } from "@/lib/utils"
 import { effectivePlan, hasFeature } from "@/lib/plans"
 import type { ParentSessionDTO, ParentViewDTO } from "@/lib/types/models"
+import { hashParentToken } from "@/server/crypto/parent-token"
 
 // 32 byte base64url = 43 ký tự. Kiểm dạng trước khi truy vấn để token rác không chạm DB.
 export const PARENT_TOKEN_REGEX = /^[A-Za-z0-9_-]{43}$/
@@ -27,7 +28,10 @@ export async function generateParentLink(
   for (let attempt = 0; ; attempt++) {
     const token = randomBytes(32).toString("base64url")
     try {
-      await db.student.update({ where: { id: studentId }, data: { parentLinkToken: token } })
+      await db.student.update({
+        where: { id: studentId },
+        data: { parentLinkToken: token, parentLinkTokenHash: hashParentToken(token) },
+      })
       return { token }
     } catch (e) {
       const isDuplicate =
@@ -43,7 +47,10 @@ export async function disableParentLink(
   studentId: number
 ): Promise<{ success: true }> {
   await assertStudentOwned(db, userId, studentId)
-  await db.student.update({ where: { id: studentId }, data: { parentLinkToken: null } })
+  await db.student.update({
+    where: { id: studentId },
+    data: { parentLinkToken: null, parentLinkTokenHash: null },
+  })
   return { success: true }
 }
 
@@ -91,8 +98,9 @@ export async function getParentView(
 ): Promise<ParentViewDTO | null> {
   if (!PARENT_TOKEN_REGEX.test(token)) return null
 
+  // Tra theo hash: dump DB không cho ra token dùng được (spec O Q9).
   const student = await db.student.findUnique({
-    where: { parentLinkToken: token },
+    where: { parentLinkTokenHash: hashParentToken(token) },
     select: {
       id: true,
       userId: true,

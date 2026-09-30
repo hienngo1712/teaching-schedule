@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll } from "vitest"
 import { getAuthedCaller } from "../helpers/trpc"
 import { recordPayment } from "../helpers/payment"
@@ -14,7 +15,7 @@ describe("Report Router", () => {
     caller = await getAuthedCaller("teacher")
     
     // Create test data
-    student = await caller.student.create({ fullName: "HS Báo Cáo", grade: 3 })
+    student = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Báo Cáo", grade: 3 })
     const subjects = await caller.subject.list({})
     subject = subjects[0]
 
@@ -106,7 +107,7 @@ describe("Report Router", () => {
   })
 
   it("report.student → summary.expectedRevenue tính tổng tất cả fee không lọc attendance", async () => {
-    const studentFee = await caller.student.create({
+    const studentFee = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Fee Kỳ Vọng",
       grade: 7,
       tuitionFee: 50000,
@@ -148,7 +149,7 @@ describe("Report Router", () => {
   }, 15000)
 
   it("report.student → lọc khoảng tháng 5→7 gộp đủ buổi & tiền cả 3 tháng", async () => {
-    const studentRange = await caller.student.create({
+    const studentRange = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Khoảng Thời Gian",
       grade: 8,
       tuitionFee: 70000,

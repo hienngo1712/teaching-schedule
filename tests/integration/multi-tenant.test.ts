@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll } from "vitest"
 import { getAuthedCaller } from "../helpers/trpc"
 type Caller = Awaited<ReturnType<typeof getAuthedCaller>>
@@ -14,7 +15,7 @@ describe("Multi-tenant isolation", () => {
     callerB = await getAuthedCaller("teacher2")
 
     // UserA creates data
-    studentA = await callerA.student.create({ fullName: "HS của A", grade: 3 })
+    studentA = await callerA.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS của A", grade: 3 })
     
     // Get a subject ID for userA (subjects are seeded in setup.ts for teacher)
     const subjectsA = await callerA.subject.list({})
@@ -37,7 +38,7 @@ describe("Multi-tenant isolation", () => {
 
   it("UserB không thể update student của UserA → NOT_FOUND", async () => {
     await expect(
-      callerB.student.update({ id: studentA.id, data: { fullName: "Hack" } })
+      callerB.student.update({ consent: CONSENT_ACCEPTED,  id: studentA.id, data: { fullName: "Hack" } })
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
 

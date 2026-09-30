@@ -6,8 +6,10 @@ import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { parseArgs } from "node:util"
 import { seedSubjectsForUser } from "./_seed-subjects"
+import { withFieldEncryption } from "../src/server/crypto/prisma-encryption"
 
-const db = new PrismaClient()
+// Ghi/đọc họ tên qua extension mã hoá như app (spec O 6.3).
+const db = withFieldEncryption(new PrismaClient())
 
 function validatePassword(pw: string): string | null {
   if (pw.length < 10) return "Password phải ít nhất 10 ký tự"

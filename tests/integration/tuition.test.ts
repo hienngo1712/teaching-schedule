@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -25,7 +26,7 @@ describe("Tuition Management", () => {
     const caller = await getAuthedCaller()
 
     // 1. Setup student
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "Nguyễn Văn An",
       grade: 3,
       tuitionFee: 100000,
@@ -103,7 +104,7 @@ describe("Tuition Management", () => {
 
   it("✓ payment.create + updateSettlement → lưu thông tin đóng tiền", async () => {
     const caller = await getAuthedCaller()
-    const student = await caller.student.create({ fullName: "An", grade: 3 })
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
     const key = { studentId: student.id, year: 2026, month: 5 }
 
     await caller.payment.create({ ...key, amount: 150000, paidAt: "2026-05-15", method: "cash" })
@@ -127,7 +128,7 @@ describe("Tuition Management", () => {
   it("✗ payment.create / updateSettlement student của user khác → NOT_FOUND", async () => {
     const callerA = await getAuthedCaller("teacher")
     const callerB = await getAuthedCaller("teacher2")
-    const sA = await callerA.student.create({ fullName: "HS của A", grade: 3 })
+    const sA = await callerA.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS của A", grade: 3 })
 
     await expect(
       callerB.payment.create({ studentId: sA.id, year: 2026, month: 5, amount: 100000, paidAt: "2026-05-15", method: "cash" })
@@ -143,8 +144,8 @@ describe("Tuition Management", () => {
     const subjectId = subjects[0].id
 
     // Tạo 2 học sinh
-    const studentA = await caller.student.create({ fullName: "Trần Thị B", grade: 2, tuitionFee: 120000 })
-    const studentB = await caller.student.create({ fullName: "Lê Văn C", grade: 4, tuitionFee: 80000 })
+    const studentA = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Trần Thị B", grade: 2, tuitionFee: 120000 })
+    const studentB = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Lê Văn C", grade: 4, tuitionFee: 80000 })
 
     // Tạo session tháng 5/2026 và assign cả 2
     const session = await caller.session.create({
@@ -178,7 +179,7 @@ describe("Tuition Management", () => {
   it("✓ getMonthlyStatus với studentId không có session trong tháng → totalExpected = 0", async () => {
     const caller = await getAuthedCaller()
 
-    const student = await caller.student.create({ fullName: "Phạm Văn D", grade: 3, tuitionFee: 100000 })
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Phạm Văn D", grade: 3, tuitionFee: 100000 })
 
     // Không tạo session nào cho tháng 5/2026
     const result = await caller.tuition.getMonthlyStatus({
@@ -199,7 +200,7 @@ describe("Tuition Management", () => {
     const subjects = await caller.subject.list({})
     const subjectId = subjects[0].id
 
-    const student = await caller.student.create({ fullName: "Ngô Thị E", grade: 5, tuitionFee: 150000 })
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Ngô Thị E", grade: 5, tuitionFee: 150000 })
 
     // Tạo session tháng 4/2026 → có mặt → fee = 150,000
     const sessionApr = await caller.session.create({

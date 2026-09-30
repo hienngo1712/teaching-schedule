@@ -5,8 +5,10 @@ import {join} from "node:path"
 import {parse} from "dotenv"
 // Nguồn subject mặc định dùng chung (alias "@/" được tsx resolve qua tsconfig paths).
 import {DEFAULT_SUBJECTS, seedSubjectsForUser} from "@/server/services/subject-defaults"
+import { withFieldEncryption } from "../src/server/crypto/prisma-encryption"
 
-const db = new PrismaClient()
+// Ghi/đọc họ tên qua extension mã hoá như app (spec O 6.3).
+const db = withFieldEncryption(new PrismaClient())
 
 const BCRYPT_COST = process.env.NODE_ENV === "test" ? 4 : 12
 

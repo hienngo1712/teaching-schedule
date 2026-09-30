@@ -15,6 +15,8 @@ import {
   type SessionFilterInput,
 } from "@/lib/schemas/session"
 import type { SchoolLevel, SessionDTO } from "@/lib/types/models"
+import { compareViName } from "@/lib/name-search"
+import { findStudentIdsByName } from "./student.service"
 
 /**
  * Kiểm tra ca dạy mới có trùng giờ với ca khác trong cùng ngày, cùng user.
@@ -71,7 +73,7 @@ export function parseSessionDate(dateStr: string): Date {
 // Ca chỉ hiện HS chưa xoá; ca bù/ca gốc đã xoá coi như không có (spec Q Q1).
 export const SESSION_DETAIL_INCLUDE = {
   subject: true,
-  sessionStudents: { where: LIVE_LINK, include: { student: true }, orderBy: { student: { fullName: "asc" } } },
+  sessionStudents: { where: LIVE_LINK, include: { student: true } },
   _count: { select: { sessionStudents: { where: LIVE_LINK } } },
   makeupSessions: { where: LIVE, select: { id: true, sessionDate: true } },
   makeupOf: { select: { id: true, sessionDate: true, isDeleted: true } },
@@ -98,15 +100,18 @@ function deriveLevel(students: Array<{ grade: number }>): SchoolLevel | "mixed" 
 }
 
 function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
-  const students = s.sessionStudents?.map((ss) => ({
-    id: ss.id,
-    studentId: ss.studentId,
-    fullName: ss.student?.fullName || "",
-    grade: ss.grade,
-    attendance: ss.attendance,
-    note: ss.note,
-    fee: ss.fee,
-  })) ?? []
+  // Tên mã hoá nên không sắp được trong DB (spec O 6.4); sắp sau khi giải mã.
+  const students = [...(s.sessionStudents ?? [])]
+    .sort((a, b) => compareViName(a.student?.fullName ?? "", b.student?.fullName ?? "") || a.studentId - b.studentId)
+    .map((ss) => ({
+      id: ss.id,
+      studentId: ss.studentId,
+      fullName: ss.student?.fullName || "",
+      grade: ss.grade,
+      attendance: ss.attendance,
+      note: ss.note,
+      fee: ss.fee,
+    }))
 
   return {
     id: s.id,
@@ -153,6 +158,13 @@ export async function getMonthSessions(
     ? new Date(Date.UTC(toYear, toMonth, 1))
     : new Date(Date.UTC(year, month, 1))
 
+  let nameIds: number[] | null = null
+  if (studentName) {
+    nameIds = await findStudentIdsByName(db, userId, studentName)
+    if (nameIds.length === 0 || (studentId && !nameIds.includes(studentId))) return []
+  }
+  const studentFilter = studentId ? { id: studentId } : nameIds ? { id: { in: nameIds } } : null
+
   const sessions = await db.teachingSession.findMany({
     where: {
       userId,
@@ -163,14 +175,11 @@ export async function getMonthSessions(
               some: {
                 ...LIVE_LINK,
                 ...(grade ? { grade } : {}),
-                ...(studentId || studentName
+                ...(studentFilter
                   ? {
                       student: {
                         isDeleted: false,
-                        ...(studentId ? { id: studentId } : {}),
-                        ...(studentName
-                          ? { fullName: { contains: studentName, mode: "insensitive" as const } }
-                          : {}),
+                        ...studentFilter,
                       },
                     }
                   : {}),
@@ -182,7 +191,7 @@ export async function getMonthSessions(
     include: {
       subject: true,
       ...(includeStudents
-        ? { sessionStudents: { where: LIVE_LINK, include: { student: true }, orderBy: { student: { fullName: "asc" } } } }
+        ? { sessionStudents: { where: LIVE_LINK, include: { student: true } } }
         : { sessionStudents: { where: LIVE_LINK, select: { id: true, studentId: true, grade: true, attendance: true, note: true, fee: true } } }
       ),
       _count: { select: { sessionStudents: { where: LIVE_LINK } } },

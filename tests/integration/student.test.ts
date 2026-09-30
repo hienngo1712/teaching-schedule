@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller, publicCaller } from "../helpers/trpc"
@@ -14,7 +15,7 @@ describe("Student CRUD", () => {
 
   it("✓ create grade=3 → trả fields + level=tieu_hoc + isActive=true", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "Nguyễn An", grade: 3 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn An", grade: 3 })
     expect(s.fullName).toBe("Nguyễn An")
     expect(s.grade).toBe(3)
     expect(s.level).toBe("tieu_hoc")
@@ -24,13 +25,13 @@ describe("Student CRUD", () => {
 
   it("✓ create grade=7 → level=thcs", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "Trần Bình", grade: 7 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Trần Bình", grade: 7 })
     expect(s.level).toBe("thcs")
   })
 
   it("✓ create grade=11 → level=thpt", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "Lê Khoa", grade: 11 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Lê Khoa", grade: 11 })
     expect(s.level).toBe("thpt")
     const list = await caller.student.list({ grade: 11 })
     expect(list.items[0].level).toBe("thpt")
@@ -38,9 +39,9 @@ describe("Student CRUD", () => {
 
   it("✓ list → trả tất cả HS active của user, sort grade+name ASC", async () => {
     const caller = await getAuthedCaller()
-    await caller.student.create({ fullName: "Hùng", grade: 5 })
-    await caller.student.create({ fullName: "An", grade: 3 })
-    await caller.student.create({ fullName: "Bình", grade: 3 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Hùng", grade: 5 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Bình", grade: 3 })
 
     const list = await caller.student.list({})
     expect(list.items).toHaveLength(3)
@@ -51,8 +52,8 @@ describe("Student CRUD", () => {
 
   it("✓ list { grade: 3 } → chỉ HS lớp 3", async () => {
     const caller = await getAuthedCaller()
-    await caller.student.create({ fullName: "An", grade: 3 })
-    await caller.student.create({ fullName: "Hùng", grade: 5 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Hùng", grade: 5 })
     const list = await caller.student.list({ grade: 3 })
     expect(list.items).toHaveLength(1)
     expect(list.items[0].fullName).toBe("An")
@@ -60,23 +61,23 @@ describe("Student CRUD", () => {
 
   it("✓ list { grade: 12 } → chỉ HS lớp 12", async () => {
     const caller = await getAuthedCaller()
-    await caller.student.create({ fullName: "An", grade: 3 })
-    await caller.student.create({ fullName: "Khoa", grade: 12 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Khoa", grade: 12 })
     const list = await caller.student.list({ grade: 12 })
     expect(list.items.map((s) => s.fullName)).toEqual(["Khoa"])
   })
 
   it("✗ create grade=13 → BAD_REQUEST", async () => {
     const caller = await getAuthedCaller()
-    await expect(caller.student.create({ fullName: "Lớp Mười Ba", grade: 13 })).rejects.toMatchObject({
+    await expect(caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Lớp Mười Ba", grade: 13 })).rejects.toMatchObject({
       code: "BAD_REQUEST",
     })
   })
 
   it("✓ list { search: 'NGUY' } → tìm không phân biệt hoa thường", async () => {
     const caller = await getAuthedCaller()
-    await caller.student.create({ fullName: "Nguyễn An", grade: 3 })
-    await caller.student.create({ fullName: "Trần Bình", grade: 5 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Nguyễn An", grade: 3 })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Trần Bình", grade: 5 })
     const list = await caller.student.list({ search: "NGUY" })
     expect(list.items).toHaveLength(1)
     expect(list.items[0].fullName).toBe("Nguyễn An")
@@ -84,10 +85,10 @@ describe("Student CRUD", () => {
 
   it("✓ update → cập nhật fields + updatedAt thay đổi", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "An", grade: 3 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
     const before = new Date(s.updatedAt).getTime()
     await new Promise((r) => setTimeout(r, 10))
-    const updated = await caller.student.update({
+    const updated = await caller.student.update({ consent: CONSENT_ACCEPTED, 
       id: s.id,
       data: { fullName: "An (đổi tên)", grade: 4 },
     })
@@ -99,7 +100,7 @@ describe("Student CRUD", () => {
 
   it("✓ delete (soft) → isDeleted=true, isActive giữ nguyên, vẫn còn trong DB", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "An", grade: 3 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
     await caller.student.delete({ id: s.id })
 
     const inDb = await db.student.findUnique({ where: { id: s.id, isDeleted: true } })
@@ -110,7 +111,7 @@ describe("Student CRUD", () => {
 
   it("✓ delete → HS đã xóa không xuất hiện trong list mặc định", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "An", grade: 3 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
     await caller.student.delete({ id: s.id })
     const list = await caller.student.list({})
     expect(list.items.find((x) => x.id === s.id)).toBeUndefined()
@@ -118,7 +119,7 @@ describe("Student CRUD", () => {
 
   it("✓ list { isActive: false } → thấy HS cho nghỉ", async () => {
     const caller = await getAuthedCaller()
-    const s = await caller.student.create({ fullName: "An", grade: 3 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "An", grade: 3 })
     await caller.student.deactivate({ id: s.id })
     const list = await caller.student.list({ isActive: false })
     expect(list.items.find((x) => x.id === s.id)).toBeDefined()
@@ -128,14 +129,14 @@ describe("Student CRUD", () => {
     const caller = await getAuthedCaller()
     await expect(
       // @ts-expect-error — test runtime validation
-      caller.student.create({ grade: 3 })
+      caller.student.create({ consent: CONSENT_ACCEPTED,  grade: 3 })
     ).rejects.toThrow()
   })
 
   it("✗ update id không tồn tại → NOT_FOUND", async () => {
     const caller = await getAuthedCaller()
     await expect(
-      caller.student.update({ id: 99999999, data: { fullName: "Tên Hợp Lệ" } })
+      caller.student.update({ consent: CONSENT_ACCEPTED,  id: 99999999, data: { fullName: "Tên Hợp Lệ" } })
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
 
@@ -154,14 +155,14 @@ describe("Student CRUD", () => {
 
   it("✗ public → UNAUTHORIZED khi create/update/delete", async () => {
     await expect(
-      publicCaller.student.create({ fullName: "X", grade: 3 })
+      publicCaller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "X", grade: 3 })
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" })
   })
 
   it("✓ multi-tenant: userB không thấy HS của userA", async () => {
     const callerA = await getAuthedCaller("teacher")
     const callerB = await getAuthedCaller("teacher2")
-    const sA = await callerA.student.create({ fullName: "HS của A", grade: 3 })
+    const sA = await callerA.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS của A", grade: 3 })
 
     const listB = await callerB.student.list({})
     expect(listB.items.find((x) => x.id === sA.id)).toBeUndefined()
@@ -170,10 +171,10 @@ describe("Student CRUD", () => {
   it("✗ multi-tenant: userB update HS của userA → NOT_FOUND", async () => {
     const callerA = await getAuthedCaller("teacher")
     const callerB = await getAuthedCaller("teacher2")
-    const sA = await callerA.student.create({ fullName: "HS của A", grade: 3 })
+    const sA = await callerA.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS của A", grade: 3 })
 
     await expect(
-      callerB.student.update({ id: sA.id, data: { fullName: "Hack" } })
+      callerB.student.update({ consent: CONSENT_ACCEPTED,  id: sA.id, data: { fullName: "Hack" } })
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
 })

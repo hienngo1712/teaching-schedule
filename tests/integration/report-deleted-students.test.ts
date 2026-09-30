@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -24,7 +25,7 @@ describe("Tiền của HS đã xoá vẫn tính (spec R8)", () => {
   it("Báo cáo + Tổng quan giữ nguyên sau khi xoá (và sau khi dọn) HS đã nghỉ hết nợ", async () => {
     const { y, m, day } = thisMonth()
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "HS Doanh thu", grade: 7, tuitionFee: 150_000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Doanh thu", grade: 7, tuitionFee: 150_000 })
     const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
     const s = await caller.session.create({ sessionDate: day, startTime: "06:00", endTime: "07:00", subjectId, studentIds: [st.id] })
     await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present" }] })
@@ -58,7 +59,7 @@ describe("Tiền của HS đã xoá vẫn tính (spec R8)", () => {
   it("lọc theo khối vẫn tính HS đã xoá của khối đó", async () => {
     const { y, m, day } = thisMonth()
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "HS Khối", grade: 8, tuitionFee: 90_000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Khối", grade: 8, tuitionFee: 90_000 })
     const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
     const s = await caller.session.create({ sessionDate: day, startTime: "05:00", endTime: "06:00", subjectId, studentIds: [st.id] })
     await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present" }] })
@@ -70,7 +71,7 @@ describe("Tiền của HS đã xoá vẫn tính (spec R8)", () => {
 
   it("HS nhập nhầm bị xoá khi còn trong ca sắp tới (chưa điểm danh) → không tính vào dự kiến / số HS", async () => {
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "HS Trùng", grade: 5, tuitionFee: 120_000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Trùng", grade: 5, tuitionFee: 120_000 })
     const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
     await caller.session.create({ sessionDate: "2031-04-07", startTime: "08:00", endTime: "09:00", subjectId, studentIds: [st.id] })
     expect(await caller.report.monthlySummary({ year: 2031, month: 4 })).toMatchObject({ expectedRevenue: 120_000, totalStudents: 1 })

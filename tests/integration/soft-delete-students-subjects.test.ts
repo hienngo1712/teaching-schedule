@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -21,7 +22,7 @@ describe("Học sinh: xoá mềm vs cho nghỉ (spec Q mục 5)", () => {
 
   it("xoá: chỉ isDeleted/deletedAt, isActive + link ca + token giữ; biến khỏi danh sách kể cả 'Tất cả'", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
     await caller.session.create({ sessionDate: FUTURE, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id] })
     await db.student.update({ where: { id: a.id }, data: { parentLinkToken: "t".repeat(43) } })
 
@@ -33,7 +34,7 @@ describe("Học sinh: xoá mềm vs cho nghỉ (spec Q mục 5)", () => {
     expect(row.parentLinkToken).toBe("t".repeat(43))
     expect(await db.sessionStudent.count({ where: { studentId: a.id } })).toBe(1)
     expect((await caller.student.list({ includeInactive: true })).items.map((s) => s.id)).not.toContain(a.id)
-    await expect(caller.student.update({ id: a.id, data: { fullName: "HS X" } })).rejects.toMatchObject({ code: "NOT_FOUND" })
+    await expect(caller.student.update({ consent: CONSENT_ACCEPTED,  id: a.id, data: { fullName: "HS X" } })).rejects.toMatchObject({ code: "NOT_FOUND" })
     await expect(caller.student.delete({ id: a.id })).rejects.toMatchObject({ code: "NOT_FOUND" })
     await expect(caller.session.create({ sessionDate: FUTURE, startTime: "10:00", endTime: "11:00", subjectId, studentIds: [a.id] }))
       .rejects.toMatchObject({ code: "NOT_FOUND" })
@@ -41,7 +42,7 @@ describe("Học sinh: xoá mềm vs cho nghỉ (spec Q mục 5)", () => {
 
   it("nhập Excel: HS đã xoá không bị coi là trùng", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
     await caller.student.delete({ id: a.id })
     const { matches } = await caller.student.importCheck({ rows: [{ fullName: "HS An", grade: 5 }] })
     expect(matches).toEqual([null])
@@ -49,7 +50,7 @@ describe("Học sinh: xoá mềm vs cho nghỉ (spec Q mục 5)", () => {
 
   it("cho nghỉ (deactivate): isActive=false, gỡ khỏi ca chưa dạy, vẫn ở lọc Đã nghỉ", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
     await caller.session.create({ sessionDate: FUTURE, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id] })
     await caller.student.deactivate({ id: a.id })
     expect((await db.student.findUniqueOrThrow({ where: { id: a.id } })).isActive).toBe(false)
@@ -61,7 +62,7 @@ describe("Học sinh: xoá mềm vs cho nghỉ (spec Q mục 5)", () => {
     const caller = await getAuthedCaller()
     const userId = (await db.user.findUniqueOrThrow({ where: { username: "teacher" } })).id
     await db.classUpgradeLog.deleteMany({ where: { userId } })
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
     await caller.student.delete({ id: a.id })
     await caller.student.upgradeAllClasses()
     expect((await db.student.findUniqueOrThrow({ where: { id: a.id, isDeleted: true } })).grade).toBe(5)

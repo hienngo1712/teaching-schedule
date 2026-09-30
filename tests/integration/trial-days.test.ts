@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach, afterAll } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller, publicCaller } from "../helpers/trpc"
@@ -61,7 +62,7 @@ describe("số ngày dùng thử mặc định (T1, T2)", () => {
     const old = await makeUser("old", 5, 60)
     await expect(admin.admin.updateTrialDays({ days: 90, expected: 60 })).resolves.toEqual({ days: 90 })
     const before = new Date()
-    await publicCaller.auth.register({ username: `${FAKE}reg90`, password: PASSWORD })
+    await publicCaller.auth.register({ consent: CONSENT_ACCEPTED,  username: `${FAKE}reg90`, password: PASSWORD })
     const reg = await db.user.findUniqueOrThrow({ where: { username: `${FAKE}reg90` } })
     expect(reg.trialEndsAt?.toISOString()).toBe(trialEndFor(before, 90)?.toISOString())
     expect((await db.user.findUniqueOrThrow({ where: { id: old.id } })).trialEndsAt?.toISOString()).toBe(
@@ -74,7 +75,7 @@ describe("số ngày dùng thử mặc định (T1, T2)", () => {
 
   it("Review Focus 3: mặc định 0 → tài khoản mới không dùng thử (trialEndsAt null), không có banner", async () => {
     await (await getAuthedCaller("admin_test")).admin.updateTrialDays({ days: 0, expected: 60 })
-    await publicCaller.auth.register({ username: `${FAKE}reg0`, password: PASSWORD })
+    await publicCaller.auth.register({ consent: CONSENT_ACCEPTED,  username: `${FAKE}reg0`, password: PASSWORD })
     const reg = await db.user.findUniqueOrThrow({ where: { username: `${FAKE}reg0` } })
     expect(reg.trialEndsAt).toBeNull()
     expect(effectivePlan(reg, new Date()).plan).toBe("standard")

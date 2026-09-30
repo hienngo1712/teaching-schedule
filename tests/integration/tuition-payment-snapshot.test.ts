@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -27,7 +28,7 @@ describe("Tuition payment snapshot — carry-over not lost", () => {
     const subjects = await caller.subject.list({})
     const subjectId = subjects[0].id
 
-    const student = await caller.student.create({ fullName: "HS Nợ Dồn", grade: 5, tuitionFee: 100000 })
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nợ Dồn", grade: 5, tuitionFee: 100000 })
 
     // April: present, owes 150k. View April so its debt is snapshotted.
     const apr = await caller.session.create({

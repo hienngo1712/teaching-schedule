@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach, afterAll } from "vitest"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
@@ -18,7 +19,7 @@ async function cleanup() {
   await db.user.deleteMany({ where: { id: { in: ids } } })
 }
 async function register(name: string) {
-  await publicCaller.auth.register({ username: FAKE + name, password: PASSWORD, fullName: "Tài khoản " + name })
+  await publicCaller.auth.register({ consent: CONSENT_ACCEPTED,  username: FAKE + name, password: PASSWORD, fullName: "Tài khoản " + name })
   return db.user.findUniqueOrThrow({ where: { username: FAKE + name } })
 }
 const names = async () => (await (await getAuthedCaller("admin_test")).admin.newAccounts()).items.map((i) => i.username)

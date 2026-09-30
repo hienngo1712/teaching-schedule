@@ -28,6 +28,8 @@ import {
 import { trpc } from "@/lib/trpc"
 import { VN_BANKS } from "@/lib/vn-banks"
 import { bankAccountSchema, type BankAccountInput } from "@/lib/schemas/settings"
+import { CONSENT_ACCEPTED, isConsentError } from "@/lib/consent"
+import { ConsentCheckbox } from "@/components/common/ConsentCheckbox"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 const BANK_OPTIONS = [...VN_BANKS].sort((a, b) => a.shortName.localeCompare(b.shortName))
@@ -58,13 +60,14 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
   const [accountName, setAccountName] = useState(initial?.bankAccountName ?? "")
   const [error, setError] = useState<string | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
+  const [consent, setConsent] = useState(false)
 
   // Callback đặt ở hook (không ở mutate) vì form có thể mount lại trước khi mutate-callback chạy.
   const mutation = trpc.settings.updateBankAccount.useMutation({
     onSuccess: (_data, input) => {
       if (input) toast.success(t("bank_saved"))
     },
-    onError: (e) => setError(e.message),
+    onError: (e) => setError(isConsentError(e) ? t("consent_required") : e.message),
   })
 
   const save = () => {
@@ -78,7 +81,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
       setError(parsed.error.issues[0].message)
       return
     }
-    mutation.mutate(parsed.data)
+    mutation.mutate({ ...parsed.data, consent: CONSENT_ACCEPTED })
   }
 
   return (
@@ -130,6 +133,14 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
           />
         </div>
 
+        <ConsentCheckbox
+          id="bank-consent"
+          label={t("consent_bank")}
+          checked={consent}
+          onCheckedChange={setConsent}
+          disabled={mutation.isPending}
+        />
+
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
@@ -145,7 +156,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
           )}
           <Button
             onClick={save}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || !consent}
             className="h-11 w-full sm:ml-auto sm:w-auto md:h-10"
           >
             {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}

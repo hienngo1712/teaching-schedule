@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll, beforeEach, vi, afterEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -38,8 +39,8 @@ describe("Cho nghỉ học sinh ↔ đồng bộ lịch & giữ điểm danh", (
   // ── Bug 1: xóa HS phải gỡ khỏi buổi tương lai ────────────────────
   it("✓ xóa HS → gỡ khỏi buổi học tương lai (sessionDate >= hôm nay)", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
-    const b = await caller.student.create({ fullName: "HS Bình", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bình", grade: 5 })
 
     const future = await caller.session.create({
       sessionDate: daysFromNow(40),
@@ -60,8 +61,8 @@ describe("Cho nghỉ học sinh ↔ đồng bộ lịch & giữ điểm danh", (
   // ── Bug 1: buổi quá khứ phải giữ nguyên (bảo toàn lịch sử) ───────
   it("✓ xóa HS → KHÔNG đụng buổi quá khứ (giữ lịch sử & doanh thu)", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
-    const b = await caller.student.create({ fullName: "HS Bình", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bình", grade: 5 })
 
     const past = await caller.session.create({
       sessionDate: daysFromNow(-40),
@@ -81,9 +82,9 @@ describe("Cho nghỉ học sinh ↔ đồng bộ lịch & giữ điểm danh", (
   // ── Bug 2: bỏ 1 HS qua addStudents phải giữ điểm danh HS còn lại ──
   it("✓ addStudents bỏ 1 HS → KHÔNG reset điểm danh HS còn lại", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
-    const b = await caller.student.create({ fullName: "HS Bình", grade: 5 })
-    const c = await caller.student.create({ fullName: "HS Cường", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bình", grade: 5 })
+    const c = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Cường", grade: 5 })
 
     const s = await caller.session.create({
       sessionDate: daysFromNow(10),
@@ -115,9 +116,9 @@ describe("Cho nghỉ học sinh ↔ đồng bộ lịch & giữ điểm danh", (
   // ── Gỡ 1 HS qua removeStudent phải giữ điểm danh HS còn lại ──────
   it("✓ removeStudent gỡ 1 HS → KHÔNG đụng điểm danh HS còn lại", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
-    const b = await caller.student.create({ fullName: "HS Bình", grade: 5 })
-    const c = await caller.student.create({ fullName: "HS Cường", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bình", grade: 5 })
+    const c = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Cường", grade: 5 })
 
     const s = await caller.session.create({
       sessionDate: daysFromNow(14),
@@ -155,7 +156,7 @@ describe("Cho nghỉ học sinh ↔ đồng bộ lịch & giữ điểm danh", (
       vi.useFakeTimers({ toFake: ["Date"] })
       vi.setSystemTime(new Date("2099-03-10T11:00:00Z"))
       const caller = await getAuthedCaller()
-      const a = await caller.student.create({ fullName: "HS Giờ VN", grade: 5 })
+      const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Giờ VN", grade: 5 })
       const ended = await caller.session.create({ sessionDate: "2099-03-10", startTime: "16:00", endTime: "17:00", subjectId, studentIds: [a.id] })
       const upcoming = await caller.session.create({ sessionDate: "2099-03-10", startTime: "19:00", endTime: "20:00", subjectId, studentIds: [a.id] })
 
@@ -169,7 +170,7 @@ describe("Cho nghỉ học sinh ↔ đồng bộ lịch & giữ điểm danh", (
       vi.useFakeTimers({ toFake: ["Date"] })
       vi.setSystemTime(new Date("2099-03-10T18:00:00Z"))
       const caller = await getAuthedCaller()
-      const a = await caller.student.create({ fullName: "HS Nửa Đêm", grade: 5 })
+      const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nửa Đêm", grade: 5 })
       const lastNight = await caller.session.create({ sessionDate: "2099-03-10", startTime: "20:00", endTime: "21:00", subjectId, studentIds: [a.id] })
       const morning = await caller.session.create({ sessionDate: "2099-03-11", startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id] })
 
@@ -183,8 +184,8 @@ describe("Cho nghỉ học sinh ↔ đồng bộ lịch & giữ điểm danh", (
   // ── Bug 2: thêm HS qua update phải giữ điểm danh HS cũ ───────────
   it("✓ update thêm HS mới → giữ điểm danh HS cũ, HS mới = pending", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS An", grade: 5 })
-    const b = await caller.student.create({ fullName: "HS Bình", grade: 5 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS An", grade: 5 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bình", grade: 5 })
 
     const s = await caller.session.create({
       sessionDate: daysFromNow(12),

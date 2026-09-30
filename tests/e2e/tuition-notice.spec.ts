@@ -118,13 +118,14 @@ test.describe('Phiếu báo học phí (390px)', () => {
     await page.getByRole('dialog', { name: 'Thêm' }).getByRole('link', { name: /Cài đặt/ }).click();
     await expect(page.getByRole('dialog', { name: 'Thêm' })).toBeHidden();
     await expect(page).toHaveURL(/\/settings/);
-    await page.getByLabel('Ngân hàng').click();
+    await page.getByRole('combobox', { name: 'Ngân hàng' }).click();
     await page.getByRole('option', { name: /^Vietcombank - / }).click();
     await page.getByLabel('Số tài khoản').fill('0011001234567');
     const holder = page.getByLabel('Tên chủ tài khoản');
     await holder.fill('nguyen van a');
     await holder.blur();
     await expect(holder).toHaveValue('NGUYEN VAN A');
+    await page.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await page.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByText('Đã lưu tài khoản ngân hàng')).toBeVisible();
     await expectNoHorizontalScroll(page);
@@ -136,6 +137,7 @@ test.describe('Phiếu báo học phí (390px)', () => {
     await page.click('button#grade');
     await page.getByRole('option', { name: 'Lớp 5' }).click();
     await page.locator('input#tuitionFee').fill('150000');
+    await page.getByRole('checkbox', { name: /đồng ý chia sẻ|agree to share/i }).click();
     await page.locator('button:has-text("Thêm")').last().click();
     await expect(page.getByText('Đã thêm học sinh')).toBeVisible();
     await createPresentSession(page, studentName, startHour, titles[0]);

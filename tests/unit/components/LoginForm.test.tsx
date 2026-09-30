@@ -113,4 +113,10 @@ describe("LoginForm — callbackUrl (chặn open redirect)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }))
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith(expected))
   })
+
+  it("có link /privacy", () => {
+    renderForm("")
+    const link = screen.getByRole("link", { name: /Chính sách bảo mật/i })
+    expect(link.getAttribute("href")).toBe("/privacy")
+  })
 })

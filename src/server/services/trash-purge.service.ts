@@ -21,7 +21,7 @@ export async function purgeTrash(db: PrismaClient, userId: number, type: TrashTy
       // Ẩn danh thay vì xoá cứng: giữ lần thu/học phí/điểm danh để doanh thu không hụt (spec R5).
       const r = await tx.student.updateMany({
         where: { userId, isDeleted: true, purgedAt: null },
-        data: { fullName: DELETED_STUDENT_NAME, parentPhone: null, parentName: null, notes: null, parentLinkToken: null, purgedAt: now },
+        data: { fullName: DELETED_STUDENT_NAME, parentPhone: null, parentName: null, notes: null, parentLinkToken: null, parentLinkTokenHash: null, purgedAt: now },
       })
       return r.count
     }

@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { TRPCError } from "@trpc/server"
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch"
@@ -58,7 +59,7 @@ const PRO_CASES: [string, Call][] = [
   ["report.student nhiều tháng", (c, sid) => c.report.student({ studentId: sid, year: Y, month: 1, toMonth: 3 })],
   ["report.alerts", (c) => c.report.alerts()],
   ["student.importCheck", (c) => c.student.importCheck({ rows: [{ fullName: "Kiểm Tra", grade: 1 }] })],
-  ["student.importMany", (c) => c.student.importMany({ rows: [{ fullName: "Nhập Thử Gói", grade: 1 }] })],
+  ["student.importMany", (c) => c.student.importMany({ consent: CONSENT_ACCEPTED,  rows: [{ fullName: "Nhập Thử Gói", grade: 1 }] })],
   ["student.generateParentLink", (c, sid) => c.student.generateParentLink({ id: sid })],
 ]
 

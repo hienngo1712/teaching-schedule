@@ -3,6 +3,8 @@ import { paginationSchema } from "./common"
 
 const phoneRegex = /^(0|\+84)[0-9]{8,9}$/
 
+import { consentPayload } from "@/lib/consent"
+
 export const studentCreateSchema = z.object({
   fullName: z.string().trim().min(2, "Tên phải có ít nhất 2 ký tự").max(100),
   grade: z.number().int().min(1).max(12),
@@ -19,9 +21,13 @@ export const studentCreateSchema = z.object({
   tuitionFee: z.number().int().min(0).default(0),
 })
 
+// Form dùng studentCreateSchema (không có cờ); input tRPC bắt buộc cờ đồng ý (spec O Q10).
+export const studentCreateInputSchema = studentCreateSchema.extend({ consent: consentPayload })
+
 export const studentUpdateSchema = z.object({
   id: z.number().int().positive(),
   data: studentCreateSchema.partial(),
+  consent: consentPayload.optional(),
 })
 
 export const studentFilterSchema = z.object({
@@ -40,6 +46,7 @@ export const studentImportCheckSchema = z.object({
 
 // 1 dòng sai → Zod từ chối cả request: đúng "tất cả hoặc không".
 export const studentImportSchema = z.object({
+  consent: consentPayload,
   rows: z
     .array(studentCreateSchema.omit({ isActive: true }).extend({ allowDuplicate: z.boolean().default(false) }))
     .min(1)

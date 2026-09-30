@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { studentLimit } from "@/lib/plans"
@@ -24,8 +25,8 @@ describe("Thùng rác (spec Q mục 7)", () => {
   it("counts + list theo loại, mới xoá lên đầu, phân trang, chỉ của mình", async () => {
     const caller = await getAuthedCaller()
     const other = await getAuthedCaller("teacher2")
-    const a = await caller.student.create({ fullName: "HS A", grade: 3 })
-    const b = await caller.student.create({ fullName: "HS B", grade: 4 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS A", grade: 3 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS B", grade: 4 })
     await caller.student.delete({ id: a.id })
     await caller.student.delete({ id: b.id })
 
@@ -39,7 +40,7 @@ describe("Thùng rác (spec Q mục 7)", () => {
 
   it("khôi phục HS → hiện lại, khôi phục lần 2 → NOT_FOUND; HS chưa xoá → NOT_FOUND", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "HS A", grade: 3 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS A", grade: 3 })
     await expect(caller.trash.restore({ type: "student", id: a.id })).rejects.toMatchObject({ code: "NOT_FOUND" })
     await caller.student.delete({ id: a.id })
     await caller.trash.restore({ type: "student", id: a.id })
@@ -51,7 +52,7 @@ describe("Thùng rác (spec Q mục 7)", () => {
     const caller = await getAuthedCaller("teacher_std")
     const userId = (await db.user.findUniqueOrThrow({ where: { username: "teacher_std" } })).id
     const limit = studentLimit("standard")!
-    const x = await caller.student.create({ fullName: "HS X", grade: 3 })
+    const x = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS X", grade: 3 })
     await caller.student.delete({ id: x.id })
     await db.student.createMany({ data: Array.from({ length: limit }, (_, i) => ({ userId, fullName: `Đầy ${i}`, grade: 1 })) })
     await expect(caller.trash.restore({ type: "student", id: x.id })).rejects.toThrow(/tối đa/)
@@ -83,7 +84,7 @@ describe("Thùng rác (spec Q mục 7)", () => {
   it("ca tương lai đang ở thùng rác cũng gỡ HS cho nghỉ → khôi phục ca không đưa HS nghỉ quay lại", async () => {
     const caller = await getAuthedCaller()
     const subjectId = await defaultSubjectId(caller)
-    const a = await caller.student.create({ fullName: "HS A", grade: 3 })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS A", grade: 3 })
     const s = await caller.session.create({ sessionDate: D, startTime: "08:00", endTime: "09:00", subjectId, studentIds: [a.id] })
     await caller.session.delete({ id: s.id })
     await caller.student.deactivate({ id: a.id })
@@ -108,7 +109,7 @@ describe("Thùng rác (spec Q mục 7)", () => {
 
   it("khôi phục lần thu: paidAmount cộng lại; HS đang xoá → CONFLICT", async () => {
     const caller = await getAuthedCaller()
-    const st = await caller.student.create({ fullName: "HS Thu", grade: 6 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thu", grade: 6 })
     const p = await caller.payment.create({ studentId: st.id, year: 2030, month: 5, amount: 70_000, paidAt: "2030-05-20", method: "cash" })
     await caller.payment.delete({ id: p.id })
     const list = await caller.trash.list({ type: "payment" })

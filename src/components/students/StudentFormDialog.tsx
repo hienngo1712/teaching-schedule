@@ -1,12 +1,14 @@
 "use client"
 
 import type { z } from "zod"
-import { useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { studentCreateSchema, type StudentCreateInput } from "@/lib/schemas/student"
+import { CONSENT_ACCEPTED, isConsentError } from "@/lib/consent"
+import { ConsentCheckbox } from "@/components/common/ConsentCheckbox"
 import { GRADES } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import {
@@ -45,6 +47,7 @@ type Props = {
 export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) {
   const { t } = useTranslation()
   const { me } = usePlan()
+  const [consent, setConsent] = useState(false)
 
   const form = useForm<z.input<typeof studentCreateSchema>>({
     resolver: zodResolver(studentCreateSchema),
@@ -61,6 +64,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   useEffect(() => {
     if (open) {
+      setConsent(false)
       form.reset({
         fullName: student?.fullName ?? "",
         grade: student?.grade ?? 1,
@@ -80,7 +84,8 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
     },
     // Lỗi thiếu gói đã mở popup ở TRPCProvider, không toast thêm.
     onError: (e) => {
-      if (!planRequiredOf(e)) toast.error(e.message)
+      if (isConsentError(e)) toast.error(t("consent_required"))
+      else if (!planRequiredOf(e)) toast.error(e.message)
     },
   })
 
@@ -91,13 +96,15 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
     },
     // Lỗi thiếu gói đã mở popup ở TRPCProvider, không toast thêm.
     onError: (e) => {
-      if (!planRequiredOf(e)) toast.error(e.message)
+      if (isConsentError(e)) toast.error(t("consent_required"))
+      else if (!planRequiredOf(e)) toast.error(e.message)
     },
   })
 
   const isPending = createMut.isPending || updateMut.isPending
 
   function onSubmit(values: z.input<typeof studentCreateSchema>) {
+    if (!consent) return
     const data = values as StudentCreateInput;
     // Bật HS thành đang học khi đã đủ giới hạn: mở popup nâng cấp thay vì gửi rồi nhận lỗi.
     const activating = data.isActive && (mode === "create" || student?.isActive === false)
@@ -106,9 +113,9 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
       return
     }
     if (mode === "create") {
-      createMut.mutate(data)
+      createMut.mutate({ ...data, consent: CONSENT_ACCEPTED })
     } else if (student) {
-      updateMut.mutate({ id: student.id, data })
+      updateMut.mutate({ id: student.id, data, consent: CONSENT_ACCEPTED })
     }
   }
 
@@ -218,6 +225,14 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
             <Textarea id="notes" rows={2} {...form.register("notes")} />
           </div>
 
+          <ConsentCheckbox
+            id="student-consent"
+            label={t("consent_student")}
+            checked={consent}
+            onCheckedChange={setConsent}
+            disabled={isPending}
+          />
+
           <DialogFooter>
             <Button
               type="button"
@@ -227,7 +242,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
             >
               {t("cancel")}
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || !consent}>
               {isPending
                 ? t("saving")
                 : mode === "create"

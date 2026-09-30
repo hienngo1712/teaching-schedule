@@ -7,6 +7,6 @@ export const { auth: middleware } = NextAuth(authConfig)
 export const config = {
   matcher: [
     // "p/" có dấu "/" để chỉ mở /p/<token>, không mở nhầm /profile hay route khác bắt đầu bằng "p".
-    "/((?!login|register|p/|api/auth|api/trpc|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|register|privacy|p/|api/auth|api/trpc|_next/static|_next/image|favicon.ico).*)",
   ],
 }

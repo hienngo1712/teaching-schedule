@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -7,6 +8,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc"
 import { registerSchema, type RegisterInput } from "@/lib/schemas/auth"
+import { CONSENT_ACCEPTED, isConsentError } from "@/lib/consent"
+import { ConsentCheckbox } from "@/components/common/ConsentCheckbox"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -23,6 +26,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 export function RegisterForm() {
   const router = useRouter()
   const { t } = useTranslation()
+  const [consent, setConsent] = useState(false)
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -39,12 +43,14 @@ export function RegisterForm() {
       router.push("/login")
     },
     onError: (err) => {
-      toast.error(err.message)
+      if (isConsentError(err)) toast.error(t("consent_required"))
+      else toast.error(err.message)
     },
   })
 
   function onSubmit(values: RegisterInput) {
-    mutation.mutate(values)
+    if (!consent) return
+    mutation.mutate({ ...values, consent: CONSENT_ACCEPTED })
   }
 
   return (
@@ -59,6 +65,7 @@ export function RegisterForm() {
               <FormControl>
                 <Input placeholder="giaovien123" {...field} disabled={mutation.isPending} />
               </FormControl>
+              <p className="text-xs text-slate-500">{t("register_username_hint")}</p>
               <FormMessage />
             </FormItem>
           )}
@@ -96,7 +103,15 @@ export function RegisterForm() {
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={mutation.isPending}>
+        <ConsentCheckbox
+          id="register-consent"
+          label={t("consent_register")}
+          checked={consent}
+          onCheckedChange={setConsent}
+          disabled={mutation.isPending}
+        />
+
+        <Button type="submit" className="w-full" disabled={mutation.isPending || !consent}>
           {mutation.isPending ? t("processing") : t("register")}
         </Button>
 
@@ -104,6 +119,12 @@ export function RegisterForm() {
           <span className="text-slate-500">{t("already_have_account")} </span>
           <Link href="/login" className="text-primary hover:underline font-medium">
             {t("login_now")}
+          </Link>
+        </div>
+
+        <div className="text-center">
+          <Link href="/privacy" className="mt-2 inline-flex min-h-11 items-center text-xs text-slate-500 hover:underline">
+            {t("privacy_title")}
           </Link>
         </div>
       </form>

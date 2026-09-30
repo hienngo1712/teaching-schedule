@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { consentPayload } from "@/lib/consent"
 
 export const changePasswordSchema = z
   .object({
@@ -30,5 +31,8 @@ export const registerSchema = z.object({
   fullName: z.string().max(100).trim().optional().or(z.literal("")),
 })
 
+export const registerInputSchema = registerSchema.extend({ consent: consentPayload })
+
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
 export type RegisterInput = z.infer<typeof registerSchema>
+export type RegisterInputSchema = z.infer<typeof registerInputSchema>

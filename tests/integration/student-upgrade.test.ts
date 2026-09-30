@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -22,11 +23,11 @@ describe("student.upgradeAllClasses — manual", () => {
 
   it("upgrades grade 1-11 active students by +1 (lớp 9 → 10, lớp 11 → 12)", async () => {
     const caller = await getAuthedCaller("teacher")
-    const s1 = await caller.student.create({ fullName: "HS Lop 1", grade: 1, tuitionFee: 0, isActive: true })
-    const s5 = await caller.student.create({ fullName: "HS Lop 5", grade: 5, tuitionFee: 0, isActive: true })
-    const s8 = await caller.student.create({ fullName: "HS Lop 8", grade: 8, tuitionFee: 0, isActive: true })
-    const s9 = await caller.student.create({ fullName: "HS Lop 9", grade: 9, tuitionFee: 0, isActive: true })
-    const s11 = await caller.student.create({ fullName: "HS Lop 11", grade: 11, tuitionFee: 0, isActive: true })
+    const s1 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 1", grade: 1, tuitionFee: 0, isActive: true })
+    const s5 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 5", grade: 5, tuitionFee: 0, isActive: true })
+    const s8 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 8", grade: 8, tuitionFee: 0, isActive: true })
+    const s9 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 9", grade: 9, tuitionFee: 0, isActive: true })
+    const s11 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 11", grade: 11, tuitionFee: 0, isActive: true })
 
     const result = await caller.student.upgradeAllClasses()
 
@@ -42,7 +43,7 @@ describe("student.upgradeAllClasses — manual", () => {
 
   it("lớp 9 KHÔNG bị cho nghỉ: lên lớp 10, vẫn đang học", async () => {
     const caller = await getAuthedCaller("teacher")
-    const s9 = await caller.student.create({ fullName: "HS Lop 9", grade: 9, tuitionFee: 0, isActive: true })
+    const s9 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 9", grade: 9, tuitionFee: 0, isActive: true })
 
     const result = await caller.student.upgradeAllClasses()
 
@@ -54,7 +55,7 @@ describe("student.upgradeAllClasses — manual", () => {
 
   it("deactivates grade-12 active students and keeps their grade=12", async () => {
     const caller = await getAuthedCaller("teacher")
-    const s12 = await caller.student.create({ fullName: "HS Lop 12", grade: 12, tuitionFee: 0, isActive: true })
+    const s12 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 12", grade: 12, tuitionFee: 0, isActive: true })
 
     const result = await caller.student.upgradeAllClasses()
 
@@ -81,7 +82,7 @@ describe("student.upgradeAllClasses — manual", () => {
 
   it("does NOT touch inactive students", async () => {
     const caller = await getAuthedCaller("teacher")
-    const s = await caller.student.create({ fullName: "HS inactive", grade: 3, tuitionFee: 0, isActive: false })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS inactive", grade: 3, tuitionFee: 0, isActive: false })
 
     await caller.student.upgradeAllClasses()
 
@@ -92,8 +93,8 @@ describe("student.upgradeAllClasses — manual", () => {
 
   it("creates ClassUpgradeLog with trigger='manual' and correct counts", async () => {
     const caller = await getAuthedCaller("teacher")
-    await caller.student.create({ fullName: "AA", grade: 2, tuitionFee: 0, isActive: true })
-    await caller.student.create({ fullName: "BB", grade: 12, tuitionFee: 0, isActive: true })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "AA", grade: 2, tuitionFee: 0, isActive: true })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "BB", grade: 12, tuitionFee: 0, isActive: true })
 
     await caller.student.upgradeAllClasses()
 
@@ -109,7 +110,7 @@ describe("student.upgradeAllClasses — manual", () => {
 
   it("throws CONFLICT when called twice in the same year", async () => {
     const caller = await getAuthedCaller("teacher")
-    await caller.student.create({ fullName: "AA", grade: 2, tuitionFee: 0, isActive: true })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "AA", grade: 2, tuitionFee: 0, isActive: true })
 
     await caller.student.upgradeAllClasses()
 
@@ -137,8 +138,8 @@ describe("student.upgradeAllClasses — manual", () => {
     const callerA = await getAuthedCaller("teacher")
     const callerB = await getAuthedCaller("teacher2")
 
-    const sA = await callerA.student.create({ fullName: "AA", grade: 2, tuitionFee: 0, isActive: true })
-    const sB = await callerB.student.create({ fullName: "BB", grade: 2, tuitionFee: 0, isActive: true })
+    const sA = await callerA.student.create({ consent: CONSENT_ACCEPTED,  fullName: "AA", grade: 2, tuitionFee: 0, isActive: true })
+    const sB = await callerB.student.create({ consent: CONSENT_ACCEPTED,  fullName: "BB", grade: 2, tuitionFee: 0, isActive: true })
 
     await callerA.student.upgradeAllClasses()
 
@@ -162,7 +163,7 @@ describe("student.getUpgradeLogThisYear", () => {
 
   it("returns the log after upgrade", async () => {
     const caller = await getAuthedCaller("teacher")
-    await caller.student.create({ fullName: "AA", grade: 2, tuitionFee: 0, isActive: true })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "AA", grade: 2, tuitionFee: 0, isActive: true })
     await caller.student.upgradeAllClasses()
 
     const log = await caller.student.getUpgradeLogThisYear()
@@ -177,7 +178,7 @@ describe("student.getUpgradeLogThisYear", () => {
     // reader phải đọc cùng năm UTC, không dùng năm local (2027).
     vi.setSystemTime(new Date("2026-12-31T20:00:00Z"))
     const caller = await getAuthedCaller("teacher")
-    await caller.student.create({ fullName: "HS NY", grade: 2, tuitionFee: 0, isActive: true })
+    await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS NY", grade: 2, tuitionFee: 0, isActive: true })
     await caller.student.upgradeAllClasses()
 
     const log = await caller.student.getUpgradeLogThisYear()
@@ -197,7 +198,7 @@ describe("SessionStudent.grade snapshot", () => {
     const caller = await getAuthedCaller("teacher")
     const subjects = await caller.subject.list({})
     const subject = subjects[0]
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Lop 3 Snapshot",
       grade: 3,
       tuitionFee: 0,
@@ -220,7 +221,7 @@ describe("SessionStudent.grade snapshot", () => {
     const caller = await getAuthedCaller("teacher")
     const subjects = await caller.subject.list({})
     const subject = subjects[0]
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Lop 3 Historical",
       grade: 3,
       tuitionFee: 0,
@@ -249,7 +250,7 @@ describe("SessionStudent.grade snapshot", () => {
   it("updateStudent đổi grade → đồng bộ grade buổi tương lai, giữ buổi quá khứ", async () => {
     const caller = await getAuthedCaller("teacher")
     const subject = (await caller.subject.list({}))[0]
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Sync Grade",
       grade: 3,
       tuitionFee: 0,
@@ -270,7 +271,7 @@ describe("SessionStudent.grade snapshot", () => {
       studentIds: [student.id],
     })
 
-    await caller.student.update({ id: student.id, data: { grade: 7 } })
+    await caller.student.update({ consent: CONSENT_ACCEPTED,  id: student.id, data: { grade: 7 } })
 
     const pastSS = await db.sessionStudent.findFirst({
       where: { sessionId: past.id, studentId: student.id },
@@ -288,11 +289,11 @@ describe("SessionStudent.grade snapshot", () => {
     try {
       const caller = await getAuthedCaller("teacher")
       const subject = (await caller.subject.list({}))[0]
-      const student = await caller.student.create({ fullName: "HS Sync VN", grade: 3, tuitionFee: 0, isActive: true })
+      const student = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Sync VN", grade: 3, tuitionFee: 0, isActive: true })
       const ended = await caller.session.create({ sessionDate: "2099-03-10", startTime: "16:00", endTime: "17:00", subjectId: subject.id, studentIds: [student.id] })
       const upcoming = await caller.session.create({ sessionDate: "2099-03-10", startTime: "19:00", endTime: "20:00", subjectId: subject.id, studentIds: [student.id] })
 
-      await caller.student.update({ id: student.id, data: { grade: 7 } })
+      await caller.student.update({ consent: CONSENT_ACCEPTED,  id: student.id, data: { grade: 7 } })
 
       const gradeOf = async (sessionId: number) =>
         (await db.sessionStudent.findFirstOrThrow({ where: { sessionId, studentId: student.id } })).grade
@@ -307,7 +308,7 @@ describe("SessionStudent.grade snapshot", () => {
     const caller = await getAuthedCaller("teacher")
     const subjects = await caller.subject.list({})
     const subject = subjects[0]
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS New After Upgrade",
       grade: 3,
       tuitionFee: 0,
@@ -339,7 +340,7 @@ describe("Historical grade filtering after upgrade", () => {
     const caller = await getAuthedCaller("teacher")
     const subjects = await caller.subject.list({})
     const subject = subjects[0]
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS3 Historical Filter",
       grade: 3,
       tuitionFee: 0,
@@ -367,7 +368,7 @@ describe("Historical grade filtering after upgrade", () => {
     const caller = await getAuthedCaller("teacher")
     const subjects = await caller.subject.list({})
     const subject = subjects[0]
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS3 Historical Report",
       grade: 3,
       tuitionFee: 0,
@@ -403,7 +404,7 @@ describe("Lazy auto-upgrade via auth.me", () => {
     vi.setSystemTime(new Date("2099-07-01T00:00:00Z"))
 
     const caller = await getAuthedCaller("teacher")
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Auto",
       grade: 2,
       tuitionFee: 0,
@@ -430,7 +431,7 @@ describe("Lazy auto-upgrade via auth.me", () => {
     vi.setSystemTime(new Date("2099-06-30T23:59:00Z"))
 
     const caller = await getAuthedCaller("teacher")
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS June",
       grade: 2,
       tuitionFee: 0,
@@ -456,7 +457,7 @@ describe("Lazy auto-upgrade via auth.me", () => {
     vi.setSystemTime(new Date("2099-07-15T00:00:00Z"))
 
     const caller = await getAuthedCaller("teacher")
-    const student = await caller.student.create({
+    const student = await caller.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "HS Pre-upgraded",
       grade: 2,
       tuitionFee: 0,
@@ -524,9 +525,9 @@ describe("upgradeAllClasses ↔ ca chưa kết thúc theo giờ VN (spec P5)", (
     vi.setSystemTime(new Date("2099-07-15T11:00:00Z"))
     const caller = await getAuthedCaller("teacher")
     const subjectId = (await caller.subject.list({}))[0].id
-    const g5 = await caller.student.create({ fullName: "HS Lop 5", grade: 5, tuitionFee: 0, isActive: true })
-    const g12 = await caller.student.create({ fullName: "HS Lop 12", grade: 12, tuitionFee: 0, isActive: true })
-    const g8 = await caller.student.create({ fullName: "HS Lop 8 Nghi", grade: 8, tuitionFee: 0, isActive: true })
+    const g5 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 5", grade: 5, tuitionFee: 0, isActive: true })
+    const g12 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 12", grade: 12, tuitionFee: 0, isActive: true })
+    const g8 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Lop 8 Nghi", grade: 8, tuitionFee: 0, isActive: true })
     const mk = (sessionDate: string, startTime: string, endTime: string, studentIds: number[]) =>
       caller.session.create({ sessionDate, startTime, endTime, subjectId, studentIds })
     const s = {
@@ -573,7 +574,7 @@ describe("upgradeAllClasses ↔ ca chưa kết thúc theo giờ VN (spec P5)", (
     const other = await getAuthedCaller("teacher2")
     const otherSubjects = await other.subject.list({})
     const otherSubject = otherSubjects.length > 0 ? otherSubjects[0].id : (await other.subject.create({ name: "Toán K", color: "#0891B2" })).id
-    const st = await other.student.create({ fullName: "HS Khac", grade: 5, tuitionFee: 0, isActive: true })
+    const st = await other.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Khac", grade: 5, tuitionFee: 0, isActive: true })
     const ses = await other.session.create({ sessionDate: "2099-07-20", startTime: "10:00", endTime: "11:00", subjectId: otherSubject, studentIds: [st.id] })
     await ctx.caller.student.upgradeAllClasses()
     expect(await links(ses.id)).toEqual([{ studentId: st.id, grade: 5 }])

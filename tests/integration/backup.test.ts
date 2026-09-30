@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll } from "vitest"
 import ExcelJS from "exceljs"
 import { Prisma } from "@prisma/client"
@@ -120,7 +121,7 @@ describe("buildBackupWorkbook", () => {
     teacherId = teacher.id
     passwordHash = teacher.passwordHash
 
-    const an = await a.student.create({
+    const an = await a.student.create({ consent: CONSENT_ACCEPTED, 
       fullName: "An Sao Lưu", grade: 3, parentName: "Mẹ An",
       parentPhone: "0912345678", tuitionFee: 150000, notes: '=HYPERLINK("http://x")',
     })
@@ -128,15 +129,15 @@ describe("buildBackupWorkbook", () => {
     // 20:00 UTC = 03:00 sáng hôm sau giờ VN → bắt lỗi quên cộng 7 giờ.
     await db.student.update({ where: { id: anId }, data: { createdAt: new Date("2026-01-01T20:00:00Z") } })
 
-    const binh = await a.student.create({ fullName: "Bình Sao Lưu", grade: 5 })
+    const binh = await a.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Bình Sao Lưu", grade: 5 })
     binhId = binh.id
-    await a.student.update({ id: binhId, data: { isActive: false } })
+    await a.student.update({ consent: CONSENT_ACCEPTED,  id: binhId, data: { isActive: false } })
 
     const hidden = await a.subject.create({ name: "Lý Sao Lưu" })
     hiddenSubjectId = hidden.id
     await a.subject.update({ id: hiddenSubjectId, data: { isActive: false } })
 
-    const stranger = await b.student.create({ fullName: "Người Lạ GV2", grade: 4, tuitionFee: 90000 })
+    const stranger = await b.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Người Lạ GV2", grade: 4, tuitionFee: 90000 })
     await b.subject.create({ name: "Môn Lạ GV2" })
 
     if (HAS_PARENT_TOKEN) {

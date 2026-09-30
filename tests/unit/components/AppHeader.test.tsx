@@ -1,16 +1,26 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { AppHeader } from "@/components/layout/AppHeader"
+import viText from "@/language/vi.json"
+
+// jsdom không có ResizeObserver mà Radix dialog cần.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver
+
+const download = vi.hoisted(() => vi.fn())
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: { username: "admin_test", fullName: "Quản trị Test" } } }),
   signOut: vi.fn(),
 }))
-vi.mock("@/hooks/useBackupDownload", () => ({ useBackupDownload: () => ({ download: vi.fn(), isDownloading: false }) }))
+vi.mock("@/hooks/useBackupDownload", () => ({ useBackupDownload: () => ({ download, isDownloading: false }) }))
 vi.mock("@/components/plan/RenewOffer", () => ({ RenewOffer: () => <div data-testid="renew-offer-slot" /> }))
 vi.mock("@/components/layout/ChangePasswordDialog", () => ({
   ChangePasswordDialog: ({ trigger }: { trigger: React.ReactNode }) => trigger,
@@ -30,11 +40,27 @@ function renderHeader(variant?: "teacher" | "admin") {
 }
 
 describe("AppHeader", () => {
+  beforeEach(() => {
+    download.mockReset()
+  })
+
   it("mặc định (giáo viên): có RenewOffer; menu Sao lưu dữ liệu, Đổi mật khẩu, Đăng xuất; không có Quản trị", async () => {
     renderHeader()
     expect(screen.getByTestId("renew-offer-slot")).toBeTruthy()
     const items = await screen.findAllByRole("menuitem")
     expect(items.map((i) => i.textContent)).toEqual(["Sao lưu dữ liệu", "Đổi mật khẩu", "Đăng xuất"])
+  })
+
+  it("bấm Sao lưu dữ liệu → hiện dialog cảnh báo, bấm Tôi hiểu tải xuống mới gọi download", async () => {
+    renderHeader()
+    const backupItem = await screen.findByRole("menuitem", { name: "Sao lưu dữ liệu" })
+    fireEvent.click(backupItem)
+    expect(download).not.toHaveBeenCalled()
+
+    expect(screen.getByText(viText.backup_confirm_title)).toBeTruthy()
+    const confirmBtn = screen.getByRole("button", { name: viText.backup_confirm_download })
+    fireEvent.click(confirmBtn)
+    expect(download).toHaveBeenCalledTimes(1)
   })
 
   it("admin: không RenewOffer; menu Quản trị (link /admin/overview), Đổi mật khẩu, Đăng xuất; không Sao lưu", async () => {

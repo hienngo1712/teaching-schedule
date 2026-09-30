@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeAll, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -25,9 +26,9 @@ describe("Bulk Update & Delete Future Sessions", () => {
     })
     subjectId = subject.id
 
-    const st1 = await caller.student.create({ fullName: "Student 1", grade: 5 })
-    const st2 = await caller.student.create({ fullName: "Student 2", grade: 5 })
-    const st3 = await caller.student.create({ fullName: "Student 3", grade: 5 })
+    const st1 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Student 1", grade: 5 })
+    const st2 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Student 2", grade: 5 })
+    const st3 = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Student 3", grade: 5 })
     
     student1Id = st1.id
     student2Id = st2.id

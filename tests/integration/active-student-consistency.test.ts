@@ -1,3 +1,4 @@
+import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
@@ -20,13 +21,13 @@ describe("Active/inactive student consistency", () => {
     const subjects = await caller.subject.list({})
     const subjectId = subjects[0].id
 
-    const s = await caller.student.create({ fullName: "HS Tốt Nghiệp", grade: 9, tuitionFee: 0 })
+    const s = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Tốt Nghiệp", grade: 9, tuitionFee: 0 })
     await caller.session.create({
       sessionDate: "2026-05-10", startTime: "08:00", endTime: "09:30",
       subjectId, studentIds: [s.id],
     })
     // Student graduates / drops out after attending the May session
-    await caller.student.update({ id: s.id, data: { isActive: false } })
+    await caller.student.update({ consent: CONSENT_ACCEPTED,  id: s.id, data: { isActive: false } })
 
     const summary = await caller.report.monthlySummary({ year: 2026, month: 5 })
 
@@ -43,9 +44,9 @@ describe("Active/inactive student consistency", () => {
   // ── Students page: must be able to view inactive (graduated) students ──
   it("student.list defaults to active-only", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "Đang Học A", grade: 3 })
-    const b = await caller.student.create({ fullName: "Đã Nghỉ B", grade: 3 })
-    await caller.student.update({ id: b.id, data: { isActive: false } })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Đang Học A", grade: 3 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Đã Nghỉ B", grade: 3 })
+    await caller.student.update({ consent: CONSENT_ACCEPTED,  id: b.id, data: { isActive: false } })
 
     const res = await caller.student.list({})
     const ids = res.items.map((x) => x.id)
@@ -55,9 +56,9 @@ describe("Active/inactive student consistency", () => {
 
   it("student.list isActive:false returns only inactive students", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "Đang Học A", grade: 3 })
-    const b = await caller.student.create({ fullName: "Đã Nghỉ B", grade: 3 })
-    await caller.student.update({ id: b.id, data: { isActive: false } })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Đang Học A", grade: 3 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Đã Nghỉ B", grade: 3 })
+    await caller.student.update({ consent: CONSENT_ACCEPTED,  id: b.id, data: { isActive: false } })
 
     const res = await caller.student.list({ isActive: false })
     const ids = res.items.map((x) => x.id)
@@ -67,9 +68,9 @@ describe("Active/inactive student consistency", () => {
 
   it("student.list includeInactive returns both active and inactive", async () => {
     const caller = await getAuthedCaller()
-    const a = await caller.student.create({ fullName: "Đang Học A", grade: 3 })
-    const b = await caller.student.create({ fullName: "Đã Nghỉ B", grade: 3 })
-    await caller.student.update({ id: b.id, data: { isActive: false } })
+    const a = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Đang Học A", grade: 3 })
+    const b = await caller.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Đã Nghỉ B", grade: 3 })
+    await caller.student.update({ consent: CONSENT_ACCEPTED,  id: b.id, data: { isActive: false } })
 
     const res = await caller.student.list({ includeInactive: true })
     const ids = res.items.map((x) => x.id)
