@@ -109,7 +109,8 @@ test('giáo viên tạo link, phụ huynh xem không cần đăng nhập, tạo 
   await expect(parent.page.getByText('Có mặt', { exact: true })).toBeVisible();
   await expect(parent.page.getByRole('heading', { name: 'Lịch sắp tới' })).toBeVisible();
   const [y, m, d] = vnDay(7).split('-');
-  await expect(parent.page.getByText(new RegExp(`${d}/${m} · 05:00`))).toBeVisible();
+  // Ca +7 ngày cùng tháng thì hiện cả ở Lịch sắp tới lẫn danh sách tháng → lấy dòng đầu.
+  await expect(parent.page.getByText(new RegExp(`${d}/${m} · 05:00`)).first()).toBeVisible();
   const overflow = await parent.page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth
   );
