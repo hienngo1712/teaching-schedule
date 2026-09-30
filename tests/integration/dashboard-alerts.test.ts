@@ -135,20 +135,17 @@ async function setPaid(
   }
 }
 
-async function snapshot(
+// Nợ sinh từ buổi có mặt thật (nợ đầu tháng tính lại từ dữ liệu gốc, không đọc số tổng lưu sẵn).
+async function owe(
+  caller: Caller,
   studentId: number,
   year: number,
   month: number,
-  totalAmountDue: number,
-  opts: { paidAmount?: number; isFullPaid?: boolean } = {}
+  fee: number,
+  opts: { isFullPaid?: boolean; day?: number } = {}
 ) {
-  await db.monthlyTuition.create({
-    data: {
-      studentId, year, month, totalAmountDue,
-      paidAmount: opts.paidAmount ?? 0,
-      isFullPaid: opts.isFullPaid ?? false,
-    },
-  })
+  await addSession(caller, { date: `${year}-${String(month).padStart(2, "0")}-${opts.day ?? 10}`, studentIds: [studentId], presentFee: fee })
+  if (opts.isFullPaid) await db.monthlyTuition.create({ data: { studentId, year, month, isFullPaid: true } })
 }
 
 describe("getDashboardAlerts — còn nợ tháng trước", () => {
@@ -217,10 +214,10 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
     const userId = await userIdOf("teacher")
     const a = await caller.student.create({ fullName: "HS Nợ Dài", grade: 6 })
     const b = await caller.student.create({ fullName: "HS Nợ Ngắn", grade: 2 })
-    await snapshot(a.id, 2026, 6, 100000)
-    await snapshot(a.id, 2026, 7, 200000)
-    await snapshot(a.id, 2026, 8, 300000)
-    await snapshot(b.id, 2026, 8, 100000)
+    await owe(caller, a.id, 2026, 6, 100000)
+    await owe(caller, a.id, 2026, 7, 100000)
+    await owe(caller, a.id, 2026, 8, 100000)
+    await owe(caller, b.id, 2026, 8, 100000, { day: 11 })
 
     const { debts } = await getDashboardAlerts(db, userId, NOW)
     expect(debts).toEqual([
@@ -229,13 +226,28 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
     ])
   })
 
+  // Lỗi prod 30/9: snapshot tháng 7 đóng băng nợ tháng 6 (ghi trước khi thu) → đếm "nợ 2 tháng" dù tháng 6 đã thu.
+  it("snapshot cũ còn ghi nợ tháng đã thu → không đếm tháng đó", async () => {
+    const caller = await getAuthedCaller()
+    const userId = await userIdOf("teacher")
+    const st = await caller.student.create({ fullName: "HS Snapshot Cũ", grade: 6 })
+    await owe(caller, st.id, 2026, 6, 100000)
+    await db.monthlyTuition.create({ data: { studentId: st.id, year: 2026, month: 7, previousBalance: 100000, totalAmountDue: 100000 } })
+    await setPaid(caller, st.id, 6, 100000, false)
+    await owe(caller, st.id, 2026, 8, 100000)
+    await caller.tuition.getMonthlyStatus({ year: 2026, month: 8, studentId: st.id, limit: 1 })
+
+    const { debts } = await getDashboardAlerts(db, userId, NOW)
+    expect(debts.map((d) => [d.amount, d.months])).toEqual([[100000, 1]])
+  })
+
   it("tháng 7 đã tất toán → đếm dừng, còn 1 tháng", async () => {
     const caller = await getAuthedCaller()
     const userId = await userIdOf("teacher")
     const st = await caller.student.create({ fullName: "HS Ngắt Quãng", grade: 6 })
-    await snapshot(st.id, 2026, 6, 100000)
-    await snapshot(st.id, 2026, 7, 200000, { isFullPaid: true })
-    await snapshot(st.id, 2026, 8, 100000)
+    await owe(caller, st.id, 2026, 6, 100000)
+    await owe(caller, st.id, 2026, 7, 100000, { isFullPaid: true })
+    await owe(caller, st.id, 2026, 8, 100000)
 
     const { debts } = await getDashboardAlerts(db, userId, NOW)
     expect(debts.map((d) => [d.amount, d.months])).toEqual([[100000, 1]])
@@ -247,7 +259,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
     const st = await caller.student.create({ fullName: "HS Nợ Lâu", grade: 6 })
     for (let i = 0; i < 12; i++) {
       const m = 9 + i // 2025-09 .. 2026-08
-      await snapshot(st.id, m > 12 ? 2026 : 2025, m > 12 ? m - 12 : m, 100000)
+      await owe(caller, st.id, m > 12 ? 2026 : 2025, m > 12 ? m - 12 : m, 100000)
     }
 
     const { debts } = await getDashboardAlerts(db, userId, NOW)
