@@ -4,6 +4,7 @@ import { db } from "@/server/db"
 import { authorizeCredentials, getSessionUserState } from "@/server/auth-credentials"
 import { registerUser } from "@/server/services/user.service"
 import { getParentView } from "@/server/services/parent-link.service"
+import { hashParentToken } from "@/server/crypto/parent-token"
 import { getAuthedCaller } from "../helpers/trpc"
 
 const NAME = "q_del_user"
@@ -26,7 +27,9 @@ async function createTestUser() {
   const u = await db.user.create({
     data: { username: NAME, passwordHash: await bcrypt.hash(PASS, 4), fullName: "GV Xoá", plan: "pro", planExpiresAt: new Date("2099-12-31T17:00:00.000Z") },
   })
-  await db.student.create({ data: { userId: u.id, fullName: "HS của GV xoá", grade: 4, parentLinkToken: TOKEN } })
+  await db.student.create({
+    data: { userId: u.id, fullName: "HS của GV xoá", grade: 4, parentLinkToken: TOKEN, parentLinkTokenHash: hashParentToken(TOKEN) },
+  })
   return u
 }
 

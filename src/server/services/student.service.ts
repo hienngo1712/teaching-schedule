@@ -14,11 +14,14 @@ import type {
   StudentImportInput,
 } from "@/lib/schemas/student"
 import type { PaginatedResponse } from "@/lib/schemas/common"
-import type { SchoolLevel, StudentDTO } from "@/lib/types/models"
+import type { StudentDTO } from "@/lib/types/models"
 import { nameKey, type ExistingMatch } from "@/lib/student-import"
 
-function withLevel<T extends { grade: number }>(s: T): T & { level: SchoolLevel } {
-  return { ...s, level: getLevel(s.grade) }
+// Hash chỉ để tra link phụ huynh, không gửi ra client (spec O 6.5).
+function toStudentDTO<T extends { grade: number; parentLinkTokenHash: string | null }>(s: T) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { parentLinkTokenHash, ...rest } = s
+  return { ...rest, level: getLevel(s.grade) }
 }
 
 export async function listStudents(
@@ -42,7 +45,7 @@ export async function listStudents(
   const matched = rows.filter((s) => nameMatches(s.fullName, search)).sort(byGradeThenName)
   const start = (page - 1) * limit
   return {
-    items: matched.slice(start, start + limit).map(withLevel),
+    items: matched.slice(start, start + limit).map(toStudentDTO),
     totalCount: matched.length,
     totalPages: Math.ceil(matched.length / limit),
   }
@@ -66,7 +69,7 @@ export async function createStudent(
       tuitionFee: input.tuitionFee,
     },
   })
-  return withLevel(student)
+  return toStudentDTO(student)
 }
 
 // Gồm cả HS đã nghỉ (spec E D3). Cùng khóa nhiều em → ưu tiên em đang học.
@@ -187,7 +190,7 @@ export async function updateStudent(
     return updated
   })
 
-  return withLevel(student)
+  return toStudentDTO(student)
 }
 
 // Cho nghỉ: gỡ khỏi ca chưa kết thúc, giữ lịch sử (spec Q mục 5).

@@ -7,6 +7,7 @@ import {
   getParentView,
   PARENT_TOKEN_REGEX,
 } from "@/server/services/parent-link.service"
+import { hashParentToken } from "@/server/crypto/parent-token"
 
 async function cleanup() {
   await db.monthlyTuition.deleteMany() // cascade xoá Payment (B)
@@ -80,7 +81,7 @@ describe("student.generateParentLink / disableParentLink", () => {
     const first = await caller.student.generateParentLink({ id: s.id })
     const second = await caller.student.generateParentLink({ id: s.id })
     expect(second.token).not.toBe(first.token)
-    expect(await db.student.findUnique({ where: { parentLinkToken: first.token } })).toBeNull()
+    expect(await db.student.findUnique({ where: { parentLinkTokenHash: hashParentToken(first.token) } })).toBeNull()
     expect((await db.student.findUniqueOrThrow({ where: { id: s.id } })).parentLinkToken).toBe(second.token)
   })
 
@@ -338,3 +339,42 @@ describe("getParentView", () => {
     }).toEqual(before)
   })
 })
+
+describe("Link phụ huynh: tra theo hash, token mã hoá (spec O 6.5)", () => {
+  it("tạo link: DB có hash SHA-256 + token ciphertext; list trả token rõ, không có hash", async () => {
+    const t = await getAuthedCaller()
+    const s = await t.student.create({ fullName: "HS Link", grade: 4 })
+    const { token } = await t.student.generateParentLink({ id: s.id })
+    const [raw] = await db.$queryRaw<Array<{ tok: string; h: string }>>`
+      SELECT parent_link_token AS tok, parent_link_token_hash AS h FROM students WHERE id = ${s.id}`
+    expect(raw.tok.startsWith("enc:v1:")).toBe(true)
+    expect(raw.h).toBe(hashParentToken(token))
+    expect(raw.h).toMatch(/^[0-9a-f]{64}$/)
+    const item = (await t.student.list({})).items.find((x) => x.id === s.id)!
+    expect(item.parentLinkToken).toBe(token)
+    expect("parentLinkTokenHash" in item).toBe(false)
+    expect(await getParentView(db, token)).not.toBeNull()
+  })
+
+  it("token cũ chỉ có bản rõ + hash tính bằng SQL của migration → vẫn mở được", async () => {
+    const t = await getAuthedCaller()
+    const s = await t.student.create({ fullName: "HS Link Cũ", grade: 4 })
+    const token = "Q".repeat(43)
+    await db.$executeRaw`UPDATE students SET parent_link_token = ${token},
+      parent_link_token_hash = encode(sha256(convert_to(${token}, 'UTF8')), 'hex') WHERE id = ${s.id}`
+    const view = await getParentView(db, token)
+    expect(view?.student.fullName).toBe("HS Link Cũ")
+  })
+
+  it("tắt link: cả 2 cột null, link cũ 404", async () => {
+    const t = await getAuthedCaller()
+    const s = await t.student.create({ fullName: "HS Tắt", grade: 4 })
+    const { token } = await t.student.generateParentLink({ id: s.id })
+    await t.student.disableParentLink({ id: s.id })
+    const [raw] = await db.$queryRaw<Array<{ tok: string | null; h: string | null }>>`
+      SELECT parent_link_token AS tok, parent_link_token_hash AS h FROM students WHERE id = ${s.id}`
+    expect(raw).toEqual({ tok: null, h: null })
+    expect(await getParentView(db, token)).toBeNull()
+  })
+})
+

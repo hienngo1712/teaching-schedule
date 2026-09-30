@@ -3,6 +3,7 @@ import { db } from "@/server/db"
 import { RESTORE_DATA } from "@/server/soft-delete"
 import { buildBackupWorkbook } from "@/server/services/backup.service"
 import { getParentView } from "@/server/services/parent-link.service"
+import { hashParentToken } from "@/server/crypto/parent-token"
 import { getAuthedCaller } from "../helpers/trpc"
 
 // Tháng quá khứ cố định để phiếu/phụ huynh (giới hạn 12 tháng) không đụng; học phí tính mọi tháng.
@@ -85,7 +86,10 @@ describe("Học phí khi xoá / khôi phục (spec Q mục 6)", () => {
 
   it("trang phụ huynh: ca đã xoá không hiện; HS đã xoá → null", async () => {
     const { caller, st, s } = await setup()
-    await db.student.update({ where: { id: st.id }, data: { parentLinkToken: TOKEN } })
+    await db.student.update({
+      where: { id: st.id },
+      data: { parentLinkToken: TOKEN, parentLinkTokenHash: hashParentToken(TOKEN) },
+    })
     // Chỉ kiểm được tháng trong 12 tháng gần nhất: dời ca về tháng hiện tại VN.
     const now = new Date(Date.now() + 7 * 3600_000)
     const ym = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`
