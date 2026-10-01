@@ -62,13 +62,27 @@ function notice(overrides: Partial<Record<string, unknown>> = {}) {
 let queryReturn: { data: unknown; isError: boolean; dataUpdatedAt: number; refetch: () => void }
 const mockSetNoticeSentMutate = vi.fn()
 const mockInvalidate = vi.fn()
+const mockClientSetNoticeSentMutate = vi.fn().mockResolvedValue({})
+let noticeMutationOptions: { onSuccess?: (res: unknown, vars: { studentId: number; year: number; month: number; sent: boolean }) => void; onError?: () => void } = {}
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
-    useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: mockInvalidate } } }),
+    useUtils: () => ({
+      tuition: { getMonthlyStatus: { invalidate: mockInvalidate } },
+      client: {
+        tuition: {
+          setNoticeSent: { mutate: mockClientSetNoticeSentMutate },
+        },
+      },
+    }),
     tuition: {
       getNotice: { useQuery: () => queryReturn },
-      setNoticeSent: { useMutation: () => ({ mutate: mockSetNoticeSentMutate, isPending: false }) },
+      setNoticeSent: {
+        useMutation: (opts?: typeof noticeMutationOptions) => {
+          noticeMutationOptions = opts ?? {}
+          return { mutate: mockSetNoticeSentMutate, isPending: false }
+        },
+      },
     },
   },
 }))
@@ -207,8 +221,7 @@ describe("TuitionNoticeDialog", () => {
     fireEvent.click(downloadBtn)
     expect(saveAs).toHaveBeenCalled()
     expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true }),
-      expect.anything()
+      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true })
     )
   })
 
@@ -229,9 +242,9 @@ describe("TuitionNoticeDialog", () => {
     const downloadBtn = screen.getByRole("button", { name: /Tải ảnh/ })
     await waitFor(() => expect(downloadBtn.getAttribute("disabled")).toBeNull())
 
-    // Mock mutate trigger onSuccess callback
-    mockSetNoticeSentMutate.mockImplementationOnce((args, options) => {
-      options?.onSuccess?.()
+    // Mock mutate trigger hook onSuccess callback
+    mockSetNoticeSentMutate.mockImplementationOnce((vars) => {
+      noticeMutationOptions.onSuccess?.(undefined, vars)
     })
 
     fireEvent.click(downloadBtn)
@@ -240,11 +253,10 @@ describe("TuitionNoticeDialog", () => {
     const toastOptions = toastCall[1] as { action?: { onClick?: () => void } }
     expect(toastOptions?.action).toBeDefined()
 
-    // Bấm Hoàn tác
+    // Bấm Hoàn tác gọi client mutate
     toastOptions.action!.onClick!()
-    expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: false }),
-      expect.anything()
+    expect(mockClientSetNoticeSentMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: false })
     )
   })
 
@@ -272,8 +284,7 @@ describe("TuitionNoticeDialog", () => {
     fireEvent.click(shareBtn)
     await waitFor(() => {
       expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
-        expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true }),
-        expect.anything()
+        expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true })
       )
     })
   })
@@ -330,8 +341,53 @@ describe("TuitionNoticeDialog", () => {
 
     fireEvent.click(saveImgBtn)
     expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true }),
-      expect.anything()
+      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true })
+    )
+  })
+
+  it("U3: unmount dialog trước khi mutation resolve -> sau khi resolve vẫn gọi toast với action Hoàn tác, bấm Hoàn tác gọi client mutate với sent: false", async () => {
+    queryReturn = {
+      data: notice({ paidAmount: 400000 }),
+      isError: false,
+      dataUpdatedAt: 1000,
+      refetch: vi.fn(),
+    }
+
+    const { unmount } = render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+
+    const downloadBtn = screen.getByRole("button", { name: "Tải ảnh" })
+    await waitFor(() => expect(downloadBtn.getAttribute("disabled")).toBeNull())
+
+    fireEvent.click(downloadBtn)
+    expect(mockSetNoticeSentMutate).toHaveBeenCalled()
+
+    // Unmount dialog trước khi mutation resolve
+    unmount()
+
+    // Mutation resolve ở hook level
+    noticeMutationOptions.onSuccess?.(undefined, { studentId: 1, year: 2026, month: 5, sent: true })
+
+    expect(toast).toHaveBeenCalledWith(
+      expect.stringContaining("Đã đánh dấu đã gửi phiếu"),
+      expect.objectContaining({
+        action: expect.objectContaining({
+          label: "Hoàn tác",
+          onClick: expect.any(Function),
+        }),
+      })
+    )
+
+    // Gọi action onClick của toast
+    const toastCall = vi.mocked(toast).mock.calls[0]
+    const action = (toastCall[1] as unknown as { action: { onClick: () => void } }).action
+    action.onClick()
+
+    expect(mockClientSetNoticeSentMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: false })
     )
   })
 })

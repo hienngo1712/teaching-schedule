@@ -22,12 +22,27 @@ type Props = { studentId: number; year: number; month: number; onClose: () => vo
 // Chỉ mount khi mở → Blob và trạng thái tự reset mỗi lần mở.
 export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) {
   const { t } = useTranslation()
-  const utils = trpc.useUtils?.()
+  const utils = trpc.useUtils()
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const query = trpc.tuition.getNotice.useQuery({ studentId, year, month })
-  const setNoticeSentMutation = trpc.tuition.setNoticeSent?.useMutation
-    ? trpc.tuition.setNoticeSent.useMutation()
-    : { mutate: () => {}, isPending: false }
+  // Callback cấp hook vẫn chạy khi dialog đã đóng → không mất toast Hoàn tác.
+  const setNoticeSentMutation = trpc.tuition.setNoticeSent.useMutation({
+    onSuccess: (_res, vars) => {
+      void utils.tuition.getMonthlyStatus.invalidate()
+      if (!vars.sent) return
+      toast(t("notice_marked"), {
+        action: {
+          label: t("undo"),
+          onClick: () => {
+            void utils.client.tuition.setNoticeSent
+              .mutate({ ...vars, sent: false })
+              .then(() => utils.tuition.getMonthlyStatus.invalidate())
+          },
+        },
+      })
+    },
+    onError: () => toast.error(t("generic_error")),
+  })
   const cardRef = useRef<HTMLDivElement>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
   const [captureFailed, setCaptureFailed] = useState(false)
@@ -35,34 +50,7 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
   // Giữ ảnh lúc mở: đánh dấu đã gửi → refetch → card chụp lại (blob về null) mà màn Lưu ảnh không được tắt/mở lại.
   const [viewerBlob, setViewerBlob] = useState<Blob | null>(null)
 
-  const markNoticeSent = () => {
-    setNoticeSentMutation.mutate(
-      { studentId, year, month, sent: true },
-      {
-        onSuccess: () => {
-          utils.tuition.getMonthlyStatus.invalidate()
-          toast(t("notice_marked"), {
-            action: {
-              label: t("undo"),
-              onClick: () => {
-                setNoticeSentMutation.mutate(
-                  { studentId, year, month, sent: false },
-                  {
-                    onSuccess: () => {
-                      utils.tuition.getMonthlyStatus.invalidate()
-                    },
-                  }
-                )
-              },
-            },
-          })
-        },
-        onError: () => {
-          toast.error(t("generic_error"))
-        },
-      }
-    )
-  }
+  const markNoticeSent = () => setNoticeSentMutation.mutate({ studentId, year, month, sent: true })
 
   // Tạo sẵn ảnh ngay khi phiếu vẽ xong: Safari chặn navigator.share nếu gọi sau tác vụ bất đồng bộ (spec C S11).
   // Không phụ thuộc `t` (tạo mới mỗi render) để card không gọi lại onReady liên tục.

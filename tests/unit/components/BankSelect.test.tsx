@@ -118,4 +118,34 @@ describe("BankSelect — combobox tìm ngân hàng (spec S2)", () => {
     fireEvent.keyDown(screen.getByPlaceholderText("Tìm ngân hàng…"), { key: "Enter" })
     expect(onChange).toHaveBeenLastCalledWith("970415")
   })
+
+  it("U21: mở combobox → ô tìm có role='combobox', aria-controls=id của listbox; option có id; mũi tên xuống → aria-activedescendant=id của option active", () => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <label htmlFor="bank-bin">Ngân hàng</label>
+        <BankSelect id="bank-bin" value="" onChange={() => {}} placeholder="Chọn ngân hàng" />
+      </LanguageProvider>
+    )
+
+    const btn = screen.getByRole("combobox", { name: "Ngân hàng" })
+    fireEvent.click(btn)
+
+    const listbox = screen.getByRole("listbox")
+    const listId = listbox.getAttribute("id")
+    expect(listId).toBeTruthy()
+
+    const searchInput = screen.getByPlaceholderText("Tìm ngân hàng…")
+    expect(searchInput.getAttribute("role")).toBe("combobox")
+    expect(searchInput.getAttribute("aria-expanded")).toBe("true")
+    expect(searchInput.getAttribute("aria-controls")).toBe(listId)
+
+    const options = screen.getAllByRole("option")
+    expect(options[0].getAttribute("id")).toBe(`${listId}-0`)
+    expect(options[1].getAttribute("id")).toBe(`${listId}-1`)
+    expect(searchInput.getAttribute("aria-activedescendant")).toBe(`${listId}-0`)
+
+    // Mũi tên xuống sang item thứ 2
+    fireEvent.keyDown(searchInput, { key: "ArrowDown" })
+    expect(searchInput.getAttribute("aria-activedescendant")).toBe(`${listId}-1`)
+  })
 })

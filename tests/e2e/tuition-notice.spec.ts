@@ -1,6 +1,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { readFileSync } from 'fs';
 import { PrismaClient } from '@prisma/client';
+import { hardDeleteStudents, studentIdsByNamePrefix } from './helpers/db-cleanup';
 
 const db = new PrismaClient();
 
@@ -8,18 +9,14 @@ test.beforeAll(async () => {
   await db.teachingSession.deleteMany({
     where: { title: { startsWith: 'Ca phiếu' } },
   });
-  await db.student.deleteMany({
-    where: { fullName: { startsWith: 'HS Phiếu' } },
-  });
+  await hardDeleteStudents(db, await studentIdsByNamePrefix(db, 'HS Phiếu'));
 });
 
 test.afterAll(async () => {
   await db.teachingSession.deleteMany({
     where: { title: { startsWith: 'Ca phiếu' } },
   });
-  await db.student.deleteMany({
-    where: { fullName: { startsWith: 'HS Phiếu' } },
-  });
+  await hardDeleteStudents(db, await studentIdsByNamePrefix(db, 'HS Phiếu'));
   await db.$disconnect();
 });
 

@@ -41,9 +41,9 @@ export function computeAccountCards(users: StatUser[], now: Date): AccountCards 
   const t = now.getTime()
   const soon = t + EXPIRING_DAYS * DAY_MS
   for (const u of users) {
-    if (u.lastActiveAt && u.lastActiveAt.getTime() >= t - DAY_MS) c.active24h++
-    // Tài khoản khóa không dùng được app: không tính vào các thẻ gói (spec K A3).
+    // Tài khoản khóa không dùng được app: không tính vào các thẻ gói và hoạt động (spec K A3, U U26).
     if (!u.isActive) continue
+    if (u.lastActiveAt && u.lastActiveAt.getTime() >= t - DAY_MS) c.active24h++
     c.activeAccounts++
     const plan = u.plan
     if (isPaidPlan(plan) && u.planExpiresAt && u.planExpiresAt.getTime() > t) {

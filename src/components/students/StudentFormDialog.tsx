@@ -6,7 +6,7 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
-import { studentCreateSchema, type StudentCreateInput } from "@/lib/schemas/student"
+import { studentCreateSchema, studentFormSchema, type StudentCreateInput } from "@/lib/schemas/student"
 import { CONSENT_ACCEPTED, isConsentError } from "@/lib/consent"
 import { ConsentCheckbox } from "@/components/common/ConsentCheckbox"
 import { GRADES } from "@/lib/constants"
@@ -52,7 +52,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
   const [consent, setConsent] = useState(false)
 
   const form = useForm<z.input<typeof studentCreateSchema>>({
-    resolver: zodResolver(studentCreateSchema),
+    resolver: zodResolver(studentFormSchema),
     shouldUnregister: false,
     defaultValues: {
       fullName: "",
@@ -111,12 +111,14 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
   const isPending = createMut.isPending || updateMut.isPending
 
   const curBillingMode = form.watch("billingMode")
+  const curMonthlyFee = form.watch("monthlyFee")
   const { month: curMonth, year: curYear } = vnDateParts()
   const isBillingModeChanged =
     mode === "edit" &&
     Boolean(student?.isActive) &&
     Boolean(student?.billingMode) &&
-    curBillingMode !== student?.billingMode
+    (curBillingMode !== student?.billingMode ||
+      (curBillingMode === "monthly" && (curMonthlyFee ?? 0) !== (student?.monthlyFee ?? 0)))
 
   function onSubmit(values: z.input<typeof studentCreateSchema>) {
     if (!consent) return

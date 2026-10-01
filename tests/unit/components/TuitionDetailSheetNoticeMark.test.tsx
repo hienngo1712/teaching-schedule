@@ -5,7 +5,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
+import { toast } from "sonner"
 
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }),
+}))
+
+let mutationOptions: { onSuccess?: () => void; onError?: (err: Error) => void } = {}
 const mockSetNoticeSentMutate = vi.fn()
 
 const rowBase = {
@@ -20,7 +26,7 @@ const rowBase = {
   notes: null,
   previousBalance: 0,
   totalAmountDue: 400000,
-  billingMode: "per_session" as const,
+  billingMode: "per_session" as "per_session" | "monthly",
   monthlyFee: 0,
   noticeSentAt: null as string | null,
   noticeSentAmount: null as number | null,
@@ -35,7 +41,12 @@ vi.mock("@/lib/trpc", () => ({
     tuition: {
       getMonthlyStatus: { useQuery: () => ({ data: { items: [currentRow] }, isPending: false }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
-      setNoticeSent: { useMutation: () => ({ mutate: mockSetNoticeSentMutate, isPending: false }) },
+      setNoticeSent: {
+        useMutation: (opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => {
+          mutationOptions = opts ?? {}
+          return { mutate: mockSetNoticeSentMutate, isPending: false }
+        },
+      },
     },
     payment: {
       list: { useQuery: () => ({ data: [], isPending: false }) },
@@ -46,6 +57,7 @@ vi.mock("@/lib/trpc", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mutationOptions = {}
   currentRow = { ...rowBase }
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
@@ -68,8 +80,7 @@ describe("TuitionDetailSheet - Đánh dấu đã gửi phiếu", () => {
     expect(btn).toBeDefined()
     fireEvent.click(btn)
     expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true }),
-      expect.anything()
+      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true })
     )
   })
 
@@ -91,8 +102,73 @@ describe("TuitionDetailSheet - Đánh dấu đã gửi phiếu", () => {
     expect(btn).toBeDefined()
     fireEvent.click(btn)
     expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: false }),
-      expect.anything()
+      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: false })
     )
+  })
+
+  it("U1: mutation setNoticeSent lỗi -> toast.error được gọi đúng 1 lần", () => {
+    currentRow = { ...rowBase, noticeStatus: "none", noticeSentAt: null }
+    mockSetNoticeSentMutate.mockImplementation((_vars, opts) => {
+      const err = new Error("Lỗi mạng")
+      // Gọi cả onError của mutate nếu có, và onError của useMutation
+      mutationOptions.onError?.(err)
+      opts?.onError?.(err)
+    })
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionDetailSheet open data={{ ...currentRow, year: 2026, month: 5 }} onOpenChange={() => {}} onSuccess={() => {}} />
+      </LanguageProvider>
+    )
+
+    const btn = screen.getByRole("button", { name: "Đánh dấu đã gửi" })
+    fireEvent.click(btn)
+    expect(toast.error).toHaveBeenCalledTimes(1)
+  })
+
+  it("U4: row.noticeStatus = 'changed' -> hiện chữ 'Đã gửi · số tiền đã đổi' (data-testid='notice-changed-hint'); 'sent' -> không hiện", () => {
+    currentRow = {
+      ...rowBase,
+      noticeStatus: "changed",
+      noticeSentAt: "2026-09-30T13:15:00.000Z",
+      noticeSentAmount: 300000,
+      totalAmountDue: 400000,
+    }
+    const { rerender } = render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionDetailSheet open data={{ ...currentRow, year: 2026, month: 5 }} onOpenChange={() => {}} onSuccess={() => {}} />
+      </LanguageProvider>
+    )
+
+    const hint = screen.getByTestId("notice-changed-hint")
+    expect(hint).toBeDefined()
+    expect(hint.textContent).toContain("Đã gửi · số tiền đã đổi")
+
+    // Khi noticeStatus === 'sent' -> không hiện
+    currentRow = { ...currentRow, noticeStatus: "sent", noticeSentAmount: 400000 }
+    rerender(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionDetailSheet open data={{ ...currentRow, year: 2026, month: 5 }} onOpenChange={() => {}} onSuccess={() => {}} />
+      </LanguageProvider>
+    )
+    expect(screen.queryByTestId("notice-changed-hint")).toBeNull()
+  })
+
+  it("U8: row.billingMode = 'monthly', presentSessions 1, totalSessions 2 -> hiện 'Học phí tháng (trọn gói) · Đã học 1/2 buổi'", () => {
+    currentRow = {
+      ...rowBase,
+      billingMode: "monthly",
+      presentSessions: 1,
+      totalSessions: 2,
+      monthlyFee: 500000,
+      totalExpected: 500000,
+    }
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionDetailSheet open data={{ ...currentRow, year: 2026, month: 5 }} onOpenChange={() => {}} onSuccess={() => {}} />
+      </LanguageProvider>
+    )
+
+    expect(screen.getByText(/Học phí tháng \(trọn gói\) · Đã học 1\/2 buổi/)).toBeDefined()
   })
 })

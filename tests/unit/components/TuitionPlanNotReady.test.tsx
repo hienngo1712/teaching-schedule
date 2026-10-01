@@ -35,12 +35,14 @@ const paymentListOpts: ({ enabled?: boolean } | undefined)[] = []
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
+    useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } } }),
     tuition: {
       getMonthlyStatus: {
         useQuery: () => ({ data: { items: [item], totalCount: 1, totalPages: 1 }, isPending: false, isError: false, refetch: vi.fn() }),
       },
       getNotice: { useQuery: () => ({ data: undefined, isError: false, refetch: vi.fn() }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     payment: {
       list: {

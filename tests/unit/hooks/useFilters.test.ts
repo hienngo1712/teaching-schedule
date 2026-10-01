@@ -85,4 +85,12 @@ describe("useFilters", () => {
     
     expect(mockPush).toHaveBeenCalledWith("/calendar")
   })
+
+  it("U5: filterParams không có khoá noticeFilter", () => {
+    ;vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("noticeFilter=sent&grade=4") as ReturnType<typeof useSearchParams>)
+    const { result } = renderHook(() => useFilters())
+
+    expect(result.current.selectedNoticeFilter).toBe("sent")
+    expect("noticeFilter" in result.current.filterParams).toBe(false)
+  })
 })

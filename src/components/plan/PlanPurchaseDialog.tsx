@@ -64,7 +64,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
   const { t } = useTranslation()
   // P11: kỳ Năm chọn sẵn; trang mount lại dialog mỗi lần mở nên state tự về mặc định.
   const [choice, setChoice] = useState<PlanChoice>({ plan: initialPlan, period: "year" })
-  const [created, setCreated] = useState<{ id: number; code: string } | null>(null)
+  const [created, setCreated] = useState<{ id: number; code: string; amount: number } | null>(null)
 
   // Cùng key với usePlan của trang: chỉ đọc trạng thái refetch, không thêm request.
   const meQuery = trpc.plan.me.useQuery()
@@ -84,7 +84,7 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
   const create = trpc.plan.createOrder.useMutation({
     onSuccess: (res) => {
       toast.success(t("plan_order_created"))
-      setCreated({ id: res.id, code: res.code })
+      setCreated({ id: res.id, code: res.code, amount: res.amount })
     },
     onError: (e) => {
       // Admin vừa đổi giá: server không tạo đơn; nạp lại giá, giữ popup ở bước chọn (spec L Q6).
@@ -115,7 +115,8 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
           <div className="space-y-4">
             {createdOrder ? (
               <PendingOrderCard order={createdOrder} paymentReady={me.paymentReady} onCancelled={() => onOpenChange(false)} />
-            ) : meQuery.isFetching ? (
+            ) : meQuery.isFetching && meQuery.failureCount === 0 ? (
+              // Lần tải đầu đã lỗi thì hiện dự phòng ngay, không chờ hết lượt retry (spec U U28).
               <Skeleton className="h-64 w-full rounded-xl" />
             ) : (
               // Refetch lỗi hoặc không thấy đơn vừa tạo: vẫn đưa mã để chuyển khoản được (spec P J1).
@@ -123,6 +124,9 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
                 <p>{t("plan_order_load_error")}</p>
                 <p className="font-medium">
                   {t("notice_transfer_content")}: SM {created.code}
+                </p>
+                <p className="font-medium">
+                  {t("plan_order_amount")}: {formatCurrency(created.amount)}
                 </p>
                 <Button type="button" variant="outline" className="h-11 bg-white md:h-10" onClick={() => void meQuery.refetch()}>
                   {t("retry")}

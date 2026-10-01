@@ -22,12 +22,13 @@ export async function adminDeleteUser(db: PrismaClient, admin: string, userId: n
 }
 
 export async function adminRestoreUser(db: PrismaClient, admin: string, userId: number): Promise<{ success: true }> {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { username: true } })
   const { count } = await db.user.updateMany({
     where: { id: userId, isDeleted: true },
     data: { isDeleted: false, deletedAt: null, deletedBy: null },
   })
   if (count === 0) throw notFound()
-  console.info(`[admin] ${admin} khôi phục tài khoản user ${userId}`)
+  console.info(`[admin] ${admin} khôi phục tài khoản ${user?.username} (user ${userId})`)
   return { success: true }
 }
 

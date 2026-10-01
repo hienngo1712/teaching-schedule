@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from "react"
+import { useState, useRef, useEffect, useCallback, useId, type KeyboardEvent } from "react"
 import { ChevronsUpDown, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ type Props = {
 
 export function BankSelect({ id, value, onChange, placeholder }: Props) {
   const { t } = useTranslation()
+  const listId = useId()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [activeIndex, setActiveIndex] = useState(0)
@@ -94,6 +95,10 @@ export function BankSelect({ id, value, onChange, placeholder }: Props) {
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <div className="border-b p-2">
           <Input
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={listId}
+            aria-activedescendant={filteredBanks[activeIndex] ? `${listId}-${activeIndex}` : undefined}
             autoFocus
             value={query}
             onChange={(e) => {
@@ -105,7 +110,7 @@ export function BankSelect({ id, value, onChange, placeholder }: Props) {
             className="h-9"
           />
         </div>
-        <ul role="listbox" className="max-h-[50vh] overflow-y-auto p-1">
+        <ul id={listId} role="listbox" className="max-h-[50vh] overflow-y-auto p-1">
           {filteredBanks.length === 0 ? (
             <li className="p-3 text-center text-sm text-slate-500">{t("bank_not_found")}</li>
           ) : (
@@ -115,6 +120,7 @@ export function BankSelect({ id, value, onChange, placeholder }: Props) {
               return (
                 <li
                   key={b.bin}
+                  id={`${listId}-${idx}`}
                   ref={isActive ? activeItemRef : null}
                   role="option"
                   aria-selected={isSelected}

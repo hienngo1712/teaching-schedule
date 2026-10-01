@@ -12,12 +12,12 @@ import { toast } from "sonner"
 
 type Me = RouterOutputs["plan"]["me"]
 type CreateOpts = {
-  onSuccess?: (res: { id: number; code: string; bonusMonths: number }) => void
+  onSuccess?: (res: { id: number; code: string; bonusMonths: number; amount?: number }) => void
   onError?: (e: { message: string; data?: { code?: string } | null }) => void
 }
 
 const mut = vi.hoisted(() => ({ create: vi.fn(), createOpts: null as null | CreateOpts, invalidate: vi.fn() }))
-const meQ = vi.hoisted(() => ({ isFetching: true, refetch: vi.fn() }))
+const meQ = vi.hoisted(() => ({ isFetching: true, failureCount: 0, refetch: vi.fn() }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("qrcode", () => ({ toDataURL: vi.fn().mockResolvedValue("data:image/png;base64,AAAA") }))
 vi.mock("@/lib/trpc", () => ({
@@ -96,6 +96,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mut.createOpts = null
   meQ.isFetching = true
+  meQ.failureCount = 0
   meQ.refetch.mockReset()
 })
 
@@ -224,17 +225,27 @@ describe("PlanPurchaseDialog", () => {
   it("tạo đơn xong mà refetch plan.me lỗi/không có đơn mới → hiện lỗi + mã SM + Thử lại (spec P J1)", () => {
     const { props, rerender } = renderDialog({ me: makeMe({ pendingOrder: pendingOrder(1, "OLDOLD") }) })
     fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
-    act(() => mut.createOpts!.onSuccess!({ id: 5, code: "NEWNEW", bonusMonths: 0 }))
+    act(() => mut.createOpts!.onSuccess!({ id: 5, code: "NEWNEW", bonusMonths: 0, amount: 490000 }))
     expect(screen.queryByTestId("purchase-load-error")).toBeNull() // còn đang fetch → Skeleton
     meQ.isFetching = false
     rerender(props)
     const box = screen.getByTestId("purchase-load-error")
     expect(box.textContent).toContain("Đã tạo đơn nhưng chưa tải được thông tin chuyển khoản.")
     expect(box.textContent).toContain("SM NEWNEW")
+    expect(box.textContent).toContain("490.000") // spec U U27
     const retry = screen.getByRole("button", { name: "Thử lại" })
     expect(retry.className).toContain("h-11")
     fireEvent.click(retry)
     expect(meQ.refetch).toHaveBeenCalled()
+  })
+
+  it("lần tải đầu đã lỗi, đang retry → hiện dự phòng ngay, không Skeleton (spec U U28)", () => {
+    const { props, rerender } = renderDialog({ me: makeMe({ pendingOrder: pendingOrder(1, "OLDOLD") }) })
+    fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
+    act(() => mut.createOpts!.onSuccess!({ id: 5, code: "NEWNEW", bonusMonths: 0, amount: 490000 }))
+    meQ.failureCount = 1
+    rerender(props)
+    expect(screen.getByTestId("purchase-load-error")).toBeTruthy()
   })
 
   it("radiogroup kỳ hạn: mũi tên phải chọn kỳ kế tiếp, roving tabindex (spec P J3)", () => {

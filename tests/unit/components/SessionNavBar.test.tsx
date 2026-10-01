@@ -193,4 +193,20 @@ describe("SessionNavBar (spec S4)", () => {
     fireEvent.touchEnd(nav, { changedTouches: [{ clientX: 180, clientY: 200 }] })
     expect(onNavigate).not.toHaveBeenCalled()
   })
+
+  it("U22: current không nằm trong siblings → không hiện chữ vị trí (Ca …/…), 2 nút đều disabled", () => {
+    const notInSiblings = makeSession(999, "2026-05-20", "14:00")
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <SessionNavBar siblings={siblingsUnsorted} current={notInSiblings} onNavigate={() => {}} />
+      </LanguageProvider>
+    )
+
+    expect(screen.queryByText(/Ca \d+\/\d+/)).toBeNull()
+    const prevBtn = screen.getByRole("button", { name: "Ca trước" }) as HTMLButtonElement
+    const nextBtn = screen.getByRole("button", { name: "Ca sau" }) as HTMLButtonElement
+    expect(prevBtn.disabled).toBe(true)
+    expect(nextBtn.disabled).toBe(true)
+  })
 })
+

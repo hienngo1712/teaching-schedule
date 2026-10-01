@@ -399,4 +399,21 @@ describe("buildBackupWorkbook", () => {
     const ws = sheet(await loadBackup(empty.id), "Cài đặt")
     for (let r = 2; r <= ws.rowCount; r++) expect(ws.getRow(r).getCell(2).value).toBeNull()
   })
+
+  it("U6: HS bị xoá mềm -> dữ liệu sheet 'Lịch sử cách thu' không có dòng của HS đó", async () => {
+    const caller = await getAuthedCaller()
+    const st = await caller.student.create({
+      consent: CONSENT_ACCEPTED,
+      fullName: "HS Backup Soft Delete",
+      grade: 5,
+      billingMode: "monthly",
+      monthlyFee: 500_000,
+    })
+    await caller.student.delete({ id: st.id })
+
+    const user = await db.user.findFirstOrThrow({ where: { students: { some: { id: st.id } } } })
+    const ws = sheet(await loadBackup(user.id), "Lịch sử cách thu")
+    const found = ws.getRows(2, ws.rowCount - 1)?.find((r) => r.getCell(2).value === st.id)
+    expect(found).toBeUndefined()
+  })
 })

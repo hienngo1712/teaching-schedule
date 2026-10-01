@@ -24,7 +24,7 @@ type Props = {
 export function DeleteStudentDialog({ student, onOpenChange }: Props) {
   const { t } = useTranslation()
   const utils = trpc.useUtils()
-  const check = trpc.student.deleteCheck.useQuery({ id: student.id })
+  const check = trpc.student.deleteCheck.useQuery({ id: student.id }, { staleTime: 0 })
   const close = () => onOpenChange(false)
   const del = trpc.student.delete.useMutation({
     onSuccess: () => {

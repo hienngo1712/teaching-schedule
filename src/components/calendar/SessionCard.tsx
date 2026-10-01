@@ -5,7 +5,6 @@ import type { SessionListDTO } from "@/lib/types/models"
 import { cn } from "@/lib/utils"
 import { getSessionLabel } from "@/lib/session-label"
 import { formatGrades } from "@/lib/format-grades"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
@@ -15,17 +14,11 @@ type Props = {
 
 export function SessionCard({ session, onClick }: Props) {
   const { t } = useTranslation()
-  const isMobile = !useMediaQuery("(min-width: 768px)")
   const level = session.level
   const label = getSessionLabel(session)
-  const gradeText = formatGrades(session.grades ?? [], t("grade"), isMobile)
-  const meta = [
-    label,
-    gradeText,
-    session.studentCount > 0 ? `${session.studentCount} ${t("student_abbrev")}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ")
+  const gradeShort = formatGrades(session.grades ?? [], t("grade"), true)
+  const gradeFull = formatGrades(session.grades ?? [], t("grade"), false)
+  const count = session.studentCount > 0 ? `${session.studentCount} ${t("student_abbrev")}` : ""
   const isCancelled = session.status === "cancelled"
   const isMakeup = session.makeupOfId != null
 
@@ -48,7 +41,16 @@ export function SessionCard({ session, onClick }: Props) {
         {session.startTime}–{session.endTime}
       </div>
       <div className={cn("truncate text-slate-700", isCancelled && "line-through")}>
-        {meta}
+        {label}
+        {/* Chỉ phần lớp đổi theo màn hình, ẩn/hiện bằng CSS (không nháy, không gắn listener mỗi thẻ). */}
+        {gradeFull && (
+          <>
+            {label && " · "}
+            <span className="md:hidden">{gradeShort}</span>
+            <span className="hidden md:inline">{gradeFull}</span>
+          </>
+        )}
+        {count && `${label || gradeFull ? " · " : ""}${count}`}
       </div>
       {isCancelled && (
         <div className="text-[10px] font-semibold text-red-600">

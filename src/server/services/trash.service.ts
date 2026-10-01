@@ -6,9 +6,9 @@ import type { TrashListInput, TrashRestoreInput, TrashType } from "@/lib/schemas
 import type { TrashItemDTO } from "@/lib/types/models"
 import { LIVE, RESTORE_DATA } from "@/server/soft-delete"
 import { assertOwnership } from "./_base.service"
-import { checkOverlap } from "./session.service"
+import { checkOverlap, lockLiveSubject } from "./session.service"
 import { lockMonth, syncPaidAmount, TX_OPTIONS } from "./payment.service"
-import { assertCanActivateStudents } from "./plan.service"
+import { lockAndAssertCanActivate } from "./student.service"
 
 const DELETED = { isDeleted: true } as const
 const ORDER = [{ deletedAt: "desc" as const }, { id: "desc" as const }]
@@ -152,7 +152,7 @@ export async function undeleteSession(db: PrismaClient, userId: number, id: numb
   const s = await db.teachingSession.findUnique({
     where: { id, ...DELETED },
     include: {
-      subject: { select: { name: true, isDeleted: true } },
+      subject: { select: { name: true, isDeleted: true, purgedAt: true } },
       makeupOf: {
         select: {
           status: true,
@@ -163,6 +163,7 @@ export async function undeleteSession(db: PrismaClient, userId: number, id: numb
     },
   })
   assertOwnership(s, userId)
+  if (s.subject.purgedAt) conflict(`Môn ${s.subject.name} đã bị dọn vĩnh viễn nên không khôi phục được ca này.`)
   if (s.subject.isDeleted) conflict(`Môn ${s.subject.name} đang ở Thùng rác. Hãy khôi phục môn trước.`)
   if (s.makeupOfId !== null) {
     const o = s.makeupOf
@@ -180,14 +181,20 @@ export async function undeleteSession(db: PrismaClient, userId: number, id: numb
       excludeId: id,
     })
   }
-  await db.teachingSession.update({ where: { id }, data: RESTORE_DATA })
+  // Khoá môn như lúc tạo ca: xoá môn xen giữa thì không khôi phục ca trỏ vào môn đã xoá (spec U U14).
+  await db.$transaction(async (tx) => {
+    await lockLiveSubject(tx, userId, s.subjectId)
+    await tx.teachingSession.update({ where: { id }, data: RESTORE_DATA })
+  })
 }
 
 export async function undeleteStudent(db: PrismaClient, userId: number, id: number): Promise<void> {
-  const st = await db.student.findFirst({ where: { id, ...DELETED, purgedAt: null } })
-  assertOwnership(st, userId)
-  if (st.isActive) await assertCanActivateStudents(db, userId, 1)
-  await db.student.update({ where: { id }, data: RESTORE_DATA })
+  await db.$transaction(async (tx) => {
+    const st = await tx.student.findFirst({ where: { id, ...DELETED, purgedAt: null } })
+    assertOwnership(st, userId)
+    if (st.isActive) await lockAndAssertCanActivate(tx, userId, 1)
+    await tx.student.update({ where: { id }, data: RESTORE_DATA })
+  }, TX_OPTIONS)
 }
 
 export async function undeletePayment(db: PrismaClient, userId: number, id: number): Promise<void> {
@@ -197,7 +204,7 @@ export async function undeletePayment(db: PrismaClient, userId: number, id: numb
       monthlyTuition: {
         select: {
           student: {
-            select: { userId: true, fullName: true, isDeleted: true },
+            select: { userId: true, fullName: true, isDeleted: true, purgedAt: true },
           },
         },
       },
@@ -205,6 +212,7 @@ export async function undeletePayment(db: PrismaClient, userId: number, id: numb
   })
   if (!p || p.monthlyTuition.student.userId !== userId) throw new TRPCError({ code: "NOT_FOUND" })
   const st = p.monthlyTuition.student
+  if (st.purgedAt) conflict("Học sinh này đã bị dọn vĩnh viễn nên không khôi phục được lần thu.")
   if (st.isDeleted) conflict(`Học sinh ${st.fullName} đang ở Thùng rác. Hãy khôi phục học sinh trước.`)
   await db.$transaction(async (tx) => {
     await lockMonth(tx, p.monthlyTuitionId)

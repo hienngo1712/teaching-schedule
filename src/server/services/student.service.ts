@@ -54,17 +54,26 @@ export async function listStudents(
   }
 }
 
+// Khoá theo user (cùng khoá với nhập Excel / tạo đơn) rồi mới đếm: 2 thao tác cùng lúc không vượt giới hạn gói.
+export async function lockAndAssertCanActivate(tx: Prisma.TransactionClient, userId: number, n: number): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
+  await assertCanActivateStudents(tx, userId, n)
+}
+
 export async function createStudent(
   db: PrismaClient,
   userId: number,
   input: StudentCreateInput
 ): Promise<StudentDTO> {
-  if (input.isActive) await assertCanActivateStudents(db, userId, 1)
-
   const mode = (input.billingMode ?? "per_session") as BillingMode
   const monthlyFee = mode === "per_session" ? 0 : (input.monthlyFee ?? 0)
+  if (mode === "monthly" && monthlyFee <= 0) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Học phí tháng phải lớn hơn 0" })
+  }
 
   const student = await db.$transaction(async (tx) => {
+    if (input.isActive) await lockAndAssertCanActivate(tx, userId, 1)
+
     const created = await tx.student.create({
       data: {
         userId,
@@ -134,6 +143,9 @@ export async function importStudents(
     // không thì cả 2 đều SELECT thấy "chưa có" ở READ COMMITTED rồi cùng insert ra bản sao.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
     await assertCanActivateStudents(tx, userId, rows.length)
+    if (rows.some((r) => r.billingMode === "monthly" && (r.monthlyFee ?? r.tuitionFee ?? 0) <= 0)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Học phí tháng phải lớn hơn 0" })
+    }
     // Kiểm tra trùng lại lúc ghi: bấm 2 lần / thử lại sau lỗi mạng không sinh bản sao.
     const existing = await findExistingByKey(tx, userId, rows)
     const seen = new Set<string>()
@@ -206,17 +218,23 @@ export async function updateStudent(
 ): Promise<StudentDTO> {
   const existing = await db.student.findUnique({ where: { id } })
   assertOwnership(existing, userId)
-  if (data.isActive === true && !existing.isActive) await assertCanActivateStudents(db, userId, 1)
 
   // Chuẩn hoá cách thu nếu có thay đổi
   const nextMode = (data.billingMode !== undefined ? data.billingMode : existing.billingMode) as BillingMode
   const nextMonthlyFee = nextMode === "per_session" ? 0 : (data.monthlyFee !== undefined ? data.monthlyFee : existing.monthlyFee)
+  // Chỉ kiểm khi có đổi cách thu: HS trọn tháng 0đ tạo từ trước vẫn phải bật lại / sửa phần khác được.
+  if ((data.billingMode !== undefined || data.monthlyFee !== undefined) && nextMode === "monthly" && nextMonthlyFee <= 0) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Học phí tháng phải lớn hơn 0" })
+  }
 
   const isBillingChanged =
     (data.billingMode !== undefined || data.monthlyFee !== undefined) &&
     (nextMode !== existing.billingMode || nextMonthlyFee !== existing.monthlyFee)
 
   const student = await db.$transaction(async (tx) => {
+    if (data.isActive === true && !existing.isActive) {
+      await lockAndAssertCanActivate(tx, userId, 1)
+    }
     const updated = await tx.student.update({
       where: { id },
       data: {

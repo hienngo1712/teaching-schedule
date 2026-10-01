@@ -1,7 +1,6 @@
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/trpc"
 import { registerInputSchema } from "@/lib/schemas/auth"
-import { recordConsent } from "@/server/services/consent.service"
 import {
   isRegisterRateLimited,
   recordRegisterAttempt,
@@ -47,9 +46,7 @@ export const authRouter = createTRPCRouter({
         })
       }
       try {
-        const user = await registerUser(ctx.db, input)
-        // Cần id user mới nên ghi sau khi tạo; cùng request nên vẫn là bằng chứng lúc bấm Đăng ký (bổ sung H2).
-        await recordConsent(ctx.db, { userId: user.id, scope: "register", ipAddress: ctx.ip })
+        const user = await registerUser(ctx.db, input, { ipAddress: ctx.ip })
         await recordRegisterAttempt(ctx.ip, true)
         return user
       } catch (err) {

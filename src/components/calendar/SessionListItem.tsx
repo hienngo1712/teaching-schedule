@@ -25,7 +25,7 @@ export function SessionListItem({ session, onClick }: Props) {
       <div className="h-12 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: session.subject.color }} />
       <div className="min-w-0 flex-1">
         <div className="truncate font-bold text-slate-900">{getSessionLabel(session)}</div>
-        <div className="mt-1.5 flex items-center gap-3 text-xs text-slate-500">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
           <div className="flex items-center gap-1 rounded bg-primary/[0.08] px-1.5 py-0.5 font-medium text-primary">
             <Clock className="size-3" />
             {session.startTime} - {session.endTime}

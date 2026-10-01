@@ -24,6 +24,11 @@ export const studentCreateSchema = z.object({
 })
 
 // Form dùng studentCreateSchema (không có cờ); input tRPC bắt buộc cờ đồng ý (spec O Q10).
+export const studentFormSchema = studentCreateSchema.refine(
+  (v) => v.billingMode !== "monthly" || (v.monthlyFee ?? 0) > 0,
+  { path: ["monthlyFee"], message: "Học phí tháng phải lớn hơn 0" }
+)
+
 export const studentCreateInputSchema = studentCreateSchema.extend({ consent: consentPayload })
 
 export const studentUpdateSchema = z.object({

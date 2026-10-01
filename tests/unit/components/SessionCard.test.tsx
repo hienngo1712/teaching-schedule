@@ -9,6 +9,12 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { SessionCard } from "@/components/calendar/SessionCard"
 import type { SessionListDTO } from "@/lib/types/models"
 
+vi.mock("@/hooks/useMediaQuery", () => ({
+  useMediaQuery: vi.fn(() => {
+    throw new Error("useMediaQuery must not be called in SessionCard")
+  }),
+}))
+
 beforeEach(() => {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: true,
@@ -92,6 +98,33 @@ describe("SessionCard — hiển thị lớp học (spec S5)", () => {
       </LanguageProvider>
     )
     expect(screen.getByRole("button").textContent).not.toContain("Lớp")
+  })
+})
+
+describe("SessionCard — U19 không dùng useMediaQuery và render 2 chuỗi meta qua CSS responsive", () => {
+  it("grades [5] → DOM có phần tử md:hidden chứa 'L5' và hidden md:inline chứa 'Lớp 5'", () => {
+    const { container } = render(
+      <LanguageProvider forcedLanguage="vi">
+        <SessionCard session={{ ...base, grades: [5], studentCount: 3 }} />
+      </LanguageProvider>
+    )
+    const shortSpan = container.querySelector(".md\\:hidden")
+    const fullSpan = container.querySelector(".hidden.md\\:inline")
+    expect(shortSpan).not.toBeNull()
+    expect(shortSpan?.textContent).toBe("L5")
+    expect(fullSpan).not.toBeNull()
+    expect(fullSpan?.textContent).toBe("Lớp 5")
+  })
+
+  it("tiêu đề ca chỉ render 1 lần (chỉ phần lớp tách theo màn hình) — getByText không bắt trúng bản ẩn", () => {
+    const { container } = render(
+      <LanguageProvider forcedLanguage="vi">
+        <SessionCard session={{ ...base, title: "Ca E2E 1", grades: [5], studentCount: 3 }} />
+      </LanguageProvider>
+    )
+    expect(screen.getAllByText(/Ca E2E 1/)).toHaveLength(1)
+    expect(container.querySelector(".md\\:hidden")?.textContent).toBe("L5")
+    expect(container.querySelector(".hidden.md\\:inline")?.textContent).toBe("Lớp 5")
   })
 })
 

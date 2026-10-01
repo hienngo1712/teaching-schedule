@@ -273,4 +273,15 @@ describe("toImportPayload", () => {
       ["trần bình", true],
     ])
   })
+
+  it("U12: Cách thu = tháng mà Học phí trống/0 → lỗi ở cột Học phí", () => {
+    const out = parseImportRows(
+      [row(2, "Trọn Tháng Trống", 5, null, null, "", "tháng"), row(3, "Trọn Tháng Không", 5, null, null, 0, "tháng"), row(4, "Theo Buổi Trống", 5, null, null, "", "buổi")],
+      { hasBillingColumn: true }
+    )
+    expect(out[0].errors).toContain("tuitionFee")
+    expect(out[1].errors).toContain("tuitionFee")
+    expect(out[2].errors).toEqual([])
+  })
 })
+

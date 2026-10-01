@@ -68,6 +68,16 @@ describe("admin.stats — chênh lệch trước/sau khi thêm user giả (spec 
     expect(typeof after.updatedAt === "string" || after.updatedAt instanceof Date).toBe(true)
   })
 
+  it("Active 24h / 7 ngày bỏ tài khoản bị khoá (spec U U26)", async () => {
+    const admin = await getAuthedCaller("admin_test")
+    const before = await admin.admin.stats()
+    const locked = await fake("locked_act", { isActive: false, lastActiveAt: new Date(Date.now() - 60_000) })
+    await db.userActivityDay.create({ data: { userId: locked.id, day: vnDayDate(new Date()), firstSeenAt: new Date() } })
+    const after = await admin.admin.stats()
+    expect(after.active24h - before.active24h).toBe(0)
+    expect(after.active7d - before.active7d).toBe(0)
+  })
+
   it("Chờ duyệt đếm đơn đang chờ", async () => {
     const admin = await getAuthedCaller("admin_test")
     const before = await admin.admin.stats()

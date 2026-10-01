@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest"
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest"
 import bcrypt from "bcryptjs"
 import { db } from "@/server/db"
 import { authorizeCredentials, getSessionUserState } from "@/server/auth-credentials"
@@ -101,5 +101,21 @@ describe("admin xoá / khôi phục tài khoản (spec Q mục 8)", () => {
     expect((await authorizeCredentials(NAME, PASS, null))?.username).toBe(NAME)
     expect((await admin.admin.overview()).users.map((x) => x.id)).toContain(u.id)
     await expect(admin.admin.restoreUser({ userId: u.id })).rejects.toMatchObject({ code: "NOT_FOUND" })
+  })
+
+  it("U17: adminRestoreUser -> log console.info chứa username của user", async () => {
+    const u = await createTestUser()
+    const admin = await getAuthedCaller("admin_test")
+    await admin.admin.deleteUser({ userId: u.id })
+
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {})
+    try {
+      await admin.admin.restoreUser({ userId: u.id })
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`[admin] admin_test khôi phục tài khoản ${NAME} (user ${u.id})`)
+      )
+    } finally {
+      infoSpy.mockRestore()
+    }
   })
 })

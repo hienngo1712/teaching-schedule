@@ -103,6 +103,8 @@ export function useExcelExport() {
       currentMonthFee: number        // TuitionStatusDTO.totalExpected
       previousBalance: number        // TuitionStatusDTO.previousBalance
       totalAmountDue: number         // TuitionStatusDTO.totalAmountDue
+      billingMode?: string
+      monthlyFee?: number | null
     }
   ) => {
     setIsExporting(true)
@@ -137,10 +139,13 @@ export function useExcelExport() {
         tuitionTitleCell.value = `─── HỌC PHÍ ${period.toUpperCase()} ───`
         tuitionTitleCell.font = { bold: true, size: 12 }
 
-        // Row 6: Học phí/buổi — label A6:C6, value D6
+        // Row 6: Học phí/buổi hoặc trọn tháng — label A6:C6, value D6
         sheet.mergeCells("A6:C6")
-        sheet.getCell("A6").value = "Học phí/buổi (mặc định)"
-        sheet.getCell("D6").value = formatCurrency(tuitionInfo.tuitionFeePerSession)
+        const isMonthly = tuitionInfo.billingMode === "monthly"
+        sheet.getCell("A6").value = isMonthly ? "Học phí tháng (trọn gói)" : "Học phí/buổi (mặc định)"
+        sheet.getCell("D6").value = isMonthly
+          ? formatCurrency(tuitionInfo.monthlyFee ?? tuitionInfo.currentMonthFee)
+          : formatCurrency(tuitionInfo.tuitionFeePerSession)
         sheet.getCell("D6").alignment = { horizontal: "right" }
 
         // Row 7: Học phí tháng này — label A7:C7, value D7

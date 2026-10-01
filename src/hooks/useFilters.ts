@@ -138,9 +138,8 @@ export function useFilters() {
       studentName: searchStudentName || undefined,
       studentId: selectedStudentId || undefined,
       status: selectedStatus || undefined,
-      noticeFilter: selectedNoticeFilter || undefined,
     }
-  }, [selectedGrade, searchStudentName, selectedStudentId, selectedStatus, selectedNoticeFilter])
+  }, [selectedGrade, searchStudentName, selectedStudentId, selectedStatus])
 
   const hasActiveFilter = useMemo(() => {
     return (

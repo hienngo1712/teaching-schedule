@@ -15,12 +15,13 @@ const q = vi.hoisted(() => ({
   refetch: vi.fn(),
 }))
 const del = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }))
+const mockDeleteCheckQuery = vi.hoisted(() => vi.fn<(...args: unknown[]) => typeof q>(() => q))
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ student: { list: { invalidate: vi.fn() } }, trash: { counts: { invalidate: vi.fn() } } }),
     student: {
-      deleteCheck: { useQuery: () => q },
+      deleteCheck: { useQuery: (input?: unknown, opts?: unknown) => mockDeleteCheckQuery(input, opts) },
       delete: { useMutation: () => del },
     },
   },
@@ -82,5 +83,13 @@ describe("DeleteStudentDialog (spec R mục 3)", () => {
     renderIt()
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }))
     expect(q.refetch).toHaveBeenCalled()
+  })
+
+  it("U16: DeleteStudentDialog gọi student.deleteCheck.useQuery với option staleTime: 0", () => {
+    renderIt()
+    expect(mockDeleteCheckQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      expect.objectContaining({ staleTime: 0 })
+    )
   })
 })

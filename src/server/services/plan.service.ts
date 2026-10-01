@@ -182,7 +182,7 @@ export async function createOrder(
   db: PrismaClient,
   userId: number,
   input: CreateOrderInput
-): Promise<{ id: number; code: string; bonusMonths: number }> {
+): Promise<{ id: number; code: string; bonusMonths: number; amount: number }> {
   if (!getPlanBankAccount()) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Chưa mở thanh toán" })
   const now = new Date()
   const fields = await db.user.findUniqueOrThrow({ where: { id: userId }, select: PLAN_SELECT })
@@ -211,7 +211,7 @@ export async function createOrder(
           data: { userId, plan: input.plan, period: input.period, amount, bonusMonths, code, status: "pending" },
           select: { id: true },
         })
-        return { id: order.id, code, bonusMonths }
+        return { id: order.id, code, bonusMonths, amount }
       })
     } catch (e) {
       const isDuplicate = e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002"

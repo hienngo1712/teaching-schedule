@@ -15,9 +15,10 @@ import {
   type SessionFilterInput,
 } from "@/lib/schemas/session"
 import type { SchoolLevel, SessionDTO } from "@/lib/types/models"
-import type { BillingMode } from "@/lib/billing"
+import { monthKey, resolveBilling, type BillingChange, type BillingMode } from "@/lib/billing"
 import { compareViName } from "@/lib/name-search"
 import { findStudentIdsByName } from "./student.service"
+import { loadBillingChanges } from "./billing.service"
 
 /**
  * Kiểm tra ca dạy mới có trùng giờ với ca khác trong cùng ngày, cùng user.
@@ -100,7 +101,10 @@ function deriveLevel(students: Array<{ grade: number }>): SchoolLevel | "mixed" 
   return "mixed"
 }
 
-function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
+function toDTO(s: SessionWithSubjectAndStudents, changes?: Map<number, BillingChange[]>): SessionDTO {
+  const key = s.sessionDate
+    ? monthKey(s.sessionDate.getUTCFullYear(), s.sessionDate.getUTCMonth() + 1)
+    : 0
   // Tên mã hoá nên không sắp được trong DB (spec O 6.4); sắp sau khi giải mã.
   const students = [...(s.sessionStudents ?? [])]
     .sort((a, b) => compareViName(a.student?.fullName ?? "", b.student?.fullName ?? "") || a.studentId - b.studentId)
@@ -112,7 +116,9 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
       attendance: ss.attendance,
       note: ss.note,
       fee: ss.fee,
-      billingMode: (ss.student?.billingMode ?? "per_session") as BillingMode,
+      billingMode: changes
+        ? resolveBilling(changes.get(ss.studentId) ?? [], key).mode
+        : ((ss.student?.billingMode ?? "per_session") as BillingMode),
     }))
 
   const grades = [...new Set(students.map((st) => st.grade).filter((g) => g > 0))].sort((a, b) => a - b)
@@ -222,7 +228,11 @@ export async function getSessionDetail(
 
   assertOwnership(session, userId)
 
-  return toDTO(session as SessionWithSubjectAndStudents)
+  const s = session as SessionWithSubjectAndStudents
+  const studentIds = (s.sessionStudents ?? []).map((ss) => ss.studentId)
+  const changes = await loadBillingChanges(db, studentIds)
+
+  return toDTO(s, changes)
 }
 
 async function assertSubjectOwned(
@@ -232,6 +242,14 @@ async function assertSubjectOwned(
 ): Promise<void> {
   const subject = await db.subject.findUnique({ where: { id: subjectId } })
   assertOwnership(subject, userId)
+}
+
+// Gọi trong transaction ghi ca: khoá dòng môn FOR KEY SHARE, xung đột với FOR UPDATE của xoá môn
+// → không còn ca trỏ vào môn vừa bị xoá (spec U U14). Môn đã xoá / của user khác → NOT_FOUND.
+export async function lockLiveSubject(tx: Prisma.TransactionClient, userId: number, subjectId: number): Promise<void> {
+  const rows = await tx.$queryRaw<{ id: number }[]>`
+    SELECT id FROM subjects WHERE id = ${subjectId} AND user_id = ${userId} AND is_deleted = false FOR KEY SHARE`
+  if (rows.length === 0) throw new TRPCError({ code: "NOT_FOUND" })
 }
 
 async function assertStudentsOwned(
@@ -268,28 +286,31 @@ export async function createSession(
     studentFees = await assertStudentsOwned(db, userId, input.studentIds)
   }
 
-  const created = await db.teachingSession.create({
-    data: {
-      userId,
-      sessionDate,
-      startTime,
-      endTime,
-      subjectId: input.subjectId,
-      title: input.title ?? null,
-      notes: input.notes ?? null,
-      ...(studentFees.length > 0
-        ? {
-            sessionStudents: {
-              create: studentFees.map((s) => ({
-                studentId: s.id,
-                fee: s.tuitionFee,
-                grade: s.grade,
-              })),
-            },
-          }
-        : {}),
-    },
-    include: SESSION_DETAIL_INCLUDE,
+  const created = await db.$transaction(async (tx) => {
+    await lockLiveSubject(tx, userId, input.subjectId)
+    return tx.teachingSession.create({
+      data: {
+        userId,
+        sessionDate,
+        startTime,
+        endTime,
+        subjectId: input.subjectId,
+        title: input.title ?? null,
+        notes: input.notes ?? null,
+        ...(studentFees.length > 0
+          ? {
+              sessionStudents: {
+                create: studentFees.map((s) => ({
+                  studentId: s.id,
+                  fee: s.tuitionFee,
+                  grade: s.grade,
+                })),
+              },
+            }
+          : {}),
+      },
+      include: SESSION_DETAIL_INCLUDE,
+    })
   })
   return toDTO(created as SessionWithSubjectAndStudents)
 }
@@ -398,6 +419,7 @@ export async function updateSession(
 
   // Cập nhật session và sync học sinh
   const updated = await db.$transaction(async (tx) => {
+    if (data.subjectId !== undefined) await lockLiveSubject(tx, userId, data.subjectId)
     // Nếu có truyền studentIds, đồng bộ delta (giữ điểm danh HS còn lại).
     // studentIds: [] CHỦ ĐÍCH = gỡ hết HS (form sửa ca luôn gửi đúng roster hiện
     // tại nên [] chỉ xảy ra khi user bỏ chọn hết). Đừng chặn ở đây — nếu cần
@@ -687,6 +709,7 @@ export async function bulkCreateSessions(
 
   if (toCreate.length > 0) {
     await db.$transaction(async (tx) => {
+      await lockLiveSubject(tx, userId, input.subjectId)
       const sessions = await tx.teachingSession.createManyAndReturn({
         data: toCreate.map((data) => ({
           ...data,
@@ -807,6 +830,7 @@ export async function bulkUpdateFutureSessions(
 
   // 3. Thực hiện update trong transaction
   await db.$transaction(async (tx) => {
+    if (data.subjectId !== undefined) await lockLiveSubject(tx, userId, data.subjectId)
     // Nếu có đổi studentIds, đồng bộ DELTA cho TỪNG ca — chỉ thêm HS mới / gỡ HS
     // bị bỏ, GIỮ NGUYÊN điểm danh/ghi chú/học phí của HS đã có. Tránh kiểu
     // xóa-sạch-tạo-lại làm reset toàn bộ điểm danh của mọi ca tương lai.

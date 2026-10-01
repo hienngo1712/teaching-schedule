@@ -1,5 +1,7 @@
 import { CONSENT_ACCEPTED } from "../../src/lib/consent"
 import { test, expect, type Page } from '@playwright/test';
+import { PrismaClient } from '@prisma/client';
+import { hardDeleteStudents, studentIdsByNamePrefix } from './helpers/db-cleanup';
 
 async function expectNoHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(
@@ -47,6 +49,13 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginTeacher(page);
+  });
+
+  // HS còn nợ không xoá được qua API (luật xoá HS) → xoá cứng cuối file để DB test không tồn đọng.
+  test.afterAll(async () => {
+    const db = new PrismaClient();
+    for (const prefix of ['E2E Rác', 'E2E Nợ']) await hardDeleteStudents(db, await studentIdsByNamePrefix(db, prefix));
+    await db.$disconnect();
   });
 
   test.afterEach(async ({ page }) => {

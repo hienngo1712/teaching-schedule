@@ -108,4 +108,34 @@ describe("ImportStudentsDialog", () => {
       })
     )
   })
+
+  it("U9: xem trước nhập 1 dòng Cách thu = tháng, Học phí = 400000 -> dòng xem trước có 400.000 và /tháng, không có 0 ₫", async () => {
+    const mockRows = [
+      {
+        status: "ok" as const,
+        rowNumber: 2,
+        input: { fullName: "Trần Thị Tháng", grade: 5, tuitionFee: 0, billingMode: "monthly" as const, monthlyFee: 400000 },
+        errors: [],
+      },
+    ]
+    vi.mocked(readImportWorkbook).mockResolvedValue({ ok: true, rows: mockRows })
+    checkMutateAsync.mockResolvedValue({ matches: [null] })
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <ImportStudentsDialog onClose={() => {}} />
+      </LanguageProvider>
+    )
+
+    const input = screen.getByTestId("import-file-input") as HTMLInputElement
+    const file = makeFile(1024)
+    Object.defineProperty(input, "files", { value: [file] })
+    fireEvent.change(input)
+
+    await screen.findByRole("button", { name: viText.import_submit.replace("{n}", "1") })
+    const rowEl = screen.getByTestId("import-row")
+    expect(rowEl.textContent).toContain("400.000")
+    expect(rowEl.textContent).toContain("/tháng")
+    expect(rowEl.textContent).not.toMatch(/(?:^|\s)0\s*[₫đ]/)
+  })
 })
