@@ -81,12 +81,15 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
       <div className="space-y-1">
         {isMonthly ? (
           <>
-            <p>
-              {t("monthly_fee_line")
-                .replace("{amount}", formatCurrency(notice.monthlyFee))
-                .replace("{p}", String(notice.presentSessions))
-                .replace("{n}", String(notice.totalSessions))}
-            </p>
+            {/* Tháng không có ca thì tháng này 0 đ: ẩn dòng trọn gói cho khỏi mâu thuẫn. */}
+            {notice.totalSessions > 0 && (
+              <p>
+                {t("monthly_fee_line")
+                  .replace("{amount}", formatCurrency(notice.monthlyFee))
+                  .replace("{p}", String(notice.presentSessions))
+                  .replace("{n}", String(notice.totalSessions))}
+              </p>
+            )}
             {dates && (
               <p>
                 <span className="text-slate-500">{t("notice_dates")}: </span>

@@ -14,12 +14,15 @@ export async function checkStudentDeletable(
   userId: number,
   student: { id: number; isActive: boolean }
 ): Promise<DeleteCheck> {
+  // Từng thu trọn tháng thì tháng có ca là có nợ, kể cả khi vắng hết (review T I3).
+  const everMonthly = (await db.studentBillingChange.count({ where: { studentId: student.id, mode: "monthly" } })) > 0
   const [attended, paid] = await Promise.all([
     db.sessionStudent.count({
       where: {
         studentId: student.id,
-        attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] },
-        session: { isDeleted: false },
+        ...(everMonthly
+          ? { session: { isDeleted: false, status: { not: "cancelled" } } }
+          : { attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] }, session: { isDeleted: false } }),
       },
     }),
     db.payment.count({ where: { monthlyTuition: { studentId: student.id } } }),

@@ -29,6 +29,8 @@ interface StudentScheduleViewProps {
   year: number
   month: number
   exportRef?: React.RefObject<HTMLDivElement | null>
+  // Doanh thu đã tính sẵn ở server (báo cáo nhiều tháng); không truyền thì tự lấy cho tháng đang xem.
+  revenue?: { expected: number; earned: number }
 }
 
 export function StudentScheduleView({
@@ -37,6 +39,7 @@ export function StudentScheduleView({
   year,
   month,
   exportRef: externalRef,
+  revenue: revenueProp,
 }: StudentScheduleViewProps) {
   const { t } = useTranslation()
   const localRef = useRef<HTMLDivElement>(null)
@@ -71,14 +74,20 @@ export function StudentScheduleView({
       .sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime())
   }, [sessions, studentId])
 
+  // HS trọn tháng: fee từng buổi không phải tiền thật → lấy doanh thu theo cách thu từ server (review T I2).
+  const reportQuery = trpc.report.student.useQuery({ studentId, year, month }, { enabled: !revenueProp })
+  const revenue =
+    revenueProp ??
+    (reportQuery.data
+      ? { expected: reportQuery.data.summary.expectedRevenue, earned: reportQuery.data.summary.totalRevenue }
+      : undefined)
+
   const summary = useMemo(() => {
     const total = studentSessions.length
     let present = 0
     let absent = 0
     let late = 0
     let pending = 0
-    let totalFee = 0
-    let expectedFee = 0
 
     studentSessions.forEach(s => {
       const st = s.students.find(ss => ss.studentId === studentId)
@@ -88,16 +97,11 @@ export function StudentScheduleView({
       else if (st.attendance === ATTENDANCE_STATUS.ABSENT) absent++
       else if (st.attendance === ATTENDANCE_STATUS.LATE) late++
       else pending++
-
-      expectedFee += st.fee ?? 0
-      if (st.attendance === ATTENDANCE_STATUS.PRESENT || st.attendance === ATTENDANCE_STATUS.LATE) {
-        totalFee += st.fee ?? 0
-      }
     })
 
     const rate = calcAttendanceRate(present + late, total - pending)
 
-    return { total, present, absent, late, pending, rate, totalFee, expectedFee }
+    return { total, present, absent, late, pending, rate }
 
   }, [studentSessions, studentId])
 
@@ -172,7 +176,7 @@ export function StudentScheduleView({
                       <TableCell className="text-slate-600">{formatDayOfWeek(session.sessionDate)}</TableCell>
                       <TableCell className="text-slate-600">{session.startTime} – {session.endTime}</TableCell>
                       <TableCell className="text-right font-medium text-slate-700">
-                        {formatCurrency(studentData?.fee)}
+                        {studentData?.billingMode === "monthly" ? t("billing_monthly") : formatCurrency(studentData?.fee)}
                       </TableCell>
                       <TableCell className="text-slate-600">{session.subject.name}</TableCell>
                       <TableCell>
@@ -215,8 +219,8 @@ export function StudentScheduleView({
               {summary.late > 0 && (
                 <span>{t("late")} <span className="text-amber-600 font-bold">{summary.late}</span></span>
               )}
-              <span>{t("expected_revenue")}: <span className="text-primary font-bold">{formatCurrency(summary.expectedFee)}</span></span>
-              <span>{t("actual_revenue")}: <span className="text-emerald-600 font-bold">{formatCurrency(summary.totalFee)}</span></span>
+              <span>{t("expected_revenue")}: <span className="text-primary font-bold">{revenue ? formatCurrency(revenue.expected) : "…"}</span></span>
+              <span>{t("actual_revenue")}: <span className="text-emerald-600 font-bold">{revenue ? formatCurrency(revenue.earned) : "…"}</span></span>
             </div>
             <div className="text-slate-400 italic">
               {t("export_date")} {formatDate(new Date())}

@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
 import { monthKey } from "@/lib/billing"
+import { vnDateParts } from "@/lib/utils"
 
 async function clean() {
   await db.payment.deleteMany()
@@ -307,5 +308,26 @@ describe("Học phí trọn tháng & nợ chuyển (spec T)", () => {
     const res = await caller.tuition.getMonthlyStatus({ year: 2026, month: 4 })
     const item = res.items.find((i) => i.studentId === st.id)
     expect(item!.previousBalance).toBe(0)
+  })
+
+  // Review T I1: link của HS trọn tháng lưu fee 0 → đổi về theo buổi phải lấy học phí/buổi mới cho các buổi từ tháng này.
+  it("đổi trọn tháng → theo buổi giữa tháng: buổi tháng này tính theo học phí/buổi mới, tháng trước giữ trọn tháng", async () => {
+    const caller = await getAuthedCaller()
+    const { year, month } = vnDateParts()
+    const pm = month === 1 ? 12 : month - 1
+    const py = month === 1 ? year - 1 : year
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS Đổi về buổi", grade: 5, billingMode: "monthly", monthlyFee: 400_000 })
+    const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
+    const day = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}-02`
+    const prev = await caller.session.create({ sessionDate: day(py, pm), startTime: "08:00", endTime: "09:00", subjectId, studentIds: [st.id] })
+    const cur = await caller.session.create({ sessionDate: day(year, month), startTime: "08:00", endTime: "09:00", subjectId, studentIds: [st.id] })
+    for (const s of [prev, cur]) await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present" }] })
+
+    await caller.student.update({ id: st.id, data: { billingMode: "per_session", tuitionFee: 50_000 } })
+
+    const now = (await caller.tuition.getMonthlyStatus({ year, month })).items.find((i) => i.studentId === st.id)
+    expect(now).toMatchObject({ billingMode: "per_session", totalExpected: 50_000 })
+    const before = (await caller.tuition.getMonthlyStatus({ year: py, month: pm })).items.find((i) => i.studentId === st.id)
+    expect(before).toMatchObject({ billingMode: "monthly", totalExpected: 400_000 })
   })
 })

@@ -243,6 +243,14 @@ export async function updateStudent(
       const { year, month } = vnDateParts()
       const currentKey = monthKey(year, month)
       await recordBillingChange(tx, id, currentKey, { mode: nextMode, monthlyFee: nextMonthlyFee })
+
+      // Link của HS trọn tháng giữ fee cũ (thường 0) → về theo buổi thì các buổi từ tháng này lấy học phí/buổi mới (review T I1).
+      if (nextMode === "per_session" && existing.billingMode !== "per_session") {
+        await tx.sessionStudent.updateMany({
+          where: { studentId: id, session: { sessionDate: { gte: new Date(Date.UTC(year, month - 1, 1)) } } },
+          data: { fee: data.tuitionFee ?? existing.tuitionFee },
+        })
+      }
     }
 
     // Đổi grade → đồng bộ snapshot grade các buổi chưa kết thúc; buổi đã dạy giữ grade lịch sử.

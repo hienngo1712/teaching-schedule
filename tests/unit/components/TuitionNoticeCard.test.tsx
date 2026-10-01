@@ -38,6 +38,18 @@ const baseNotice: TuitionNoticeDTO = {
 }
 
 describe("TuitionNoticeCard: hiển thị học phí trọn tháng vs theo buổi (Plan T)", () => {
+  // Review T: tháng không có ca thì tháng này 0 đ — không được ghi "trọn gói 400.000" ngay trên dòng 0 đ.
+  it("HS trọn tháng, tháng không có ca (chỉ còn nợ cũ) → không hiện dòng trọn gói", () => {
+    render(
+      <LanguageProvider>
+        <TuitionNoticeCard
+          notice={{ ...baseNotice, totalSessions: 0, presentSessions: 0, currentMonthFee: 0, presentDates: [], previousBalance: 400000, totalAmountDue: 400000 }}
+        />
+      </LanguageProvider>
+    )
+    expect(screen.queryByText(/trọn gói/)).toBeNull()
+  })
+
   it("HS trọn tháng hiện dòng 'Học phí tháng (trọn gói): ... · Đã học 1/2 buổi' và không hiện học phí/buổi", () => {
     render(
       <LanguageProvider>
