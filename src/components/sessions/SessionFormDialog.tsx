@@ -254,7 +254,8 @@ export function SessionFormDialog({
                 control={form.control}
                 name="subjectId"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
+                    {/* Cùng flex-col với ô Ngày dạy: nhãn đều là block thì 2 cột mới thẳng hàng. */}
                     <FormLabel>{t("subject")}</FormLabel>
                     <Select
                       onValueChange={(val) => field.onChange(Number(val))}
