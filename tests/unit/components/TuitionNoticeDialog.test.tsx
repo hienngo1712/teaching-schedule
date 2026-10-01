@@ -9,11 +9,23 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 
+import { toast } from "sonner"
+import { saveAs } from "file-saver"
+import { shareOrDownloadPng } from "@/lib/share-image"
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- giữ tham số để khớp chữ ký thật
 const elementToPngBlob = vi.fn((_el: HTMLElement): Promise<Blob> => Promise.resolve(new Blob(["x"])))
 
+vi.mock("file-saver", () => ({
+  saveAs: vi.fn(),
+}))
+
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }),
+}))
+
 vi.mock("@/lib/share-image", () => ({
-  canShareFiles: () => false,
+  canShareFiles: vi.fn(() => false),
   elementToPngBlob: (el: HTMLElement) => elementToPngBlob(el),
   shareOrDownloadPng: vi.fn(),
 }))
@@ -48,9 +60,17 @@ function notice(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 let queryReturn: { data: unknown; isError: boolean; dataUpdatedAt: number; refetch: () => void }
+const mockSetNoticeSentMutate = vi.fn()
+const mockInvalidate = vi.fn()
 
 vi.mock("@/lib/trpc", () => ({
-  trpc: { tuition: { getNotice: { useQuery: () => queryReturn } } },
+  trpc: {
+    useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: mockInvalidate } } }),
+    tuition: {
+      getNotice: { useQuery: () => queryReturn },
+      setNoticeSent: { useMutation: () => ({ mutate: mockSetNoticeSentMutate, isPending: false }) },
+    },
+  },
 }))
 
 beforeEach(() => {
@@ -140,5 +160,153 @@ describe("TuitionNoticeDialog", () => {
     // Bấm nút Lưu ảnh → mở viewer
     fireEvent.click(saveImgBtn)
     expect(screen.getByText(/Nhấn giữ ảnh → chọn Lưu vào Ảnh/)).toBeDefined()
+  })
+
+  it("desktop: bấm Tải ảnh → gọi saveAs và gọi setNoticeSent(sent: true), toast có Hoàn tác", async () => {
+    queryReturn = {
+      data: notice({ paidAmount: 400000 }),
+      isError: false,
+      dataUpdatedAt: 1000,
+      refetch: vi.fn(),
+    }
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+
+    const downloadBtn = screen.getByRole("button", { name: /Tải ảnh/ })
+    await waitFor(() => expect(downloadBtn.getAttribute("disabled")).toBeNull())
+
+    fireEvent.click(downloadBtn)
+    expect(saveAs).toHaveBeenCalled()
+    expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true }),
+      expect.anything()
+    )
+  })
+
+  it("toast Hoàn tác → gọi setNoticeSent(sent: false)", async () => {
+    queryReturn = {
+      data: notice({ paidAmount: 400000 }),
+      isError: false,
+      dataUpdatedAt: 1000,
+      refetch: vi.fn(),
+    }
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+
+    const downloadBtn = screen.getByRole("button", { name: /Tải ảnh/ })
+    await waitFor(() => expect(downloadBtn.getAttribute("disabled")).toBeNull())
+
+    // Mock mutate trigger onSuccess callback
+    mockSetNoticeSentMutate.mockImplementationOnce((args, options) => {
+      options?.onSuccess?.()
+    })
+
+    fireEvent.click(downloadBtn)
+    expect(toast).toHaveBeenCalled()
+    const toastCall = vi.mocked(toast).mock.calls[0]
+    const toastOptions = toastCall[1] as { action?: { onClick?: () => void } }
+    expect(toastOptions?.action).toBeDefined()
+
+    // Bấm Hoàn tác
+    toastOptions.action!.onClick!()
+    expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: false }),
+      expect.anything()
+    )
+  })
+
+  it("chia sẻ 'shared' → gọi setNoticeSent(sent: true)", async () => {
+    const { canShareFiles } = await import("@/lib/share-image")
+    vi.mocked(canShareFiles).mockReturnValue(true)
+    vi.mocked(shareOrDownloadPng).mockResolvedValue("shared")
+
+    queryReturn = {
+      data: notice({ paidAmount: 400000 }),
+      isError: false,
+      dataUpdatedAt: 1000,
+      refetch: vi.fn(),
+    }
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+
+    const shareBtn = screen.getByRole("button", { name: /Chia sẻ/ })
+    await waitFor(() => expect(shareBtn.getAttribute("disabled")).toBeNull())
+
+    fireEvent.click(shareBtn)
+    await waitFor(() => {
+      expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
+        expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true }),
+        expect.anything()
+      )
+    })
+  })
+
+  it("chia sẻ 'aborted' → KHÔNG gọi setNoticeSent", async () => {
+    const { canShareFiles } = await import("@/lib/share-image")
+    vi.mocked(canShareFiles).mockReturnValue(true)
+    vi.mocked(shareOrDownloadPng).mockResolvedValue("aborted")
+
+    queryReturn = {
+      data: notice({ paidAmount: 400000 }),
+      isError: false,
+      dataUpdatedAt: 1000,
+      refetch: vi.fn(),
+    }
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+
+    const shareBtn = screen.getByRole("button", { name: /Chia sẻ/ })
+    await waitFor(() => expect(shareBtn.getAttribute("disabled")).toBeNull())
+
+    fireEvent.click(shareBtn)
+    await waitFor(() => expect(shareOrDownloadPng).toHaveBeenCalled())
+    expect(mockSetNoticeSentMutate).not.toHaveBeenCalled()
+  })
+
+  it("mobile: bấm Lưu ảnh → gọi setNoticeSent(sent: true)", async () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia
+
+    queryReturn = {
+      data: notice({ paidAmount: 400000 }),
+      isError: false,
+      dataUpdatedAt: 1000,
+      refetch: vi.fn(),
+    }
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+
+    const saveImgBtn = screen.getByRole("button", { name: /Lưu ảnh/ })
+    await waitFor(() => expect(saveImgBtn.getAttribute("disabled")).toBeNull())
+
+    fireEvent.click(saveImgBtn)
+    expect(mockSetNoticeSentMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: true }),
+      expect.anything()
+    )
   })
 })

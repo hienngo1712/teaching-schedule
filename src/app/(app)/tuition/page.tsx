@@ -21,6 +21,7 @@ import { getTuitionBadgeStatus, type TuitionBadgeStatus } from "@/lib/tuition-st
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
 import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
 import { TuitionStatusBadge } from "@/components/tuition/TuitionStatusBadge"
+import { TuitionNoticeBadge } from "@/components/tuition/TuitionNoticeBadge"
 import { useFeatureGate } from "@/hooks/useFeatureGate"
 import { LockBadge } from "@/components/plan/LockBadge"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
@@ -159,7 +160,16 @@ export default function TuitionPage() {
     },
     { header: t("sessions_count"), cell: (item) => `${item.presentSessions}/${item.totalSessions}`, className: "w-[120px] text-center text-slate-600" },
     { header: t("amount_to_pay"), cell: (item) => formatCurrency(item.totalAmountDue), className: "w-[160px] whitespace-nowrap text-right font-medium text-slate-900" },
-    { header: t("status"), cell: (item) => <TuitionStatusBadge item={item} />, className: "w-[160px] text-center" },
+    {
+      header: t("status"),
+      cell: (item) => (
+        <div className="flex flex-col items-center gap-1">
+          <TuitionStatusBadge item={item} />
+          <TuitionNoticeBadge item={item} />
+        </div>
+      ),
+      className: "w-[160px] text-center",
+    },
     {
       header: <span className="sr-only">{t("action")}</span>,
       cell: (item) => (
@@ -269,7 +279,10 @@ export default function TuitionPage() {
                 </Badge>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <TuitionStatusBadge item={item} />
+                <div className="flex flex-wrap items-center justify-end gap-1">
+                  <TuitionStatusBadge item={item} />
+                  <TuitionNoticeBadge item={item} />
+                </div>
                 <span className="text-xs text-slate-500">
                   {item.presentSessions}/{item.totalSessions} {t("sessions")}
                 </span>

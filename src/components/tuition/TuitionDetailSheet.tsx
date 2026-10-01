@@ -18,6 +18,7 @@ import { cn, formatCurrency, formatDate } from "@/lib/utils"
 import { paymentSummaryLine } from "@/lib/payment-summary"
 import type { PaymentDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import dayjs from "@/lib/dayjs"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
@@ -120,6 +121,7 @@ function TuitionDetailBody({
   paymentsLocked: boolean
 }) {
   const { t } = useTranslation()
+  const utils = trpc.useUtils()
   const { studentId, year, month } = data
 
   // `data` là bản chụp lúc mở; sheet vẫn mở sau mỗi lần thu nên đọc lại dòng tháng (TRPCProvider tự invalidate).
@@ -138,6 +140,13 @@ function TuitionDetailBody({
   const [form, setForm] = useState<{ open: false } | { open: true; payment?: PaymentDTO }>({ open: false })
   const [deleteTarget, setDeleteTarget] = useState<PaymentDTO | null>(null)
   const [noticeOpen, setNoticeOpen] = useState(false)
+
+  const setNoticeSentMut = trpc.tuition.setNoticeSent.useMutation({
+    onSuccess: () => {
+      utils.tuition.getMonthlyStatus.invalidate()
+    },
+    onError: (e) => toast.error(e.message),
+  })
 
   const settlementMut = trpc.tuition.updateSettlement.useMutation({
     onSuccess: () => {
@@ -267,6 +276,46 @@ function TuitionDetailBody({
                   {formatCurrency(summary.amount)}
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* Phiếu báo */}
+          <div className="space-y-3">
+            <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-500">
+              <Receipt className="size-4" />
+              {t("tuition_notice")}
+            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
+              <div className="text-sm">
+                {row.noticeSentAt ? (
+                  <span className="font-medium text-slate-700">
+                    {t("notice_sent_detail")
+                      .replace("{d}", dayjs(row.noticeSentAt).tz("Asia/Ho_Chi_Minh").format("D/M"))
+                      .replace("{t}", dayjs(row.noticeSentAt).tz("Asia/Ho_Chi_Minh").format("HH:mm"))}
+                  </span>
+                ) : (
+                  <span className="text-slate-500">{t("notice_unsent")}</span>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 md:h-10 text-xs font-semibold"
+                disabled={setNoticeSentMut.isPending}
+                onClick={() =>
+                  setNoticeSentMut.mutate(
+                    { studentId, year, month, sent: row.noticeStatus === "none" },
+                    {
+                      onSuccess: () => {
+                        utils.tuition.getMonthlyStatus.invalidate()
+                      },
+                      onError: (e) => toast.error(e.message),
+                    }
+                  )
+                }
+              >
+                {row.noticeStatus === "none" ? t("mark_notice_sent") : t("unmark_notice_sent")}
+              </Button>
             </div>
           </div>
 
