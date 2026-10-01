@@ -121,7 +121,7 @@ function TuitionDetailBody({
   paymentsLocked: boolean
 }) {
   const { t } = useTranslation()
-  const utils = trpc.useUtils?.()
+  const utils = trpc.useUtils()
   const { studentId, year, month } = data
 
   // `data` là bản chụp lúc mở; sheet vẫn mở sau mỗi lần thu nên đọc lại dòng tháng (TRPCProvider tự invalidate).
@@ -141,14 +141,12 @@ function TuitionDetailBody({
   const [deleteTarget, setDeleteTarget] = useState<PaymentDTO | null>(null)
   const [noticeOpen, setNoticeOpen] = useState(false)
 
-  const setNoticeSentMut = trpc.tuition.setNoticeSent?.useMutation
-    ? trpc.tuition.setNoticeSent.useMutation({
-        onSuccess: () => {
-          utils?.tuition.getMonthlyStatus.invalidate()
-        },
-        onError: (e) => toast.error(e.message),
-      })
-    : { mutate: () => {}, isPending: false }
+  const setNoticeSentMut = trpc.tuition.setNoticeSent.useMutation({
+    onSuccess: () => {
+      utils.tuition.getMonthlyStatus.invalidate()
+    },
+    onError: (e) => toast.error(e.message),
+  })
 
   const settlementMut = trpc.tuition.updateSettlement.useMutation({
     onSuccess: () => {
@@ -298,6 +296,11 @@ function TuitionDetailBody({
                 ) : (
                   <span className="text-slate-500">{t("notice_unsent")}</span>
                 )}
+                {row.noticeStatus === "changed" && (
+                  <span data-testid="notice-changed-hint" className="mt-0.5 block text-xs font-medium text-amber-700">
+                    {t("notice_changed")}
+                  </span>
+                )}
               </div>
               <Button
                 type="button"
@@ -305,15 +308,12 @@ function TuitionDetailBody({
                 className="h-11 md:h-10 text-xs font-semibold"
                 disabled={setNoticeSentMut.isPending}
                 onClick={() =>
-                  setNoticeSentMut.mutate(
-                    { studentId, year, month, sent: row.noticeStatus === "none" },
-                    {
-                      onSuccess: () => {
-                        utils.tuition.getMonthlyStatus.invalidate()
-                      },
-                      onError: (e) => toast.error(e.message),
-                    }
-                  )
+                  setNoticeSentMut.mutate({
+                    studentId,
+                    year,
+                    month,
+                    sent: row.noticeStatus === "none",
+                  })
                 }
               >
                 {row.noticeStatus === "none" ? t("mark_notice_sent") : t("unmark_notice_sent")}

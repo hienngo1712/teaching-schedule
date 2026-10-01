@@ -32,9 +32,11 @@ const mockCalls = vi.hoisted(() => ({ list: [] as unknown[] }))
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
+    useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } } }),
     tuition: {
       getMonthlyStatus: { useQuery: () => ({ data: { items: [row] }, isPending: false }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     payment: {
       list: {

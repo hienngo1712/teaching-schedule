@@ -42,10 +42,12 @@ const getMonthlyStatusQuery = {
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
+    useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } } }),
     tuition: {
       getMonthlyStatus: { useQuery: () => getMonthlyStatusQuery },
       getNotice: { useQuery: () => ({ data: undefined, isError: false, refetch: vi.fn() }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     payment: {
       list: { useQuery: () => ({ data: [], isPending: false }) },
