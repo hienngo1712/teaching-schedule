@@ -102,9 +102,13 @@ export function SessionNavBar({ siblings, current, onNavigate, blocked = false }
         <ChevronLeft className="size-5" />
       </Button>
 
-      <span className="text-xs font-semibold text-slate-600 select-none">
-        {positionText}
-      </span>
+      {currentIndex >= 0 ? (
+        <span className="text-xs font-semibold text-slate-600 select-none">
+          {positionText}
+        </span>
+      ) : (
+        <span aria-hidden />
+      )}
 
       <Button
         type="button"

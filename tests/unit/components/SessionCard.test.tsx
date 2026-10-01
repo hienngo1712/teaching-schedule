@@ -9,6 +9,12 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { SessionCard } from "@/components/calendar/SessionCard"
 import type { SessionListDTO } from "@/lib/types/models"
 
+vi.mock("@/hooks/useMediaQuery", () => ({
+  useMediaQuery: vi.fn(() => {
+    throw new Error("useMediaQuery must not be called in SessionCard")
+  }),
+}))
+
 beforeEach(() => {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: true,
@@ -92,6 +98,22 @@ describe("SessionCard — hiển thị lớp học (spec S5)", () => {
       </LanguageProvider>
     )
     expect(screen.getByRole("button").textContent).not.toContain("Lớp")
+  })
+})
+
+describe("SessionCard — U19 không dùng useMediaQuery và render 2 chuỗi meta qua CSS responsive", () => {
+  it("grades [5] → DOM có phần tử md:hidden chứa 'L5' và hidden md:inline chứa 'Lớp 5'", () => {
+    const { container } = render(
+      <LanguageProvider forcedLanguage="vi">
+        <SessionCard session={{ ...base, grades: [5], studentCount: 3 }} />
+      </LanguageProvider>
+    )
+    const shortSpan = container.querySelector(".md\\:hidden")
+    const fullSpan = container.querySelector(".hidden.md\\:inline")
+    expect(shortSpan).not.toBeNull()
+    expect(shortSpan?.textContent).toContain("L5 · 3 HS")
+    expect(fullSpan).not.toBeNull()
+    expect(fullSpan?.textContent).toContain("Lớp 5 · 3 HS")
   })
 })
 
