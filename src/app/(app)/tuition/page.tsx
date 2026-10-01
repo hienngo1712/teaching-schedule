@@ -43,7 +43,18 @@ function amountClass(status: TuitionBadgeStatus) {
 
 export default function TuitionPage() {
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
-  const { selectedGrade, setGrade, searchStudentName, setSearch, selectedStatus, setStatus, selectedStudentId, setStudentId } = useFilters()
+  const {
+    selectedGrade,
+    setGrade,
+    searchStudentName,
+    setSearch,
+    selectedStatus,
+    setStatus,
+    selectedNoticeFilter,
+    setNoticeFilter,
+    selectedStudentId,
+    setStudentId,
+  } = useFilters()
   const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
   const [selectedStudent, setSelectedStudent] = useState<(TuitionStatusItem & { year: number; month: number }) | null>(null)
@@ -68,6 +79,7 @@ export default function TuitionPage() {
     search: searchStudentName || undefined,
     studentId: pendingDeepLinkId,
     status: selectedStatus as MonthlyTuitionFilterInput["status"],
+    noticeFilter: (selectedNoticeFilter && selectedNoticeFilter !== "all" ? selectedNoticeFilter : undefined) as MonthlyTuitionFilterInput["noticeFilter"],
     page: currentPage,
     limit: pageSize,
   })
@@ -75,7 +87,7 @@ export default function TuitionPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [selectedGrade, searchStudentName, selectedStatus, year, month])
+  }, [selectedGrade, searchStudentName, selectedStatus, selectedNoticeFilter, year, month])
 
   const items = query.data?.items ?? []
   const totalItems = query.data?.totalCount ?? 0
@@ -160,7 +172,10 @@ export default function TuitionPage() {
     },
   ]
 
-  const activeFilterCount = (selectedGrade ? 1 : 0) + (selectedStatus && selectedStatus !== "all" ? 1 : 0)
+  const activeFilterCount =
+    (selectedGrade ? 1 : 0) +
+    (selectedStatus && selectedStatus !== "all" ? 1 : 0) +
+    (selectedNoticeFilter && selectedNoticeFilter !== "all" ? 1 : 0)
 
   return (
     <div className="flex flex-col gap-4">
@@ -195,6 +210,16 @@ export default function TuitionPage() {
                 <SelectItem value="paid_this_month">{t("paid_this_month")}</SelectItem>
                 <SelectItem value="partial">{t("partial_paid")}</SelectItem>
                 <SelectItem value="unpaid">{t("unpaid")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={selectedNoticeFilter || "all"} onValueChange={(v) => setNoticeFilter(v)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder={t("notice_filter")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("all_notice")}</SelectItem>
+                <SelectItem value="unsent">{t("notice_unsent")}</SelectItem>
+                <SelectItem value="sent">{t("notice_sent")}</SelectItem>
               </SelectContent>
             </Select>
             <Select

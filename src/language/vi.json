@@ -773,5 +773,16 @@
   "per_session": "/buổi",
   "billing_change_note": "Áp dụng từ tháng {m}/{y}; các tháng trước giữ nguyên.",
   "billing_mode_label": "Cách thu học phí",
-  "monthly_fee_line": "Học phí tháng (trọn gói): {amount} · Đã học {p}/{n} buổi"
+  "monthly_fee_line": "Học phí tháng (trọn gói): {amount} · Đã học {p}/{n} buổi",
+  "notice_filter": "Phiếu báo",
+  "notice_unsent": "Chưa gửi",
+  "notice_sent": "Đã gửi",
+  "all_notice": "Tất cả",
+  "notice_sent_on": "Đã gửi {d}",
+  "notice_changed": "Đã gửi · số tiền đã đổi",
+  "notice_marked": "Đã đánh dấu đã gửi phiếu",
+  "undo": "Hoàn tác",
+  "mark_notice_sent": "Đánh dấu đã gửi",
+  "unmark_notice_sent": "Bỏ đánh dấu",
+  "notice_sent_detail": "Phiếu báo: Đã gửi {d} lúc {t}"
 }

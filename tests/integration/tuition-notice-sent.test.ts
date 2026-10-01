@@ -161,4 +161,86 @@ describe("Đánh dấu đã gửi phiếu học phí (spec V)", () => {
       })
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
+
+  it("Task 2: Bộ lọc noticeFilter (all / unsent / sent) và phân trang", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const { year, month } = vnDateParts()
+    const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
+
+    // 4 HS: A (sent), B (unsent nợ), C (đã đóng đủ chưa gửi), D (changed)
+    const stA = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS A Sent", grade: 5, tuitionFee: 100_000 })
+    const stB = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS B Unsent", grade: 5, tuitionFee: 100_000 })
+    const stC = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS C Paid", grade: 5, tuitionFee: 100_000 })
+    const stD = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS D Changed", grade: 5, tuitionFee: 100_000 })
+
+    const curDate = `${year}-${String(month).padStart(2, "0")}-05`
+    const session = await caller.session.create({
+      sessionDate: curDate,
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId,
+      studentIds: [stA.id, stB.id, stC.id, stD.id],
+    })
+    await caller.attendance.update({
+      sessionId: session.id,
+      attendances: [
+        { studentId: stA.id, attendance: "present", fee: 100_000 },
+        { studentId: stB.id, attendance: "present", fee: 100_000 },
+        { studentId: stC.id, attendance: "present", fee: 100_000 },
+        { studentId: stD.id, attendance: "present", fee: 100_000 },
+      ],
+    })
+
+    // A: đánh dấu đã gửi
+    await caller.tuition.setNoticeSent({ studentId: stA.id, year, month, sent: true })
+
+    // C: đóng đủ tiền
+    await caller.payment.create({
+      studentId: stC.id,
+      year,
+      month,
+      amount: 100_000,
+      paidAt: curDate,
+      method: "cash",
+    })
+
+    // D: đánh dấu đã gửi, sau đó thêm 1 ca 50k
+    await caller.tuition.setNoticeSent({ studentId: stD.id, year, month, sent: true })
+    const session2 = await caller.session.create({
+      sessionDate: `${year}-${String(month).padStart(2, "0")}-10`,
+      startTime: "10:00",
+      endTime: "11:30",
+      subjectId,
+      studentIds: [stD.id],
+    })
+    await caller.attendance.update({
+      sessionId: session2.id,
+      attendances: [{ studentId: stD.id, attendance: "present", fee: 50_000 }],
+    })
+
+    // Kiểm tra noticeFilter = "all" (hoặc không truyền) -> cả 4 HS
+    const resAll = await caller.tuition.getMonthlyStatus({ year, month, noticeFilter: "all" })
+    expect(resAll.totalCount).toBe(4)
+    expect(resAll.items.map((i) => i.studentId).sort()).toEqual([stA.id, stB.id, stC.id, stD.id].sort())
+
+    // Kiểm tra noticeFilter = "unsent" -> [B, D] (C bị loại vì còn nợ = 0, A bị loại vì sent)
+    const resUnsent = await caller.tuition.getMonthlyStatus({ year, month, noticeFilter: "unsent" })
+    expect(resUnsent.totalCount).toBe(2)
+    expect(resUnsent.items.map((i) => i.studentId).sort()).toEqual([stB.id, stD.id].sort())
+
+    // Kiểm tra noticeFilter = "sent" -> [A] (D bị loại vì changed)
+    const resSent = await caller.tuition.getMonthlyStatus({ year, month, noticeFilter: "sent" })
+    expect(resSent.totalCount).toBe(1)
+    expect(resSent.items[0].studentId).toBe(stA.id)
+
+    // Phân trang với noticeFilter = "unsent"
+    const p1 = await caller.tuition.getMonthlyStatus({ year, month, noticeFilter: "unsent", page: 1, limit: 1 })
+    expect(p1.items).toHaveLength(1)
+    expect(p1.totalCount).toBe(2)
+    expect(p1.totalPages).toBe(2)
+
+    const p2 = await caller.tuition.getMonthlyStatus({ year, month, noticeFilter: "unsent", page: 2, limit: 1 })
+    expect(p2.items).toHaveLength(1)
+    expect(p2.items[0].studentId).not.toBe(p1.items[0].studentId)
+  })
 })

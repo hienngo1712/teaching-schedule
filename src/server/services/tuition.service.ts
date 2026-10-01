@@ -127,7 +127,7 @@ export async function getMonthlyTuitionStatus(
   // Dashboard (spec P1): chỉ tính cho các HS này, bỏ lọc isActive/grade của danh sách màn Học phí.
   onlyStudentIds?: number[]
 ): Promise<PaginatedResponse<TuitionStatusDTO>> {
-  const { year, month, grade, search, studentId, status, page, limit } = filter
+  const { year, month, grade, search, studentId, status, noticeFilter, page, limit } = filter
   if (onlyStudentIds && onlyStudentIds.length === 0) return { items: [], totalCount: 0, totalPages: 0 }
 
   // 1. Lấy toàn bộ học sinh active theo filter
@@ -280,11 +280,24 @@ export async function getMonthlyTuitionStatus(
     )
   }
 
-  // 7. Lọc theo status — dùng chung helper với badge client.
-  const filteredResults =
+  // 7. Lọc theo status và noticeFilter — dùng chung helper với badge client.
+  let filteredResults =
     status && status !== "all"
       ? results.filter(item => matchesTuitionStatusFilter(item, status))
       : results
+
+  if (noticeFilter && noticeFilter !== "all") {
+    filteredResults = filteredResults.filter(item => {
+      if (noticeFilter === "sent") {
+        return item.noticeStatus === "sent"
+      }
+      if (noticeFilter === "unsent") {
+        const remaining = item.isFullPaid ? 0 : Math.max(0, item.totalAmountDue - item.paidAmount)
+        return (item.noticeStatus === "none" || item.noticeStatus === "changed") && remaining > 0
+      }
+      return true
+    })
+  }
 
   // 8. Phân trang
   const totalCount = filteredResults.length
