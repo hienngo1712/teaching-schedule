@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { hardDeleteStudents, studentIdsByNamePrefix } from './helpers/db-cleanup';
 
 const db = new PrismaClient();
 
@@ -13,15 +14,8 @@ async function cleanupData() {
   await db.teachingSession.deleteMany({
     where: { title: { startsWith: SESSION_PREFIX } },
   });
-  await db.monthlyTuition.deleteMany({
-    where: { student: { fullName: { startsWith: TEST_PREFIX } } },
-  });
-  await db.studentBillingChange.deleteMany({
-    where: { student: { fullName: { startsWith: TEST_PREFIX } } },
-  });
-  await db.student.deleteMany({
-    where: { fullName: { startsWith: TEST_PREFIX } },
-  });
+  // Tên đã mã hoá: lọc sau khi giải mã; FK cascade dọn học phí/lịch sử cách thu.
+  await hardDeleteStudents(db, await studentIdsByNamePrefix(db, TEST_PREFIX));
 }
 
 test.beforeAll(async () => {
