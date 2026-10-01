@@ -1,6 +1,6 @@
 import { createTRPCRouter, planProcedure, protectedProcedure } from "@/server/trpc"
-import { monthlyTuitionFilterSchema, updateSettlementSchema, tuitionNoticeSchema } from "@/lib/schemas/tuition"
-import { getMonthlyTuitionStatus, updateSettlement } from "@/server/services/tuition.service"
+import { monthlyTuitionFilterSchema, updateSettlementSchema, tuitionNoticeSchema, setNoticeSentSchema } from "@/lib/schemas/tuition"
+import { getMonthlyTuitionStatus, updateSettlement, setNoticeSent } from "@/server/services/tuition.service"
 import { getTuitionNotice } from "@/server/services/tuition-notice.service"
 
 export const tuitionRouter = createTRPCRouter({
@@ -21,4 +21,8 @@ export const tuitionRouter = createTRPCRouter({
   getNotice: planProcedure("tuitionNotice")
     .input(tuitionNoticeSchema)
     .query(({ ctx, input }) => getTuitionNotice(ctx.db, ctx.userId, input)),
+
+  setNoticeSent: protectedProcedure
+    .input(setNoticeSentSchema)
+    .mutation(({ ctx, input }) => setNoticeSent(ctx.db, ctx.userId, input)),
 })

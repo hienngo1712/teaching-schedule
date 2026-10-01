@@ -2,9 +2,9 @@ import { Prisma, type PrismaClient, type MonthlyTuition, type SessionStudent } f
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { matchesTuitionStatusFilter } from "@/lib/tuition-status"
 import { assertOwnership } from "./_base.service"
-import type { MonthlyTuitionFilterInput, UpdateSettlementInput } from "@/lib/schemas/tuition"
+import type { MonthlyTuitionFilterInput, UpdateSettlementInput, SetNoticeSentInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
-import type { TuitionStatusDTO } from "@/lib/types/models"
+import type { TuitionStatusDTO, NoticeStatus } from "@/lib/types/models"
 import { byGradeThenName, nameMatches } from "@/lib/name-search"
 import { monthFee, monthKey, resolveBilling, type Billing, type BillingChange } from "@/lib/billing"
 import { loadBillingChanges } from "./billing.service"
@@ -218,6 +218,16 @@ export async function getMonthlyTuitionStatus(
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
       calcStudentTuition(attendance, snapshot, closingBalances.get(student.id)?.get(year * 12 + month - 2) ?? 0, billing)
 
+    const paidAmount = snapshot?.paidAmount ?? 0
+    const isFullPaid = snapshot?.isFullPaid ?? false
+    const remaining = isFullPaid ? 0 : Math.max(0, totalAmountDue - paidAmount)
+    const noticeSentAt = snapshot?.noticeSentAt ?? null
+    const noticeSentAmount = snapshot?.noticeSentAmount ?? null
+    let noticeStatus: NoticeStatus = "none"
+    if (noticeSentAt !== null) {
+      noticeStatus = remaining === noticeSentAmount ? "sent" : "changed"
+    }
+
     return {
       studentId: student.id,
       fullName: student.fullName,
@@ -225,14 +235,17 @@ export async function getMonthlyTuitionStatus(
       totalSessions,
       presentSessions,
       totalExpected: currentMonthFee,
-      paidAmount: snapshot?.paidAmount ?? 0,
-      isFullPaid: snapshot?.isFullPaid ?? false,
+      paidAmount,
+      isFullPaid,
       notes: snapshot?.notes ?? null,
       previousBalance,
       totalAmountDue,
       needsUpsert,
       billingMode: billing.mode,
       monthlyFee: billing.monthlyFee,
+      noticeSentAt,
+      noticeSentAmount,
+      noticeStatus,
     }
   })
 
@@ -293,6 +306,9 @@ export async function getMonthlyTuitionStatus(
       totalAmountDue: item.totalAmountDue,
       billingMode: item.billingMode,
       monthlyFee: item.monthlyFee,
+      noticeSentAt: item.noticeSentAt,
+      noticeSentAmount: item.noticeSentAmount,
+      noticeStatus: item.noticeStatus,
     })),
     totalCount,
     totalPages: Math.ceil(totalCount / limit),
@@ -341,6 +357,51 @@ export async function updateSettlement(
       isFullPaid: input.isFullPaid,
       ...(input.notes !== undefined && { notes: input.notes }),
     },
+  })
+}
+
+export async function setNoticeSent(
+  db: PrismaClient,
+  userId: number,
+  input: SetNoticeSentInput
+): Promise<{ noticeSentAt: Date | null; noticeSentAmount: number | null }> {
+  const mt = await ensureMonthlyTuition(db, userId, input.studentId, input.year, input.month)
+
+  if (!input.sent) {
+    return db.monthlyTuition.update({
+      where: { id: mt.id },
+      data: {
+        noticeSentAt: null,
+        noticeSentAmount: null,
+      },
+      select: { noticeSentAt: true, noticeSentAmount: true },
+    })
+  }
+
+  const statusRes = await getMonthlyTuitionStatus(
+    db,
+    userId,
+    {
+      studentId: input.studentId,
+      year: input.year,
+      month: input.month,
+      status: "all",
+      page: 1,
+      limit: 1,
+    },
+    false,
+    [input.studentId]
+  )
+  const item = statusRes.items[0]
+  const remaining = item ? (item.isFullPaid ? 0 : Math.max(0, item.totalAmountDue - item.paidAmount)) : 0
+
+  return db.monthlyTuition.update({
+    where: { id: mt.id },
+    data: {
+      noticeSentAt: new Date(),
+      noticeSentAmount: remaining,
+    },
+    select: { noticeSentAt: true, noticeSentAmount: true },
   })
 }
 

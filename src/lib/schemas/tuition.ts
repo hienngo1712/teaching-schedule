@@ -29,3 +29,12 @@ export const tuitionNoticeSchema = z.object({
 })
 
 export type TuitionNoticeInput = z.infer<typeof tuitionNoticeSchema>
+
+export const setNoticeSentSchema = z.object({
+  studentId: z.number().int().positive(),
+  year: z.number().int(),
+  month: z.number().int().min(1).max(12),
+  sent: z.boolean(),
+})
+
+export type SetNoticeSentInput = z.infer<typeof setNoticeSentSchema>
