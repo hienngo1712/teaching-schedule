@@ -6,7 +6,8 @@ export const IMPORT_COLUMNS = [
   { label: "Lớp*", field: "grade" },
   { label: "Tên phụ huynh", field: "parentName" },
   { label: "SĐT phụ huynh", field: "parentPhone" },
-  { label: "Học phí/buổi", field: "tuitionFee" },
+  { label: "Học phí", field: "tuitionFee" },
+  { label: "Cách thu", field: "billingMode" },
   { label: "Ghi chú", field: "notes" },
 ] as const
 
@@ -21,6 +22,8 @@ export type ImportRowInput = {
   parentName?: string
   parentPhone?: string
   tuitionFee: number
+  billingMode?: "per_session" | "monthly"
+  monthlyFee?: number
   notes?: string
 }
 
@@ -56,9 +59,61 @@ export function cellToText(value: unknown): string {
   return String(value).trim()
 }
 
+function stripDiacritics(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+}
+
+export type ImportHeaderLayout = {
+  valid: boolean
+  hasBillingColumn: boolean
+  hasNotesColumn: boolean
+}
+
+export function parseImportHeader(cells: unknown[]): ImportHeaderLayout {
+  const clean = (val: unknown) => stripDiacritics(cellToText(val)).replace(/\s*\*$/, "")
+  if (
+    clean(cells[0]) !== "ho ten" ||
+    clean(cells[1]) !== "lop" ||
+    clean(cells[2]) !== "ten phu huynh" ||
+    clean(cells[3]) !== "sdt phu huynh"
+  ) {
+    return { valid: false, hasBillingColumn: false, hasNotesColumn: false }
+  }
+  const feeLabel = clean(cells[4])
+  if (feeLabel !== "hoc phi" && feeLabel !== "hoc phi/buoi") {
+    return { valid: false, hasBillingColumn: false, hasNotesColumn: false }
+  }
+
+  const col5 = clean(cells[5])
+  const col6 = clean(cells[6])
+
+  if (!col5) {
+    if (col6) return { valid: false, hasBillingColumn: false, hasNotesColumn: false }
+    return { valid: true, hasBillingColumn: false, hasNotesColumn: false }
+  }
+
+  if (col5 === "cach thu") {
+    if (!col6) return { valid: true, hasBillingColumn: true, hasNotesColumn: false }
+    if (col6 === "ghi chu") return { valid: true, hasBillingColumn: true, hasNotesColumn: true }
+    return { valid: false, hasBillingColumn: false, hasNotesColumn: false }
+  }
+
+  if (col5 === "ghi chu") {
+    if (col6) return { valid: false, hasBillingColumn: false, hasNotesColumn: false }
+    return { valid: true, hasBillingColumn: false, hasNotesColumn: true }
+  }
+
+  return { valid: false, hasBillingColumn: false, hasNotesColumn: false }
+}
+
 export function isImportHeader(cells: unknown[]): boolean {
-  const clean = (s: string) => normalizeText(s).replace(/\s*\*$/, "")
-  return IMPORT_COLUMNS.every((c, i) => clean(cellToText(cells[i])) === clean(c.label))
+  return parseImportHeader(cells).valid
 }
 
 function parseGrade(raw: unknown): number {
@@ -85,28 +140,60 @@ function parseFee(raw: unknown): number {
   return Number(cleaned.replace(/[.,]/g, ""))
 }
 
+function parseBillingMode(raw: unknown): { mode: "per_session" | "monthly"; error: boolean } {
+  const text = stripDiacritics(cellToText(raw))
+  if (!text || text === "buoi") return { mode: "per_session", error: false }
+  if (text === "thang") return { mode: "monthly", error: false }
+  return { mode: "per_session", error: true }
+}
+
 function optionalText(raw: unknown): string | undefined {
   return cellToText(raw) || undefined
 }
 
-export function parseImportRows(rows: { rowNumber: number; cells: unknown[] }[]): ParsedImportRow[] {
+export function parseImportRows(
+  rows: { rowNumber: number; cells: unknown[] }[],
+  options?: { hasBillingColumn?: boolean }
+): ParsedImportRow[] {
   const result: ParsedImportRow[] = []
   for (const { rowNumber, cells } of rows) {
-    if (IMPORT_COLUMNS.every((_, i) => cellToText(cells[i]) === "")) continue
+    if (cells.every((c) => cellToText(c) === "")) continue
+
+    const hasBilling = options?.hasBillingColumn ?? (cells.length >= 7)
+    const fee = parseFee(cells[4])
+    const { mode: billingMode, error: billingError } = hasBilling
+      ? parseBillingMode(cells[5])
+      : { mode: "per_session" as const, error: false }
+
+    const isMonthly = billingMode === "monthly"
+    const feeIsNaN = Number.isNaN(fee)
+
     const input: ImportRowInput = {
       fullName: cellToText(cells[0]).normalize("NFC"),
       grade: parseGrade(cells[1]),
       parentName: optionalText(cells[2]),
       parentPhone: parsePhone(cells[3]),
-      tuitionFee: parseFee(cells[4]),
-      notes: optionalText(cells[5]),
+      tuitionFee: isMonthly ? (feeIsNaN ? NaN : 0) : fee,
+      billingMode,
+      monthlyFee: isMonthly ? (feeIsNaN ? NaN : fee) : 0,
+      notes: optionalText(hasBilling ? cells[6] : cells[5]),
     }
+
     const check = studentCreateSchema.safeParse(input)
-    // Chỉ lấy tên field: message mặc định của Zod là tiếng Anh, UI tự dịch bằng key import_err_<field>.
-    const errors = check.success
-      ? []
-      : IMPORT_COLUMNS.map((c) => c.field).filter((f) => check.error.issues.some((i) => i.path[0] === f))
-    result.push({ rowNumber, input, errors })
+    const errors: ImportField[] = []
+    if (billingError) {
+      errors.push("billingMode")
+    }
+    if (!check.success) {
+      for (const c of IMPORT_COLUMNS) {
+        if (c.field === "billingMode" && billingError) continue
+        if (check.error.issues.some((i) => i.path[0] === c.field)) {
+          errors.push(c.field)
+        }
+      }
+    }
+    const sortedErrors = IMPORT_COLUMNS.map((c) => c.field).filter((f) => errors.includes(f))
+    result.push({ rowNumber, input, errors: sortedErrors })
   }
   return result
 }

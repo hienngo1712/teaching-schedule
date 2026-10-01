@@ -88,7 +88,7 @@ export async function buildBackupWorkbook(
   now: Date
 ): Promise<ExcelJS.Workbook> {
   // Mọi truy vấn đều liệt kê cột: thêm cột nhạy cảm vào schema sau này không tự lọt ra file.
-  const [user, students, subjects, sessions, attendances, tuitions, payments, upgradeLogs] = await Promise.all([
+  const [user, students, billingChanges, subjects, sessions, attendances, tuitions, payments, upgradeLogs] = await Promise.all([
     db.user.findUniqueOrThrow({
       where: { id: userId },
       select: { username: true, fullName: true, bankBin: true, bankAccountNumber: true, bankAccountName: true },
@@ -97,7 +97,15 @@ export async function buildBackupWorkbook(
       where: { userId },
       select: {
         id: true, fullName: true, grade: true, parentName: true, parentPhone: true,
-        tuitionFee: true, isActive: true, notes: true, createdAt: true, updatedAt: true,
+        tuitionFee: true, billingMode: true, monthlyFee: true, isActive: true, notes: true, createdAt: true, updatedAt: true,
+      },
+    }),
+    db.studentBillingChange.findMany({
+      where: { student: { userId } },
+      orderBy: [{ studentId: "asc" }, { fromKey: "asc" }, { id: "asc" }],
+      select: {
+        id: true, studentId: true, fromKey: true, mode: true, monthlyFee: true, createdAt: true,
+        student: { select: { fullName: true } },
       },
     }),
     db.subject.findMany({
@@ -170,10 +178,29 @@ export async function buildBackupWorkbook(
     { header: "Tên phụ huynh", width: 22, value: (s) => s.parentName },
     { header: "SĐT phụ huynh", width: 15, kind: "phone", value: (s) => s.parentPhone },
     { header: "Học phí/buổi", width: 14, kind: "money", value: (s) => s.tuitionFee },
+    { header: "Cách thu", width: 13, value: (s) => (s.billingMode === "monthly" ? "Trọn tháng" : "Theo buổi") },
+    { header: "Học phí tháng", width: 14, kind: "money", value: (s) => s.monthlyFee },
     { header: "Đang học", width: 10, value: (s) => yesNo(s.isActive) },
     { header: "Ghi chú", width: 30, value: (s) => s.notes },
     { header: "Ngày tạo", width: 17, kind: "datetime", value: (s) => vnTime(s.createdAt) },
     { header: "Cập nhật lần cuối", width: 17, kind: "datetime", value: (s) => vnTime(s.updatedAt) },
+  ])])
+
+  counts.push(["Lịch sử cách thu", addDataSheet(wb, "Lịch sử cách thu", billingChanges, [
+    { header: "ID", width: 8, value: (c) => c.id },
+    { header: "ID học sinh", width: 11, value: (c) => c.studentId },
+    { header: "Học sinh", width: 26, value: (c) => c.student.fullName },
+    {
+      header: "Từ tháng",
+      width: 12,
+      value: (c) =>
+        c.fromKey === 0
+          ? "Từ đầu"
+          : `${String((c.fromKey % 12) + 1).padStart(2, "0")}/${Math.floor(c.fromKey / 12)}`,
+    },
+    { header: "Cách thu", width: 13, value: (c) => (c.mode === "monthly" ? "Trọn tháng" : "Theo buổi") },
+    { header: "Học phí tháng", width: 14, kind: "money", value: (c) => c.monthlyFee },
+    { header: "Ngày tạo", width: 17, kind: "datetime", value: (c) => vnTime(c.createdAt) },
   ])])
 
   counts.push(["Môn học", addDataSheet(wb, "Môn học", subjects, [

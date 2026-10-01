@@ -188,4 +188,58 @@ describe("Nhập học sinh từ Excel", () => {
     const { matches } = await caller.student.importCheck({ rows })
     expect(matches.every((m) => m !== null)).toBe(true)
   })
+
+  it("✓ importMany dòng monthly → HS billingMode='monthly', monthlyFee=số, tuitionFee=0, có dòng lịch sử fromKey=0", async () => {
+    const caller = await getAuthedCaller()
+    const res = await caller.student.importMany({
+      consent: CONSENT_ACCEPTED,
+      rows: [
+        {
+          fullName: "Trần Trọn Tháng",
+          grade: 6,
+          tuitionFee: 400000,
+          billingMode: "monthly",
+          monthlyFee: 400000,
+        },
+        {
+          fullName: "Lê Theo Buổi",
+          grade: 6,
+          tuitionFee: 50000,
+          billingMode: "per_session",
+        },
+      ],
+    })
+    expect(res).toEqual({ created: 2 })
+
+    const list = await caller.student.list({ limit: 10 })
+    const monthlyStudent = list.items.find((s) => s.fullName === "Trần Trọn Tháng")
+    const perSessionStudent = list.items.find((s) => s.fullName === "Lê Theo Buổi")
+
+    expect(monthlyStudent).toMatchObject({
+      billingMode: "monthly",
+      monthlyFee: 400000,
+      tuitionFee: 0,
+    })
+    expect(perSessionStudent).toMatchObject({
+      billingMode: "per_session",
+      tuitionFee: 50000,
+      monthlyFee: 0,
+    })
+
+    const changes = await db.studentBillingChange.findMany({
+      where: { studentId: monthlyStudent!.id },
+    })
+    expect(changes).toHaveLength(1)
+    expect(changes[0]).toMatchObject({
+      studentId: monthlyStudent!.id,
+      fromKey: 0,
+      mode: "monthly",
+      monthlyFee: 400000,
+    })
+
+    const perSessionChanges = await db.studentBillingChange.findMany({
+      where: { studentId: perSessionStudent!.id },
+    })
+    expect(perSessionChanges).toHaveLength(0)
+  })
 })

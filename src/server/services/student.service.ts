@@ -147,21 +147,43 @@ export async function importStudents(
       }
       seen.add(key)
     }
-    const { count } = await tx.student.createMany({
-      data: rows.map((r) => ({
-        userId,
-        fullName: r.fullName,
-        grade: r.grade,
-        parentPhone: r.parentPhone ?? null,
-        parentName: r.parentName ?? null,
-        notes: r.notes ?? null,
-        tuitionFee: r.tuitionFee,
-        billingMode: r.billingMode ?? "per_session",
-        monthlyFee: (r.billingMode === "monthly" ? r.monthlyFee : 0) ?? 0,
-        isActive: true,
-      })),
+    const createdStudents = await tx.student.createManyAndReturn({
+      data: rows.map((r) => {
+        const isMonthly = r.billingMode === "monthly"
+        const monthlyFee = isMonthly ? (r.monthlyFee ?? r.tuitionFee) : 0
+        const tuitionFee = isMonthly ? 0 : r.tuitionFee
+        return {
+          userId,
+          fullName: r.fullName,
+          grade: r.grade,
+          parentPhone: r.parentPhone ?? null,
+          parentName: r.parentName ?? null,
+          notes: r.notes ?? null,
+          tuitionFee,
+          billingMode: r.billingMode ?? "per_session",
+          monthlyFee,
+          isActive: true,
+        }
+      }),
+      select: { id: true, billingMode: true, monthlyFee: true },
     })
-    return { created: count }
+
+    const monthlyChanges = createdStudents
+      .filter((s) => s.billingMode === "monthly")
+      .map((s) => ({
+        studentId: s.id,
+        fromKey: 0,
+        mode: "monthly",
+        monthlyFee: s.monthlyFee,
+      }))
+
+    if (monthlyChanges.length > 0) {
+      await tx.studentBillingChange.createMany({
+        data: monthlyChanges,
+      })
+    }
+
+    return { created: createdStudents.length }
   })
 }
 

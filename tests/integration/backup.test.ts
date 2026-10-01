@@ -9,14 +9,18 @@ import { buildBackupWorkbook } from "@/server/services/backup.service"
 const NOW = new Date("2026-09-25T14:30:00Z")
 
 const DATA_SHEETS = [
-  "Học sinh", "Môn học", "Ca dạy", "Điểm danh", "Học phí tháng", "Lần thu", "Lịch sử lên lớp",
+  "Học sinh", "Lịch sử cách thu", "Môn học", "Ca dạy", "Điểm danh", "Học phí tháng", "Lần thu", "Lịch sử lên lớp",
 ]
 
 const HEADERS: Record<string, string[]> = {
   "Thông tin": ["Mục", "Giá trị"],
   "Học sinh": [
     "ID", "Họ tên", "Lớp", "Tên phụ huynh", "SĐT phụ huynh", "Học phí/buổi",
+    "Cách thu", "Học phí tháng",
     "Đang học", "Ghi chú", "Ngày tạo", "Cập nhật lần cuối",
+  ],
+  "Lịch sử cách thu": [
+    "ID", "ID học sinh", "Học sinh", "Từ tháng", "Cách thu", "Học phí tháng", "Ngày tạo",
   ],
   "Môn học": ["ID", "Tên môn", "Màu (hex)", "Mặc định", "Đang dạy", "Thứ tự", "Ngày tạo"],
   "Ca dạy": [
@@ -42,6 +46,7 @@ const HEADERS: Record<string, string[]> = {
 // Số bản ghi của user theo đúng điều kiện chủ sở hữu ở spec mục 6.3.
 const COUNTERS: Record<string, (userId: number) => Promise<number>> = {
   "Học sinh": (userId) => db.student.count({ where: { userId } }),
+  "Lịch sử cách thu": (userId) => db.studentBillingChange.count({ where: { student: { userId } } }),
   "Môn học": (userId) => db.subject.count({ where: { userId } }),
   "Ca dạy": (userId) => db.teachingSession.count({ where: { userId } }),
   "Điểm danh": (userId) => db.sessionStudent.count({ where: { session: { userId } } }),
@@ -108,6 +113,7 @@ describe("buildBackupWorkbook", () => {
   let passwordHash: string
   let anId: number
   let binhId: number
+  let chiId: number
   let hiddenSubjectId: number
   let normalSessionId: number
   let cancelledSessionId: number
@@ -132,6 +138,15 @@ describe("buildBackupWorkbook", () => {
     const binh = await a.student.create({ consent: CONSENT_ACCEPTED,  fullName: "Bình Sao Lưu", grade: 5 })
     binhId = binh.id
     await a.student.update({ consent: CONSENT_ACCEPTED,  id: binhId, data: { isActive: false } })
+
+    const chi = await a.student.create({
+      consent: CONSENT_ACCEPTED,
+      fullName: "Chi Trọn Gói",
+      grade: 4,
+      billingMode: "monthly",
+      monthlyFee: 500000,
+    })
+    chiId = chi.id
 
     const hidden = await a.subject.create({ name: "Lý Sao Lưu" })
     hiddenSubjectId = hidden.id
@@ -232,6 +247,14 @@ describe("buildBackupWorkbook", () => {
     expect(Number.isInteger(fee.value)).toBe(true)
     expect(fee.numFmt).toBe("#,##0")
 
+    expect(cellOf(ws, anId, "Cách thu").value).toBe("Theo buổi")
+    expect(cellOf(ws, anId, "Học phí tháng").value).toBe(0)
+    expect(cellOf(ws, anId, "Học phí tháng").numFmt).toBe("#,##0")
+
+    expect(cellOf(ws, chiId, "Cách thu").value).toBe("Trọn tháng")
+    expect(cellOf(ws, chiId, "Học phí tháng").value).toBe(500000)
+    expect(cellOf(ws, chiId, "Học phí tháng").numFmt).toBe("#,##0")
+
     expect(cellOf(ws, anId, "Đang học").value).toBe("Có")
     expect(cellOf(ws, binhId, "Đang học").value).toBe("Không")
 
@@ -246,6 +269,17 @@ describe("buildBackupWorkbook", () => {
     expect(created.value).toBeInstanceOf(Date)
     expect((created.value as Date).toISOString()).toBe("2026-01-02T03:00:00.000Z")
     expect(created.numFmt).toBe("dd/mm/yyyy hh:mm")
+  })
+
+  it("Lịch sử cách thu: có dòng của HS trọn gói, từ tháng Từ đầu, cách thu Trọn tháng, học phí tháng là số nguyên", async () => {
+    const ws = sheet(await loadBackup(teacherId), "Lịch sử cách thu")
+    const change = await db.studentBillingChange.findFirstOrThrow({ where: { studentId: chiId } })
+    expect(cellOf(ws, change.id, "ID học sinh").value).toBe(chiId)
+    expect(cellOf(ws, change.id, "Học sinh").value).toBe("Chi Trọn Gói")
+    expect(cellOf(ws, change.id, "Từ tháng").value).toBe("Từ đầu")
+    expect(cellOf(ws, change.id, "Cách thu").value).toBe("Trọn tháng")
+    expect(cellOf(ws, change.id, "Học phí tháng").value).toBe(500000)
+    expect(cellOf(ws, change.id, "Học phí tháng").numFmt).toBe("#,##0")
   })
 
   it("Môn học: xuất cả môn đã ẩn, cột Mặc định / Đang dạy", async () => {

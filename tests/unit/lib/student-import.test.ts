@@ -61,6 +61,23 @@ describe("isImportHeader", () => {
     ).toBe(true)
   })
 
+  it("file 5 cột cũ (không có Cách thu, không có Ghi chú) → hợp lệ", () => {
+    expect(isImportHeader(["Họ tên*", "Lớp*", "Tên phụ huynh", "SĐT phụ huynh", "Học phí/buổi"])).toBe(true)
+    expect(isImportHeader(["Họ tên*", "Lớp*", "Tên phụ huynh", "SĐT phụ huynh", "Học phí"])).toBe(true)
+  })
+
+  it("file 6 cột cũ (cột 6 là Ghi chú) → hợp lệ", () => {
+    expect(isImportHeader(["Họ tên*", "Lớp*", "Tên phụ huynh", "SĐT phụ huynh", "Học phí/buổi", "Ghi chú"])).toBe(true)
+  })
+
+  it("file 6 cột (cột 6 là Cách thu) → hợp lệ", () => {
+    expect(isImportHeader(["Họ tên*", "Lớp*", "Tên phụ huynh", "SĐT phụ huynh", "Học phí", "Cách thu"])).toBe(true)
+  })
+
+  it("file 7 cột mới (có cả Cách thu và Ghi chú) → hợp lệ", () => {
+    expect(isImportHeader(["Họ tên*", "Lớp*", "Tên phụ huynh", "SĐT phụ huynh", "Học phí", "Cách thu", "Ghi chú"])).toBe(true)
+  })
+
   it("sai thứ tự hoặc thiếu cột → false", () => {
     expect(isImportHeader(["Lớp*", "Họ tên*", "Tên phụ huynh", "SĐT phụ huynh", "Học phí/buổi", "Ghi chú"])).toBe(false)
     expect(isImportHeader(["Họ tên*", "Lớp*"])).toBe(false)
@@ -88,6 +105,8 @@ describe("parseImportRows", () => {
       parentName: "Chị Hoa",
       parentPhone: "0912345678",
       tuitionFee: 150000,
+      billingMode: "per_session",
+      monthlyFee: 0,
       notes: "Yếu toán",
     })
   })
@@ -148,6 +167,48 @@ describe("parseImportRows", () => {
 
   it("tên 1 ký tự → lỗi fullName", () => {
     expect(parseImportRows([row(2, "A", 5)])[0].errors).toEqual(["fullName"])
+  })
+
+  it("cột cách thu: tháng/Thang/THÁNG → monthly, buổi/rỗng → per_session, khác → lỗi billingMode", () => {
+    const out = parseImportRows(
+      [
+        row(2, "Nguyễn An", 5, "Mẹ An", "0912345678", 400000, "tháng", "Ghi chú"),
+        row(3, "Trần Bình", 5, null, null, 50000, "buổi"),
+        row(4, "Lê Chi", 5, null, null, 300000, "THÁNG"),
+        row(5, "Phạm Dung", 5, null, null, 350000, "Thang"),
+        row(6, "Hoàng Em", 5, null, null, 60000, ""),
+        row(7, "Đỗ Dũng", 5, null, null, 100000, "tùy ý"),
+      ],
+      { hasBillingColumn: true }
+    )
+    expect(out[0].errors).toEqual([])
+    expect(out[0].input).toMatchObject({
+      fullName: "Nguyễn An",
+      billingMode: "monthly",
+      monthlyFee: 400000,
+      tuitionFee: 0,
+      notes: "Ghi chú",
+    })
+
+    expect(out[1].errors).toEqual([])
+    expect(out[1].input).toMatchObject({ billingMode: "per_session", tuitionFee: 50000, monthlyFee: 0 })
+
+    expect(out[2].errors).toEqual([])
+    expect(out[2].input).toMatchObject({ billingMode: "monthly", monthlyFee: 300000, tuitionFee: 0 })
+
+    expect(out[3].errors).toEqual([])
+    expect(out[3].input).toMatchObject({ billingMode: "monthly", monthlyFee: 350000, tuitionFee: 0 })
+
+    expect(out[4].errors).toEqual([])
+    expect(out[4].input).toMatchObject({ billingMode: "per_session", tuitionFee: 60000, monthlyFee: 0 })
+
+    expect(out[5].errors).toEqual(["billingMode"])
+  })
+
+  it("file 5 cột cũ hoặc không có cột cách thu → mặc định per_session", () => {
+    const out = parseImportRows([row(2, "Nguyễn An", 5, null, null, 150000)])
+    expect(out[0].errors).toEqual([])
+    expect(out[0].input).toMatchObject({ billingMode: "per_session", tuitionFee: 150000, monthlyFee: 0 })
   })
 
   it("nhiều lỗi 1 dòng → đủ các field, theo thứ tự cột", () => {

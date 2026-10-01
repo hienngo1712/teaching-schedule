@@ -15,15 +15,46 @@ describe("readImportWorkbook", () => {
   it("đọc dòng dữ liệu, giữ số dòng thật, bỏ dòng trống ở giữa", async () => {
     const data = await makeFile((s) => {
       s.getRow(1).values = HEADER
-      s.getRow(2).values = ["Nguyễn An", 5, "Chị Hoa", 912345678, 150000, "Yếu toán"]
+      s.getRow(2).values = ["Nguyễn An", 5, "Chị Hoa", 912345678, 150000, "buổi", "Yếu toán"]
       s.getRow(4).values = ["Trần Bình", "Lớp 3"]
     })
     const res = await readImportWorkbook(data)
     expect(res.ok).toBe(true)
     if (!res.ok) return
     expect(res.rows.map((r) => r.rowNumber)).toEqual([2, 4])
-    expect(res.rows[0].input).toMatchObject({ fullName: "Nguyễn An", grade: 5, parentPhone: "0912345678", tuitionFee: 150000 })
+    expect(res.rows[0].input).toMatchObject({ fullName: "Nguyễn An", grade: 5, parentPhone: "0912345678", tuitionFee: 150000, billingMode: "per_session", notes: "Yếu toán" })
     expect(res.rows[1].input.grade).toBe(3)
+  })
+
+  it("file 6 cột cũ (cột 6 là Ghi chú) → hợp lệ, billingMode=per_session", async () => {
+    const data = await makeFile((s) => {
+      s.getRow(1).values = ["Họ tên*", "Lớp*", "Tên phụ huynh", "SĐT phụ huynh", "Học phí/buổi", "Ghi chú"]
+      s.getRow(2).values = ["Nguyễn An", 5, "Chị Hoa", 912345678, 150000, "Yếu toán"]
+    })
+    const res = await readImportWorkbook(data)
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.rows[0].input).toMatchObject({
+      fullName: "Nguyễn An",
+      tuitionFee: 150000,
+      billingMode: "per_session",
+      notes: "Yếu toán",
+    })
+  })
+
+  it("file 5 cột cũ → hợp lệ, billingMode=per_session", async () => {
+    const data = await makeFile((s) => {
+      s.getRow(1).values = ["Họ tên*", "Lớp*", "Tên phụ huynh", "SĐT phụ huynh", "Học phí/buổi"]
+      s.getRow(2).values = ["Nguyễn An", 5, null, null, 150000]
+    })
+    const res = await readImportWorkbook(data)
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.rows[0].input).toMatchObject({
+      fullName: "Nguyễn An",
+      tuitionFee: 150000,
+      billingMode: "per_session",
+    })
   })
 
   it("file không phải xlsx → file", async () => {
@@ -60,7 +91,7 @@ describe("readImportWorkbook", () => {
 })
 
 describe("buildImportTemplate", () => {
-  it("2 sheet, tiêu đề 6 cột đúng thứ tự, không có dòng ví dụ", async () => {
+  it("2 sheet, tiêu đề 7 cột đúng thứ tự, không có dòng ví dụ", async () => {
     const buf = await buildImportTemplate()
     const wb = new ExcelJS.Workbook()
     await wb.xlsx.load(buf)
