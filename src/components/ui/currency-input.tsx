@@ -22,12 +22,15 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const rawValue = e.target.value.replace(/,/g, "")
       if (rawValue === "") {
+        setDisplayValue("")
         onChange(undefined)
         return
       }
 
       const numValue = parseInt(rawValue, 10)
       if (!isNaN(numValue)) {
+        // Hiện ngay, không chờ effect theo prop: chờ thì phím gõ liền sau bị React ghi đè mất.
+        setDisplayValue(format(numValue))
         onChange(numValue)
       }
     }

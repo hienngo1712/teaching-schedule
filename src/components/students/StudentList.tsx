@@ -177,9 +177,10 @@ export function StudentList() {
     { header: t("grade"), cell: (s) => s.grade, className: "w-16" },
     { header: t("level"), cell: levelBadge, className: "w-32" },
     {
-      header: t("tuition_fee"),
+      // Đơn vị /buổi hay /tháng đã ghi trong ô → tiêu đề chỉ "Học phí".
+      header: t("tuition_col"),
       cell: (s) => (
-        <span>
+        <span className="whitespace-nowrap">
           {formatCurrency(s.billingMode === "monthly" ? s.monthlyFee : s.tuitionFee)}
           <span className="ml-1 text-xs font-normal text-slate-500">
             {s.billingMode === "monthly" ? t("per_month") : t("per_session")}
@@ -296,7 +297,7 @@ export function StudentList() {
               {actionsMenu(s)}
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-              <span className="font-medium text-slate-900">
+              <span className="whitespace-nowrap font-medium text-slate-900">
                 {formatCurrency(s.billingMode === "monthly" ? s.monthlyFee : s.tuitionFee)}
                 <span className="font-normal text-slate-500">
                   {s.billingMode === "monthly" ? t("per_month") : t("per_session")}
