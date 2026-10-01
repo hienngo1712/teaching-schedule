@@ -6,9 +6,9 @@
 
 ## Tổng quan nhanh
 
-Ứng dụng quản lý lịch dạy học cá nhân cho **1 giáo viên**. Học sinh lớp 1–12. Deploy trên **Vercel** + **Neon PostgreSQL**.
+Ứng dụng quản lý lịch dạy học cho giáo viên (nhiều tài khoản, mỗi tài khoản 1 giáo viên, có phân gói). Học sinh lớp 1–12. Deploy trên **Vercel** + **Neon PostgreSQL**.
 
-**Stack:** Next.js 14 (App Router) · TypeScript · tRPC v11 · Prisma · NextAuth.js v5 · shadcn/ui · TailwindCSS 4 · Vitest · Playwright
+**Stack:** Next.js 15 (App Router) · TypeScript · tRPC v11 · Prisma · NextAuth.js v5 · shadcn/ui · TailwindCSS 3.4 · Vitest · Playwright
 
 ---
 
@@ -17,28 +17,20 @@
 | File | Nội dung | Đọc khi nào |
 |------|----------|-------------|
 | `docs/01-overview.md` | Nghiệp vụ, tech stack, cấu trúc thư mục dự án, package.json | Lần đầu setup, khi cần tra cứu tổng thể |
-| `docs/02-database.md` | Prisma schema đầy đủ (4 models), seed data, DB conventions | Phase 1 Sub 1.2 — setup DB |
+| `docs/02-database.md` | Prisma schema ban đầu, seed data, DB conventions (schema hiện hành: `prisma/schema.prisma`) | Tra cứu quy ước DB |
 | `docs/03-api.md` | tRPC routers chi tiết: input/output, Zod schemas, services | Mỗi lần code backend (Phase 2–8) |
 | `docs/04-frontend.md` | Spec từng component, hooks, styles, routing | Mỗi lần code UI (Phase 1–8) |
 | `docs/05-deploy.md` | Vercel + Neon setup step-by-step, env vars, workflow CI/CD | Phase 0, Phase 1 Sub 1.6, troubleshooting |
 | `docs/06-testing.md` | Vitest config, Playwright config, test helpers, toàn bộ test cases | Phase 1 Sub 1.5, trước mỗi commit |
-| `docs/07-phases.md` | 9 phases × sub-phases đầy đủ với checklist từng task | **Đọc đầu mỗi phiên làm việc** |
+| `docs/07-phases.md` | 9 phases × sub-phases ban đầu với checklist từng task | Tra cứu lịch sử dựng dự án |
 | `docs/08-review.md` | Review checklist 2 lần, quy tắc code, final acceptance checklist | Sau mỗi sub-phase hoàn thành |
-| `docs/09-bulk-session-management.md` | Hướng dẫn quản lý ca dạy hàng loạt (đã xong) | Tra cứu logic bulk update/delete |
-| `docs/10-tuition-payment-tracking.md` | Kế hoạch đánh dấu và theo dõi đóng tiền học phí | Phase 10 — quản lý đóng tiền |
-| `docs/11-multi-language.md` | Hướng dẫn và kế hoạch đa ngôn ngữ (VI/EN) | Phase 11 — đa ngôn ngữ |
-| `docs/12-pagination.md` | Hướng dẫn và cơ chế phân trang cho bảng dữ liệu | Toàn bộ các màn hình dùng bảng |
+| `docs/superpowers/specs/`, `docs/superpowers/plans/` | Spec + plan từng phần | Trước khi code phần mới |
 
 ---
 
-## Quy tắc làm việc (BẮT BUỘC)
+## Quy tắc làm việc
 
-```
-1. Mỗi phiên làm việc = 1 sub-phase duy nhất
-2. Bắt đầu phiên → đọc docs liên quan → code → test → review 2 lần → commit
-3. KHÔNG sang sub-phase tiếp khi chưa pass review
-4. Thứ tự: docs/07-phases.md → biết làm gì → docs tương ứng → biết làm thế nào
-```
+Phần mới đi theo spec + plan trong `docs/superpowers/` (duyệt spec → plan → code + test → review → merge). `docs/01–08` là tài liệu nền, đọc phần liên quan khi cần.
 
 ---
 
@@ -50,7 +42,7 @@
 
 1. **Đọc kỹ `docs/coding-rule.md` §6.1** (RULE BẤT KHẢ XÂM PHẠM — Bảo vệ Production Data) trước khi action.
 2. **Verify endpoint:** so sánh `.env` (production) và `.env.test` DATABASE_URL — phải KHÁC nhau.
-3. **`pnpm test` / `pnpm test:integration` / `pnpm test:e2e`** chỉ được chạy khi:
+3. **`pnpm test` / `pnpm test:integration` / `pnpm exec playwright test`** chỉ được chạy khi:
    - `.env.test` tồn tại VÀ trỏ vào test branch riêng (khác endpoint `.env`).
    - `tests/env-setup.ts` là `setupFiles[0]` trong `vitest.config.ts`.
    - Không sửa `tests/setup.ts` thành nơi load env trực tiếp (vì ES module import hoisting).
@@ -67,7 +59,7 @@
 ## Bắt đầu từ đâu?
 
 ```
-Lần đầu tiên:  đọc docs/01-overview.md  →  docs/07-phases.md (Phase 0)
-Đang giữa chừng: đọc docs/07-phases.md → tìm sub-phase tiếp → đọc doc liên quan
+Lần đầu tiên:  đọc docs/01-overview.md
+Đang làm phần mới: đọc spec + plan tương ứng trong docs/superpowers/
 Đang fix bug:  đọc docs/03-api.md hoặc docs/04-frontend.md tùy loại bug
 ```
