@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server"
 import { Prisma, type PrismaClient, type Subject } from "@prisma/client"
 import { assertOwnership } from "./_base.service"
 import { WITH_DELETED, softDeleteData } from "@/server/soft-delete"
+import { TX_OPTIONS } from "./payment.service"
 import type {
   SubjectCreateInput,
   SubjectFilterInput,
@@ -135,18 +136,21 @@ export async function softDeleteSubject(
   userId: number,
   id: number
 ): Promise<{ success: true }> {
-  const existing = await db.subject.findUnique({ where: { id } })
-  assertOwnership(existing, userId)
-  if (existing.isDefault) {
-    throw badRequest("Không thể xoá môn mặc định. Hãy chọn môn mặc định khác trước.")
-  }
-  // Ca đã xoá không tính: khôi phục ca đó sau này sẽ bị chặn cho tới khi khôi phục môn.
-  const inUse = await db.teachingSession.count({ where: { subjectId: id, userId } })
-  if (inUse > 0) throw badRequest("Không thể xoá môn đang có ca dạy. Hãy xoá các ca đó hoặc chỉ ẩn môn.")
-  if (existing.isActive) {
-    const remaining = await db.subject.count({ where: { userId, isActive: true, NOT: { id } } })
-    if (remaining === 0) throw badRequest("Không thể xoá môn cuối cùng")
-  }
-  await db.subject.update({ where: { id }, data: softDeleteData() })
-  return { success: true }
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
+    const existing = await tx.subject.findUnique({ where: { id } })
+    assertOwnership(existing, userId)
+    if (existing.isDefault) {
+      throw badRequest("Không thể xoá môn mặc định. Hãy chọn môn mặc định khác trước.")
+    }
+    // Ca đã xoá không tính: khôi phục ca đó sau này sẽ bị chặn cho tới khi khôi phục môn.
+    const inUse = await tx.teachingSession.count({ where: { subjectId: id, userId } })
+    if (inUse > 0) throw badRequest("Không thể xoá môn đang có ca dạy. Hãy xoá các ca đó hoặc chỉ ẩn môn.")
+    if (existing.isActive) {
+      const remaining = await tx.subject.count({ where: { userId, isActive: true, NOT: { id } } })
+      if (remaining === 0) throw badRequest("Không thể xoá môn cuối cùng")
+    }
+    await tx.subject.update({ where: { id }, data: softDeleteData() })
+    return { success: true }
+  }, TX_OPTIONS)
 }

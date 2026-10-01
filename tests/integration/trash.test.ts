@@ -131,4 +131,24 @@ describe("Thùng rác (spec Q mục 7)", () => {
     expect(item).toMatchObject({ type: "session", id: s.id, sessionDate: D, startTime: "07:15", endTime: "08:45", subjectName: "Tiếng Anh", title: "Ôn thi", isMakeup: false })
     expect(item.deletedAt).toBeInstanceOf(Date)
   })
+
+  it("U15: dọn vĩnh viễn môn (đã có ca trong Thùng rác) -> khôi phục ca -> lỗi CONFLICT chứa 'đã bị dọn vĩnh viễn'; tương tự lần thu của HS đã dọn", async () => {
+    const caller = await getAuthedCaller()
+    const ly = await caller.subject.create({ name: "Lý Purged", color: "#EF4444" })
+    const s = await caller.session.create({ sessionDate: D, startTime: "10:00", endTime: "11:00", subjectId: ly.id })
+    await caller.session.delete({ id: s.id })
+    // Môn bị dọn vĩnh viễn
+    await db.subject.update({ where: { id: ly.id }, data: { isDeleted: true, deletedAt: new Date(), purgedAt: new Date() } })
+
+    await expect(caller.trash.restore({ type: "session", id: s.id })).rejects.toThrow(/đã bị dọn vĩnh viễn/)
+
+    // Tương tự với payment và student đã dọn vĩnh viễn
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS Purged Payment", grade: 7 })
+    const p = await caller.payment.create({ studentId: st.id, year: 2030, month: 6, amount: 150_000, paidAt: "2030-06-10", method: "cash" })
+    await caller.payment.delete({ id: p.id })
+    // HS bị dọn vĩnh viễn
+    await db.student.update({ where: { id: st.id }, data: { isDeleted: true, deletedAt: new Date(), purgedAt: new Date() } })
+
+    await expect(caller.trash.restore({ type: "payment", id: p.id })).rejects.toThrow(/đã bị dọn vĩnh viễn/)
+  })
 })

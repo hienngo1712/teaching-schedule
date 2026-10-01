@@ -54,13 +54,17 @@ export async function listStudents(
   }
 }
 
+// Khoá theo user (cùng khoá với nhập Excel / tạo đơn) rồi mới đếm: 2 thao tác cùng lúc không vượt giới hạn gói.
+export async function lockAndAssertCanActivate(tx: Prisma.TransactionClient, userId: number, n: number): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
+  await assertCanActivateStudents(tx, userId, n)
+}
+
 export async function createStudent(
   db: PrismaClient,
   userId: number,
   input: StudentCreateInput
 ): Promise<StudentDTO> {
-  if (input.isActive) await assertCanActivateStudents(db, userId, 1)
-
   const mode = (input.billingMode ?? "per_session") as BillingMode
   const monthlyFee = mode === "per_session" ? 0 : (input.monthlyFee ?? 0)
   if (mode === "monthly" && monthlyFee <= 0) {
@@ -68,6 +72,8 @@ export async function createStudent(
   }
 
   const student = await db.$transaction(async (tx) => {
+    if (input.isActive) await lockAndAssertCanActivate(tx, userId, 1)
+
     const created = await tx.student.create({
       data: {
         userId,
@@ -209,7 +215,6 @@ export async function updateStudent(
 ): Promise<StudentDTO> {
   const existing = await db.student.findUnique({ where: { id } })
   assertOwnership(existing, userId)
-  if (data.isActive === true && !existing.isActive) await assertCanActivateStudents(db, userId, 1)
 
   // Chuẩn hoá cách thu nếu có thay đổi
   const nextMode = (data.billingMode !== undefined ? data.billingMode : existing.billingMode) as BillingMode
@@ -223,6 +228,9 @@ export async function updateStudent(
     (nextMode !== existing.billingMode || nextMonthlyFee !== existing.monthlyFee)
 
   const student = await db.$transaction(async (tx) => {
+    if (data.isActive === true && !existing.isActive) {
+      await lockAndAssertCanActivate(tx, userId, 1)
+    }
     const updated = await tx.student.update({
       where: { id },
       data: {
