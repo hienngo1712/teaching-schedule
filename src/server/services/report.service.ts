@@ -7,6 +7,44 @@ import { HISTORY_LINK } from "@/server/soft-delete"
 import { getCancelledWithoutMakeup, getMonthSessions } from "./session.service"
 import { computeClosingBalances, getMonthlyOutstanding, getMonthlyTuitionStatus } from "./tuition.service"
 import { byGradeThenName } from "@/lib/name-search"
+import { monthKey, resolveBilling, revenueForMonth, type BillingChange } from "@/lib/billing"
+import { loadBillingChanges } from "./billing.service"
+
+// Gom link theo (HS, tháng) rồi tính theo cách thu tháng đó: trọn tháng cộng 1 lần/tháng.
+function sumRevenue(
+  links: { studentId: number; attendance: string; fee: number; sessionDate: Date }[],
+  billingMap: Map<number, BillingChange[]>
+): { expected: number; earned: number } {
+  const grouped = new Map<string, { studentId: number; key: number; monthLinks: { attendance: string; fee: number }[] }>()
+
+  for (const link of links) {
+    const d = link.sessionDate instanceof Date ? link.sessionDate : new Date(link.sessionDate)
+    const y = d.getUTCFullYear()
+    const m = d.getUTCMonth() + 1
+    const key = monthKey(y, m)
+    const mapKey = `${link.studentId}_${key}`
+
+    let group = grouped.get(mapKey)
+    if (!group) {
+      group = { studentId: link.studentId, key, monthLinks: [] }
+      grouped.set(mapKey, group)
+    }
+    group.monthLinks.push({ attendance: link.attendance, fee: link.fee })
+  }
+
+  let totalExpected = 0
+  let totalEarned = 0
+
+  for (const group of grouped.values()) {
+    const changes = billingMap.get(group.studentId) ?? []
+    const billing = resolveBilling(changes, group.key)
+    const { expected, earned } = revenueForMonth(billing, group.monthLinks)
+    totalExpected += expected
+    totalEarned += earned
+  }
+
+  return { expected: totalExpected, earned: totalEarned }
+}
 
 export async function getStudentReport(
   db: PrismaClient,
@@ -52,17 +90,21 @@ export async function getStudentReport(
 
   const rate = calcAttendanceRate(present + late, total - pending)
 
-  let totalRevenue = 0
-  let expectedRevenue = 0
+  const links: { studentId: number; attendance: string; fee: number; sessionDate: Date }[] = []
   studentSessions.forEach(s => {
     const ss = s.students.find(x => x.studentId === studentId)
     if (ss) {
-      expectedRevenue += ss.fee
-      if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {
-        totalRevenue += ss.fee
-      }
+      links.push({
+        studentId,
+        attendance: ss.attendance,
+        fee: ss.fee,
+        sessionDate: s.sessionDate,
+      })
     }
   })
+
+  const billingMap = await loadBillingChanges(db, [studentId])
+  const { expected: expectedRevenue, earned: totalRevenue } = sumRevenue(links, billingMap)
 
   return {
     student: {
@@ -149,24 +191,30 @@ export async function getMonthlySummary(
   }
   const totalStudents = studentIdsInPeriod.size
 
-  let totalRevenue = 0
-  let expectedRevenue = 0
   let presentRecords = 0
   let totalRecords = 0
+  const links: { studentId: number; attendance: string; fee: number; sessionDate: Date }[] = []
 
   sessions.forEach(s => {
     s.sessionStudents.forEach(ss => {
       if (grade && ss.grade !== grade) return
-      expectedRevenue += ss.fee
       if (ss.attendance !== ATTENDANCE_STATUS.PENDING) {
         totalRecords++
         if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {
           presentRecords++
-          totalRevenue += ss.fee
         }
       }
+      links.push({
+        studentId: ss.studentId,
+        attendance: ss.attendance,
+        fee: ss.fee,
+        sessionDate: s.sessionDate,
+      })
     })
   })
+
+  const billingMap = await loadBillingChanges(db, [...studentIdsInPeriod])
+  const { expected: expectedRevenue, earned: totalRevenue } = sumRevenue(links, billingMap)
 
   const startVal = year * 100 + month
   const endVal = effToYear * 100 + effToMonth
@@ -256,21 +304,29 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
   // 4. Attendance rate and revenue this month
   let totalRecords = 0
   let presentRecords = 0
-  let totalRevenueMonth = 0
-  let expectedRevenueMonth = 0
+  const studentIdsThisMonth = new Set<number>()
+  const linksThisMonth: { studentId: number; attendance: string; fee: number; sessionDate: Date }[] = []
 
   sessionsThisMonth.forEach(s => {
     s.sessionStudents.forEach(ss => {
-      expectedRevenueMonth += ss.fee
+      studentIdsThisMonth.add(ss.studentId)
       if (ss.attendance !== ATTENDANCE_STATUS.PENDING) {
         totalRecords++
         if (ss.attendance === ATTENDANCE_STATUS.PRESENT || ss.attendance === ATTENDANCE_STATUS.LATE) {
           presentRecords++
-          totalRevenueMonth += ss.fee
         }
       }
+      linksThisMonth.push({
+        studentId: ss.studentId,
+        attendance: ss.attendance,
+        fee: ss.fee,
+        sessionDate: s.sessionDate,
+      })
     })
   })
+
+  const billingMapThisMonth = await loadBillingChanges(db, [...studentIdsThisMonth])
+  const { expected: expectedRevenueMonth, earned: totalRevenueMonth } = sumRevenue(linksThisMonth, billingMapThisMonth)
 
   const attendanceRate = totalRecords > 0 ? (presentRecords / totalRecords) * 100 : 0
 
