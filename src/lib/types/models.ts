@@ -16,10 +16,13 @@ export type StudentReportInfo = {
   level: SchoolLevel
 }
 
+import type { BillingMode } from "@/lib/billing"
+
 /**
  * Student with enhanced UI fields
  */
-export interface StudentDTO extends Omit<Student, "createdAt" | "updatedAt" | "deletedAt" | "purgedAt" | "parentLinkTokenHash"> {
+export interface StudentDTO extends Omit<Student, "createdAt" | "updatedAt" | "deletedAt" | "purgedAt" | "parentLinkTokenHash" | "billingMode"> {
+  billingMode: BillingMode
   level: SchoolLevel
   createdAt: Date | string
   updatedAt: Date | string

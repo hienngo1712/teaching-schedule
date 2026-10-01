@@ -16,12 +16,15 @@ import type {
 import type { PaginatedResponse } from "@/lib/schemas/common"
 import type { StudentDTO } from "@/lib/types/models"
 import { nameKey, type ExistingMatch } from "@/lib/student-import"
+import { recordBillingChange } from "./billing.service"
+import { vnDateParts } from "@/lib/utils"
+import { monthKey, type BillingMode } from "@/lib/billing"
 
 // Hash chỉ để tra link phụ huynh, không gửi ra client (spec O 6.5).
-function toStudentDTO<T extends { grade: number; parentLinkTokenHash: string | null }>(s: T) {
+function toStudentDTO<T extends { grade: number; parentLinkTokenHash: string | null; billingMode: string; monthlyFee: number }>(s: T) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { parentLinkTokenHash, ...rest } = s
-  return { ...rest, level: getLevel(s.grade) }
+  return { ...rest, level: getLevel(s.grade), billingMode: s.billingMode as BillingMode, monthlyFee: s.monthlyFee }
 }
 
 export async function listStudents(
@@ -57,18 +60,33 @@ export async function createStudent(
   input: StudentCreateInput
 ): Promise<StudentDTO> {
   if (input.isActive) await assertCanActivateStudents(db, userId, 1)
-  const student = await db.student.create({
-    data: {
-      userId,
-      fullName: input.fullName,
-      grade: input.grade,
-      parentPhone: input.parentPhone ?? null,
-      parentName: input.parentName ?? null,
-      notes: input.notes ?? null,
-      isActive: input.isActive,
-      tuitionFee: input.tuitionFee,
-    },
+
+  const mode = (input.billingMode ?? "per_session") as BillingMode
+  const monthlyFee = mode === "per_session" ? 0 : (input.monthlyFee ?? 0)
+
+  const student = await db.$transaction(async (tx) => {
+    const created = await tx.student.create({
+      data: {
+        userId,
+        fullName: input.fullName,
+        grade: input.grade,
+        parentPhone: input.parentPhone ?? null,
+        parentName: input.parentName ?? null,
+        notes: input.notes ?? null,
+        isActive: input.isActive,
+        tuitionFee: input.tuitionFee,
+        billingMode: mode,
+        monthlyFee,
+      },
+    })
+
+    if (mode === "monthly") {
+      await recordBillingChange(tx, created.id, 0, { mode: "monthly", monthlyFee })
+    }
+
+    return created
   })
+
   return toStudentDTO(student)
 }
 
@@ -101,10 +119,15 @@ export async function checkImportDuplicates(
   return { matches: rows.map((r) => existing.get(nameKey(r.fullName, r.grade)) ?? null) }
 }
 
+export type StudentImportRow = Omit<StudentImportInput["rows"][number], "billingMode" | "monthlyFee"> & {
+  billingMode?: "per_session" | "monthly"
+  monthlyFee?: number
+}
+
 export async function importStudents(
   db: PrismaClient,
   userId: number,
-  rows: StudentImportInput["rows"]
+  rows: StudentImportRow[]
 ): Promise<{ created: number }> {
   return db.$transaction(async (tx) => {
     // Khóa theo userId trong transaction: 2 request cùng lúc phải kiểm tra trùng tuần tự,
@@ -133,6 +156,8 @@ export async function importStudents(
         parentName: r.parentName ?? null,
         notes: r.notes ?? null,
         tuitionFee: r.tuitionFee,
+        billingMode: r.billingMode ?? "per_session",
+        monthlyFee: (r.billingMode === "monthly" ? r.monthlyFee : 0) ?? 0,
         isActive: true,
       })),
     })
@@ -161,6 +186,14 @@ export async function updateStudent(
   assertOwnership(existing, userId)
   if (data.isActive === true && !existing.isActive) await assertCanActivateStudents(db, userId, 1)
 
+  // Chuẩn hoá cách thu nếu có thay đổi
+  const nextMode = (data.billingMode !== undefined ? data.billingMode : existing.billingMode) as BillingMode
+  const nextMonthlyFee = nextMode === "per_session" ? 0 : (data.monthlyFee !== undefined ? data.monthlyFee : existing.monthlyFee)
+
+  const isBillingChanged =
+    (data.billingMode !== undefined || data.monthlyFee !== undefined) &&
+    (nextMode !== existing.billingMode || nextMonthlyFee !== existing.monthlyFee)
+
   const student = await db.$transaction(async (tx) => {
     const updated = await tx.student.update({
       where: { id },
@@ -176,8 +209,19 @@ export async function updateStudent(
         ...(data.notes !== undefined && { notes: data.notes ?? null }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.tuitionFee !== undefined && { tuitionFee: data.tuitionFee }),
+        ...(isBillingChanged && {
+          billingMode: nextMode,
+          monthlyFee: nextMonthlyFee,
+        }),
       },
     })
+
+    // Đổi cách thu -> ghi lịch sử từ tháng VN hiện tại (spec T 3)
+    if (isBillingChanged) {
+      const { year, month } = vnDateParts()
+      const currentKey = monthKey(year, month)
+      await recordBillingChange(tx, id, currentKey, { mode: nextMode, monthlyFee: nextMonthlyFee })
+    }
 
     // Đổi grade → đồng bộ snapshot grade các buổi chưa kết thúc; buổi đã dạy giữ grade lịch sử.
     if (data.grade !== undefined && data.grade !== existing.grade) {
