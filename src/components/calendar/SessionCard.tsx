@@ -16,14 +16,9 @@ export function SessionCard({ session, onClick }: Props) {
   const { t } = useTranslation()
   const level = session.level
   const label = getSessionLabel(session)
-  const metaOf = (short: boolean) =>
-    [
-      label,
-      formatGrades(session.grades ?? [], t("grade"), short),
-      session.studentCount > 0 ? `${session.studentCount} ${t("student_abbrev")}` : "",
-    ]
-      .filter(Boolean)
-      .join(" · ")
+  const gradeShort = formatGrades(session.grades ?? [], t("grade"), true)
+  const gradeFull = formatGrades(session.grades ?? [], t("grade"), false)
+  const count = session.studentCount > 0 ? `${session.studentCount} ${t("student_abbrev")}` : ""
   const isCancelled = session.status === "cancelled"
   const isMakeup = session.makeupOfId != null
 
@@ -46,8 +41,16 @@ export function SessionCard({ session, onClick }: Props) {
         {session.startTime}–{session.endTime}
       </div>
       <div className={cn("truncate text-slate-700", isCancelled && "line-through")}>
-        <span className="md:hidden">{metaOf(true)}</span>
-        <span className="hidden md:inline">{metaOf(false)}</span>
+        {label}
+        {/* Chỉ phần lớp đổi theo màn hình, ẩn/hiện bằng CSS (không nháy, không gắn listener mỗi thẻ). */}
+        {gradeFull && (
+          <>
+            {label && " · "}
+            <span className="md:hidden">{gradeShort}</span>
+            <span className="hidden md:inline">{gradeFull}</span>
+          </>
+        )}
+        {count && `${label || gradeFull ? " · " : ""}${count}`}
       </div>
       {isCancelled && (
         <div className="text-[10px] font-semibold text-red-600">
