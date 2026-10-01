@@ -6,6 +6,8 @@ import type { MonthlyTuitionFilterInput, UpdateSettlementInput } from "@/lib/sch
 import type { PaginatedResponse } from "@/lib/schemas/common"
 import type { TuitionStatusDTO } from "@/lib/types/models"
 import { byGradeThenName, nameMatches } from "@/lib/name-search"
+import { monthFee, monthKey, resolveBilling, type Billing, type BillingChange } from "@/lib/billing"
+import { loadBillingChanges } from "./billing.service"
 
 type AttendanceRecord = SessionStudent & { session: { sessionDate: Date } }
 
@@ -13,6 +15,7 @@ function calcStudentTuition(
   attendance: AttendanceRecord[],
   snapshot: MonthlyTuition | undefined,
   previousBalance: number,
+  billing: Billing,
 ): {
   totalSessions: number
   presentSessions: number
@@ -25,12 +28,10 @@ function calcStudentTuition(
   const presentSessions = attendance.filter(
     a => a.attendance === ATTENDANCE_STATUS.PRESENT || a.attendance === ATTENDANCE_STATUS.LATE
   ).length
-  const currentMonthFee = attendance.reduce((sum, a) => {
-    if (a.attendance === ATTENDANCE_STATUS.PRESENT || a.attendance === ATTENDANCE_STATUS.LATE) {
-      return sum + a.fee
-    }
-    return sum
-  }, 0)
+  const currentMonthFee = monthFee(
+    billing,
+    attendance.map(a => ({ attendance: a.attendance, fee: a.fee }))
+  )
 
   const totalAmountDue = previousBalance + currentMonthFee
 
@@ -56,9 +57,12 @@ export async function computeClosingBalances(
   userId: number,
   studentIds: number[],
   year: number,
-  month: number
+  month: number,
+  billingMap?: Map<number, BillingChange[]>
 ): Promise<Map<number, Map<number, number>>> {
   const startDate = new Date(Date.UTC(year, month - 1, 1))
+  const resolvedBillingMap = billingMap ?? (await loadBillingChanges(db, studentIds))
+
   const [snaps, links] = await Promise.all([
     db.monthlyTuition.findMany({
       where: { studentId: { in: studentIds }, OR: [{ year: { lt: year } }, { year, month: { lt: month } }] },
@@ -67,20 +71,19 @@ export async function computeClosingBalances(
     db.sessionStudent.findMany({
       where: {
         studentId: { in: studentIds },
-        attendance: { in: [ATTENDANCE_STATUS.PRESENT, ATTENDANCE_STATUS.LATE] },
         session: { sessionDate: { lt: startDate }, userId, status: { not: "cancelled" }, isDeleted: false },
       },
-      select: { studentId: true, fee: true, session: { select: { sessionDate: true } } },
+      select: { studentId: true, fee: true, attendance: true, session: { select: { sessionDate: true } } },
     }),
   ])
 
-  type MonthData = { fee: number; paid: number; fullPaid: boolean }
+  type MonthData = { links: { attendance: string; fee: number }[]; paid: number; fullPaid: boolean }
   const byStudent = new Map<number, Map<number, MonthData>>()
   const slot = (studentId: number, key: number) => {
     let months = byStudent.get(studentId)
     if (!months) byStudent.set(studentId, (months = new Map()))
     let d = months.get(key)
-    if (!d) months.set(key, (d = { fee: 0, paid: 0, fullPaid: false }))
+    if (!d) months.set(key, (d = { links: [], paid: 0, fullPaid: false }))
     return d
   }
   for (const s of snaps) {
@@ -90,7 +93,8 @@ export async function computeClosingBalances(
   }
   for (const l of links) {
     const date = l.session.sessionDate
-    slot(l.studentId, date.getUTCFullYear() * 12 + date.getUTCMonth()).fee += l.fee
+    const key = date.getUTCFullYear() * 12 + date.getUTCMonth()
+    slot(l.studentId, key).links.push({ attendance: l.attendance, fee: l.fee })
   }
 
   const lastKey = year * 12 + month - 2
@@ -98,10 +102,13 @@ export async function computeClosingBalances(
   for (const [studentId, months] of byStudent) {
     const closing = new Map<number, number>()
     let balance = 0
+    const changes = resolvedBillingMap.get(studentId) ?? []
     for (let key = Math.min(...months.keys()); key <= lastKey; key++) {
       const d = months.get(key)
       if (d) {
-        const residual = balance + d.fee - d.paid
+        const billing = resolveBilling(changes, key)
+        const fee = monthFee(billing, d.links)
+        const residual = balance + fee - d.paid
         balance = d.fullPaid ? Math.min(0, residual) : residual
       }
       closing.set(key, balance)
@@ -175,8 +182,10 @@ export async function getMonthlyTuitionStatus(
   const startDate = new Date(Date.UTC(year, month - 1, 1))
   const endDate = new Date(Date.UTC(year, month, 1))
 
-  // 2. Fetch song song: điểm danh tháng hiện tại + snapshot tháng này + nợ đầu tháng
-  const [currentAttendance, existingSnapshots, closingBalances] = await Promise.all([
+  // 2. Fetch song song: billing changes + điểm danh tháng hiện tại + snapshot tháng này + nợ đầu tháng
+  const billingMapPromise = loadBillingChanges(db, studentIds)
+  const [billingMap, currentAttendance, existingSnapshots, closingBalances] = await Promise.all([
+    billingMapPromise,
     db.sessionStudent.findMany({
       where: {
         studentId: { in: studentIds },
@@ -187,7 +196,7 @@ export async function getMonthlyTuitionStatus(
     db.monthlyTuition.findMany({
       where: { studentId: { in: studentIds }, year, month },
     }),
-    computeClosingBalances(db, userId, studentIds, year, month),
+    billingMapPromise.then((bMap) => computeClosingBalances(db, userId, studentIds, year, month, bMap)),
   ])
 
   // 3. Dùng Map để tra cứu O(1) thay vì .find() O(n) trong vòng lặp
@@ -200,11 +209,14 @@ export async function getMonthlyTuitionStatus(
   }
 
   // 5. Tính kết quả cho từng học sinh
+  const targetKey = monthKey(year, month)
   const results = students.map(student => {
     const attendance = attendanceMap.get(student.id) ?? []
     const snapshot = snapshotMap.get(student.id)
+    const changes = billingMap.get(student.id) ?? []
+    const billing = resolveBilling(changes, targetKey)
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
-      calcStudentTuition(attendance, snapshot, closingBalances.get(student.id)?.get(year * 12 + month - 2) ?? 0)
+      calcStudentTuition(attendance, snapshot, closingBalances.get(student.id)?.get(year * 12 + month - 2) ?? 0, billing)
 
     return {
       studentId: student.id,
@@ -219,6 +231,8 @@ export async function getMonthlyTuitionStatus(
       previousBalance,
       totalAmountDue,
       needsUpsert,
+      billingMode: billing.mode,
+      monthlyFee: billing.monthlyFee,
     }
   })
 
@@ -277,6 +291,8 @@ export async function getMonthlyTuitionStatus(
       notes: item.notes,
       previousBalance: item.previousBalance,
       totalAmountDue: item.totalAmountDue,
+      billingMode: item.billingMode,
+      monthlyFee: item.monthlyFee,
     })),
     totalCount,
     totalPages: Math.ceil(totalCount / limit),

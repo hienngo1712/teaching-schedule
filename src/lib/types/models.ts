@@ -85,6 +85,8 @@ export interface TuitionStatusDTO {
   notes: string | null
   previousBalance: number
   totalAmountDue: number
+  billingMode: BillingMode
+  monthlyFee: number
 }
 
 /**
