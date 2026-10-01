@@ -377,5 +377,28 @@ describe("Link phụ huynh: tra theo hash, token mã hoá (spec O 6.5)", () => {
     expect(raw).toEqual({ tok: null, h: null })
     expect(await getParentView(db, token)).toBeNull()
   })
+
+  it("HS trọn tháng: getParentView trả notice kèm billingMode và monthlyFee", async () => {
+    const caller = await getAuthedCaller()
+    const subject = (await caller.subject.list({}))[0]
+    const student = await caller.student.create({
+      consent: CONSENT_ACCEPTED,
+      fullName: "HS Link Trọn Tháng",
+      grade: 5,
+      billingMode: "monthly",
+      monthlyFee: 400000,
+      tuitionFee: 0,
+    })
+    const { token } = await caller.student.generateParentLink({ id: student.id })
+    const { year, month } = vnDateParts()
+    const day1 = new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10)
+    await addSession(caller, subject.id, [student.id], day1, "08:00", "09:00", "present")
+
+    const view = await getParentView(db, token)
+    expect(view).not.toBeNull()
+    expect(view?.notice.billingMode).toBe("monthly")
+    expect(view?.notice.monthlyFee).toBe(400000)
+    expect(view?.notice.currentMonthFee).toBe(400000)
+  })
 })
 

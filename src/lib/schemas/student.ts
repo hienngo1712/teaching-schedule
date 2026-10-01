@@ -19,6 +19,8 @@ export const studentCreateSchema = z.object({
   notes: z.string().max(1000).optional(),
   isActive: z.boolean().default(true),
   tuitionFee: z.number().int().min(0).default(0),
+  billingMode: z.enum(["per_session", "monthly"]).default("per_session"),
+  monthlyFee: z.number().int().min(0).default(0),
 })
 
 // Form dùng studentCreateSchema (không có cờ); input tRPC bắt buộc cờ đồng ý (spec O Q10).

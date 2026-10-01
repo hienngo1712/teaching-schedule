@@ -34,6 +34,8 @@ import { usePlan } from "@/hooks/usePlan"
 import { openUpgrade } from "@/components/plan/upgrade-store"
 import { studentLimitMessage } from "@/components/plan/limit-message"
 import { minPlanForStudents, planRequiredOf } from "@/lib/plans"
+import { handleRadioGroupKeyDown } from "@/lib/radio-group-keys"
+import { cn, vnDateParts } from "@/lib/utils"
 
 type StudentRecord = RouterOutputs["student"]["list"]["items"][number]
 
@@ -51,6 +53,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   const form = useForm<z.input<typeof studentCreateSchema>>({
     resolver: zodResolver(studentCreateSchema),
+    shouldUnregister: false,
     defaultValues: {
       fullName: "",
       grade: 1,
@@ -59,6 +62,8 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
       notes: undefined,
       isActive: true,
       tuitionFee: undefined,
+      billingMode: "per_session",
+      monthlyFee: undefined,
     },
   })
 
@@ -73,6 +78,8 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
         notes: student?.notes ?? undefined,
         isActive: student?.isActive ?? true,
         tuitionFee: student?.tuitionFee ?? undefined,
+        billingMode: student?.billingMode ?? "per_session",
+        monthlyFee: student?.monthlyFee ?? undefined,
       })
     }
   }, [open, student, form])
@@ -102,6 +109,14 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
   })
 
   const isPending = createMut.isPending || updateMut.isPending
+
+  const curBillingMode = form.watch("billingMode")
+  const { month: curMonth, year: curYear } = vnDateParts()
+  const isBillingModeChanged =
+    mode === "edit" &&
+    Boolean(student?.isActive) &&
+    Boolean(student?.billingMode) &&
+    curBillingMode !== student?.billingMode
 
   function onSubmit(values: z.input<typeof studentCreateSchema>) {
     if (!consent) return
@@ -163,27 +178,100 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tuitionFee">
-              {t("tuition_fee_per_session")}
-            </Label>
-            <Controller
-              control={form.control}
-              name="tuitionFee"
-              render={({ field }) => (
-                <CurrencyInput
-                  id="tuitionFee"
-                  placeholder="0"
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-            {form.formState.errors.tuitionFee && (
-              <p className="text-xs text-red-600">
-                {form.formState.errors.tuitionFee.message}
+            <Label>{t("billing_mode_label")}</Label>
+            <div
+              role="radiogroup"
+              aria-label={t("billing_mode_label")}
+              onKeyDown={handleRadioGroupKeyDown}
+              className="grid grid-cols-2 gap-2"
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={curBillingMode === "per_session"}
+                tabIndex={curBillingMode === "per_session" ? 0 : -1}
+                onClick={() => form.setValue("billingMode", "per_session")}
+                className={cn(
+                  "flex min-h-11 items-center justify-center rounded-md border text-sm font-medium transition-colors",
+                  curBillingMode === "per_session"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                )}
+              >
+                {t("billing_per_session")}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={curBillingMode === "monthly"}
+                tabIndex={curBillingMode === "monthly" ? 0 : -1}
+                onClick={() => form.setValue("billingMode", "monthly")}
+                className={cn(
+                  "flex min-h-11 items-center justify-center rounded-md border text-sm font-medium transition-colors",
+                  curBillingMode === "monthly"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                )}
+              >
+                {t("billing_monthly")}
+              </button>
+            </div>
+            {isBillingModeChanged && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                {t("billing_change_note")
+                  .replace("{m}", String(curMonth))
+                  .replace("{y}", String(curYear))}
               </p>
             )}
           </div>
+
+          {curBillingMode === "monthly" ? (
+            <div className="space-y-2">
+              <Label htmlFor="monthlyFee">
+                {t("fee_per_month_label")}
+              </Label>
+              <Controller
+                control={form.control}
+                name="monthlyFee"
+                render={({ field }) => (
+                  <CurrencyInput
+                    id="monthlyFee"
+                    placeholder="0"
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              {form.formState.errors.monthlyFee && (
+                <p className="text-xs text-red-600">
+                  {form.formState.errors.monthlyFee.message}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="tuitionFee">
+                {t("fee_per_session_label")}
+              </Label>
+              <Controller
+                control={form.control}
+                name="tuitionFee"
+                render={({ field }) => (
+                  <CurrencyInput
+                    id="tuitionFee"
+                    placeholder="0"
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              {form.formState.errors.tuitionFee && (
+                <p className="text-xs text-red-600">
+                  {form.formState.errors.tuitionFee.message}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="isActive">{t("status")}</Label>

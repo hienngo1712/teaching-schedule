@@ -407,6 +407,7 @@
   "import_err_parentPhone": "Invalid phone number",
   "import_err_parentName": "Parent name max 100 characters",
   "import_err_tuitionFee": "Fee must be a non-negative number",
+  "import_err_billingMode": "Billing mode must be 'session' or 'monthly'",
   "import_err_notes": "Notes max 1000 characters",
   "backup_data": "Back up data",
   "backup_preparing": "Preparing backup file…",
@@ -763,5 +764,14 @@
   "privacy_version": "Version: {v}",
   "backup_confirm_title": "Download backup file",
   "backup_confirm_desc": "The file contains all personal data of students, parents and your bank account, unencrypted. Keep it somewhere safe, do not send it via chat apps or email, and delete it when no longer needed.",
-  "backup_confirm_download": "I understand, download"
+  "backup_confirm_download": "I understand, download",
+  "billing_per_session": "Per session",
+  "billing_monthly": "Monthly",
+  "fee_per_session_label": "Tuition fee/session",
+  "fee_per_month_label": "Tuition fee/month",
+  "per_month": "/month",
+  "per_session": "/session",
+  "billing_change_note": "Effective from month {m}/{y}; previous months unchanged.",
+  "billing_mode_label": "Billing mode",
+  "monthly_fee_line": "Monthly fee (flat): {amount} · Attended {p}/{n} sessions"
 }

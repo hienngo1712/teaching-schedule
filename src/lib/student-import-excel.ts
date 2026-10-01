@@ -3,7 +3,7 @@ import {
   IMPORT_COLUMNS,
   MAX_IMPORT_FILE_BYTES,
   MAX_IMPORT_ROWS,
-  isImportHeader,
+  parseImportHeader,
   parseImportRows,
   type ParsedImportRow,
 } from "@/lib/student-import"
@@ -19,7 +19,8 @@ const GUIDE_ROWS = [
   ["Lớp", "Có", "Số từ 1 đến 12 (ghi \"Lớp 5\" cũng được)", "5"],
   ["Tên phụ huynh", "Không", "Tối đa 100 ký tự", "Chị Hoa"],
   ["SĐT phụ huynh", "Không", "Bắt đầu bằng 0 hoặc +84", "0912345678"],
-  ["Học phí/buổi", "Không", "Số tiền VND, bỏ trống là 0", "150000"],
+  ["Học phí", "Không", "Số tiền VND, bỏ trống là 0", "150000"],
+  ["Cách thu", "Không", "buổi hoặc tháng, bỏ trống là buổi", "tháng"],
   ["Ghi chú", "Không", "Tối đa 1000 ký tự", "Yếu phần hình học"],
 ]
 
@@ -63,14 +64,15 @@ export async function readImportWorkbook(data: ArrayBuffer): Promise<ImportReadR
   const sheet = wb.worksheets[0]
   if (!sheet) return { ok: false, error: "file" }
 
-  const readCells = (row: Row) => IMPORT_COLUMNS.map((_, i) => row.getCell(i + 1).value)
-  if (!isImportHeader(readCells(sheet.getRow(1)))) return { ok: false, error: "template" }
+  const readCells = (row: Row) => Array.from({ length: 7 }, (_, i) => row.getCell(i + 1).value)
+  const headerLayout = parseImportHeader(readCells(sheet.getRow(1)))
+  if (!headerLayout.valid) return { ok: false, error: "template" }
 
   const raw: { rowNumber: number; cells: unknown[] }[] = []
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber > 1) raw.push({ rowNumber, cells: readCells(row) })
   })
-  const rows = parseImportRows(raw)
+  const rows = parseImportRows(raw, { hasBillingColumn: headerLayout.hasBillingColumn })
   if (rows.length === 0) return { ok: false, error: "empty" }
   if (rows.length > MAX_IMPORT_ROWS) return { ok: false, error: "too_many" }
   return { ok: true, rows }

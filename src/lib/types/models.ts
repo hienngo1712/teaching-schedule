@@ -16,10 +16,13 @@ export type StudentReportInfo = {
   level: SchoolLevel
 }
 
+import type { BillingMode } from "@/lib/billing"
+
 /**
  * Student with enhanced UI fields
  */
-export interface StudentDTO extends Omit<Student, "createdAt" | "updatedAt" | "deletedAt" | "purgedAt" | "parentLinkTokenHash"> {
+export interface StudentDTO extends Omit<Student, "createdAt" | "updatedAt" | "deletedAt" | "purgedAt" | "parentLinkTokenHash" | "billingMode"> {
+  billingMode: BillingMode
   level: SchoolLevel
   createdAt: Date | string
   updatedAt: Date | string
@@ -65,6 +68,7 @@ export interface SessionStudentDTO extends Omit<SessionStudent, "sessionId" | "s
   studentId: number
   fullName: string
   grade: number
+  billingMode?: BillingMode
 }
 
 /**
@@ -82,6 +86,8 @@ export interface TuitionStatusDTO {
   notes: string | null
   previousBalance: number
   totalAmountDue: number
+  billingMode: BillingMode
+  monthlyFee: number
 }
 
 /**
@@ -95,6 +101,7 @@ export interface AttendanceDTO {
   attendance: string
   note: string | null
   fee: number
+  billingMode?: BillingMode
 }
 
 /**
@@ -117,7 +124,10 @@ export interface TuitionNoticeDTO {
   grade: number
   year: number
   month: number
+  totalSessions: number
   presentSessions: number
+  billingMode: BillingMode
+  monthlyFee: number
   currentMonthFee: number
   previousBalance: number
   totalAmountDue: number

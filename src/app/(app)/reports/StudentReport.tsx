@@ -64,6 +64,7 @@ export function StudentReport({ studentId, year, month, toYear, toMonth }: Stude
         sessions={sessions}
         year={toYear ?? year}
         month={toMonth ?? month}
+        revenue={{ expected: data.summary.expectedRevenue, earned: data.summary.totalRevenue }}
       />
     </div>
   )

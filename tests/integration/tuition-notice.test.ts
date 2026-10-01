@@ -255,4 +255,25 @@ describe("tuition.getNotice", () => {
       caller2.tuition.getNotice({ studentId: st.id, ...MAY })
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
+
+  it("HS trọn tháng 400k, tháng có 2 ca (1 có mặt, 1 vắng) -> getNotice trả billingMode: 'monthly', monthlyFee: 400000, currentMonthFee: 400000", async () => {
+    const caller = await getAuthedCaller()
+    const st = await caller.student.create({
+      consent: CONSENT_ACCEPTED,
+      fullName: "HS Trọn Tháng",
+      grade: 5,
+      billingMode: "monthly",
+      monthlyFee: 400000,
+      tuitionFee: 0,
+    })
+    await addSession(caller, st.id, "2026-05-04", ATTENDANCE_STATUS.PRESENT, 0)
+    await addSession(caller, st.id, "2026-05-11", ATTENDANCE_STATUS.ABSENT, 0)
+
+    const n = await caller.tuition.getNotice({ studentId: st.id, ...MAY })
+    expect(n.billingMode).toBe("monthly")
+    expect(n.monthlyFee).toBe(400000)
+    expect(n.currentMonthFee).toBe(400000)
+    expect(n.presentSessions).toBe(1)
+    expect(n.totalSessions).toBe(2)
+  })
 })

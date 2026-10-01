@@ -14,6 +14,7 @@ async function clean() {
   await db.monthlyTuition.deleteMany()
   await db.sessionStudent.deleteMany()
   await db.teachingSession.deleteMany()
+  await db.studentBillingChange.deleteMany()
   await db.student.deleteMany()
 }
 
@@ -80,6 +81,18 @@ describe("Quy tắc xoá học sinh (spec R2)", () => {
     await caller.student.deactivate({ id: st.id })
     expect(await caller.student.deleteCheck({ id: st.id })).toEqual({ allowed: true })
     await caller.student.delete({ id: st.id })
+  })
+
+  // Review T I3: HS trọn tháng vắng cả tháng vẫn nợ trọn tháng → không được coi là "sạch".
+  it("HS trọn tháng chỉ có buổi vắng, chưa trả → không xoá được (đang học: active_with_data; đã nghỉ: debt)", async () => {
+    const caller = await getAuthedCaller()
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS Trọn tháng vắng", grade: 3, billingMode: "monthly", monthlyFee: 400_000 })
+    const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
+    const s = await caller.session.create({ sessionDate: PAST, startTime: "13:00", endTime: "14:00", subjectId, studentIds: [st.id] })
+    await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "absent" }] })
+    expect(await caller.student.deleteCheck({ id: st.id })).toEqual({ allowed: false, reason: "active_with_data" })
+    await caller.student.update({ id: st.id, data: { isActive: false } })
+    expect(await caller.student.deleteCheck({ id: st.id })).toEqual({ allowed: false, reason: "debt", debt: 400_000 })
   })
 
   it("HS người khác → NOT_FOUND", async () => {

@@ -176,7 +176,18 @@ export function StudentList() {
     { header: t("full_name"), cell: (s) => <span className="font-medium">{s.fullName}</span> },
     { header: t("grade"), cell: (s) => s.grade, className: "w-16" },
     { header: t("level"), cell: levelBadge, className: "w-32" },
-    { header: t("tuition_fee"), cell: (s) => formatCurrency(s.tuitionFee), className: "w-32 text-right font-medium text-slate-700" },
+    {
+      header: t("tuition_fee"),
+      cell: (s) => (
+        <span>
+          {formatCurrency(s.billingMode === "monthly" ? s.monthlyFee : s.tuitionFee)}
+          <span className="ml-1 text-xs font-normal text-slate-500">
+            {s.billingMode === "monthly" ? t("per_month") : t("per_session")}
+          </span>
+        </span>
+      ),
+      className: "w-36 text-right font-medium text-slate-700",
+    },
     { header: t("status"), cell: statusBadge, className: "w-28" },
     { header: t("parent_phone"), cell: (s) => s.parentPhone || "-", className: "text-slate-600" },
     { header: t("parent_name"), cell: (s) => s.parentName || "-", className: "hidden lg:table-cell text-slate-600" },
@@ -286,8 +297,10 @@ export function StudentList() {
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="font-medium text-slate-900">
-                {formatCurrency(s.tuitionFee)}
-                <span className="font-normal text-slate-500">{t("per_session")}</span>
+                {formatCurrency(s.billingMode === "monthly" ? s.monthlyFee : s.tuitionFee)}
+                <span className="font-normal text-slate-500">
+                  {s.billingMode === "monthly" ? t("per_month") : t("per_session")}
+                </span>
               </span>
               {s.parentPhone && (
                 <a href={`tel:${s.parentPhone}`} className="inline-flex min-h-11 items-center gap-1.5 text-primary">

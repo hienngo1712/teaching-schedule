@@ -95,15 +95,33 @@ model Student {
   isDeleted       Boolean          @default(false) @map("is_deleted")
   deletedAt       DateTime?        @map("deleted_at")
   purgedAt        DateTime?        @map("purged_at")
+  billingMode     String           @default("per_session") @map("billing_mode") @db.VarChar(20)
+  monthlyFee      Int              @default(0) @map("monthly_fee")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   sessionStudents SessionStudent[]
   monthlyTuitions MonthlyTuition[]
+  billingChanges  StudentBillingChange[]
   user            User             @relation(fields: [userId], references: [id])
 
   @@index([userId, grade])
   @@index([userId, isActive])
   @@map("students")
+}
+
+model StudentBillingChange {
+  id         Int      @id @default(autoincrement())
+  studentId  Int      @map("student_id")
+  // year*12 + month-1; 0 = áp cho mọi tháng (HS tạo mới đã chọn trọn tháng).
+  fromKey    Int      @map("from_key")
+  mode       String   @db.VarChar(20)
+  monthlyFee Int      @default(0) @map("monthly_fee")
+  createdAt  DateTime @default(now()) @map("created_at")
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, fromKey])
+  @@index([studentId])
+  @@map("student_billing_changes")
 }
 
 model MonthlyTuition {

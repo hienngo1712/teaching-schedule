@@ -5,6 +5,7 @@ import { LIVE_LINK } from "@/server/soft-delete"
 import type { AttendanceUpdateInput } from "@/lib/schemas/attendance"
 import { getLevel } from "@/lib/utils"
 import type { AttendanceDTO } from "@/lib/types/models"
+import type { BillingMode } from "@/lib/billing"
 
 export async function getAttendance(
   db: PrismaClient,
@@ -33,6 +34,7 @@ export async function getAttendance(
     attendance: ss.attendance,
     note: ss.note,
     fee: ss.fee,
+    billingMode: (ss.student.billingMode ?? "per_session") as BillingMode,
   }))
 }
 
