@@ -139,6 +139,7 @@
   "fee_breakdown": "Fee Breakdown",
   "previous_balance_short": "Prev. Balance",
   "current_month_fee": "This Month Fee",
+  "tuition_monthly_package_line": "Monthly fee (package) · Attended {p}/{n} sessions",
   "total_amount_due": "Total Amount Due",
   "settled_waived": "Settled (waived)",
   "settled_waived_warning": "Marked as SETTLED while still short by",

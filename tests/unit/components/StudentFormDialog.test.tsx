@@ -144,4 +144,38 @@ describe("StudentFormDialog: cách thu học phí (Plan T)", () => {
 
     unmount()
   })
+
+  it("U11: form sửa HS đang học, đang trọn tháng 400k -> đổi ô Học phí/tháng thành 500k -> hiện ghi chú 'Áp dụng từ tháng...'", async () => {
+    const studentWithMonthly = {
+      ...STUDENT,
+      billingMode: "monthly",
+      monthlyFee: 400000,
+      tuitionFee: 40000,
+    }
+    renderDialog({ mode: "edit", student: studentWithMonthly as never })
+
+    expect(screen.queryByText(/Áp dụng từ tháng/)).toBeNull()
+
+    const monthlyInput = screen.getByLabelText(viText.fee_per_month_label)
+    fireEvent.change(monthlyInput, { target: { value: "500000" } })
+
+    expect(screen.getByText(/Áp dụng từ tháng/)).toBeTruthy()
+  })
+
+  it("U12: form chọn Trọn tháng, để 0 -> submit báo lỗi 'Học phí tháng phải lớn hơn 0', không gọi mutation", async () => {
+    renderDialog({ mode: "create" })
+    fireEvent.change(screen.getByLabelText(new RegExp(viText.full_name)), { target: { value: "HS Trọn Tháng Zero" } })
+    fireEvent.click(screen.getByRole("radio", { name: viText.billing_monthly }))
+
+    const monthlyInput = screen.getByLabelText(viText.fee_per_month_label)
+    fireEvent.change(monthlyInput, { target: { value: "0" } })
+
+    fireEvent.click(screen.getByRole("checkbox", { name: viText.consent_student }))
+    fireEvent.click(screen.getByRole("button", { name: viText.add }))
+
+    await waitFor(() => {
+      expect(screen.getByText("Học phí tháng phải lớn hơn 0")).toBeTruthy()
+    })
+    expect(createMutate).not.toHaveBeenCalled()
+  })
 })

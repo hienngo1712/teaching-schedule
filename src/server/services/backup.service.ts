@@ -101,7 +101,7 @@ export async function buildBackupWorkbook(
       },
     }),
     db.studentBillingChange.findMany({
-      where: { student: { userId } },
+      where: { student: { userId, isDeleted: false } },
       orderBy: [{ studentId: "asc" }, { fromKey: "asc" }, { id: "asc" }],
       select: {
         id: true, studentId: true, fromKey: true, mode: true, monthlyFee: true, createdAt: true,

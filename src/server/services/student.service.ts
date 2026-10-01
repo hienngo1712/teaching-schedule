@@ -63,6 +63,9 @@ export async function createStudent(
 
   const mode = (input.billingMode ?? "per_session") as BillingMode
   const monthlyFee = mode === "per_session" ? 0 : (input.monthlyFee ?? 0)
+  if (mode === "monthly" && monthlyFee <= 0) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Học phí tháng phải lớn hơn 0" })
+  }
 
   const student = await db.$transaction(async (tx) => {
     const created = await tx.student.create({
@@ -211,6 +214,9 @@ export async function updateStudent(
   // Chuẩn hoá cách thu nếu có thay đổi
   const nextMode = (data.billingMode !== undefined ? data.billingMode : existing.billingMode) as BillingMode
   const nextMonthlyFee = nextMode === "per_session" ? 0 : (data.monthlyFee !== undefined ? data.monthlyFee : existing.monthlyFee)
+  if (nextMode === "monthly" && nextMonthlyFee <= 0) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Học phí tháng phải lớn hơn 0" })
+  }
 
   const isBillingChanged =
     (data.billingMode !== undefined || data.monthlyFee !== undefined) &&

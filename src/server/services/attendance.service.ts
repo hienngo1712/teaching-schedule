@@ -5,7 +5,8 @@ import { LIVE_LINK } from "@/server/soft-delete"
 import type { AttendanceUpdateInput } from "@/lib/schemas/attendance"
 import { getLevel } from "@/lib/utils"
 import type { AttendanceDTO } from "@/lib/types/models"
-import type { BillingMode } from "@/lib/billing"
+import { monthKey, resolveBilling } from "@/lib/billing"
+import { loadBillingChanges } from "./billing.service"
 
 export async function getAttendance(
   db: PrismaClient,
@@ -26,6 +27,10 @@ export async function getAttendance(
 
   assertOwnership(session, userId)
 
+  const studentIds = session!.sessionStudents.map((ss) => ss.studentId)
+  const key = monthKey(session!.sessionDate.getUTCFullYear(), session!.sessionDate.getUTCMonth() + 1)
+  const changes = await loadBillingChanges(db, studentIds)
+
   return session!.sessionStudents.map((ss) => ({
     studentId: ss.studentId,
     fullName: ss.student.fullName,
@@ -34,7 +39,7 @@ export async function getAttendance(
     attendance: ss.attendance,
     note: ss.note,
     fee: ss.fee,
-    billingMode: (ss.student.billingMode ?? "per_session") as BillingMode,
+    billingMode: resolveBilling(changes.get(ss.studentId) ?? [], key).mode,
   }))
 }
 

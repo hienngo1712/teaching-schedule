@@ -157,11 +157,12 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
             </p>
             <ul className="space-y-2">
               {preview.map((row) => {
-                const fee = row.input.tuitionFee
+                const isMonthly = row.input.billingMode === "monthly"
+                const fee = isMonthly ? row.input.monthlyFee ?? NaN : row.input.tuitionFee
                 const details = [
                   row.input.parentName,
                   row.input.parentPhone,
-                  Number.isNaN(fee) ? null : formatCurrency(fee),
+                  Number.isNaN(fee) ? null : `${formatCurrency(fee)}${isMonthly ? t("per_month") : ""}`,
                   row.input.notes,
                 ].filter(Boolean)
                 const checkboxId = `import-anyway-${row.rowNumber}`

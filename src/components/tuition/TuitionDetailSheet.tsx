@@ -243,7 +243,11 @@ function TuitionDetailBody({
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-500">
-                  {t("current_month_fee")} ({row.presentSessions}/{row.totalSessions} {t("sessions")})
+                  {row.billingMode === "monthly"
+                    ? t("tuition_monthly_package_line")
+                        .replace("{p}", String(row.presentSessions))
+                        .replace("{n}", String(row.totalSessions))
+                    : `${t("current_month_fee")} (${row.presentSessions}/${row.totalSessions} ${t("sessions")})`}
                 </span>
                 <span className="font-medium text-slate-900">+{formatCurrency(row.totalExpected)}</span>
               </div>

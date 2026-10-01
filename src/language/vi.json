@@ -139,6 +139,7 @@
   "fee_breakdown": "Diễn giải học phí",
   "previous_balance_short": "Dư nợ tháng trước",
   "current_month_fee": "Tiền học tháng này",
+  "tuition_monthly_package_line": "Học phí tháng (trọn gói) · Đã học {p}/{n} buổi",
   "total_amount_due": "Tổng tiền cần đóng",
   "settled_waived": "Tất toán (miễn giảm)",
   "settled_waived_warning": "Đang đánh dấu TẤT TOÁN dù còn thiếu",

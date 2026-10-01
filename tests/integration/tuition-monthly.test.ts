@@ -330,4 +330,66 @@ describe("Học phí trọn tháng & nợ chuyển (spec T)", () => {
     const before = (await caller.tuition.getMonthlyStatus({ year: py, month: pm })).items.find((i) => i.studentId === st.id)
     expect(before).toMatchObject({ billingMode: "monthly", totalExpected: 400_000 })
   })
+
+  it("U7: HS theo buổi có ca tháng trước; đổi sang trọn tháng ở tháng hiện tại -> attendance.get ca tháng trước trả per_session, ca tháng này trả monthly; session.getDetail cũng vậy", async () => {
+    const caller = await getAuthedCaller()
+    const { year, month } = vnDateParts()
+    const pm = month === 1 ? 12 : month - 1
+    const py = month === 1 ? year - 1 : year
+    const st = await caller.student.create({
+      consent: CONSENT_ACCEPTED,
+      fullName: "HS U7 Đổi Cách Thu",
+      grade: 4,
+      billingMode: "per_session",
+      tuitionFee: 100_000,
+    })
+    const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
+    const day = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}-05`
+    const sPrev = await caller.session.create({ sessionDate: day(py, pm), startTime: "08:00", endTime: "09:00", subjectId, studentIds: [st.id] })
+    const sCur = await caller.session.create({ sessionDate: day(year, month), startTime: "08:00", endTime: "09:00", subjectId, studentIds: [st.id] })
+
+    // Đổi sang trọn tháng từ tháng này
+    await caller.student.update({ id: st.id, data: { billingMode: "monthly", monthlyFee: 400_000 } })
+
+    // attendance.get
+    const attPrev = await caller.attendance.get({ sessionId: sPrev.id })
+    const attCur = await caller.attendance.get({ sessionId: sCur.id })
+    expect(attPrev.find((s) => s.studentId === st.id)?.billingMode).toBe("per_session")
+    expect(attCur.find((s) => s.studentId === st.id)?.billingMode).toBe("monthly")
+
+    // session.getDetail
+    const detailPrev = await caller.session.getDetail({ id: sPrev.id })
+    const detailCur = await caller.session.getDetail({ id: sCur.id })
+    expect(detailPrev.students.find((s) => s.studentId === st.id)?.billingMode).toBe("per_session")
+    expect(detailCur.students.find((s) => s.studentId === st.id)?.billingMode).toBe("monthly")
+  })
+
+  it("U12: tạo HS trọn tháng với monthlyFee = 0 -> BAD_REQUEST; sửa sang trọn tháng với 0 -> BAD_REQUEST; theo buổi monthlyFee 0 -> OK", async () => {
+    const caller = await getAuthedCaller()
+    await expect(
+      caller.student.create({
+        consent: CONSENT_ACCEPTED,
+        fullName: "HS U12 Zero Monthly",
+        grade: 3,
+        billingMode: "monthly",
+        monthlyFee: 0,
+      })
+    ).rejects.toThrow("Học phí tháng phải lớn hơn 0")
+
+    const st = await caller.student.create({
+      consent: CONSENT_ACCEPTED,
+      fullName: "HS U12 Valid Per Session",
+      grade: 3,
+      billingMode: "per_session",
+      tuitionFee: 100_000,
+    })
+    expect(st.id).toBeDefined()
+
+    await expect(
+      caller.student.update({
+        id: st.id,
+        data: { billingMode: "monthly", monthlyFee: 0 },
+      })
+    ).rejects.toThrow("Học phí tháng phải lớn hơn 0")
+  })
 })

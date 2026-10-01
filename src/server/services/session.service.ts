@@ -15,9 +15,10 @@ import {
   type SessionFilterInput,
 } from "@/lib/schemas/session"
 import type { SchoolLevel, SessionDTO } from "@/lib/types/models"
-import type { BillingMode } from "@/lib/billing"
+import { monthKey, resolveBilling, type BillingChange, type BillingMode } from "@/lib/billing"
 import { compareViName } from "@/lib/name-search"
 import { findStudentIdsByName } from "./student.service"
+import { loadBillingChanges } from "./billing.service"
 
 /**
  * Kiểm tra ca dạy mới có trùng giờ với ca khác trong cùng ngày, cùng user.
@@ -100,7 +101,10 @@ function deriveLevel(students: Array<{ grade: number }>): SchoolLevel | "mixed" 
   return "mixed"
 }
 
-function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
+function toDTO(s: SessionWithSubjectAndStudents, changes?: Map<number, BillingChange[]>): SessionDTO {
+  const key = s.sessionDate
+    ? monthKey(s.sessionDate.getUTCFullYear(), s.sessionDate.getUTCMonth() + 1)
+    : 0
   // Tên mã hoá nên không sắp được trong DB (spec O 6.4); sắp sau khi giải mã.
   const students = [...(s.sessionStudents ?? [])]
     .sort((a, b) => compareViName(a.student?.fullName ?? "", b.student?.fullName ?? "") || a.studentId - b.studentId)
@@ -112,7 +116,9 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
       attendance: ss.attendance,
       note: ss.note,
       fee: ss.fee,
-      billingMode: (ss.student?.billingMode ?? "per_session") as BillingMode,
+      billingMode: changes
+        ? resolveBilling(changes.get(ss.studentId) ?? [], key).mode
+        : ((ss.student?.billingMode ?? "per_session") as BillingMode),
     }))
 
   const grades = [...new Set(students.map((st) => st.grade).filter((g) => g > 0))].sort((a, b) => a - b)
@@ -222,7 +228,11 @@ export async function getSessionDetail(
 
   assertOwnership(session, userId)
 
-  return toDTO(session as SessionWithSubjectAndStudents)
+  const s = session as SessionWithSubjectAndStudents
+  const studentIds = (s.sessionStudents ?? []).map((ss) => ss.studentId)
+  const changes = await loadBillingChanges(db, studentIds)
+
+  return toDTO(s, changes)
 }
 
 async function assertSubjectOwned(

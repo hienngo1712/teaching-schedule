@@ -67,6 +67,8 @@ export function ExportExcelButton({ sessions, students = [], className, iconOnly
           currentMonthFee: studentTuition.totalExpected,
           previousBalance: studentTuition.previousBalance,
           totalAmountDue: studentTuition.totalAmountDue,
+          billingMode: studentTuition.billingMode,
+          monthlyFee: studentTuition.monthlyFee,
         }
       : undefined
 

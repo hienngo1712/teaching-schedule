@@ -26,7 +26,7 @@ const rowBase = {
   notes: null,
   previousBalance: 0,
   totalAmountDue: 400000,
-  billingMode: "per_session" as const,
+  billingMode: "per_session" as "per_session" | "monthly",
   monthlyFee: 0,
   noticeSentAt: null as string | null,
   noticeSentAmount: null as number | null,
@@ -152,5 +152,23 @@ describe("TuitionDetailSheet - Đánh dấu đã gửi phiếu", () => {
       </LanguageProvider>
     )
     expect(screen.queryByTestId("notice-changed-hint")).toBeNull()
+  })
+
+  it("U8: row.billingMode = 'monthly', presentSessions 1, totalSessions 2 -> hiện 'Học phí tháng (trọn gói) · Đã học 1/2 buổi'", () => {
+    currentRow = {
+      ...rowBase,
+      billingMode: "monthly",
+      presentSessions: 1,
+      totalSessions: 2,
+      monthlyFee: 500000,
+      totalExpected: 500000,
+    }
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionDetailSheet open data={{ ...currentRow, year: 2026, month: 5 }} onOpenChange={() => {}} onSuccess={() => {}} />
+      </LanguageProvider>
+    )
+
+    expect(screen.getByText(/Học phí tháng \(trọn gói\) · Đã học 1\/2 buổi/)).toBeDefined()
   })
 })
