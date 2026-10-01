@@ -6,11 +6,16 @@ import { BCRYPT_COST, isRateLimited } from "@/server/auth-credentials"
 import { seedSubjectsForUser } from "./subject-defaults"
 import { trialEndFor } from "@/lib/plans"
 import { getDefaultTrialDays } from "./trial.service"
+import { CONSENT_TEXT_VERSION } from "@/lib/consent"
 
 // Re-export để giữ tương thích cho code đang import từ module này.
 export { DEFAULT_SUBJECTS, seedSubjectsForUser } from "./subject-defaults"
 
-export async function registerUser(db: PrismaClient, input: RegisterInput) {
+export async function registerUser(
+  db: PrismaClient,
+  input: RegisterInput,
+  consent?: { ipAddress: string | null }
+) {
   const { username, password, fullName } = input
 
   const existing = await db.user.findUnique({ where: { username } })
@@ -25,15 +30,30 @@ export async function registerUser(db: PrismaClient, input: RegisterInput) {
   const trialDays = await getDefaultTrialDays(db)
   let user
   try {
-    user = await db.user.create({
-      data: {
-        username,
-        passwordHash,
-        fullName: fullName || null,
-        // D4: gán ở đây (không dùng default DB) để tài khoản cũ không bị gán nhầm dùng thử.
-        // Số ngày đọc lúc đăng ký: đổi mặc định chỉ ảnh hưởng tài khoản tạo sau (spec L mục 15 T2).
-        trialEndsAt: trialEndFor(new Date(), trialDays),
-      },
+    user = await db.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          username,
+          passwordHash,
+          fullName: fullName || null,
+          // D4: gán ở đây (không dùng default DB) để tài khoản cũ không bị gán nhầm dùng thử.
+          // Số ngày đọc lúc đăng ký: đổi mặc định chỉ ảnh hưởng tài khoản tạo sau (spec L mục 15 T2).
+          trialEndsAt: trialEndFor(new Date(), trialDays),
+        },
+      })
+
+      if (consent) {
+        await tx.consentRecord.create({
+          data: {
+            userId: created.id,
+            scope: "register",
+            textVersion: CONSENT_TEXT_VERSION,
+            ipAddress: consent.ipAddress?.slice(0, 45) ?? null,
+          },
+        })
+      }
+
+      return created
     })
   } catch (err) {
     // Race: hai request cùng username vượt qua findUnique ở trên → unique

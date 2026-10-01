@@ -3,6 +3,7 @@ import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
 import { CONSENT_ACCEPTED, CONSENT_TEXT_VERSION } from "@/lib/consent"
 import { publicCaller } from "../helpers/trpc"
+import { registerUser } from "@/server/services/user.service"
 
 async function cleanup() {
   const users = await db.user.findMany({ where: { username: { startsWith: "dk_consent_" } }, select: { id: true } })
@@ -91,5 +92,39 @@ describe("Đồng ý chia sẻ dữ liệu phía server (spec O 6.6)", () => {
     const events = await db.securityEvent.findMany({ orderBy: { id: "asc" } })
     expect(events.map((e) => e.event)).toEqual(["bank_account_update", "bank_account_clear"])
     expect(await db.consentRecord.count()).toBe(1)
+  })
+
+  it("U18: registerUser tạo user và consentRecord cùng transaction -> nếu ghi consent lỗi, user bị rollback, gọi lại tạo được", async () => {
+    const username = "dk_consent_u18"
+    const input = {
+      username,
+      password: "Password123@",
+      fullName: "User U18",
+    }
+    const failingDb = db.$extends({
+      query: {
+        consentRecord: {
+          async create() {
+            throw new Error("Lỗi giả lập khi ghi consent")
+          },
+        },
+      },
+    }) as unknown as typeof db
+
+    // Gọi registerUser với failingDb -> ném lỗi
+    await expect(registerUser(failingDb, input, { ipAddress: "1.2.3.4" })).rejects.toThrow("Lỗi giả lập khi ghi consent")
+
+    // User phải bị rollback (không còn trong DB)
+    const userInDb = await db.user.findUnique({ where: { username } })
+    expect(userInDb).toBeNull()
+
+    // Gọi lại với db thường -> tạo được thành công (không báo trùng tên)
+    const created = await registerUser(db, input, { ipAddress: "1.2.3.4" })
+    expect(created.username).toBe(username)
+
+    const savedUser = await db.user.findUnique({ where: { username } })
+    expect(savedUser).not.toBeNull()
+    const savedConsent = await db.consentRecord.findFirst({ where: { userId: created.id } })
+    expect(savedConsent).toMatchObject({ scope: "register", textVersion: CONSENT_TEXT_VERSION, ipAddress: "1.2.3.4" })
   })
 })

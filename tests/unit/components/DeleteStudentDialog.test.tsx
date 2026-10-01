@@ -15,7 +15,7 @@ const q = vi.hoisted(() => ({
   refetch: vi.fn(),
 }))
 const del = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }))
-const mockDeleteCheckQuery = vi.hoisted(() => vi.fn(() => q))
+const mockDeleteCheckQuery = vi.hoisted(() => vi.fn<(...args: unknown[]) => typeof q>(() => q))
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
