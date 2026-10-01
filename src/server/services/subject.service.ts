@@ -137,7 +137,8 @@ export async function softDeleteSubject(
   id: number
 ): Promise<{ success: true }> {
   return db.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
+    // FOR UPDATE trên dòng môn: chờ / chặn các transaction ghi ca đang giữ FOR KEY SHARE (lockLiveSubject).
+    await tx.$queryRaw`SELECT id FROM subjects WHERE id = ${id} FOR UPDATE`
     const existing = await tx.subject.findUnique({ where: { id } })
     assertOwnership(existing, userId)
     if (existing.isDefault) {

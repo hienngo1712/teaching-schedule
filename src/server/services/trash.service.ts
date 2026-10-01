@@ -6,7 +6,7 @@ import type { TrashListInput, TrashRestoreInput, TrashType } from "@/lib/schemas
 import type { TrashItemDTO } from "@/lib/types/models"
 import { LIVE, RESTORE_DATA } from "@/server/soft-delete"
 import { assertOwnership } from "./_base.service"
-import { checkOverlap } from "./session.service"
+import { checkOverlap, lockLiveSubject } from "./session.service"
 import { lockMonth, syncPaidAmount, TX_OPTIONS } from "./payment.service"
 import { lockAndAssertCanActivate } from "./student.service"
 
@@ -181,7 +181,11 @@ export async function undeleteSession(db: PrismaClient, userId: number, id: numb
       excludeId: id,
     })
   }
-  await db.teachingSession.update({ where: { id }, data: RESTORE_DATA })
+  // Khoá môn như lúc tạo ca: xoá môn xen giữa thì không khôi phục ca trỏ vào môn đã xoá (spec U U14).
+  await db.$transaction(async (tx) => {
+    await lockLiveSubject(tx, userId, s.subjectId)
+    await tx.teachingSession.update({ where: { id }, data: RESTORE_DATA })
+  })
 }
 
 export async function undeleteStudent(db: PrismaClient, userId: number, id: number): Promise<void> {

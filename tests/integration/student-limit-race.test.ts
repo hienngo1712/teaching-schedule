@@ -6,7 +6,8 @@ import type { PrismaClient } from "@prisma/client"
 import { createStudent } from "@/server/services/student.service"
 import { restoreTrashItem } from "@/server/services/trash.service"
 import { softDeleteSubject } from "@/server/services/subject.service"
-import { createSession } from "@/server/services/session.service"
+import { createSession, updateSession } from "@/server/services/session.service"
+import { WITH_DELETED } from "@/server/soft-delete"
 
 const D = "2031-05-15"
 
@@ -160,49 +161,52 @@ describe("student limit race & subject delete race (U13, U14)", () => {
     expect(activeCount).toBe(limit)
   })
 
-  it("U14: xoá môn trong khi 1 ca dùng môn đó được tạo đồng thời -> không có ca nào trỏ tới môn đã xoá", async () => {
+  // Thứ tự gây lỗi: tạo ca kiểm môn xong → xoá môn chạy hết, commit → tạo ca mới ghi (spec U U14, review).
+  async function raceCreateAfterDelete(run: (slow: PrismaClient, userId: number, subjectId: number) => Promise<unknown>) {
     const caller = await getAuthedCaller()
     const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
-    const sub = await caller.subject.create({ name: "Môn Đua", color: "#10B981" })
-
-    let releaseBarrier = () => {}
-    const barrier = new Promise<void>((resolve) => {
-      releaseBarrier = resolve
-    })
-
+    const sub = await caller.subject.create({ name: `Môn Đua ${Math.random()}`, color: "#10B981" })
+    let release = () => {}
+    const barrier = new Promise<void>((r) => (release = r))
     const slowDb = db.$extends({
       query: {
-        teachingSession: {
-          async count({ args, query }) {
+        subject: {
+          async findUnique({ args, query }) {
+            const r = await query(args)
             await barrier
-            return query(args)
+            return r
           },
         },
       },
     }) as unknown as PrismaClient
-
-    const pDelete = softDeleteSubject(slowDb, user.id, sub.id)
-    const pCreateSession = createSession(db, user.id, {
-      subjectId: sub.id,
-      sessionDate: D,
-      startTime: "09:00",
-      endTime: "10:00",
-    })
-
+    const pCreate = run(slowDb, user.id, sub.id)
     await new Promise((r) => setTimeout(r, 50))
-    releaseBarrier()
+    await softDeleteSubject(db, user.id, sub.id)
+    release()
+    const res = await Promise.allSettled([pCreate])
+    const subject = await db.subject.findFirstOrThrow({ where: { id: sub.id, ...WITH_DELETED } })
+    const live = await db.teachingSession.count({ where: { subjectId: sub.id } })
+    return { res: res[0], subject, live }
+  }
 
-    const results = await Promise.allSettled([pDelete, pCreateSession])
-    const deletedSubject = await db.subject.findUnique({ where: { id: sub.id } })
-    const sessions = await db.teachingSession.findMany({ where: { subjectId: sub.id } })
+  it("U14: tạo ca xen giữa lúc xoá môn → bị từ chối, không có ca trỏ tới môn đã xoá", async () => {
+    const { res, subject, live } = await raceCreateAfterDelete((slow, userId, subjectId) =>
+      createSession(slow, userId, { subjectId, sessionDate: D, startTime: "09:00", endTime: "10:00" })
+    )
+    expect(subject.isDeleted).toBe(true)
+    expect(res.status).toBe("rejected")
+    expect(live).toBe(0)
+  })
 
-    if (deletedSubject?.isDeleted) {
-      // Nếu môn đã xoá thì không được có ca nào trỏ tới môn này
-      expect(sessions.length).toBe(0)
-    } else {
-      // Nếu môn không bị xoá thì việc xoá môn phải bị từ chối
-      const delResult = results[0]
-      expect(delResult.status).toBe("rejected")
-    }
+  it("U14: đổi môn của ca xen giữa lúc xoá môn → bị từ chối", async () => {
+    const caller = await getAuthedCaller()
+    const user = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    const defId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
+    const sess = await createSession(db, user.id, { subjectId: defId, sessionDate: D, startTime: "11:00", endTime: "12:00" })
+    const { res, live } = await raceCreateAfterDelete((slow, userId, subjectId) =>
+      updateSession(slow, userId, sess.id, { subjectId })
+    )
+    expect(res.status).toBe("rejected")
+    expect(live).toBe(0)
   })
 })
