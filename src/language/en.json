@@ -772,5 +772,16 @@
   "per_session": "/session",
   "billing_change_note": "Effective from month {m}/{y}; previous months unchanged.",
   "billing_mode_label": "Billing mode",
-  "monthly_fee_line": "Monthly fee (flat): {amount} · Attended {p}/{n} sessions"
+  "monthly_fee_line": "Monthly fee (flat): {amount} · Attended {p}/{n} sessions",
+  "notice_filter": "Tuition notice",
+  "notice_unsent": "Unsent",
+  "notice_sent": "Sent",
+  "all_notice": "All",
+  "notice_sent_on": "Sent {d}",
+  "notice_changed": "Sent · amount changed",
+  "notice_marked": "Marked notice as sent",
+  "undo": "Undo",
+  "mark_notice_sent": "Mark as sent",
+  "unmark_notice_sent": "Unmark sent",
+  "notice_sent_detail": "Notice: Sent {d} at {t}"
 }

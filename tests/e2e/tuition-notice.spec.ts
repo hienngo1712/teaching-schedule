@@ -13,6 +13,16 @@ test.beforeAll(async () => {
   });
 });
 
+test.afterAll(async () => {
+  await db.teachingSession.deleteMany({
+    where: { title: { startsWith: 'Ca phiếu' } },
+  });
+  await db.student.deleteMany({
+    where: { fullName: { startsWith: 'HS Phiếu' } },
+  });
+  await db.$disconnect();
+});
+
 test.use({ viewport: { width: 390, height: 844 } });
 
 async function expectNoHorizontalScroll(page: Page) {
@@ -23,8 +33,11 @@ async function expectNoHorizontalScroll(page: Page) {
 }
 
 async function expectTouchTarget(locator: Locator) {
-  const box = await locator.boundingBox();
-  expect(box!.height).toBeGreaterThanOrEqual(44);
+  await expect(async () => {
+    const box = await locator.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }).toPass();
 }
 
 // Tạo 1 ca hôm nay gắn HS rồi điểm danh "Có mặt" (giống mobile.spec.ts).

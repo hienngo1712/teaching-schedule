@@ -23,6 +23,9 @@ const row = {
   totalAmountDue: 400000,
   billingMode: "per_session" as const,
   monthlyFee: 0,
+  noticeSentAt: null,
+  noticeSentAmount: null,
+  noticeStatus: "none" as const,
 }
 
 const mockCalls = vi.hoisted(() => ({ list: [] as unknown[] }))

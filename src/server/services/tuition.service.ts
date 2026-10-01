@@ -2,9 +2,9 @@ import { Prisma, type PrismaClient, type MonthlyTuition, type SessionStudent } f
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { matchesTuitionStatusFilter } from "@/lib/tuition-status"
 import { assertOwnership } from "./_base.service"
-import type { MonthlyTuitionFilterInput, UpdateSettlementInput } from "@/lib/schemas/tuition"
+import type { MonthlyTuitionFilterInput, UpdateSettlementInput, SetNoticeSentInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
-import type { TuitionStatusDTO } from "@/lib/types/models"
+import type { TuitionStatusDTO, NoticeStatus } from "@/lib/types/models"
 import { byGradeThenName, nameMatches } from "@/lib/name-search"
 import { monthFee, monthKey, resolveBilling, type Billing, type BillingChange } from "@/lib/billing"
 import { loadBillingChanges } from "./billing.service"
@@ -127,7 +127,7 @@ export async function getMonthlyTuitionStatus(
   // Dashboard (spec P1): chỉ tính cho các HS này, bỏ lọc isActive/grade của danh sách màn Học phí.
   onlyStudentIds?: number[]
 ): Promise<PaginatedResponse<TuitionStatusDTO>> {
-  const { year, month, grade, search, studentId, status, page, limit } = filter
+  const { year, month, grade, search, studentId, status, noticeFilter, page, limit } = filter
   if (onlyStudentIds && onlyStudentIds.length === 0) return { items: [], totalCount: 0, totalPages: 0 }
 
   // 1. Lấy toàn bộ học sinh active theo filter
@@ -218,6 +218,17 @@ export async function getMonthlyTuitionStatus(
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
       calcStudentTuition(attendance, snapshot, closingBalances.get(student.id)?.get(year * 12 + month - 2) ?? 0, billing)
 
+    const paidAmount = snapshot?.paidAmount ?? 0
+    const isFullPaid = snapshot?.isFullPaid ?? false
+    const remaining = isFullPaid ? 0 : Math.max(0, totalAmountDue - paidAmount)
+    const noticeSentAt = snapshot?.noticeSentAt ?? null
+    const noticeSentAmount = snapshot?.noticeSentAmount ?? null
+    let noticeStatus: NoticeStatus = "none"
+    if (noticeSentAt !== null) {
+      // Đã đóng đủ thì phiếu hết tác dụng: không gợi ý gửi lại (review V I2).
+      noticeStatus = remaining === noticeSentAmount || remaining === 0 ? "sent" : "changed"
+    }
+
     return {
       studentId: student.id,
       fullName: student.fullName,
@@ -225,14 +236,17 @@ export async function getMonthlyTuitionStatus(
       totalSessions,
       presentSessions,
       totalExpected: currentMonthFee,
-      paidAmount: snapshot?.paidAmount ?? 0,
-      isFullPaid: snapshot?.isFullPaid ?? false,
+      paidAmount,
+      isFullPaid,
       notes: snapshot?.notes ?? null,
       previousBalance,
       totalAmountDue,
       needsUpsert,
       billingMode: billing.mode,
       monthlyFee: billing.monthlyFee,
+      noticeSentAt,
+      noticeSentAmount,
+      noticeStatus,
     }
   })
 
@@ -267,11 +281,24 @@ export async function getMonthlyTuitionStatus(
     )
   }
 
-  // 7. Lọc theo status — dùng chung helper với badge client.
-  const filteredResults =
+  // 7. Lọc theo status và noticeFilter — dùng chung helper với badge client.
+  let filteredResults =
     status && status !== "all"
       ? results.filter(item => matchesTuitionStatusFilter(item, status))
       : results
+
+  if (noticeFilter && noticeFilter !== "all") {
+    filteredResults = filteredResults.filter(item => {
+      if (noticeFilter === "sent") {
+        return item.noticeStatus === "sent"
+      }
+      if (noticeFilter === "unsent") {
+        const remaining = item.isFullPaid ? 0 : Math.max(0, item.totalAmountDue - item.paidAmount)
+        return (item.noticeStatus === "none" || item.noticeStatus === "changed") && remaining > 0
+      }
+      return true
+    })
+  }
 
   // 8. Phân trang
   const totalCount = filteredResults.length
@@ -293,6 +320,9 @@ export async function getMonthlyTuitionStatus(
       totalAmountDue: item.totalAmountDue,
       billingMode: item.billingMode,
       monthlyFee: item.monthlyFee,
+      noticeSentAt: item.noticeSentAt,
+      noticeSentAmount: item.noticeSentAmount,
+      noticeStatus: item.noticeStatus,
     })),
     totalCount,
     totalPages: Math.ceil(totalCount / limit),
@@ -341,6 +371,51 @@ export async function updateSettlement(
       isFullPaid: input.isFullPaid,
       ...(input.notes !== undefined && { notes: input.notes }),
     },
+  })
+}
+
+export async function setNoticeSent(
+  db: PrismaClient,
+  userId: number,
+  input: SetNoticeSentInput
+): Promise<{ noticeSentAt: Date | null; noticeSentAmount: number | null }> {
+  const mt = await ensureMonthlyTuition(db, userId, input.studentId, input.year, input.month)
+
+  if (!input.sent) {
+    return db.monthlyTuition.update({
+      where: { id: mt.id },
+      data: {
+        noticeSentAt: null,
+        noticeSentAmount: null,
+      },
+      select: { noticeSentAt: true, noticeSentAmount: true },
+    })
+  }
+
+  const statusRes = await getMonthlyTuitionStatus(
+    db,
+    userId,
+    {
+      studentId: input.studentId,
+      year: input.year,
+      month: input.month,
+      status: "all",
+      page: 1,
+      limit: 1,
+    },
+    false,
+    [input.studentId]
+  )
+  const item = statusRes.items[0]
+  const remaining = item ? (item.isFullPaid ? 0 : Math.max(0, item.totalAmountDue - item.paidAmount)) : 0
+
+  return db.monthlyTuition.update({
+    where: { id: mt.id },
+    data: {
+      noticeSentAt: new Date(),
+      noticeSentAmount: remaining,
+    },
+    select: { noticeSentAt: true, noticeSentAmount: true },
   })
 }
 

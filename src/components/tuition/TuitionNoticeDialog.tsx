@@ -6,6 +6,7 @@ import { saveAs } from "file-saver"
 import { Download, ImageDown, Loader2, Share2 } from "lucide-react"
 import { trpc } from "@/lib/trpc"
 import { removeVietnameseTones } from "@/lib/utils"
+import { toast } from "sonner"
 import { canShareFiles, elementToPngBlob, shareOrDownloadPng } from "@/lib/share-image"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -21,13 +22,47 @@ type Props = { studentId: number; year: number; month: number; onClose: () => vo
 // Chỉ mount khi mở → Blob và trạng thái tự reset mỗi lần mở.
 export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) {
   const { t } = useTranslation()
+  const utils = trpc.useUtils?.()
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const query = trpc.tuition.getNotice.useQuery({ studentId, year, month })
+  const setNoticeSentMutation = trpc.tuition.setNoticeSent?.useMutation
+    ? trpc.tuition.setNoticeSent.useMutation()
+    : { mutate: () => {}, isPending: false }
   const cardRef = useRef<HTMLDivElement>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
   const [captureFailed, setCaptureFailed] = useState(false)
   const [shareable] = useState(canShareFiles)
-  const [viewerOpen, setViewerOpen] = useState(false)
+  // Giữ ảnh lúc mở: đánh dấu đã gửi → refetch → card chụp lại (blob về null) mà màn Lưu ảnh không được tắt/mở lại.
+  const [viewerBlob, setViewerBlob] = useState<Blob | null>(null)
+
+  const markNoticeSent = () => {
+    setNoticeSentMutation.mutate(
+      { studentId, year, month, sent: true },
+      {
+        onSuccess: () => {
+          utils.tuition.getMonthlyStatus.invalidate()
+          toast(t("notice_marked"), {
+            action: {
+              label: t("undo"),
+              onClick: () => {
+                setNoticeSentMutation.mutate(
+                  { studentId, year, month, sent: false },
+                  {
+                    onSuccess: () => {
+                      utils.tuition.getMonthlyStatus.invalidate()
+                    },
+                  }
+                )
+              },
+            },
+          })
+        },
+        onError: () => {
+          toast.error(t("generic_error"))
+        },
+      }
+    )
+  }
 
   // Tạo sẵn ảnh ngay khi phiếu vẽ xong: Safari chặn navigator.share nếu gọi sau tác vụ bất đồng bộ (spec C S11).
   // Không phụ thuộc `t` (tạo mới mỗi render) để card không gọi lại onReady liên tục.
@@ -105,7 +140,13 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
           variant="outline"
           className="h-11 flex-1 md:h-10 md:flex-none"
           disabled={!blob}
-          onClick={() => blob && shareOrDownloadPng(blob, filename, title)}
+          onClick={async () => {
+            if (!blob) return
+            const result = await shareOrDownloadPng(blob, filename, title)
+            if (result === "shared" || result === "downloaded") {
+              markNoticeSent()
+            }
+          }}
         >
           {blob ? (
             <Share2 className="mr-2 size-4" />
@@ -121,7 +162,11 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
         <Button
           className="h-11 flex-1 md:h-10 md:flex-none"
           disabled={!blob}
-          onClick={() => blob && saveAs(blob, filename)}
+          onClick={() => {
+            if (!blob) return
+            saveAs(blob, filename)
+            markNoticeSent()
+          }}
         >
           {blob ? (
             <Download className="mr-2 size-4" />
@@ -136,7 +181,11 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
         <Button
           className="h-11 flex-1 md:h-10 md:flex-none"
           disabled={!blob}
-          onClick={() => blob && setViewerOpen(true)}
+          onClick={() => {
+            if (!blob) return
+            setViewerBlob(blob)
+            markNoticeSent()
+          }}
         >
           {blob ? (
             <ImageDown className="mr-2 size-4" />
@@ -180,12 +229,12 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
           </SheetContent>
         </Sheet>
       )}
-      {viewerOpen && blob && (
+      {viewerBlob && (
         <NoticeImageViewer
-          blob={blob}
+          blob={viewerBlob}
           filename={filename}
           title={title}
-          onClose={() => setViewerOpen(false)}
+          onClose={() => setViewerBlob(null)}
         />
       )}
     </>

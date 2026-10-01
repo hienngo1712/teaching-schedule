@@ -21,6 +21,7 @@ import { getTuitionBadgeStatus, type TuitionBadgeStatus } from "@/lib/tuition-st
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
 import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
 import { TuitionStatusBadge } from "@/components/tuition/TuitionStatusBadge"
+import { TuitionNoticeBadge } from "@/components/tuition/TuitionNoticeBadge"
 import { useFeatureGate } from "@/hooks/useFeatureGate"
 import { LockBadge } from "@/components/plan/LockBadge"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
@@ -43,7 +44,18 @@ function amountClass(status: TuitionBadgeStatus) {
 
 export default function TuitionPage() {
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
-  const { selectedGrade, setGrade, searchStudentName, setSearch, selectedStatus, setStatus, selectedStudentId, setStudentId } = useFilters()
+  const {
+    selectedGrade,
+    setGrade,
+    searchStudentName,
+    setSearch,
+    selectedStatus,
+    setStatus,
+    selectedNoticeFilter,
+    setNoticeFilter,
+    selectedStudentId,
+    setStudentId,
+  } = useFilters()
   const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
   const [selectedStudent, setSelectedStudent] = useState<(TuitionStatusItem & { year: number; month: number }) | null>(null)
@@ -68,6 +80,7 @@ export default function TuitionPage() {
     search: searchStudentName || undefined,
     studentId: pendingDeepLinkId,
     status: selectedStatus as MonthlyTuitionFilterInput["status"],
+    noticeFilter: (selectedNoticeFilter && selectedNoticeFilter !== "all" ? selectedNoticeFilter : undefined) as MonthlyTuitionFilterInput["noticeFilter"],
     page: currentPage,
     limit: pageSize,
   })
@@ -75,7 +88,7 @@ export default function TuitionPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [selectedGrade, searchStudentName, selectedStatus, year, month])
+  }, [selectedGrade, searchStudentName, selectedStatus, selectedNoticeFilter, year, month])
 
   const items = query.data?.items ?? []
   const totalItems = query.data?.totalCount ?? 0
@@ -147,7 +160,16 @@ export default function TuitionPage() {
     },
     { header: t("sessions_count"), cell: (item) => `${item.presentSessions}/${item.totalSessions}`, className: "w-[120px] text-center text-slate-600" },
     { header: t("amount_to_pay"), cell: (item) => formatCurrency(item.totalAmountDue), className: "w-[160px] whitespace-nowrap text-right font-medium text-slate-900" },
-    { header: t("status"), cell: (item) => <TuitionStatusBadge item={item} />, className: "w-[160px] text-center" },
+    {
+      header: t("status"),
+      cell: (item) => (
+        <div className="flex flex-col items-center gap-1">
+          <TuitionStatusBadge item={item} />
+          <TuitionNoticeBadge item={item} />
+        </div>
+      ),
+      className: "w-[160px] text-center",
+    },
     {
       header: <span className="sr-only">{t("action")}</span>,
       cell: (item) => (
@@ -160,7 +182,10 @@ export default function TuitionPage() {
     },
   ]
 
-  const activeFilterCount = (selectedGrade ? 1 : 0) + (selectedStatus && selectedStatus !== "all" ? 1 : 0)
+  const activeFilterCount =
+    (selectedGrade ? 1 : 0) +
+    (selectedStatus && selectedStatus !== "all" ? 1 : 0) +
+    (selectedNoticeFilter && selectedNoticeFilter !== "all" ? 1 : 0)
 
   return (
     <div className="flex flex-col gap-4">
@@ -195,6 +220,16 @@ export default function TuitionPage() {
                 <SelectItem value="paid_this_month">{t("paid_this_month")}</SelectItem>
                 <SelectItem value="partial">{t("partial_paid")}</SelectItem>
                 <SelectItem value="unpaid">{t("unpaid")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={selectedNoticeFilter || "all"} onValueChange={(v) => setNoticeFilter(v)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder={t("notice_filter")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("all_notice")}</SelectItem>
+                <SelectItem value="unsent">{t("notice_unsent")}</SelectItem>
+                <SelectItem value="sent">{t("notice_sent")}</SelectItem>
               </SelectContent>
             </Select>
             <Select
@@ -244,7 +279,10 @@ export default function TuitionPage() {
                 </Badge>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <TuitionStatusBadge item={item} />
+                <div className="flex flex-wrap items-center justify-end gap-1">
+                  <TuitionStatusBadge item={item} />
+                  <TuitionNoticeBadge item={item} />
+                </div>
                 <span className="text-xs text-slate-500">
                   {item.presentSessions}/{item.totalSessions} {t("sessions")}
                 </span>

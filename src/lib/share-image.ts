@@ -32,15 +32,18 @@ export function canShareFiles(): boolean {
   return navigator.canShare({ files: [new File([""], "x.png", { type: "image/png" })] }) === true
 }
 
-export async function shareOrDownloadPng(blob: Blob, filename: string, title: string): Promise<void> {
+export type ShareResult = "shared" | "downloaded" | "aborted"
+
+export async function shareOrDownloadPng(blob: Blob, filename: string, title: string): Promise<ShareResult> {
   if (canShareFiles()) {
     try {
       await navigator.share({ files: [new File([blob], filename, { type: "image/png" })], title })
-      return
+      return "shared"
     } catch (e) {
       // Người dùng tự đóng bảng chia sẻ → không làm gì. Lỗi khác (NotAllowedError...) → tải file.
-      if ((e as { name?: string })?.name === "AbortError") return
+      if ((e as { name?: string })?.name === "AbortError") return "aborted"
     }
   }
   saveAs(blob, filename)
+  return "downloaded"
 }

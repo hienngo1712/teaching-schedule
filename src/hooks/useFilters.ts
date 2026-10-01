@@ -38,6 +38,10 @@ export function useFilters() {
     return searchParams.get("status") || "all"
   }, [searchParams])
 
+  const selectedNoticeFilter = useMemo(() => {
+    return searchParams.get("noticeFilter") || "all"
+  }, [searchParams])
+
   const createQueryString = useCallback(
     (params: Record<string, string | number | null>) => {
       const newSearchParams = new URLSearchParams(searchParams.toString())
@@ -71,6 +75,17 @@ export function useFilters() {
       const queryString = createQueryString({ 
         status: status === "all" ? null : status,
         studentId: null 
+      })
+      router.push(`${pathname}?${queryString}`)
+    },
+    [router, pathname, createQueryString]
+  )
+
+  const setNoticeFilter = useCallback(
+    (noticeFilter: string | null) => {
+      const queryString = createQueryString({
+        noticeFilter: noticeFilter === "all" ? null : noticeFilter,
+        studentId: null,
       })
       router.push(`${pathname}?${queryString}`)
     },
@@ -123,22 +138,31 @@ export function useFilters() {
       studentName: searchStudentName || undefined,
       studentId: selectedStudentId || undefined,
       status: selectedStatus || undefined,
+      noticeFilter: selectedNoticeFilter || undefined,
     }
-  }, [selectedGrade, searchStudentName, selectedStudentId, selectedStatus])
+  }, [selectedGrade, searchStudentName, selectedStudentId, selectedStatus, selectedNoticeFilter])
 
   const hasActiveFilter = useMemo(() => {
-    return selectedGrade !== null || searchStudentName !== "" || selectedStudentId !== null || selectedStatus !== "all"
-  }, [selectedGrade, searchStudentName, selectedStudentId, selectedStatus])
+    return (
+      selectedGrade !== null ||
+      searchStudentName !== "" ||
+      selectedStudentId !== null ||
+      selectedStatus !== "all" ||
+      selectedNoticeFilter !== "all"
+    )
+  }, [selectedGrade, searchStudentName, selectedStudentId, selectedStatus, selectedNoticeFilter])
 
   return {
     selectedGrade,
     searchStudentName,
     selectedStudentId,
     selectedStatus,
+    selectedNoticeFilter,
     setGrade,
     setSearch,
     setStudentId,
     setStatus,
+    setNoticeFilter,
     resetFilters,
     filterParams,
     hasActiveFilter,

@@ -88,7 +88,12 @@ export interface TuitionStatusDTO {
   totalAmountDue: number
   billingMode: BillingMode
   monthlyFee: number
+  noticeSentAt: Date | string | null
+  noticeSentAmount: number | null
+  noticeStatus: NoticeStatus
 }
+
+export type NoticeStatus = "none" | "sent" | "changed"
 
 /**
  * Attendance record for a student

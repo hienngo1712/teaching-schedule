@@ -30,31 +30,35 @@ describe("canShareFiles", () => {
 })
 
 describe("shareOrDownloadPng", () => {
-  it("chia sẻ được → gọi navigator.share với file PNG, không tải", async () => {
+  it("chia sẻ được → gọi navigator.share với file PNG, không tải, trả về 'shared'", async () => {
     const share = vi.fn().mockResolvedValue(undefined)
     setShareSupport(share, () => true)
-    await shareOrDownloadPng(blob, "phieu.png", "Phiếu")
+    const result = await shareOrDownloadPng(blob, "phieu.png", "Phiếu")
     const data = share.mock.calls[0][0] as ShareData
     expect(data.title).toBe("Phiếu")
     expect(data.files?.[0].name).toBe("phieu.png")
     expect(data.files?.[0].type).toBe("image/png")
     expect(saveAs).not.toHaveBeenCalled()
+    expect(result).toBe("shared")
   })
 
-  it("người dùng huỷ (AbortError) → im lặng, không tải", async () => {
+  it("người dùng huỷ (AbortError) → im lặng, không tải, trả về 'aborted'", async () => {
     setShareSupport(vi.fn().mockRejectedValue(new DOMException("x", "AbortError")), () => true)
-    await shareOrDownloadPng(blob, "phieu.png", "Phiếu")
+    const result = await shareOrDownloadPng(blob, "phieu.png", "Phiếu")
     expect(saveAs).not.toHaveBeenCalled()
+    expect(result).toBe("aborted")
   })
 
-  it("NotAllowedError (iOS mất user activation) → tải file", async () => {
+  it("NotAllowedError (iOS mất user activation) → tải file, trả về 'downloaded'", async () => {
     setShareSupport(vi.fn().mockRejectedValue(new DOMException("x", "NotAllowedError")), () => true)
-    await shareOrDownloadPng(blob, "phieu.png", "Phiếu")
+    const result = await shareOrDownloadPng(blob, "phieu.png", "Phiếu")
     expect(saveAs).toHaveBeenCalledWith(blob, "phieu.png")
+    expect(result).toBe("downloaded")
   })
 
-  it("không hỗ trợ chia sẻ file → tải file", async () => {
-    await shareOrDownloadPng(blob, "phieu.png", "Phiếu")
+  it("không hỗ trợ chia sẻ file → tải file, trả về 'downloaded'", async () => {
+    const result = await shareOrDownloadPng(blob, "phieu.png", "Phiếu")
     expect(saveAs).toHaveBeenCalledWith(blob, "phieu.png")
+    expect(result).toBe("downloaded")
   })
 })
