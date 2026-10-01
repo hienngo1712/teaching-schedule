@@ -225,7 +225,8 @@ export async function getMonthlyTuitionStatus(
     const noticeSentAmount = snapshot?.noticeSentAmount ?? null
     let noticeStatus: NoticeStatus = "none"
     if (noticeSentAt !== null) {
-      noticeStatus = remaining === noticeSentAmount ? "sent" : "changed"
+      // Đã đóng đủ thì phiếu hết tác dụng: không gợi ý gửi lại (review V I2).
+      noticeStatus = remaining === noticeSentAmount || remaining === 0 ? "sent" : "changed"
     }
 
     return {

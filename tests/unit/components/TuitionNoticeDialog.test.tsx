@@ -162,6 +162,31 @@ describe("TuitionNoticeDialog", () => {
     expect(screen.getByText(/Nhấn giữ ảnh → chọn Lưu vào Ảnh/)).toBeDefined()
   })
 
+  // Review V I1: đánh dấu đã gửi → refetch → card chụp lại ảnh; màn Lưu ảnh không được tắt/mở lại dưới tay người dùng.
+  it("mobile: đang mở màn Lưu ảnh mà dữ liệu tải lại → màn xem ảnh vẫn giữ nguyên", async () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia
+    queryReturn = { data: notice(), isError: false, dataUpdatedAt: 1000, refetch: vi.fn() }
+    const ui = () => (
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+    const { rerender } = render(ui())
+    const saveImgBtn = screen.getByRole("button", { name: /Lưu ảnh/ })
+    await waitFor(() => expect(saveImgBtn.getAttribute("disabled")).toBeNull())
+    fireEvent.click(saveImgBtn)
+    expect(screen.getByText(/Nhấn giữ ảnh → chọn Lưu vào Ảnh/)).toBeDefined()
+
+    // Lần chụp lại sau refetch chưa xong.
+    elementToPngBlob.mockReturnValueOnce(new Promise<Blob>(() => {}))
+    queryReturn = { ...queryReturn, dataUpdatedAt: 2000 }
+    rerender(ui())
+    await waitFor(() => expect(elementToPngBlob).toHaveBeenCalledTimes(2))
+    expect(screen.getByText(/Nhấn giữ ảnh → chọn Lưu vào Ảnh/)).toBeDefined()
+  })
+
   it("desktop: bấm Tải ảnh → gọi saveAs và gọi setNoticeSent(sent: true), toast có Hoàn tác", async () => {
     queryReturn = {
       data: notice({ paidAmount: 400000 }),

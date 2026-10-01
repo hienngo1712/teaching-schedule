@@ -162,6 +162,21 @@ describe("Đánh dấu đã gửi phiếu học phí (spec V)", () => {
     ).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
 
+  // Review V I2: đã đóng đủ thì phiếu hết tác dụng → không gợi ý gửi lại (nhãn "số tiền đã đổi").
+  it("gửi phiếu rồi thu đủ → noticeStatus 'sent', không phải 'changed'", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const { year, month } = vnDateParts()
+    const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS Đóng đủ V", grade: 5, tuitionFee: 100_000 })
+    const day = `${year}-${String(month).padStart(2, "0")}-05`
+    const s = await caller.session.create({ sessionDate: day, startTime: "10:00", endTime: "11:00", subjectId, studentIds: [st.id] })
+    await caller.attendance.update({ sessionId: s.id, attendances: [{ studentId: st.id, attendance: "present" }] })
+    await caller.tuition.setNoticeSent({ studentId: st.id, year, month, sent: true })
+    await caller.payment.create({ studentId: st.id, year, month, amount: 100_000, paidAt: day, method: "cash" })
+    const item = (await caller.tuition.getMonthlyStatus({ year, month })).items.find((i) => i.studentId === st.id)!
+    expect(item.noticeStatus).toBe("sent")
+  })
+
   it("Task 2: Bộ lọc noticeFilter (all / unsent / sent) và phân trang", async () => {
     const caller = await getAuthedCaller("teacher")
     const { year, month } = vnDateParts()

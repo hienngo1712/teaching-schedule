@@ -32,7 +32,8 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
   const [blob, setBlob] = useState<Blob | null>(null)
   const [captureFailed, setCaptureFailed] = useState(false)
   const [shareable] = useState(canShareFiles)
-  const [viewerOpen, setViewerOpen] = useState(false)
+  // Giữ ảnh lúc mở: đánh dấu đã gửi → refetch → card chụp lại (blob về null) mà màn Lưu ảnh không được tắt/mở lại.
+  const [viewerBlob, setViewerBlob] = useState<Blob | null>(null)
 
   const markNoticeSent = () => {
     setNoticeSentMutation.mutate(
@@ -182,7 +183,7 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
           disabled={!blob}
           onClick={() => {
             if (!blob) return
-            setViewerOpen(true)
+            setViewerBlob(blob)
             markNoticeSent()
           }}
         >
@@ -228,12 +229,12 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
           </SheetContent>
         </Sheet>
       )}
-      {viewerOpen && blob && (
+      {viewerBlob && (
         <NoticeImageViewer
-          blob={blob}
+          blob={viewerBlob}
           filename={filename}
           title={title}
-          onClose={() => setViewerOpen(false)}
+          onClose={() => setViewerBlob(null)}
         />
       )}
     </>
