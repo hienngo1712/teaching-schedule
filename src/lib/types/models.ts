@@ -68,6 +68,7 @@ export interface SessionStudentDTO extends Omit<SessionStudent, "sessionId" | "s
   studentId: number
   fullName: string
   grade: number
+  billingMode?: BillingMode
 }
 
 /**
@@ -100,6 +101,7 @@ export interface AttendanceDTO {
   attendance: string
   note: string | null
   fee: number
+  billingMode?: BillingMode
 }
 
 /**

@@ -199,11 +199,17 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
 
                 {/* md:contents: ở desktop 3 phần tử con thành ô grid riêng, sắp lại bằng order */}
                 <div className="order-3 col-span-2 flex items-center gap-2 md:contents">
-                  <CurrencyInput
-                    value={state.fee}
-                    onChange={(val) => handleUpdateFee(student.studentId, val || 0)}
-                    className="h-10 w-28 shrink-0 text-sm md:order-2 md:h-8 md:w-full md:text-xs"
-                  />
+                  {student.billingMode === "monthly" ? (
+                    <span className="inline-flex h-10 w-28 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600 md:order-2 md:h-8 md:w-full">
+                      {t("billing_monthly")}
+                    </span>
+                  ) : (
+                    <CurrencyInput
+                      value={state.fee}
+                      onChange={(val) => handleUpdateFee(student.studentId, val || 0)}
+                      className="h-10 w-28 shrink-0 text-sm md:order-2 md:h-8 md:w-full md:text-xs"
+                    />
+                  )}
                   <Input
                     placeholder={t("note")}
                     value={state.note}

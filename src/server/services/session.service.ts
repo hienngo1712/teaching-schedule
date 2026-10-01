@@ -15,6 +15,7 @@ import {
   type SessionFilterInput,
 } from "@/lib/schemas/session"
 import type { SchoolLevel, SessionDTO } from "@/lib/types/models"
+import type { BillingMode } from "@/lib/billing"
 import { compareViName } from "@/lib/name-search"
 import { findStudentIdsByName } from "./student.service"
 
@@ -111,6 +112,7 @@ function toDTO(s: SessionWithSubjectAndStudents): SessionDTO {
       attendance: ss.attendance,
       note: ss.note,
       fee: ss.fee,
+      billingMode: (ss.student?.billingMode ?? "per_session") as BillingMode,
     }))
 
   const grades = [...new Set(students.map((st) => st.grade).filter((g) => g > 0))].sort((a, b) => a - b)

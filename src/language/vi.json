@@ -763,5 +763,14 @@
   "privacy_version": "Phiên bản: {v}",
   "backup_confirm_title": "Tải file sao lưu",
   "backup_confirm_desc": "File chứa toàn bộ dữ liệu cá nhân của học sinh, phụ huynh và tài khoản ngân hàng ở dạng chưa mã hoá. Chỉ lưu ở nơi an toàn, không gửi qua Zalo, Facebook hay email, xoá khi không còn cần.",
-  "backup_confirm_download": "Tôi hiểu, tải xuống"
+  "backup_confirm_download": "Tôi hiểu, tải xuống",
+  "billing_per_session": "Theo buổi",
+  "billing_monthly": "Trọn tháng",
+  "fee_per_session_label": "Học phí/buổi",
+  "fee_per_month_label": "Học phí/tháng",
+  "per_month": "/tháng",
+  "per_session": "/buổi",
+  "billing_change_note": "Áp dụng từ tháng {m}/{y}; các tháng trước giữ nguyên.",
+  "billing_mode_label": "Cách thu học phí",
+  "monthly_fee_line": "Học phí tháng (trọn gói): {amount} · Đã học {p}/{n} buổi"
 }
