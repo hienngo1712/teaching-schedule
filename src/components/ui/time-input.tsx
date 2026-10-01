@@ -8,7 +8,7 @@ export interface TimeInputProps extends React.InputHTMLAttributes<HTMLInputEleme
 }
 
 const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
-  ({ className, value, onChange, onValueChange, ...props }, ref) => {
+  ({ className, value, onChange, onValueChange, onFocus, ...props }, ref) => {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let val = e.target.value.replace(/\D/g, "") // Chỉ lấy số
       
@@ -40,6 +40,13 @@ const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
         ref={ref}
         value={value}
         onChange={handleInputChange}
+        // Ô luôn đủ 5 ký tự (maxLength) → bôi đen sẵn để gõ là thay giờ mới.
+        // Hoãn 1 nhịp: cú nhả chuột sau focus sẽ đặt lại con trỏ, xoá mất vùng chọn.
+        onFocus={(e) => {
+          const el = e.currentTarget
+          setTimeout(() => el.setSelectionRange(0, el.value.length), 0)
+          onFocus?.(e)
+        }}
         placeholder="HH:mm (ví dụ: 1700 → 17:00)"
         className={className}
         maxLength={5}
