@@ -43,9 +43,10 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
     }
   }, [payload, onReady, onError])
 
-  const fee = noticeFeePerSession(notice.presentDates)
+  const isMonthly = notice.billingMode === "monthly"
+  const fee = isMonthly ? null : noticeFeePerSession(notice.presentDates)
   const dates = notice.presentDates
-    .map((d) => (fee === null ? `${ddmm(d.date)} (${formatCurrency(d.fee)})` : ddmm(d.date)))
+    .map((d) => (!isMonthly && fee === null ? `${ddmm(d.date)} (${formatCurrency(d.fee)})` : ddmm(d.date)))
     .join(", ")
 
   const row = (label: string, value: string, className?: string) => (
@@ -78,13 +79,32 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
       </div>
 
       <div className="space-y-1">
-        {row(t("notice_present_sessions"), String(notice.presentSessions))}
-        {fee !== null && row(t("notice_fee_per_session"), formatCurrency(fee))}
-        {dates && (
-          <p>
-            <span className="text-slate-500">{t("notice_dates")}: </span>
-            {dates}
-          </p>
+        {isMonthly ? (
+          <>
+            <p>
+              {t("monthly_fee_line")
+                .replace("{amount}", formatCurrency(notice.monthlyFee))
+                .replace("{p}", String(notice.presentSessions))
+                .replace("{n}", String(notice.totalSessions))}
+            </p>
+            {dates && (
+              <p>
+                <span className="text-slate-500">{t("notice_dates")}: </span>
+                {dates}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            {row(t("notice_present_sessions"), String(notice.presentSessions))}
+            {fee !== null && row(t("notice_fee_per_session"), formatCurrency(fee))}
+            {dates && (
+              <p>
+                <span className="text-slate-500">{t("notice_dates")}: </span>
+                {dates}
+              </p>
+            )}
+          </>
         )}
       </div>
 

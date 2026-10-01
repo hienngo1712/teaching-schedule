@@ -124,7 +124,10 @@ export interface TuitionNoticeDTO {
   grade: number
   year: number
   month: number
+  totalSessions: number
   presentSessions: number
+  billingMode: BillingMode
+  monthlyFee: number
   currentMonthFee: number
   previousBalance: number
   totalAmountDue: number
