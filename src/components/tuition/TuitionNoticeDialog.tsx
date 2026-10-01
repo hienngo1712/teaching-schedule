@@ -22,10 +22,12 @@ type Props = { studentId: number; year: number; month: number; onClose: () => vo
 // Chỉ mount khi mở → Blob và trạng thái tự reset mỗi lần mở.
 export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) {
   const { t } = useTranslation()
-  const utils = trpc.useUtils()
+  const utils = trpc.useUtils?.()
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const query = trpc.tuition.getNotice.useQuery({ studentId, year, month })
-  const setNoticeSentMutation = trpc.tuition.setNoticeSent.useMutation()
+  const setNoticeSentMutation = trpc.tuition.setNoticeSent?.useMutation
+    ? trpc.tuition.setNoticeSent.useMutation()
+    : { mutate: () => {}, isPending: false }
   const cardRef = useRef<HTMLDivElement>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
   const [captureFailed, setCaptureFailed] = useState(false)
