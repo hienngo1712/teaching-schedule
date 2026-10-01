@@ -157,7 +157,8 @@ export function StudentPicker({ value, onChange, knownStudents = [] }: Props) {
             </Label>
           </div>
         )}
-        <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
+        {/* relative: input ẩn (absolute) của Checkbox Radix bị cắt trong khung cuộn, không kéo dài hộp thoại. */}
+        <div className="relative max-h-48 overflow-y-auto space-y-2 pr-2">
           {isLoading ? (
             <div className="text-center py-4 text-sm text-slate-500">
               {t("loading")}
