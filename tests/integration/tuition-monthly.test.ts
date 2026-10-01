@@ -392,4 +392,18 @@ describe("Học phí trọn tháng & nợ chuyển (spec T)", () => {
       })
     ).rejects.toThrow("Học phí tháng phải lớn hơn 0")
   })
+
+  it("U12 (review): HS trọn tháng 0đ có sẵn vẫn sửa được phần không đụng cách thu; nhập Excel trọn tháng 0đ -> BAD_REQUEST", async () => {
+    const caller = await getAuthedCaller()
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS U12 Legacy", grade: 4, billingMode: "monthly", monthlyFee: 300_000 })
+    // Mô phỏng HS cũ tạo trước khi có kiểm tra 0đ.
+    await db.student.update({ where: { id: st.id }, data: { monthlyFee: 0, isActive: false } })
+    await expect(caller.student.update({ id: st.id, data: { isActive: true } })).resolves.toBeDefined()
+    await expect(caller.student.update({ id: st.id, data: { grade: 5 } })).resolves.toBeDefined()
+
+    await expect(
+      caller.student.importMany({ consent: CONSENT_ACCEPTED, rows: [{ fullName: "HS U12 Import", grade: 3, billingMode: "monthly", monthlyFee: 0 }] })
+    ).rejects.toThrow("Học phí tháng phải lớn hơn 0")
+  })
 })
+

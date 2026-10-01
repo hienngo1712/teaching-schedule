@@ -184,6 +184,8 @@ export function parseImportRows(
     if (billingError) {
       errors.push("billingMode")
     }
+    // Trọn tháng phải có mức tháng > 0 (cùng luật với form/server, spec U U12).
+    if (isMonthly && !feeIsNaN && fee <= 0) errors.push("tuitionFee")
     if (!check.success) {
       for (const c of IMPORT_COLUMNS) {
         if (c.field === "billingMode" && billingError) continue
