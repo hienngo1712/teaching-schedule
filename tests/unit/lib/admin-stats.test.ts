@@ -72,6 +72,11 @@ describe("computeAccountCards (spec K A1–A10)", () => {
     )
     expect(c.active24h).toBe(1)
   })
+
+  it("Active 24h bỏ tài khoản bị khoá (spec U U26)", () => {
+    const c = computeAccountCards([user({ isActive: false, lastActiveAt: at(-0.1) }), user({ lastActiveAt: at(-0.1) })], NOW)
+    expect(c.active24h).toBe(1)
+  })
 })
 
 describe("lastNDays", () => {

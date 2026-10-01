@@ -158,15 +158,15 @@ export function AdminRevenue() {
           {data && (
             <div data-testid="revenue-summary" className="space-y-3">
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div data-testid="revenue-total" className="rounded-lg border border-slate-200 bg-white p-4">
+                <div data-testid="revenue-total" className="min-w-0 rounded-lg border border-slate-200 bg-white p-4">
                   <p className="text-xs text-slate-500">{t("admin_revenue_total")}</p>
-                  <p className="text-xl font-bold text-primary">{money(data.summary.total)}</p>
+                  <p className="break-words text-lg font-bold text-primary md:text-xl">{money(data.summary.total)}</p>
                   <p className="text-xs text-slate-500">{orders(data.summary.total)}</p>
                 </div>
                 {REVENUE_KINDS.map((k) => (
-                  <div key={k} data-testid={`revenue-kind-${k}`} className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div key={k} data-testid={`revenue-kind-${k}`} className="min-w-0 rounded-lg border border-slate-200 bg-white p-4">
                     <p className="text-xs text-slate-500">{t(KIND_KEY[k])}</p>
-                    <p className="text-lg font-semibold text-foreground">{money(data.summary.byKind[k])}</p>
+                    <p className="break-words text-base font-semibold text-foreground md:text-lg">{money(data.summary.byKind[k])}</p>
                     <p className="text-xs text-slate-500">{orders(data.summary.byKind[k])}</p>
                   </div>
                 ))}

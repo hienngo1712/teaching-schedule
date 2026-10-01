@@ -109,3 +109,15 @@ describe("AdminRevenue — số liệu", () => {
     expect(screen.queryByTestId("revenue-chart")).toBeNull()
   })
 })
+
+describe("AdminRevenue — số lớn không tràn thẻ (spec U U25)", () => {
+  it("thẻ có min-w-0, số được phép xuống dòng", () => {
+    h.data = REPORT
+    renderRevenue()
+    for (const id of ["revenue-total", "revenue-kind-new"]) {
+      const card = screen.queryByTestId(id) ?? screen.getAllByTestId(/^revenue-kind-/)[0]
+      expect(card.className).toContain("min-w-0")
+      expect(card.querySelector("p:nth-child(2)")!.className).toContain("break-words")
+    }
+  })
+})

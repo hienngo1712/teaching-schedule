@@ -13,7 +13,7 @@ const dm = (day: string) => `${day.slice(8, 10)}/${day.slice(5, 7)}`
 const dmy = (day: string) => `${dm(day)}/${day.slice(0, 4)}`
 
 export function AccountTrend() {
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   const [days, setDays] = useState<TrendRange>(7)
   const query = trpc.admin.accountTrend.useQuery({ days })
   const data = query.data
@@ -61,7 +61,7 @@ export function AccountTrend() {
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {mini("new", t("admin_trend_new"), String(data.totals.newAccounts))}
-            {mini("avg", t("admin_trend_avg"), data.totals.avgPerDay.toLocaleString("vi-VN"))}
+            {mini("avg", t("admin_trend_avg"), data.totals.avgPerDay.toLocaleString(language === "en" ? "en-US" : "vi-VN"))}
             {mini("returning", t("admin_trend_returning"), String(data.totals.returning))}
             {mini(
               "busiest",

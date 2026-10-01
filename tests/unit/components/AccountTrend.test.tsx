@@ -66,4 +66,15 @@ describe("AccountTrend (spec K T1–T6)", () => {
     expect(screen.getByText("Lượt quay lại được ghi từ 12/11/2026")).toBeTruthy()
     expect(screen.getByText("Hôm nay (chưa hết ngày)")).toBeTruthy()
   })
+
+  it("trung bình/ngày theo ngôn ngữ: tiếng Anh dùng dấu chấm thập phân (spec U U24)", () => {
+    h.data = TREND
+    render(
+      <LanguageProvider forcedLanguage="en">
+        <AccountTrend />
+      </LanguageProvider>
+    )
+    expect(screen.getByTestId("trend-avg").textContent).toContain("0.6")
+    expect(screen.getByTestId("trend-avg").textContent).not.toContain("0,6")
+  })
 })

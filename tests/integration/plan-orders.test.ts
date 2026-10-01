@@ -71,7 +71,8 @@ describe("plan.me", () => {
 describe("plan.createOrder / cancelOrder", () => {
   it("tạo đơn → pending, tiền theo bảng giá, mã 6 ký tự hợp lệ; plan.me có QR nội dung SM <mã>", async () => {
     const c = await getAuthedCaller("teacher_std")
-    const { id, code, bonusMonths } = await c.plan.createOrder({ plan: "plus", period: "year" })
+    const { id, code, bonusMonths, amount } = await c.plan.createOrder({ plan: "plus", period: "year" })
+    expect(amount).toBe(490000) // spec U U27: popup cần số tiền khi tải lại đơn lỗi
     expect(code).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/)
     expect(bonusMonths).toBe(0)
     expect(await db.planOrder.findUniqueOrThrow({ where: { id } })).toMatchObject({

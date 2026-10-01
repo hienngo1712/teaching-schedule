@@ -488,6 +488,7 @@
   "plan_copied": "Copied",
   "plan_order_created": "Transfer code created",
   "plan_order_load_error": "Order created, but the transfer details could not be loaded.",
+  "plan_order_amount": "Amount",
   "plan_price_changed": "Prices just changed and have been updated. Please review before creating the order.",
   "plan_order_cancelled": "Request cancelled",
   "plan_history": "Order history",

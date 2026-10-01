@@ -2,7 +2,6 @@ import type { PrismaClient } from "@prisma/client"
 import { adminUsernames } from "@/lib/admin"
 import { buildAccountTrend, computeAccountCards, lastNDays, type AccountCards, type AccountTrend, type DayCount, type TrendRange } from "@/lib/admin-stats"
 import { getPendingCount } from "./plan-admin.service" // vị trí thật của getPendingCount theo P
-import { countNewAccounts } from "./new-accounts.service"
 
 export type AdminStats = AccountCards & { active7d: number; pendingOrders: number; newAccounts: number; updatedAt: Date }
 
@@ -13,7 +12,7 @@ const vnDayStartIso = (day: string) => new Date(Date.parse(`${day}T00:00:00Z`) -
 export async function getAdminStats(db: PrismaClient, now = new Date()): Promise<AdminStats> {
   const admins = adminUsernames()
   const start7 = lastNDays(now, 7)[0]
-  const [users, active7, pending, newAccounts] = await Promise.all([
+  const [users, active7, pending] = await Promise.all([
     db.user.findMany({
       where: { isDeleted: false },
       select: { username: true, isActive: true, plan: true, planExpiresAt: true, trialEndsAt: true, lastActiveAt: true },
@@ -21,13 +20,12 @@ export async function getAdminStats(db: PrismaClient, now = new Date()): Promise
     db.$queryRaw<{ count: number }[]>`
       SELECT COUNT(DISTINCT a.user_id)::int AS count
       FROM user_activity_days a JOIN users u ON u.id = a.user_id
-      WHERE a.day >= ${start7}::date AND u.is_deleted = false AND NOT (u.username = ANY(${admins}::text[]))`,
-    // Cùng hàm với badge số đơn chờ ở sidebar/tab bar (spec K A9).
+      WHERE a.day >= ${start7}::date AND u.is_deleted = false AND u.is_active = true AND NOT (u.username = ANY(${admins}::text[]))`,
+    // Cùng hàm với badge số đơn chờ ở sidebar/tab bar (spec K A9); đã gồm số tài khoản mới.
     getPendingCount(db),
-    countNewAccounts(db),
   ])
   const cards = computeAccountCards(users.filter((u) => !admins.includes(u.username)), now)
-  return { ...cards, active7d: active7[0]?.count ?? 0, pendingOrders: pending.count, newAccounts, updatedAt: now }
+  return { ...cards, active7d: active7[0]?.count ?? 0, pendingOrders: pending.count, newAccounts: pending.newAccounts, updatedAt: now }
 }
 
 export async function getAccountTrend(db: PrismaClient, days: TrendRange, now = new Date()): Promise<AccountTrend> {

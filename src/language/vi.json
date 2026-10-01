@@ -488,6 +488,7 @@
   "plan_copied": "Đã sao chép",
   "plan_order_created": "Đã tạo mã chuyển khoản",
   "plan_order_load_error": "Đã tạo đơn nhưng chưa tải được thông tin chuyển khoản.",
+  "plan_order_amount": "Số tiền",
   "plan_price_changed": "Giá gói vừa thay đổi, đã cập nhật giá mới. Vui lòng xem lại trước khi tạo đơn.",
   "plan_order_cancelled": "Đã hủy yêu cầu",
   "plan_history": "Lịch sử đơn",
