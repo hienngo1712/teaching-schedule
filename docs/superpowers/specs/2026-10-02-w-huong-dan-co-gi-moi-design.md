@@ -41,7 +41,7 @@
 - Trang công khai, bố cục như `/privacy` (không sidebar): tiêu đề, mục lục (link anchor), các mục, chân trang link `/privacy` + `/login`.
 - Thêm `guide` vào danh sách loại trừ của `src/middleware.ts` matcher.
 - **Tải PDF** = nút gọi `window.print()`. CSS `@media print`: ẩn nút, mục lục, chân trang; mỗi mục không bị cắt giữa (`break-inside: avoid` cho bước); chữ đen nền trắng. Không thư viện PDF.
-- Mở từ app: mục **"Hướng dẫn sử dụng"** trong menu avatar (`AppHeader`) và trong tab "Thêm" mobile (`MORE_ITEMS`), **mở tab mới**. Trang Đăng nhập thêm link "Hướng dẫn" cạnh "Chính sách bảo mật".
+- Mở từ app: mục **"Hướng dẫn sử dụng"** trong menu avatar (`AppHeader`, có cả trên mobile), **mở tab mới**. (Điều chỉnh khi viết plan: không thêm vào tab "Thêm" mobile vì danh sách đó toàn link cùng tab; menu avatar đã có trên mobile.) Trang Đăng nhập thêm link "Hướng dẫn" cạnh "Chính sách bảo mật".
 - `page.tsx` không đọc `params/searchParams` (luật `next15-contract.test.ts`).
 
 ## 4. W2 — Thẻ "Bắt đầu" trên Tổng quan
@@ -49,11 +49,13 @@
 ### 4.1 5 bước, tự tick theo dữ liệu thật (chỉ đếm bản ghi chưa xoá mềm)
 | # | Bước | Xong khi | Nút |
 |---|---|---|---|
-| 1 | Thêm môn học | có ≥ 1 `Subject` | → `/subjects` |
-| 2 | Thêm học sinh | có ≥ 1 `Student` | → `/students` |
-| 3 | Tạo ca dạy | có ≥ 1 `TeachingSession` | → `/calendar` |
-| 4 | Điểm danh 1 ca | có ≥ 1 `SessionStudent.attendance ≠ "pending"` (ca chưa xoá) | → `/calendar` |
-| 5 | Thu học phí | có ≥ 1 `Payment` | → `/tuition` |
+| 1 | Thêm học sinh | có ≥ 1 `Student` | → `/students` |
+| 2 | Tạo ca dạy | có ≥ 1 `TeachingSession` | → `/calendar` |
+| 3 | Điểm danh 1 ca | có ≥ 1 `SessionStudent.attendance ≠ "pending"` (ca chưa xoá) | → `/calendar` |
+| 4 | Thu học phí | có ≥ 1 `Payment` của HS mình | → `/tuition` |
+| 5 | Cài tài khoản nhận học phí | `users.bankAccountNumber` có giá trị (đọc rồi kiểm ở JS, không lọc DB theo trường mã hoá) | → `/settings` |
+
+- **Điều chỉnh khi viết plan (2026-10-02):** bản đầu có bước "Thêm môn học", nhưng đăng ký đã tự tạo 5 môn mặc định (`seedSubjectsForUser`) nên bước này luôn xong ngay. Thay bằng "Cài tài khoản nhận học phí" (cần cho phiếu báo QR). Bước "Tạo ca" ghi chú "App đã tạo sẵn vài môn, sửa ở Môn học". Hệ quả: tài khoản cũ chưa cài ngân hàng sẽ thấy thẻ (4/5), bấm Ẩn được.
 
 - Mỗi dòng có link "Xem hướng dẫn" → `/guide#<id>` tab mới.
 - Thanh tiến độ "2/5".
@@ -66,7 +68,7 @@
 - Vị trí: đầu `/dashboard`, trên `DashboardAlerts`.
 
 ### 4.3 API
-- `onboarding.status` (query, `protectedProcedure`): `{ dismissed: boolean, steps: { subject, student, session, attendance, payment: boolean } }`. Mỗi bước 1 truy vấn `findFirst({ select: { id: true } })` của user, chạy song song.
+- `onboarding.status` (query, `protectedProcedure`): `{ dismissed: boolean, steps: { student, session, attendance, payment, bank: boolean } }`. Mỗi bước 1 truy vấn `findFirst({ select: { id: true } })` của user, chạy song song.
 - `onboarding.dismiss` (mutation).
 
 ## 5. W3 — "Có gì mới"
@@ -101,7 +103,7 @@
 - Đóng ô (X, bấm ngoài, Esc) → `release.markSeen({ version: <bản notify mới nhất> })` → ghi cột; chấm báo tắt. Server chỉ ghi khi version gửi lên có trong `RELEASES` và lớn hơn giá trị đang có.
 - Mutation lỗi → lần sau ô mở lại; không báo lỗi cho người dùng.
 - **Đăng ký mới**: `registerUser` ghi `lastSeenRelease = RELEASES[0].version` → không tự mở; họ thấy thẻ Bắt đầu.
-- **Không chồng popup**: không tự mở khi đang có hộp `mustChangePassword` hoặc trang `/change-password`.
+- **Không chồng popup**: tài khoản `mustChangePassword` đã bị layout `(app)` chuyển sang `/change-password` (ngoài layout có thanh đầu trang) nên ô không thể mở ở đó; không cần xử lý thêm.
 - Admin: không có nút, không tự mở.
 - Dữ liệu trạng thái: `release.status` (query) trả `{ lastSeenRelease: string | null }`; danh sách bản đọc thẳng từ `releases.ts` ở client.
 
