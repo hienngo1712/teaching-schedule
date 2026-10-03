@@ -88,9 +88,26 @@ export function encryptWriteArgs<T>(args: T): T {
   return out as T
 }
 
+const warnedPlaintext = new Set<string>()
+
+// Chỉ để test đặt lại trạng thái.
+export function resetPlaintextWarnings(): void {
+  warnedPlaintext.clear()
+}
+
+// Sau O2 mọi trường phải là ciphertext; bản rõ còn sót = có đường ghi vòng qua extension.
+function warnPlaintext(key: string): void {
+  if (warnedPlaintext.has(key)) return
+  warnedPlaintext.add(key)
+  console.warn(`[crypto] còn bản rõ ở trường ${key}`)
+}
+
 export function decryptResult<T>(node: T, key?: string): T {
   if (typeof node === "string") {
-    return (key && ENCRYPTED_KEYS.has(key) && isEncrypted(node) ? decryptField(node, key) : node) as T
+    if (!key || !ENCRYPTED_KEYS.has(key)) return node
+    if (isEncrypted(node)) return decryptField(node, key) as T
+    if (node !== "") warnPlaintext(key)
+    return node
   }
   if (Array.isArray(node)) return node.map((x) => decryptResult(x, key)) as T
   if (!isPlainObject(node)) return node

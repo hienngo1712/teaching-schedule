@@ -11,7 +11,7 @@ type Props = {
 }
 
 // Mặc định không tick; nơi dùng reset về false mỗi lần mở form (spec O Q12).
-// Không đặt link sang /privacy ở đây: người dùng không bị kéo rời form (bổ sung H2); link nằm ở /login.
+// Không đặt link trong ô đồng ý; trang Đăng ký có link "Đọc đầy đủ" mở tab mới ở khung tóm tắt (spec X).
 export function ConsentCheckbox({ id, label, checked, onCheckedChange, disabled }: Props) {
   return (
     <div className="flex min-h-11 items-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">

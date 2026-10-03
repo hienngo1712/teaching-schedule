@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { CONSENT_TEXT_VERSION } from "@/lib/consent"
 import { PRIVACY_CONTACT } from "@/lib/privacy"
+import { PrivacySummary } from "@/components/privacy/PrivacySummary"
 
 const SECTIONS = [
   ["privacy_collect_title", "privacy_collect_body"],
@@ -18,6 +19,7 @@ export function PrivacyContent() {
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-8 text-slate-700">
       <h1 className="text-2xl font-semibold text-slate-900">{t("privacy_title")}</h1>
+      <PrivacySummary />
       {SECTIONS.map(([title, body]) => (
         <section key={title} className="space-y-2">
           <h2 className="text-lg font-semibold text-slate-900">{t(title)}</h2>

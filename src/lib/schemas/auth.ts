@@ -33,6 +33,15 @@ export const registerSchema = z.object({
 
 export const registerInputSchema = registerSchema.extend({ consent: consentPayload })
 
+// Chỉ dùng ở form: ô nhập lại kiểm ở client, payload gửi server vẫn là registerSchema (spec X §4).
+export function registerFormSchema(mismatchMessage: string) {
+  return registerSchema
+    .extend({ confirmPassword: z.string().min(1, mismatchMessage) })
+    .refine((v) => v.password === v.confirmPassword, { message: mismatchMessage, path: ["confirmPassword"] })
+}
+
+export type RegisterFormValues = z.infer<ReturnType<typeof registerFormSchema>>
+
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
 export type RegisterInput = z.infer<typeof registerSchema>
 export type RegisterInputSchema = z.infer<typeof registerInputSchema>

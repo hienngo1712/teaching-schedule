@@ -272,3 +272,33 @@ API routes/tRPC: max 10s execution time
 → Đủ cho queries đơn giản của app này
 → Nếu bulkCreate chậm: chia batch nhỏ (max 50 sessions/lần)
 ```
+
+---
+
+## Khoá mã hoá dữ liệu cá nhân (spec O)
+
+**Biến env** (Vercel → Production, kiểu Sensitive; không đặt ở Preview, không đặt trong `.env`):
+- `DATA_ENCRYPTION_KEYS="k1:<base64 32 byte>[,k2:<base64 32 byte>]"`
+- `DATA_ENCRYPTION_ACTIVE_KID="k1"` (khoá dùng để ghi; đọc theo `kid` trong từng giá trị)
+
+**Sinh khoá:** `node -e "console.log('k1:' + require('crypto').randomBytes(32).toString('base64'))"`.
+**Lưu dự phòng ở 2 nơi khác nhau trước khi dán vào Vercel. Mất khoá = mất toàn bộ dữ liệu đã mã hoá.** Không gửi khoá qua chat, không chụp màn hình.
+
+**Xoay khoá** (nghi lộ khoá, hoặc 1–2 năm/lần):
+1. Sinh `k2`, lưu dự phòng như trên.
+2. Vercel: `DATA_ENCRYPTION_KEYS=k1:<cũ>,k2:<mới>`, `DATA_ENCRYPTION_ACTIVE_KID=k2` → redeploy.
+3. Tạo Neon backup branch → chạy `--rotate` → `--verify` (mã thoát 0).
+4. Bỏ `k1` khỏi env, redeploy. Giữ bản dự phòng `k1` tới khi mọi Neon branch chứa dữ liệu mã hoá bằng `k1` đã xoá.
+
+**Script `scripts/crypto-backfill.ts`** (người dùng tự chạy ở terminal của mình, truyền env trong lệnh, script không đọc `.env`):
+```
+DATABASE_URL=... DATA_ENCRYPTION_KEYS=... DATA_ENCRYPTION_ACTIVE_KID=... [CONFIRM_HOST=<host DB>] \
+  pnpm exec tsx scripts/crypto-backfill.ts [--dry-run|--apply|--verify|--decrypt|--rotate] [--batch 200]
+```
+- Mặc định `--dry-run` (chỉ đếm). `--apply` mã hoá bản rõ; `--verify` kiểm không còn bản rõ + giải mã được hết; `--decrypt` trả về bản rõ (rollback); `--rotate` mã hoá lại bằng khoá active.
+- `--apply` / `--decrypt` / `--rotate` cần `CONFIRM_HOST` đúng bằng host trong `DATABASE_URL`.
+- Mã thoát: `0` ổn, `1` cấu hình / xác nhận sai, `2` verify thấy bản rõ hoặc lỗi giải mã.
+
+**Theo dõi:** Vercel log có `[crypto] còn bản rõ ở trường <tên>` = có đường ghi vòng qua extension → tìm và sửa, rồi chạy `--apply` lại. `FieldDecryptError` = thiếu/sai khoá.
+
+**Neon branch chứa bản rõ:** branch backup tạo trước O2 còn dữ liệu chưa mã hoá → xoá sau khi O3 chạy ổn (người dùng tự xoá).

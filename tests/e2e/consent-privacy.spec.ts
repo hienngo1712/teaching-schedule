@@ -13,6 +13,7 @@ test.describe('Spec O: đồng ý chia sẻ dữ liệu, chính sách, cảnh b�
     await page.goto('/privacy');
     await expect(page).toHaveURL(/\/privacy$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Chính sách bảo mật' })).toBeVisible();
+    await expect(page.getByText('Trước khi đăng ký, bạn nên biết')).toBeVisible();
     await expect(page.getByRole('heading', { level: 2 })).toHaveCount(5);
   });
 
@@ -20,6 +21,11 @@ test.describe('Spec O: đồng ý chia sẻ dữ liệu, chính sách, cảnh b�
     await page.goto('/login');
     await expect(page.getByRole('link', { name: 'Chính sách bảo mật' })).toHaveAttribute('href', '/privacy');
     await page.goto('/register');
+    await expect(page.getByText('Trước khi đăng ký, bạn nên biết')).toBeVisible();
+    const full = page.getByRole('link', { name: /Đọc đầy đủ chính sách/ });
+    await expect(full).toHaveAttribute('href', '/privacy');
+    await expect(full).toHaveAttribute('target', '_blank');
+    await expect(page.locator('input[name="confirmPassword"]')).toBeVisible();
     await expect(page.getByText('Không nên dùng số điện thoại làm tên đăng nhập.')).toBeVisible();
     await expect(page.getByRole('button', { name: /Đăng ký/ })).toBeDisabled();
     await page.locator('#register-consent').click();
