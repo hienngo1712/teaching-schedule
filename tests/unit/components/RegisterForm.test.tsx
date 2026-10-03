@@ -51,9 +51,12 @@ describe("RegisterForm: ô đồng ý và chính sách bảo mật (spec O 6.6, 
     // Gợi ý tên đăng nhập
     expect(screen.getByText(viText.register_username_hint)).toBeTruthy()
 
-    // Link tới /privacy
-    const privacyLink = screen.getByRole("link", { name: viText.privacy_title })
+    // Khung tóm tắt + link đọc đầy đủ mở tab mới (spec X §3.1); không còn link chữ nhỏ ở chân form.
+    expect(screen.getByText(viText.privacy_summary_title)).toBeTruthy()
+    const privacyLink = screen.getByRole("link", { name: new RegExp(viText.privacy_read_full) })
     expect(privacyLink.getAttribute("href")).toBe("/privacy")
+    expect(privacyLink.getAttribute("target")).toBe("_blank")
+    expect(screen.queryByRole("link", { name: viText.privacy_title })).toBeNull()
 
     // Nút đăng ký bị disabled khi chưa tick ô đồng ý
     const submitBtn = screen.getByRole("button", { name: viText.register })

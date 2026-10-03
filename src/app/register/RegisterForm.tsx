@@ -10,6 +10,7 @@ import { trpc } from "@/lib/trpc"
 import { registerSchema, type RegisterInput } from "@/lib/schemas/auth"
 import { CONSENT_ACCEPTED, isConsentError } from "@/lib/consent"
 import { ConsentCheckbox } from "@/components/common/ConsentCheckbox"
+import { PrivacySummary } from "@/components/privacy/PrivacySummary"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -103,6 +104,8 @@ export function RegisterForm() {
           )}
         />
 
+        <PrivacySummary showFullLink />
+
         <ConsentCheckbox
           id="register-consent"
           label={t("consent_register")}
@@ -119,12 +122,6 @@ export function RegisterForm() {
           <span className="text-slate-500">{t("already_have_account")} </span>
           <Link href="/login" className="text-primary hover:underline font-medium">
             {t("login_now")}
-          </Link>
-        </div>
-
-        <div className="text-center">
-          <Link href="/privacy" className="mt-2 inline-flex min-h-11 items-center text-xs text-slate-500 hover:underline">
-            {t("privacy_title")}
           </Link>
         </div>
       </form>
