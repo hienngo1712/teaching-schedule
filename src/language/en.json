@@ -129,6 +129,8 @@
   "login_to_continue": "Login to continue",
   "register_new_account": "Register a new account",
   "register_success": "Registration successful! Please login.",
+  "register_confirm_password": "Confirm password",
+  "register_password_mismatch": "Passwords do not match",
   "fullname_optional": "Full name (optional)",
   "register": "Register",
   "already_have_account": "Already have an account?",

@@ -129,6 +129,8 @@
   "login_to_continue": "Đăng nhập để tiếp tục",
   "register_new_account": "Đăng ký tài khoản mới",
   "register_success": "Đăng ký thành công! Vui lòng đăng nhập.",
+  "register_confirm_password": "Nhập lại mật khẩu",
+  "register_password_mismatch": "Mật khẩu nhập lại không khớp",
   "fullname_optional": "Họ và tên (không bắt buộc)",
   "register": "Đăng ký",
   "already_have_account": "Đã có tài khoản?",

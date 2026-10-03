@@ -25,6 +25,7 @@ test.describe('Spec O: đồng ý chia sẻ dữ liệu, chính sách, cảnh b�
     const full = page.getByRole('link', { name: /Đọc đầy đủ chính sách/ });
     await expect(full).toHaveAttribute('href', '/privacy');
     await expect(full).toHaveAttribute('target', '_blank');
+    await expect(page.locator('input[name="confirmPassword"]')).toBeVisible();
     await expect(page.getByText('Không nên dùng số điện thoại làm tên đăng nhập.')).toBeVisible();
     await expect(page.getByRole('button', { name: /Đăng ký/ })).toBeDisabled();
     await page.locator('#register-consent').click();

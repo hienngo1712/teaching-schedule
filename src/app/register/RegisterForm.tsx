@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc"
-import { registerSchema, type RegisterInput } from "@/lib/schemas/auth"
+import { registerFormSchema, type RegisterFormValues } from "@/lib/schemas/auth"
 import { CONSENT_ACCEPTED, isConsentError } from "@/lib/consent"
 import { ConsentCheckbox } from "@/components/common/ConsentCheckbox"
 import { PrivacySummary } from "@/components/privacy/PrivacySummary"
@@ -29,14 +29,22 @@ export function RegisterForm() {
   const { t } = useTranslation()
   const [consent, setConsent] = useState(false)
 
-  const form = useForm<RegisterInput>({
-    resolver: zodResolver(registerSchema),
+  const schema = useMemo(() => registerFormSchema(t("register_password_mismatch")), [t])
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(schema),
     defaultValues: {
       username: "",
       password: "",
       fullName: "",
+      confirmPassword: "",
     },
   })
+
+  // Resolver chỉ cập nhật lỗi của ô vừa sửa → đổi Mật khẩu phải tự kiểm lại ô Nhập lại.
+  const password = form.watch("password")
+  useEffect(() => {
+    if (form.getValues("confirmPassword")) void form.trigger("confirmPassword")
+  }, [password, form])
 
   const mutation = trpc.auth.register.useMutation({
     onSuccess: () => {
@@ -49,8 +57,10 @@ export function RegisterForm() {
     },
   })
 
-  function onSubmit(values: RegisterInput) {
+  function onSubmit(data: RegisterFormValues) {
     if (!consent) return
+    const { confirmPassword, ...values } = data
+    void confirmPassword
     mutation.mutate({ ...values, consent: CONSENT_ACCEPTED })
   }
 
@@ -92,6 +102,24 @@ export function RegisterForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>{t("password")}</FormLabel>
+              <FormControl>
+                <PasswordInput
+                  placeholder="••••••••••"
+                  {...field}
+                  disabled={mutation.isPending}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("register_confirm_password")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   placeholder="••••••••••"

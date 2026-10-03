@@ -65,6 +65,7 @@ describe("RegisterForm: ô đồng ý và chính sách bảo mật (spec O 6.6, 
     // Điền form
     fireEvent.change(screen.getByLabelText(viText.username), { target: { value: "giaovien_test" } })
     fireEvent.change(screen.getByLabelText(viText.password), { target: { value: "MatKhau123456" } })
+    fireEvent.change(screen.getByLabelText(viText.register_confirm_password), { target: { value: "MatKhau123456" } })
 
     // Tick ô đồng ý
     const checkbox = screen.getByRole("checkbox", { name: viText.consent_register })
@@ -82,5 +83,40 @@ describe("RegisterForm: ô đồng ý và chính sách bảo mật (spec O 6.6, 
         consent: CONSENT_ACCEPTED,
       })
     )
+    expect(registerMutate.mock.calls[0][0]).not.toHaveProperty("confirmPassword")
+  })
+})
+
+describe("RegisterForm: nhập lại mật khẩu (spec X §4)", () => {
+  beforeEach(() => registerMutate.mockReset())
+
+  function fill(pw: string, confirm: string) {
+    fireEvent.change(screen.getByLabelText(viText.username), { target: { value: "giaovien_test" } })
+    fireEvent.change(screen.getByLabelText(viText.password), { target: { value: pw } })
+    fireEvent.change(screen.getByLabelText(viText.register_confirm_password), { target: { value: confirm } })
+    fireEvent.click(screen.getByRole("checkbox", { name: viText.consent_register }))
+  }
+
+  it("không khớp → hiện lỗi dưới ô xác nhận, không gọi đăng ký", async () => {
+    render(<LanguageProvider><RegisterForm /></LanguageProvider>)
+    fill("MatKhau123456", "MatKhau654321")
+    fireEvent.click(screen.getByRole("button", { name: viText.register }))
+    expect(await screen.findByText(viText.register_password_mismatch)).toBeTruthy()
+    expect(registerMutate).not.toHaveBeenCalled()
+  })
+
+  it("sửa ô Mật khẩu cho khớp → lỗi biến mất, gửi được", async () => {
+    render(<LanguageProvider><RegisterForm /></LanguageProvider>)
+    fill("MatKhau123456", "MatKhau654321")
+    fireEvent.click(screen.getByRole("button", { name: viText.register }))
+    await screen.findByText(viText.register_password_mismatch)
+    fireEvent.change(screen.getByLabelText(viText.password), { target: { value: "MatKhau654321" } })
+    await waitFor(() => expect(screen.queryByText(viText.register_password_mismatch)).toBeNull())
+    fireEvent.click(screen.getByRole("button", { name: viText.register }))
+    await waitFor(() => expect(registerMutate).toHaveBeenCalledTimes(1))
+    expect(registerMutate.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ password: "MatKhau654321", consent: CONSENT_ACCEPTED })
+    )
+    expect(registerMutate.mock.calls[0][0]).not.toHaveProperty("confirmPassword")
   })
 })
