@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest"
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest"
 import { randomBytes } from "node:crypto"
 import { Prisma } from "@prisma/client"
 import {
@@ -8,8 +8,9 @@ import {
   assertNoEncryptedFilter,
   decryptResult,
   encryptWriteArgs,
+  resetPlaintextWarnings,
 } from "@/server/crypto/prisma-encryption"
-import { FieldCryptoConfigError, decryptField, isEncrypted } from "@/server/crypto/field-crypto"
+import { FieldCryptoConfigError, decryptField, encryptField, isEncrypted } from "@/server/crypto/field-crypto"
 
 const ORIGINAL = { keys: process.env.DATA_ENCRYPTION_KEYS, active: process.env.DATA_ENCRYPTION_ACTIVE_KID }
 beforeEach(() => {
@@ -115,5 +116,38 @@ describe("ENCRYPTED_FIELDS khớp schema (DMMF)", () => {
       expect(m, model).toBeDefined()
       for (const f of fields) expect(m!.fields.some((x) => x.name === f), `${model}.${f}`).toBe(true)
     }
+  })
+})
+
+describe("O3: cảnh báo bản rõ còn sót (spec X §2)", () => {
+  it("cảnh báo đúng 1 lần mỗi tên trường, không in giá trị; rỗng/null không cảnh báo", () => {
+    resetPlaintextWarnings()
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    decryptResult({ fullName: "Bí Mật A", notes: "", note: null })
+    decryptResult([{ fullName: "Bí Mật B" }])
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0][0])).toBe("[crypto] còn bản rõ ở trường fullName")
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("Bí Mật")
+    warn.mockRestore()
+  })
+
+  it("trường không mã hoá và bản đã mã hoá không cảnh báo; vẫn giải mã đúng", () => {
+    resetPlaintextWarnings()
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const out = decryptResult({ username: "gv1", title: "Ca 1", parentPhone: encryptField("0901", "parentPhone") })
+    expect(out.parentPhone).toBe("0901")
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it("mỗi trường cảnh báo riêng", () => {
+    resetPlaintextWarnings()
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    decryptResult({ fullName: "A", parentName: "B" })
+    expect(warn.mock.calls.map((c) => c[0])).toEqual([
+      "[crypto] còn bản rõ ở trường fullName",
+      "[crypto] còn bản rõ ở trường parentName",
+    ])
+    warn.mockRestore()
   })
 })
