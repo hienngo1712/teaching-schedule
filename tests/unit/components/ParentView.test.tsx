@@ -92,4 +92,25 @@ describe("ParentView - layout 2 cột desktop (spec Y Task 7)", () => {
     const card = screen.getByTestId("notice-card")
     expect(card.className).toContain("w-full")
   })
+
+  it("điện thoại giữ như cũ: 3 ô tóm tắt chỉ hiện từ lg, dòng 'Có mặt n/total buổi' hiện dưới lg", () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <ParentView view={baseView} />
+      </LanguageProvider>
+    )
+
+    const statsGrid = screen.getAllByTestId("parent-stat")[0].parentElement!
+    expect(statsGrid.className).toContain("hidden")
+    expect(statsGrid.className).toContain("lg:grid")
+    const summary = screen.getByText("Có mặt 2/3 buổi")
+    expect(summary.className).toContain("lg:hidden")
+  })
 })

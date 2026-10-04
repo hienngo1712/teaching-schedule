@@ -76,7 +76,15 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
             <section className="rounded-lg border border-slate-200 bg-white p-4">
               <h2 className="font-semibold text-slate-900">{`${t("parent_attendance")} ${view.month}`}</h2>
 
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              {/* Điện thoại giữ dòng tóm tắt cũ (spec Y §4.5); 3 ô chỉ cho máy tính. */}
+              {view.attendance.length > 0 && (
+                <p className="mt-1 text-sm text-slate-600 lg:hidden">
+                  {t("parent_present_summary")
+                    .replace("{n}", String(presentCount))
+                    .replace("{total}", String(totalCount))}
+                </p>
+              )}
+              <div className="mt-3 hidden grid-cols-3 gap-2 lg:grid">
                 <div data-testid="parent-stat" className="rounded-md bg-slate-50 p-2.5 text-center">
                   <p className="text-xs text-slate-500">{t("parent_stat_present")}</p>
                   <p className="mt-1 text-lg font-bold text-emerald-700">{presentCount}</p>

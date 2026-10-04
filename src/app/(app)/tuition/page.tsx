@@ -323,7 +323,7 @@ export default function TuitionPage() {
             <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-3">
               <div>
                 <div className="text-xs text-slate-500">{t("amount_to_pay")}</div>
-                <TuitionAmountCell item={item} month={month} className="items-start" />
+                <TuitionAmountCell item={item} month={month} className="items-start" amountClassName="text-[17px]" />
               </div>
               <div className="flex gap-2">
                 {noticeButton(item, "size-11")}

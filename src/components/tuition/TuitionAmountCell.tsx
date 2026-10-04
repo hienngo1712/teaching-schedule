@@ -5,7 +5,7 @@ import { dueNow, getRowStatus, isProvisional, type DisplayRow } from "@/lib/tuit
 
 type Item = DisplayRow & { debtMonths: number }
 
-export function TuitionAmountCell({ item, month, className }: { item: Item; month: number; className?: string }) {
+export function TuitionAmountCell({ item, month, className, amountClassName }: { item: Item; month: number; className?: string; amountClassName?: string }) {
   const { t } = useTranslation()
   const due = dueNow(item)
   const prevM = month === 1 ? 12 : month - 1
@@ -25,7 +25,7 @@ export function TuitionAmountCell({ item, month, className }: { item: Item; mont
   const status = getRowStatus(item)
   return (
     <div className={cn("flex flex-col items-end gap-0.5", className)}>
-      <span className={cn("whitespace-nowrap font-semibold tabular-nums", status === "unpaid" ? "text-debt" : due === 0 ? "text-muted-foreground" : "text-foreground")}>
+      <span className={cn("whitespace-nowrap font-semibold tabular-nums", status === "unpaid" ? "text-debt" : due === 0 ? "text-muted-foreground" : "text-foreground", amountClassName)}>
         {formatCurrency(due)}
       </span>
       {parts.length > 0 && <span className="text-xs text-slate-500 tabular-nums">{parts.join(" · ")}</span>}

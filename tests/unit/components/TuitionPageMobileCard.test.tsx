@@ -144,3 +144,32 @@ describe("TuitionPage - nút Đã đóng đủ thẻ mobile", () => {
     expect(payBtn).toBeUndefined()
   })
 })
+
+describe("TuitionPage - số tiền to trên thẻ mobile (spec Y §4.1)", () => {
+  afterEach(() => {
+    getMonthlyStatusQuery.data = { items: [item], totalCount: 1, totalPages: 1 }
+  })
+
+  function cardAmount(text: string) {
+    return screen.getAllByText(text).find((el) => el.tagName === "SPAN" && el.closest('[role="button"]'))!
+  }
+
+  it("chưa đóng → số cần đóng đỏ nợ, 17px", () => {
+    renderPage()
+    const amount = cardAmount("400.000 đ")
+    expect(amount.className).toContain("text-debt")
+    expect(amount.className).toContain("text-[17px]")
+  })
+
+  it("đóng một phần → chữ chính", () => {
+    getMonthlyStatusQuery.data = { items: [{ ...item, paidAmount: 100000 }], totalCount: 1, totalPages: 1 }
+    renderPage()
+    expect(cardAmount("300.000 đ").className).toContain("text-foreground")
+  })
+
+  it("đã đóng đủ → 0 đ chữ phụ", () => {
+    getMonthlyStatusQuery.data = { items: [{ ...item, paidAmount: 400000 }], totalCount: 1, totalPages: 1 }
+    renderPage()
+    expect(cardAmount("0 đ").className).toContain("text-muted-foreground")
+  })
+})
