@@ -34,7 +34,7 @@ export const paymentCreateSchema = z.object({
   ...monthKey,
   amount: amountSchema,
   paidAt: paidAtSchema,
-  method: z.enum(PAYMENT_METHODS),
+  method: z.enum(PAYMENT_METHODS).default("cash"),
   note: noteSchema,
 })
 
@@ -50,6 +50,13 @@ export const paymentUpdateSchema = z.object({
 
 export const paymentListSchema = z.object(monthKey)
 export const paymentDeleteSchema = z.object({ id: z.number().int().positive() })
+
+export const paymentRecordSchema = z.object({ ...monthKey, amount: amountSchema, paidAt: paidAtSchema.optional(), note: noteSchema })
+const batchIdSchema = z.string().min(1).max(60)
+export const paymentBatchSchema = z.object({ batchId: batchIdSchema })
+export const paymentUpdateBatchSchema = z.object({ batchId: batchIdSchema, amount: amountSchema, paidAt: paidAtSchema, note: noteSchema })
+export type PaymentRecordInput = z.infer<typeof paymentRecordSchema>
+export type PaymentUpdateBatchInput = z.infer<typeof paymentUpdateBatchSchema>
 
 export type PaymentCreateInput = z.infer<typeof paymentCreateSchema>
 export type PaymentUpdateInput = z.infer<typeof paymentUpdateSchema>

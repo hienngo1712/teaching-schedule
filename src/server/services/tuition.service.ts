@@ -8,6 +8,7 @@ import type { TuitionStatusDTO, NoticeStatus } from "@/lib/types/models"
 import { byGradeThenName, nameMatches } from "@/lib/name-search"
 import { monthFee, monthKey, resolveBilling, type Billing, type BillingChange } from "@/lib/billing"
 import { loadBillingChanges } from "./billing.service"
+import type { MonthLedger } from "@/lib/payment-allocation"
 
 type AttendanceRecord = SessionStudent & { session: { sessionDate: Date } }
 
@@ -116,6 +117,48 @@ export async function computeClosingBalances(
     result.set(studentId, closing)
   }
   return result
+}
+
+// Sổ từng tháng của 1 HS tới hết tháng đích (gồm cả tháng đích) cho chia tiền FIFO; cùng nguồn với computeClosingBalances.
+export async function loadMonthLedgers(
+  db: PrismaClient | Prisma.TransactionClient,
+  userId: number,
+  studentId: number,
+  year: number,
+  month: number
+): Promise<MonthLedger[]> {
+  const endDate = new Date(Date.UTC(year, month, 1))
+  const [billingMap, snaps, links] = await Promise.all([
+    loadBillingChanges(db, [studentId]),
+    db.monthlyTuition.findMany({
+      where: { studentId, OR: [{ year: { lt: year } }, { year, month: { lte: month } }] },
+      select: { year: true, month: true, paidAmount: true, isFullPaid: true },
+    }),
+    db.sessionStudent.findMany({
+      where: { studentId, session: { sessionDate: { lt: endDate }, userId, status: { not: "cancelled" }, isDeleted: false } },
+      select: { fee: true, attendance: true, session: { select: { sessionDate: true } } },
+    }),
+  ])
+  const changes = billingMap.get(studentId) ?? []
+  const byKey = new Map<number, { links: { attendance: string; fee: number }[]; paid: number; fullPaid: boolean }>()
+  const slot = (key: number) => {
+    let d = byKey.get(key)
+    if (!d) byKey.set(key, (d = { links: [], paid: 0, fullPaid: false }))
+    return d
+  }
+  for (const s of snaps) {
+    const d = slot(monthKey(s.year, s.month))
+    d.paid = s.paidAmount
+    d.fullPaid = s.isFullPaid
+  }
+  for (const l of links) {
+    const date = l.session.sessionDate
+    slot(date.getUTCFullYear() * 12 + date.getUTCMonth()).links.push({ attendance: l.attendance, fee: l.fee })
+  }
+  slot(monthKey(year, month))
+  return [...byKey]
+    .sort(([a], [b]) => a - b)
+    .map(([key, d]) => ({ key, fee: monthFee(resolveBilling(changes, key), d.links), paid: d.paid, fullPaid: d.fullPaid }))
 }
 
 export async function getMonthlyTuitionStatus(

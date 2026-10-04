@@ -1,6 +1,7 @@
 import { createTRPCRouter, planProcedure, protectedProcedure } from "@/server/trpc"
 import { monthlyTuitionFilterSchema, updateSettlementSchema, tuitionNoticeSchema, setNoticeSentSchema } from "@/lib/schemas/tuition"
-import { getMonthlyTuitionStatus, updateSettlement, setNoticeSent } from "@/server/services/tuition.service"
+import { paymentListSchema } from "@/lib/schemas/payment"
+import { ensureMonthlyTuition, getMonthlyTuitionStatus, loadMonthLedgers, updateSettlement, setNoticeSent } from "@/server/services/tuition.service"
 import { getTuitionNotice } from "@/server/services/tuition-notice.service"
 
 export const tuitionRouter = createTRPCRouter({
@@ -25,4 +26,11 @@ export const tuitionRouter = createTRPCRouter({
   setNoticeSent: protectedProcedure
     .input(setNoticeSentSchema)
     .mutation(({ ctx, input }) => setNoticeSent(ctx.db, ctx.userId, input)),
+
+  ledgers: planProcedure("payments")
+    .input(paymentListSchema)
+    .query(async ({ ctx, input }) => {
+      await ensureMonthlyTuition(ctx.db, ctx.userId, input.studentId, input.year, input.month)
+      return loadMonthLedgers(ctx.db, ctx.userId, input.studentId, input.year, input.month)
+    }),
 })
