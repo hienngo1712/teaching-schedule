@@ -1,6 +1,6 @@
 # W — Hướng dẫn sử dụng + thẻ "Bắt đầu" + "Có gì mới"
 
-> Ngày: 2026-10-02 · Người yêu cầu: chủ ứng dụng · Phiên bản: **0.10.0** (minor, **có migration**: 2 cột trên `users`).
+> Ngày: 2026-10-02 · Người yêu cầu: chủ ứng dụng · Phiên bản: **0.11.0** (minor, **có migration**: 2 cột trên `users`). Cập nhật 2026-10-04: Y (0.10.0) chen trước nên W thành 0.11.0.
 > Làm sau X (0.9.5). Người dùng duyệt hướng ngày 2026-10-02: làm cả 3 dạng hướng dẫn nhưng chung 1 nguồn nội dung; thẻ "Bắt đầu" thay tour; popup "Có gì mới" theo bố cục mẫu iOne (màu của mình); chỉ tự mở ở bản có thay đổi người dùng thấy; trạng thái đã xem lưu DB.
 
 ## 1. Mục tiêu
@@ -82,7 +82,7 @@
 - `notify: true` = bản có thay đổi người dùng thấy → tự mở. Bản sửa nhỏ: `notify: false`, vẫn ghi để hiện ở `/updates`.
 - **Test bắt buộc**: `RELEASES[0].version === package.json version` → mỗi lần nâng version (kể cả patch) phải thêm mục. Ghi luật này vào `docs/05-deploy.md` (checklist deploy) và bước "nâng version" của mọi plan sau.
 - Chỉ tiếng Việt như W1.
-- Mục ban đầu: `0.10.0` (notify, giới thiệu Hướng dẫn, thẻ Bắt đầu, Có gì mới, mã hoá dữ liệu cá nhân) và `0.9.5` (notify false: xác nhận mật khẩu, tóm tắt chính sách).
+- Mục ban đầu: `0.11.0` (notify, giới thiệu Hướng dẫn, thẻ Bắt đầu, Có gì mới, nhắc lại Thu học phí 1 chạm, mã hoá dữ liệu cá nhân), `0.10.0` (notify, luồng thu học phí Y, trang phụ huynh 2 cột) và `0.9.5` (notify false: xác nhận mật khẩu, tóm tắt chính sách).
 
 ### 5.2 Nút trên thanh đầu trang
 - `AppHeader` (biến thể teacher), bên trái nút ngôn ngữ.
@@ -113,7 +113,7 @@
 - Nút "Tải PDF" (in) như W1, dùng chung CSS in.
 
 ## 6. Migration
-- `ALTER TABLE users ADD COLUMN last_seen_release VARCHAR(20), ADD COLUMN onboarding_dismissed_at TIMESTAMP(3);` (chỉ thêm cột, null). Tài khoản cũ: `last_seen_release` null → thấy bản 0.10.0 tự mở (người dùng duyệt câu 5).
+- `ALTER TABLE users ADD COLUMN last_seen_release VARCHAR(20), ADD COLUMN onboarding_dismissed_at TIMESTAMP(3);` (chỉ thêm cột, null). Tài khoản cũ: `last_seen_release` null → thấy bản 0.11.0 tự mở (người dùng duyệt câu 5).
 - Neon backup branch trước khi merge.
 - Nâng minor 0.10 → mọi người bị đăng xuất 1 lần (luật phiên spec N); popup mở ngay sau khi đăng nhập lại.
 

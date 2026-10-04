@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Trang `/guide` (in ra PDF được), thẻ 5 bước trên Tổng quan cho người mới, nút + ô "Có gì mới" tự mở 1 lần mỗi bản có tính năng mới, trang `/updates`. Version `0.10.0`.
+**Goal:** Trang `/guide` (in ra PDF được), thẻ 5 bước trên Tổng quan cho người mới, nút + ô "Có gì mới" tự mở 1 lần mỗi bản có tính năng mới, trang `/updates`. Version `0.11.0`.
 
 **Architecture:** Nội dung tĩnh trong code: `src/lib/guide-content.ts` (hướng dẫn) và `src/lib/releases.ts` (các bản cập nhật). 2 cột mới trên `users` (`last_seen_release`, `onboarding_dismissed_at`) + 2 router tRPC nhỏ (`release`, `onboarding`). UI: `StartCard` trên `/dashboard`, `WhatsNew` trong `AppHeader`, 2 trang công khai `/guide`, `/updates` (bố cục như `/privacy`, nút "Tải PDF" = `window.print()` + class `print:` của Tailwind).
 
@@ -12,8 +12,9 @@
 
 ## Global Constraints
 
-- Nhánh `feat/w-huong-dan-co-gi-moi` từ `main` **sau khi X (0.9.5) đã merge**. Version cuối `0.10.0` (minor → mọi người đăng nhập lại 1 lần; đúng ý spec §6).
+- Nhánh `feat/w-huong-dan-co-gi-moi` từ `main` **sau khi Y (0.10.0) đã merge** (`0571f79`). Version cuối `0.11.0` (minor → mọi người đăng nhập lại 1 lần; đúng ý spec §6). Cập nhật 2026-10-04: Y chen trước W nên W là 0.11.0; `RELEASES` có thêm mục 0.10.0 cho Y.
 - **Migration chỉ thêm 2 cột null** trên `users`. Tạo bằng `DATABASE_URL=<url .env.test> DIRECT_URL=<url .env.test> pnpm exec prisma migrate dev --create-only --name add_release_onboarding`, đọc SQL, áp `... pnpm exec prisma migrate deploy` lên DB test (kiểm dòng `localhost:5433`). Không áp prod (Vercel tự `migrate deploy` khi build). Prisma đòi reset / báo drift → DỪNG, báo Claude.
+- **Nếu người thực thi là Gehaha (OpenCode):** `opencode.json` cấm `prisma migrate` → Claude tạo sẵn schema + migration trên nhánh (như Y), Gehaha bắt đầu từ bước sau migration của Task 1.
 - An toàn DB: chỉ `.env.test` (localhost:5433). Cấm `db:reset` / `migrate reset` / `db push` / `pnpm db:migrate:*` trên mọi DB. Đọc `docs/coding-rule.md` §6.1 trước lệnh DB đầu tiên.
 - Không `pnpm build` / `pnpm dev`. e2e: RAM ≥ 3000 MB, foreground, chia 2 nửa, dọn tiến trình (LENH.md).
 - **Không lọc/sắp DB theo trường mã hoá** (`bankAccountNumber`, `fullName`…): extension ném `EncryptedFieldQueryError`. Đọc ra rồi kiểm ở JS.
@@ -34,7 +35,7 @@
 
 ---
 
-### Task 1: Dữ liệu bản cập nhật + cột DB + router `release` + đăng ký ghi `lastSeenRelease` + version 0.10.0
+### Task 1: Dữ liệu bản cập nhật + cột DB + router `release` + đăng ký ghi `lastSeenRelease` + version 0.11.0
 
 **Files:**
 - Create: `src/lib/releases.ts`, `src/server/services/release.service.ts`, `src/server/trpc/routers/release.ts`, `prisma/migrations/<timestamp>_add_release_onboarding/migration.sql` (Prisma sinh)
@@ -201,8 +202,8 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
-    version: "0.10.0",
-    date: "2026-10-05",
+    version: "0.11.0",
+    date: "2026-10-06",
     title: "Hướng dẫn sử dụng và thông báo bản mới",
     summary: "Có trang hướng dẫn đầy đủ, thẻ Bắt đầu cho người mới, và ô này để bạn biết mỗi bản có gì.",
     notify: true,
@@ -210,7 +211,24 @@ export const RELEASES: Release[] = [
       { kind: "new", title: "Hướng dẫn sử dụng", body: "Mở ở menu tài khoản (góc phải trên). Có nút Tải PDF để lưu hoặc gửi cho đồng nghiệp.", guideId: "bat-dau" },
       { kind: "new", title: "Thẻ Bắt đầu trên Tổng quan", body: "5 bước làm quen, tự đánh dấu khi bạn làm xong, có thể ẩn đi.", guideId: "bat-dau" },
       { kind: "new", title: "Có gì mới", body: "Mỗi bản có tính năng mới, ô này tự mở 1 lần. Bấm nút Có gì mới để xem lại." },
+      // Ô chỉ hiện bản notify mới nhất → nhắc lại thay đổi lớn của 0.10.0 để giáo viên chưa từng thấy ô vẫn biết.
+      { kind: "improve", title: "Thu học phí 1 chạm", body: "Học phí mở sẵn tháng trước. Bấm Đã đóng đủ là xong; đóng thiếu thì bấm Đóng một phần, tiền tự trừ vào tháng cũ nhất trước.", guideId: "hoc-phi" },
       { kind: "improve", title: "Dữ liệu cá nhân được mã hoá", body: "Họ tên, số điện thoại, số tài khoản trong cơ sở dữ liệu đã được mã hoá toàn bộ.", guideId: "bao-mat" },
+    ],
+  },
+  {
+    version: "0.10.0",
+    date: "2026-10-04",
+    title: "Thu học phí nhanh hơn",
+    summary: "Ghi tiền 1 chạm, tự trừ tháng cũ trước, số tiền tách rõ theo tháng; trang phụ huynh 2 cột trên máy tính.",
+    notify: true,
+    items: [
+      { kind: "improve", title: "Mở sẵn tháng trước", body: "Màn Học phí mở sẵn tháng vừa học xong, đúng lúc thu tiền.", guideId: "hoc-phi" },
+      { kind: "new", title: "Đã đóng đủ 1 chạm", body: "Bấm Đã đóng đủ trên dòng học sinh là ghi xong; bấm Hoàn tác nếu lỡ tay.", guideId: "hoc-phi" },
+      { kind: "new", title: "Đóng một phần", body: "Nhập số tiền phụ huynh đưa, app tự trừ vào tháng cũ nhất trước và cho xem trước sẽ trừ tháng nào.", guideId: "hoc-phi" },
+      { kind: "improve", title: "Tiền tách theo tháng", body: "Mọi chỗ hiện số còn thiếu đều ghi rõ bao nhiêu là tháng trước, bao nhiêu là tháng này. Tháng đang học chỉ tạm tính.", guideId: "hoc-phi" },
+      { kind: "improve", title: "Nhắc phiếu báo quá hạn", body: "Phiếu đã gửi từ 7 ngày mà chưa đóng tiền sẽ có nhãn màu cam để bạn nhắc phụ huynh.", guideId: "hoc-phi" },
+      { kind: "improve", title: "Trang phụ huynh 2 cột", body: "Trên máy tính, phụ huynh thấy điểm danh và phiếu học phí có mã QR trong 1 màn hình." },
     ],
   },
   {
@@ -258,7 +276,7 @@ export function formatReleaseDate(date: string): string {
   return date.split("-").reverse().join("/")
 }
 ```
-Ngày `date` của `0.10.0` / `0.9.5`: sửa thành ngày merge thật ở task cuối (Task 5 Step 5).
+Ngày `date` của `0.11.0`: sửa thành ngày merge thật ở task cuối (Task 5 Step 5). `0.10.0` (2026-10-04) và `0.9.5` đã đúng ngày lên prod.
 
 `src/server/services/release.service.ts`:
 ```ts
@@ -311,7 +329,7 @@ và `import { RELEASES } from "@/lib/releases"`.
       onboardingDismissedAt: new Date(),
 ```
 
-- [ ] **Step 7: Version** — `package.json` → `"version": "0.10.0"`.
+- [ ] **Step 7: Version** — `package.json` → `"version": "0.11.0"`.
 
 - [ ] **Step 8: Chạy** `pnpm test tests/unit/lib/releases.test.ts tests/integration/release.test.ts tests/integration/register.test.ts` → Expected: PASS.
 `pnpm exec tsc --noEmit` + `pnpm lint` → sạch.
@@ -319,7 +337,7 @@ và `import { RELEASES } from "@/lib/releases"`.
 - [ ] **Step 9: Commit**
 ```bash
 git add prisma/schema.prisma prisma/migrations src/lib/releases.ts src/server/services/release.service.ts src/server/trpc/routers/release.ts src/server/trpc/root.ts src/server/services/user.service.ts tests/setup.ts tests/unit/lib/releases.test.ts tests/integration/release.test.ts package.json
-git commit -m "feat(w): dữ liệu bản cập nhật, cột last_seen_release/onboarding_dismissed_at, router release; v0.10.0"
+git commit -m "feat(w): dữ liệu bản cập nhật, cột last_seen_release/onboarding_dismissed_at, router release; v0.11.0"
 ```
 
 ---
@@ -486,7 +504,7 @@ describe("StartCard (spec W §4)", () => {
   "start_step_session": "Tạo ca dạy đầu tiên",
   "start_step_session_hint": "App đã tạo sẵn vài môn học, sửa ở mục Môn học.",
   "start_step_attendance": "Điểm danh 1 ca",
-  "start_step_payment": "Ghi nhận học phí lần đầu",
+  "start_step_payment": "Thu học phí lần đầu",
   "start_step_bank": "Cài tài khoản nhận học phí",
   "start_step_bank_hint": "Cần để phiếu báo học phí có mã QR chuyển khoản.",
   "start_open": "Mở",
@@ -849,10 +867,12 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "hoc-phi",
     title: "Học phí",
     steps: [
-      "Mở **Học phí**, chọn tháng. Mỗi học sinh có số buổi, học phí, nợ tháng trước và số đã thu.",
-      "Bấm vào học sinh để xem chi tiết, bấm **Ghi nhận** để ghi 1 lần thu (tiền mặt hoặc chuyển khoản).",
+      "Mở **Học phí**: app mở sẵn **tháng trước** (tháng vừa học xong). Mỗi học sinh có số cần đóng, ghi rõ phần nợ tháng cũ và tiền tháng đó.",
+      "Phụ huynh đóng đủ: bấm **Đã đóng đủ** trên dòng học sinh. Lỡ tay thì bấm **Hoàn tác** trên thông báo.",
+      "Đóng thiếu hoặc đóng nhiều tháng: bấm vào học sinh → **Đóng một phần**, nhập số tiền. Tiền tự trừ vào tháng cũ nhất trước, có dòng xem trước trừ tháng nào.",
+      "Tháng đang học chỉ **tạm tính** theo buổi đã học, chưa cần thu. Muốn miễn phần còn thiếu thì mở học sinh ở tháng đó → menu ⋮ → **Miễn phần còn thiếu**.",
       "Bấm **Phiếu báo** để tạo phiếu học phí có mã QR, rồi lưu ảnh hoặc chia sẻ cho phụ huynh.",
-      "Gửi xong, bấm **Đánh dấu đã gửi** để lọc được học sinh chưa gửi phiếu. Số tiền đổi sau khi gửi sẽ có nhãn báo.",
+      "Gửi xong, bấm **Đánh dấu đã gửi** để lọc được học sinh chưa gửi phiếu. Số tiền đổi sau khi gửi sẽ có nhãn báo; phiếu gửi từ 7 ngày mà chưa đóng có nhãn màu cam.",
       "**Link phụ huynh**: phụ huynh mở link là xem được học phí, điểm danh và lịch học của con, không cần đăng nhập.",
     ],
     tips: ["Không chia sẻ công khai link phụ huynh."],
@@ -1576,6 +1596,6 @@ git add tests/e2e/w-huong-dan-co-gi-moi.spec.ts docs/05-deploy.md
 git commit -m "test(w): e2e hướng dẫn, Có gì mới, thẻ Bắt đầu; luật thêm mục cập nhật khi nâng version"
 ```
 
-- [ ] **Step 5: Ngày phát hành** — Claude (không phải Gehihi) sửa `date` của `0.10.0` (và `0.9.5` nếu khác) trong `src/lib/releases.ts` thành ngày merge thật ngay trước khi merge.
+- [ ] **Step 5: Ngày phát hành** — Claude (không phải Gehihi) sửa `date` của `0.11.0` trong `src/lib/releases.ts` thành ngày merge thật ngay trước khi merge.
 
 Báo cáo cho Claude: số test unit/e2e, mọi `Ruling:`, chỗ nội dung hướng dẫn đã sửa so với plan (Task 3 Step 4).
