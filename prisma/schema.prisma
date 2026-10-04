@@ -156,6 +156,8 @@ model Payment {
   paidAt           DateTime       @map("paid_at") @db.Date
   method           String         @default("cash") @db.VarChar(10)
   note             String?        @db.Text
+  // Các dòng tạo từ 1 lần thu (chia FIFO nhiều tháng) chung batchId; dòng trước Y = null (spec Y §3.3).
+  batchId          String?        @map("batch_id") @db.VarChar(36)
   isDeleted        Boolean        @default(false) @map("is_deleted")
   deletedAt        DateTime?      @map("deleted_at")
   createdAt        DateTime       @default(now()) @map("created_at")
@@ -164,6 +166,7 @@ model Payment {
 
   @@index([monthlyTuitionId])
   @@index([paidAt])
+  @@index([batchId])
   @@map("payments")
 }
 

@@ -59,13 +59,18 @@ async function createPresentSession(page: Page, studentName: string, startHour: 
   await page.keyboard.press('Escape');
 }
 
-async function deleteSession(page: Page, title: string) {
-  await page.goto('/calendar');
-  await page.getByText(title).filter({ visible: true }).first().click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Menu hành động' }).click();
-  await page.getByRole('menuitem', { name: 'Xóa ca dạy' }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa ca dạy' }).click();
-  await expect(page.getByText('Đã xóa ca dạy').first()).toBeVisible();
+// Màn Học phí mở tháng trước; tháng đang học theo buổi chỉ tạm tính (cần đóng = 0) → dời ca tạo hôm nay về tháng trước
+// để phiếu có số tiền thật và mã QR (spec Y §3.4).
+async function moveSessionToPrevMonth(title: string) {
+  const now = new Date();
+  const prev = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, Math.min(now.getDate(), 28)));
+  const res = await db.teachingSession.updateMany({ where: { title }, data: { sessionDate: prev } });
+  expect(res.count).toBe(1);
+}
+
+async function deleteSessionRow(title: string) {
+  await db.sessionStudent.deleteMany({ where: { session: { title } } });
+  await db.teachingSession.deleteMany({ where: { title } });
 }
 
 async function openNoticeFromCard(page: Page, studentName: string) {
@@ -145,7 +150,7 @@ test.describe('Phiếu báo học phí (390px)', () => {
     const stamp = Date.now();
     const studentName = `HS Phiếu Nguyễn Thị Hường ${stamp}`;
     const titles = [`Ca phiếu A ${stamp}`, `Ca phiếu B ${stamp}`];
-    const startHour = Math.floor(Math.random() * 4) + 13; // 13 tới 16, ca thứ 2 cách 2 giờ
+    const startHour = Math.floor(Math.random() * 2) + 20; // 20 tới 21 (tránh trùng ca ban ngày)
 
     // 1. Cài đặt ngân hàng từ tab Thêm
     await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('button', { name: 'Thêm', exact: true }).click();
@@ -176,8 +181,9 @@ test.describe('Phiếu báo học phí (390px)', () => {
     await expect(page.getByText('Đã thêm học sinh')).toBeVisible();
     await createPresentSession(page, studentName, startHour, titles[0]);
     await createPresentSession(page, studentName, startHour + 2, titles[1]);
+    for (const title of titles) await moveSessionToPrevMonth(title);
 
-    // 3. Mở phiếu từ thẻ mobile
+    // 3. Mở phiếu từ thẻ mobile (tháng trước)
     const card = await openNoticeFromCard(page, studentName);
     const notice = page.getByTestId('tuition-notice');
     const noticeCard = notice.getByTestId('notice-card');
@@ -211,7 +217,7 @@ test.describe('Phiếu báo học phí (390px)', () => {
     await expect(noticeCard.locator('img')).toHaveCount(0);
     await page.keyboard.press('Escape');
 
-    // 6. Dọn ca để lần chạy sau cùng ngày không vướng trùng giờ
-    for (const title of titles) await deleteSession(page, title);
+    // 6. Dọn ca (đã dời sang tháng trước nên lịch hôm nay không còn thấy) để lần chạy sau không vướng
+    for (const title of titles) await deleteSessionRow(title);
   });
 });

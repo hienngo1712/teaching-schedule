@@ -122,23 +122,30 @@ export function buildCalendarGrid(
   return { grid }
 }
 
-export function useCalendar() {
+export function useCalendar(options: { defaultOffset?: number } = {}) {
+  const { defaultOffset = 0 } = options
   const { t } = useTranslation()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const now = useMemo(() => new Date(), [])
+  const defaultDate = useMemo(() => {
+    const d = new Date()
+    if (defaultOffset !== 0) {
+      return new Date(d.getFullYear(), d.getMonth() + defaultOffset, 1)
+    }
+    return d
+  }, [defaultOffset])
   
   const year = useMemo(() => {
     const y = searchParams.get("year")
-    return y ? parseInt(y, 10) : now.getFullYear()
-  }, [searchParams, now])
+    return y ? parseInt(y, 10) : defaultDate.getFullYear()
+  }, [searchParams, defaultDate])
 
   const month = useMemo(() => {
     const m = searchParams.get("month")
-    return m ? parseInt(m, 10) : now.getMonth() + 1
-  }, [searchParams, now])
+    return m ? parseInt(m, 10) : defaultDate.getMonth() + 1
+  }, [searchParams, defaultDate])
 
   const monthLabel = useMemo(() => buildMonthLabel(year, month, t), [year, month, t])
 

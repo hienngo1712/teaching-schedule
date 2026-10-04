@@ -91,6 +91,8 @@ export interface TuitionStatusDTO {
   noticeSentAt: Date | string | null
   noticeSentAmount: number | null
   noticeStatus: NoticeStatus
+  inProgress: boolean
+  debtMonths: number
 }
 
 export type NoticeStatus = "none" | "sent" | "changed"
@@ -120,6 +122,15 @@ export interface PaymentDTO {
   note: string | null
 }
 
+export type PaymentBatchDTO = {
+  batchId: string
+  amount: number
+  paidAt: string
+  note: string | null
+  allocations: { year: number; month: number; amount: number }[]
+  legacy: boolean
+}
+
 /**
  * Phiếu báo học phí 1 HS/tháng (spec C §7.4). G dùng lại y nguyên.
  */
@@ -142,6 +153,8 @@ export interface TuitionNoticeDTO {
   payments: PaymentDTO[]
   remaining: number
   overpaid: number
+  inProgress: boolean
+  debtMonths: number
   teacherName: string
   bankConfigured: boolean
   qr: {

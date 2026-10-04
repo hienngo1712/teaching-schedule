@@ -26,6 +26,8 @@ const row = {
   noticeSentAt: null,
   noticeSentAmount: null,
   noticeStatus: "none" as const,
+  inProgress: false,
+  debtMonths: 0,
 }
 
 const mockCalls = vi.hoisted(() => ({ list: [] as unknown[] }))
@@ -35,6 +37,7 @@ vi.mock("@/lib/trpc", () => ({
     useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } } }),
     tuition: {
       getMonthlyStatus: { useQuery: () => ({ data: { items: [row] }, isPending: false }) },
+      ledgers: { useQuery: () => ({ data: [], isPending: false }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
@@ -45,7 +48,15 @@ vi.mock("@/lib/trpc", () => ({
           return { data: [], isPending: false }
         },
       },
+      listBatches: {
+        useQuery: (...args: unknown[]) => {
+          mockCalls.list.push(args[1])
+          return { data: [], isPending: false }
+        },
+      },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      record: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      deleteBatch: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }))
@@ -68,17 +79,10 @@ function renderSheet() {
 }
 
 describe("TuitionDetailSheet - nút Phiếu báo", () => {
-  it("chưa sửa gì (không dirty) → nút Phiếu báo bấm được", () => {
+  it("nút Phiếu báo bấm được", () => {
     renderSheet()
     const btn = screen.getByRole("button", { name: "Phiếu báo" })
     expect(btn.hasAttribute("disabled")).toBe(false)
-  })
-
-  it("đang sửa tất toán chưa lưu (dirty) → nút Phiếu báo bị disable", () => {
-    renderSheet()
-    fireEvent.click(screen.getByRole("checkbox"))
-    const btn = screen.getByRole("button", { name: "Phiếu báo" })
-    expect(btn.hasAttribute("disabled")).toBe(true)
   })
 })
 
@@ -98,9 +102,7 @@ describe("TuitionDetailSheet - Standard (paymentsLocked)", () => {
         <UpgradeDialog />
       </LanguageProvider>
     )
-    expect(screen.getByText("Tổng tiền cần đóng")).toBeTruthy()
     expect(screen.getByTestId("payments-locked")).toBeTruthy()
-    expect(screen.getByTestId("settlement-locked")).toBeTruthy()
     expect(mockCalls.list.every((opts) => (opts as { enabled?: boolean })?.enabled === false)).toBe(true)
     fireEvent.click(screen.getByRole("button", { name: /Phiếu báo/ }))
     expect(await screen.findByText("Nâng lên gói Plus hoặc Pro để sử dụng tính năng này.")).toBeTruthy()

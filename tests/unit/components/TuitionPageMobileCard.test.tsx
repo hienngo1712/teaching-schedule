@@ -8,7 +8,6 @@ import { render, screen, fireEvent } from "@testing-library/react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import TuitionPage from "@/app/(app)/tuition/page"
-import { formatCurrency } from "@/lib/utils"
 
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
@@ -31,6 +30,13 @@ const item = {
   notes: null,
   previousBalance: 0,
   totalAmountDue: 400000,
+  billingMode: "per_session" as const,
+  monthlyFee: 0,
+  noticeSentAt: null,
+  noticeSentAmount: null,
+  noticeStatus: "none" as const,
+  inProgress: false,
+  debtMonths: 0,
 }
 
 const getMonthlyStatusQuery = {
@@ -46,12 +52,16 @@ vi.mock("@/lib/trpc", () => ({
     tuition: {
       getMonthlyStatus: { useQuery: () => getMonthlyStatusQuery },
       getNotice: { useQuery: () => ({ data: undefined, isError: false, refetch: vi.fn() }) },
+      ledgers: { useQuery: () => ({ data: [], isPending: false }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     payment: {
       list: { useQuery: () => ({ data: [], isPending: false }) },
+      listBatches: { useQuery: () => ({ data: [], isPending: false }) },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      deleteBatch: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      record: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }))
@@ -90,10 +100,11 @@ describe("TuitionPage - thẻ mobile", () => {
     expect(screen.queryByText("Chi tiết học phí")).toBeNull()
   })
 
-  it("Enter nổi lên từ nút Ghi nhận lồng bên trong không mở sheet 2 lần / không lỗi", () => {
+  it("Enter nổi lên từ nút Đã đóng đủ lồng bên trong không mở sheet 2 lần / không lỗi", () => {
     renderPage()
-    const btns = screen.getAllByRole("button", { name: "Ghi nhận" })
-    const inCard = btns.find((b) => b.closest('[role="button"]'))!
+    // Nút desktop không nằm trong card, chỉ tìm nút trong thẻ mobile
+    const cards = screen.getAllByRole("button", { name: /Nguyễn Văn A/ }).filter((el) => el.tagName === "DIV")
+    const inCard = cards[0].querySelector("button:not([aria-label='Phiếu báo'])")!
     fireEvent.keyDown(inCard, { key: "Enter", bubbles: true })
 
     expect(screen.queryByText("Chi tiết học phí")).toBeNull()
@@ -110,42 +121,55 @@ describe("TuitionPage - thẻ mobile", () => {
   })
 })
 
-describe("TuitionPage - màu thẻ mobile", () => {
+describe("TuitionPage - nút Đã đóng đủ thẻ mobile", () => {
   afterEach(() => {
     getMonthlyStatusQuery.data.items = [item]
   })
 
-  function cardAmount(value: number) {
-    return screen
-      .getAllByText(formatCurrency(value))
-      .find((el) => el.tagName === "DIV" && el.closest('[role="button"]'))!
-  }
-
-  function cardPayButton() {
-    return screen.getAllByRole("button", { name: "Ghi nhận" }).find((b) => b.closest('[role="button"]'))!
-  }
-
-  it("chưa đóng → số tiền đỏ nợ 17px, nút Ghi nhận nền màu nhấn", () => {
+  it("due > 0 → có nút Đã đóng đủ 400.000 đ", () => {
     renderPage()
-    const amount = cardAmount(400000)
+    const btns = screen.getAllByRole("button", { name: "Đã đóng đủ 400.000 đ" })
+    expect(btns.length).toBeGreaterThan(0)
+  })
+
+  it("due === 0 → không có nút Đã đóng đủ", () => {
+    getMonthlyStatusQuery.data = {
+      items: [{ ...item, paidAmount: 400000 }],
+      totalCount: 1,
+      totalPages: 1,
+    }
+    renderPage()
+    const btns = screen.queryAllByRole("button")
+    const payBtn = btns.find((b) => b.tagName === "BUTTON" && b.textContent?.includes("Đã đóng đủ"))
+    expect(payBtn).toBeUndefined()
+  })
+})
+
+describe("TuitionPage - số tiền to trên thẻ mobile (spec Y §4.1)", () => {
+  afterEach(() => {
+    getMonthlyStatusQuery.data = { items: [item], totalCount: 1, totalPages: 1 }
+  })
+
+  function cardAmount(text: string) {
+    return screen.getAllByText(text).find((el) => el.tagName === "SPAN" && el.closest('[role="button"]'))!
+  }
+
+  it("chưa đóng → số cần đóng đỏ nợ, 17px", () => {
+    renderPage()
+    const amount = cardAmount("400.000 đ")
     expect(amount.className).toContain("text-debt")
     expect(amount.className).toContain("text-[17px]")
-    expect(amount.className).toContain("tabular-nums")
-    expect(cardPayButton().className).toContain("bg-primary")
   })
 
-  it("đóng một phần → số tiền chữ chính", () => {
-    getMonthlyStatusQuery.data.items = [{ ...item, paidAmount: 100000 }]
+  it("đóng một phần → chữ chính", () => {
+    getMonthlyStatusQuery.data = { items: [{ ...item, paidAmount: 100000 }], totalCount: 1, totalPages: 1 }
     renderPage()
-    expect(cardAmount(400000).className).toContain("text-foreground")
+    expect(cardAmount("300.000 đ").className).toContain("text-foreground")
   })
 
-  it("đã đóng đủ → số tiền chữ phụ, nút Ghi nhận viền (outline)", () => {
-    getMonthlyStatusQuery.data.items = [{ ...item, paidAmount: 400000 }]
+  it("đã đóng đủ → 0 đ chữ phụ", () => {
+    getMonthlyStatusQuery.data = { items: [{ ...item, paidAmount: 400000 }], totalCount: 1, totalPages: 1 }
     renderPage()
-    expect(cardAmount(400000).className).toContain("text-muted-foreground")
-    const btn = cardPayButton().className
-    expect(btn).toContain("border-input")
-    expect(btn).not.toContain("bg-primary")
+    expect(cardAmount("0 đ").className).toContain("text-muted-foreground")
   })
 })

@@ -51,7 +51,15 @@ vi.mock("@/lib/trpc", () => ({
           return { data: [], isPending: false }
         },
       },
+      listBatches: {
+        useQuery: (_input: unknown, opts?: { enabled?: boolean }) => {
+          paymentListOpts.push(opts)
+          return { data: [], isPending: false }
+        },
+      },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      deleteBatch: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      record: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }))

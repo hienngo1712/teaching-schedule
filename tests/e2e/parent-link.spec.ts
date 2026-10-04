@@ -105,8 +105,10 @@ test('giáo viên tạo link, phụ huynh xem không cần đăng nhập, tạo 
   expect(headers['cache-control']).toContain('no-store');
   await expect(parent.page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
   await expect(parent.page.getByRole('heading', { name: NAME })).toBeVisible();
-  await expect(parent.page.getByText('Còn phải trả').first()).toBeVisible();
-  await expect(parent.page.getByText('Có mặt', { exact: true })).toBeVisible();
+  // Tháng đang học theo buổi: nhãn là "Cần đóng ngay", tháng đã kết thúc là "Còn phải trả"
+  await expect(parent.page.getByText(/Cần đóng ngay|Còn phải trả/).first()).toBeVisible();
+  // Nhãn điểm danh trong danh sách buổi (3 ô tóm tắt cũng có chữ 'Có mặt' nhưng ẩn trên điện thoại).
+  await expect(parent.page.getByText('Có mặt', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await expect(parent.page.getByRole('heading', { name: 'Lịch sắp tới' })).toBeVisible();
   const [y, m, d] = vnDay(7).split('-');
   // Ca +7 ngày cùng tháng thì hiện cả ở Lịch sắp tới lẫn danh sách tháng → lấy dòng đầu.
@@ -123,6 +125,19 @@ test('giáo viên tạo link, phụ huynh xem không cần đăng nhập, tạo 
   await prevLink.click();
   await expect(parent.page).toHaveURL(/\?thang=\d{4}-\d{2}$/);
   await expect(parent.page.getByTestId('parent-month')).not.toHaveText(monthBefore ?? '');
+
+  // 1280px: layout 2 cột, section điểm danh và thẻ phiếu đều nằm trong màn đầu (y < 800)
+  const desktopContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const desktopPage = await desktopContext.newPage();
+  await hideDevBadge(desktopPage);
+  await desktopPage.goto(url1);
+  const attendanceBox = await desktopPage.getByRole('heading', { name: /Điểm danh tháng/ }).boundingBox();
+  const noticeCardBox = await desktopPage.getByTestId('notice-card').boundingBox();
+  expect(attendanceBox).not.toBeNull();
+  expect(noticeCardBox).not.toBeNull();
+  expect(attendanceBox!.y).toBeLessThan(800);
+  expect(noticeCardBox!.y).toBeLessThan(800);
+  await desktopContext.close();
 
   // Tham số tháng lặp → vẫn 200, về tháng hiện tại
   const [curY, curM] = vnDay(0).split('-');

@@ -1,17 +1,23 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
+import { PrismaClient } from '@prisma/client';
+
+const db = new PrismaClient();
+test.afterAll(async () => {
+  await db.$disconnect();
+});
 
 test.use({ viewport: { width: 390, height: 844 } });
+
+async function expectTouchTarget(locator: Locator) {
+  const box = await locator.boundingBox();
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+}
 
 async function expectNoHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth
   );
   expect(overflow).toBeLessThanOrEqual(0);
-}
-
-async function expectTouchTarget(locator: Locator) {
-  const box = await locator.boundingBox();
-  expect(box!.height).toBeGreaterThanOrEqual(44);
 }
 
 test.describe('Lịch sử thu tiền (390px)', () => {
@@ -33,8 +39,10 @@ test.describe('Lịch sử thu tiền (390px)', () => {
 
   test('thu 2 lần, sửa, xoá; Đã trả và badge cập nhật', async ({ page }) => {
     const studentName = `HS thu tiền ${Date.now()}`;
-    const title = `Ca thu tiền ${Math.floor(Math.random() * 10000)}`;
-    const startHour = Math.floor(Math.random() * 5) + 13; // 13:00 tới 17:00, tránh trùng ca có sẵn
+    const stamp = Math.floor(Math.random() * 100000);
+    const title = `Ca thu tiền ${stamp}`;
+    const startHour = Math.floor(Math.random() * 4) + 19; // 19:00 - 23:00, không trùng ca ban ngày
+    const startMin = ['00', '15', '30'][Math.floor(Math.random() * 3)];
 
     // 1. HS học phí 200.000/buổi
     await page.goto('/students');
@@ -51,8 +59,8 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await page.goto('/calendar');
     await page.getByRole('button', { name: 'Tạo ca dạy' }).first().click();
     const form = page.getByRole('dialog');
-    await form.getByLabel('Bắt đầu (HH:mm)').fill(`${startHour}00`);
-    await form.getByLabel('Kết thúc (HH:mm)').fill(`${startHour + 1}00`);
+    await form.getByLabel('Bắt đầu (HH:mm)').fill(`${startHour}${startMin}`);
+    await form.getByLabel('Kết thúc (HH:mm)').fill(`${startHour + 1}${startMin}`);
     await form.getByLabel('Môn học').click();
     await page.getByRole('option').first().click();
     await form.getByPlaceholder('Nhóm nâng cao').fill(title);
@@ -66,59 +74,56 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await detail.getByRole('button', { name: 'Lưu điểm danh' }).click();
     await expect(page.getByText('Đã lưu điểm danh')).toBeVisible();
     await page.keyboard.press('Escape');
+    // Dời ca về tháng trước (tháng đã học xong, màn Học phí mở sẵn tháng này) để cần đóng = học phí thật.
+    const now = new Date();
+    const prev = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, Math.min(now.getDate(), 28)));
+    expect((await db.teachingSession.updateMany({ where: { title }, data: { sessionDate: prev } })).count).toBe(1);
 
-    // 3. /tuition → Ghi nhận
+    // 3. /tuition (tháng trước) → mở sheet chi tiết
     await page.goto('/tuition');
     await page.getByPlaceholder('Tìm tên học sinh...').fill(studentName);
     const card = page.getByTestId('list-card').filter({ hasText: studentName });
-    await card.getByRole('button', { name: 'Ghi nhận', exact: true }).click();
+    await card.click();
     const sheet = page.getByRole('dialog', { name: 'Chi tiết học phí' });
     await expect(sheet.getByText('Chưa có lần thu nào')).toBeVisible();
     await expectNoHorizontalScroll(page);
-    const addBtn = sheet.getByRole('button', { name: 'Thu tiền', exact: true });
-    await expectTouchTarget(addBtn);
 
-    // 4. Lần 1: 100.000 tiền mặt (mặc định)
-    await addBtn.click();
-    let payForm = page.getByRole('dialog', { name: /Thu tiền tháng/ });
-    await expect(payForm.getByRole('button', { name: 'Tiền mặt' })).toHaveAttribute('aria-pressed', 'true');
-    await payForm.getByLabel('Số tiền').fill('100000');
-    await payForm.getByRole('button', { name: 'Lưu', exact: true }).click();
-    await expect(page.getByText(/Đã lưu lần thu/).first()).toBeVisible();
+    // 4. Lần 1: Đóng một phần 100.000
+    await expectTouchTarget(sheet.getByRole('button', { name: /^Đã đóng đủ/ }));
+    await expectTouchTarget(sheet.getByRole('button', { name: 'Đóng một phần' }));
+    await sheet.getByRole('button', { name: 'Đóng một phần' }).click();
+    await sheet.getByLabel('Số tiền phụ huynh đưa').fill('100000');
+    await sheet.getByRole('button', { name: 'Ghi nhận' }).click();
+    await expect(page.getByText(/Đã ghi/).first()).toBeVisible();
     await expect(sheet.getByTestId('payment-row')).toHaveCount(1);
     await expect(sheet.getByTestId('paid-total')).toHaveText(/100\.000/);
     await expectTouchTarget(sheet.getByTestId('payment-row').first().getByRole('button', { name: 'Menu hành động' }));
 
-    // 5. Lần 2: nút "Số còn lại" (100.000), chuyển khoản
-    await sheet.getByRole('button', { name: 'Thu tiền', exact: true }).click();
-    payForm = page.getByRole('dialog', { name: /Thu tiền tháng/ });
-    await payForm.getByRole('button', { name: /Số còn lại/ }).click();
-    await expect(payForm.getByLabel('Số tiền')).toHaveValue('100,000');
-    await payForm.getByRole('button', { name: 'Chuyển khoản' }).click();
-    await payForm.getByRole('button', { name: 'Lưu', exact: true }).click();
+    // 5. Lần 2: Đóng một phần 100.000 tiếp
+    await sheet.getByRole('button', { name: 'Đóng một phần' }).click();
+    await sheet.getByLabel('Số tiền phụ huynh đưa').fill('100000');
+    await sheet.getByRole('button', { name: 'Ghi nhận' }).click();
+    await expect(page.getByText(/Đã ghi/).first()).toBeVisible();
     await expect(sheet.getByTestId('payment-row')).toHaveCount(2);
     await expect(sheet.getByTestId('paid-total')).toHaveText(/200\.000/);
 
     // Badge trên thẻ đổi thành "Đã đóng đủ"
     await page.keyboard.press('Escape');
     await expect(card.getByText('Đã đóng đủ')).toBeVisible();
-    await card.getByRole('button', { name: 'Ghi nhận', exact: true }).click();
+    await card.click();
 
-    // Chưa sửa tất toán/ghi chú → nút Lưu tắt
-    await expect(sheet.getByRole('button', { name: 'Lưu', exact: true })).toBeDisabled();
-
-    // 6. Sửa lần 1 (tiền mặt) thành 50.000
-    const cashRow = sheet.getByTestId('payment-row').filter({ hasText: 'Tiền mặt' });
-    await cashRow.getByRole('button', { name: 'Menu hành động' }).click();
+    // 6. Sửa 1 đợt 100.000 thành 50.000
+    const rowToEdit = sheet.getByTestId('payment-row').filter({ hasText: '100.000' }).first();
+    await rowToEdit.getByRole('button', { name: 'Menu hành động' }).click();
     await page.getByRole('menuitem', { name: 'Sửa' }).click();
     const editForm = page.getByRole('dialog', { name: 'Sửa lần thu' });
     await editForm.getByLabel('Số tiền').fill('50000');
     await editForm.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(sheet.getByTestId('paid-total')).toHaveText(/150\.000/);
 
-    // 7. Xoá lần 2 (chuyển khoản), có xác nhận
-    const transferRow = sheet.getByTestId('payment-row').filter({ hasText: 'Chuyển khoản' });
-    await transferRow.getByRole('button', { name: 'Menu hành động' }).click();
+    // 7. Xoá đợt 100.000 còn lại, giữ đợt 50.000 vừa sửa
+    const rowToDelete = sheet.getByTestId('payment-row').filter({ hasText: '100.000' });
+    await rowToDelete.getByRole('button', { name: 'Menu hành động' }).click();
     await page.getByRole('menuitem', { name: 'Xóa' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa' }).click();
     await expect(page.getByText('Đã xoá lần thu')).toBeVisible();
@@ -126,21 +131,18 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await expect(sheet.getByTestId('paid-total')).toHaveText(/50\.000/);
     await expectNoHorizontalScroll(page);
 
-    // Xoá nốt lần 1 để HS sạch dữ liệu trước khi xoá HS
-    const remainingCashRow = sheet.getByTestId('payment-row').filter({ hasText: 'Tiền mặt' });
-    await remainingCashRow.getByRole('button', { name: 'Menu hành động' }).click();
+    // Xoá nốt dòng còn lại để HS sạch dữ liệu trước khi xoá HS
+    const remainingRow = sheet.getByTestId('payment-row').first();
+    await remainingRow.getByRole('button', { name: 'Menu hành động' }).click();
     await page.getByRole('menuitem', { name: 'Xóa' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa' }).click();
     await expect(page.getByText('Đã xoá lần thu')).toBeVisible();
+    await expect(sheet.getByTestId('paid-total')).toHaveText(/0 đ/);
 
-    // 8. Dọn dữ liệu: xoá ca rồi xoá HS (xoá mềm)
+    // 8. Dọn dữ liệu: xoá ca (đã dời sang tháng trước) rồi xoá HS (xoá mềm)
     await page.keyboard.press('Escape');
-    await page.goto('/calendar');
-    await page.getByText(title).filter({ visible: true }).first().click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Menu hành động' }).click();
-    await page.getByRole('menuitem', { name: 'Xóa ca dạy' }).click();
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa ca dạy' }).click();
-    await expect(page.getByText('Đã xóa ca dạy')).toBeVisible();
+    await db.sessionStudent.deleteMany({ where: { session: { title } } });
+    await db.teachingSession.deleteMany({ where: { title } });
 
     await page.goto('/students');
     const studentCard = page.getByTestId('list-card').filter({ hasText: studentName });

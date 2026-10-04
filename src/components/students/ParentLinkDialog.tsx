@@ -88,7 +88,7 @@ export function ParentLinkDialog({ student, onOpenChange, canGenerate = true }: 
   return (
     <>
       <Dialog open onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[640px]">
           <DialogHeader>
             <DialogTitle>{`${t("parent_link")} · ${student.fullName}`}</DialogTitle>
             <DialogDescription>{t("parent_link_desc")}</DialogDescription>
@@ -104,7 +104,7 @@ export function ParentLinkDialog({ student, onOpenChange, canGenerate = true }: 
                 onFocus={(e) => e.currentTarget.select()}
                 onClick={(e) => e.currentTarget.select()}
               />
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-nowrap">
                 <Button className={btn} onClick={copy}>
                   <Copy className="mr-2 size-4" />
                   {t("copy_link")}

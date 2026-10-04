@@ -106,8 +106,9 @@ test.describe('Học phí trọn tháng E2E', () => {
     await createAndAttendSession(page, studentName, 8, session1, 'Có mặt');
     await createAndAttendSession(page, studentName, 10, session2, 'Vắng');
 
-    // 4. Màn Học phí tháng này: thẻ HS hiện 400.000 và "1/2"
-    await page.goto('/tuition');
+    // 4. Màn Học phí tháng này: chuyển sang tháng hiện tại (ca tạo hôm nay)
+    const now = new Date();
+    await page.goto(`/tuition?year=${now.getFullYear()}&month=${now.getMonth() + 1}`);
     await page.getByPlaceholder('Tìm tên học sinh...').fill(studentName);
     const tuitionCard = page.getByTestId('list-card').filter({ hasText: studentName });
     await expect(tuitionCard).toBeVisible();
@@ -150,7 +151,8 @@ test.describe('Học phí trọn tháng E2E', () => {
     await createAndAttendSession(page, studentName, 15, session2, 'Vắng');
 
     // 4. Màn Học phí tháng này: dòng/thẻ HS hiện 400.000 và "1/2"
-    await page.goto('/tuition');
+    const nowDesk = new Date();
+    await page.goto(`/tuition?year=${nowDesk.getFullYear()}&month=${nowDesk.getMonth() + 1}`);
     await page.getByPlaceholder('Tìm tên học sinh...').fill(studentName);
     const rowOrCard = page.locator('tr, [data-testid="list-card"]', { hasText: studentName }).first();
     await expect(rowOrCard).toBeVisible();

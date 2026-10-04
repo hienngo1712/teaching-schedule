@@ -31,6 +31,8 @@ const rowBase = {
   noticeSentAt: null as string | null,
   noticeSentAmount: null as number | null,
   noticeStatus: "none" as "none" | "sent" | "changed",
+  inProgress: false,
+  debtMonths: 0,
 }
 
 let currentRow = { ...rowBase }
@@ -40,6 +42,7 @@ vi.mock("@/lib/trpc", () => ({
     useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } } }),
     tuition: {
       getMonthlyStatus: { useQuery: () => ({ data: { items: [currentRow] }, isPending: false }) },
+      ledgers: { useQuery: () => ({ data: [], isPending: false }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       setNoticeSent: {
         useMutation: (opts?: { onSuccess?: () => void; onError?: (err: Error) => void }) => {
@@ -50,7 +53,10 @@ vi.mock("@/lib/trpc", () => ({
     },
     payment: {
       list: { useQuery: () => ({ data: [], isPending: false }) },
+      listBatches: { useQuery: () => ({ data: [], isPending: false }) },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      record: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      deleteBatch: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }))

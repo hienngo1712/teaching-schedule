@@ -3,6 +3,7 @@
 import { AlertCircle, BadgeCheck, CheckCircle2, CircleDollarSign, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getTuitionBadgeStatus, type TuitionStatusInput } from "@/lib/tuition-status"
+import { getRowStatus, type DisplayRow } from "@/lib/tuition-display"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 // Chỉ 3 nhóm màu: nợ (đỏ nợ), đang dở (màu nhấn), đã xong (xanh lá). hover giữ nền vì badge không bấm được.
@@ -11,10 +12,21 @@ const IN_PROGRESS = "border-none bg-primary/[0.08] text-primary hover:bg-primary
 const DONE = "border-none bg-success-soft text-success hover:bg-success-soft"
 
 // Badge dùng chung cho trang Học phí và thẻ tóm tắt ở Báo cáo.
-export function TuitionStatusBadge({ item }: { item: TuitionStatusInput }) {
+export function TuitionStatusBadge({ item }: { item: TuitionStatusInput & Partial<Pick<DisplayRow, "inProgress" | "billingMode">> }) {
   const { t } = useTranslation()
 
-  switch (getTuitionBadgeStatus(item)) {
+  const status =
+    item.inProgress !== undefined && item.billingMode !== undefined
+      ? getRowStatus(item as DisplayRow)
+      : getTuitionBadgeStatus(item)
+
+  switch (status) {
+    case "in_progress":
+      return (
+        <Badge className={IN_PROGRESS}>
+          <Clock className="size-3 mr-1" /> {t("tuition_in_progress")}
+        </Badge>
+      )
     case "overpaid":
       return (
         <Badge className={DONE}>

@@ -77,6 +77,15 @@ async function createAndAttendSession(
   await page.keyboard.press('Escape');
 }
 
+// Màn Học phí mở tháng trước; tháng đang học theo buổi chỉ tạm tính (cần đóng = 0) → dời ca tạo hôm nay về tháng trước
+// để phiếu báo có số tiền thật (spec Y §3.4).
+async function moveSessionToPrevMonth(title: string) {
+  const now = new Date();
+  const prev = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, Math.min(now.getDate(), 28)));
+  const res = await db.teachingSession.updateMany({ where: { title }, data: { sessionDate: prev } });
+  expect(res.count).toBe(1);
+}
+
 test.describe('E2E Đã gửi phiếu học phí (spec V)', () => {
   test('Desktop (1280px): Tải ảnh tự đánh dấu đã gửi, lọc phiếu báo, đổi số tiền hiện nhãn cam', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -87,8 +96,9 @@ test.describe('E2E Đã gửi phiếu học phí (spec V)', () => {
     await login(page);
     await addStudent(page, studentName);
     await createAndAttendSession(page, studentName, 8, session1);
+    await moveSessionToPrevMonth(session1);
 
-    // Vào màn học phí
+    // Vào màn học phí (mặc định tháng trước)
     await page.goto('/tuition');
     await page.getByPlaceholder('Tìm tên học sinh...').fill(studentName);
 
@@ -132,10 +142,10 @@ test.describe('E2E Đã gửi phiếu học phí (spec V)', () => {
     await page.getByRole('option', { name: 'Đã gửi' }).click();
     await expect(row).toBeVisible();
 
-    // Điểm danh thêm 1 buổi có mặt
+    // Điểm danh thêm 1 buổi có mặt (cũng ở tháng trước) → số tiền đổi
     await createAndAttendSession(page, studentName, 10, session2);
+    await moveSessionToPrevMonth(session2);
 
-    // Vào lại học phí
     await page.goto('/tuition');
     await page.getByPlaceholder('Tìm tên học sinh...').fill(studentName);
 
@@ -158,8 +168,9 @@ test.describe('E2E Đã gửi phiếu học phí (spec V)', () => {
     await login(page);
     await addStudent(page, studentName);
     await createAndAttendSession(page, studentName, 14, session1);
+    await moveSessionToPrevMonth(session1);
 
-    // Vào màn học phí
+    // Vào màn học phí (mặc định tháng trước)
     await page.goto('/tuition');
     await page.getByPlaceholder('Tìm tên học sinh...').fill(studentName);
     const card = page.getByTestId('list-card').filter({ hasText: studentName });

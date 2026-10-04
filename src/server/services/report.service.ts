@@ -347,7 +347,15 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
 export type DashboardAlerts = {
   year: number
   month: number
-  debts: { studentId: number; fullName: string; grade: number; amount: number; months: number; isActive: boolean }[]
+  debts: {
+    studentId: number
+    fullName: string
+    grade: number
+    amount: number
+    months: number
+    isActive: boolean
+    noticeSentAt: Date | string | null
+  }[]
   idleStudents: { studentId: number; fullName: string; grade: number }[]
   unrescheduled: SessionDTO[]
 }
@@ -435,9 +443,27 @@ export async function getDashboardAlerts(
     }))
     .filter((d) => d.amount > 0)
 
-  const monthsById = await countDebtMonths(db, userId, debtors.map((d) => d.studentId), year, month)
+  const prevYear = month === 1 ? year - 1 : year
+  const prevMonth = month === 1 ? 12 : month - 1
+
+  const debtorIds = debtors.map((d) => d.studentId)
+  const [monthsById, prevNotices] = await Promise.all([
+    countDebtMonths(db, userId, debtorIds, year, month),
+    debtorIds.length > 0
+      ? db.monthlyTuition.findMany({
+          where: { studentId: { in: debtorIds }, year: prevYear, month: prevMonth },
+          select: { studentId: true, noticeSentAt: true },
+        })
+      : Promise.resolve([]),
+  ])
+  const noticeMap = new Map(prevNotices.map((n) => [n.studentId, n.noticeSentAt]))
+
   const debts = debtors
-    .map((d) => ({ ...d, months: monthsById.get(d.studentId) ?? 1 }))
+    .map((d) => ({
+      ...d,
+      months: monthsById.get(d.studentId) ?? 1,
+      noticeSentAt: noticeMap.get(d.studentId) ?? null,
+    }))
     .sort((a, b) => b.amount - a.amount)
 
   return {

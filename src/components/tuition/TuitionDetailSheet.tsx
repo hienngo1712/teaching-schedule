@@ -1,30 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
-  AlertTriangle,
   Calculator,
   History,
-  Info,
   MoreHorizontal,
   Pencil,
-  Plus,
   Receipt,
   Trash2,
 } from "lucide-react"
 import { type RouterOutputs, trpc } from "@/lib/trpc"
 import { cn, formatCurrency, formatDate } from "@/lib/utils"
-import { paymentSummaryLine } from "@/lib/payment-summary"
-import type { PaymentDTO } from "@/lib/types/models"
+import type { PaymentBatchDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import dayjs from "@/lib/dayjs"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -47,9 +40,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { PaymentFormDialog } from "./PaymentFormDialog"
 import { TuitionNoticeDialog } from "./TuitionNoticeDialog"
-import { LockBadge } from "@/components/plan/LockBadge"
+import { TuitionStatusBadge } from "./TuitionStatusBadge"
+import { PayBlock } from "./PayBlock"
+import { WaiveDialog } from "./WaiveDialog"
 import { LockedSection } from "@/components/plan/LockedSection"
 import { openUpgrade } from "@/components/plan/upgrade-store"
+import { dueNow, isProvisional, noticeAgeDays, NOTICE_OVERDUE_DAYS } from "@/lib/tuition-display"
 
 type TuitionStatus = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
 type SheetData = TuitionStatus & { year: number; month: number }
@@ -66,7 +62,6 @@ export function TuitionDetailSheet({
   open,
   onOpenChange,
   data,
-  onSuccess,
   paymentsLocked = false,
 }: TuitionDetailSheetProps) {
   const { t } = useTranslation()
@@ -74,15 +69,10 @@ export function TuitionDetailSheet({
 
   if (!data) return null
 
-  // DialogContent/SheetContent chỉ mount khi mở → phần sửa dở của form tất toán bị bỏ mỗi lần mở lại.
   const body = (
     <TuitionDetailBody
       data={data}
       paymentsLocked={paymentsLocked}
-      onSaved={() => {
-        onSuccess()
-        onOpenChange(false)
-      }}
     />
   )
 
@@ -113,175 +103,233 @@ export function TuitionDetailSheet({
 
 function TuitionDetailBody({
   data,
-  onSaved,
   paymentsLocked,
 }: {
   data: SheetData
-  onSaved: () => void
   paymentsLocked: boolean
 }) {
   const { t } = useTranslation()
   const utils = trpc.useUtils()
   const { studentId, year, month } = data
 
-  // `data` là bản chụp lúc mở; sheet vẫn mở sau mỗi lần thu nên đọc lại dòng tháng (TRPCProvider tự invalidate).
-  const statusQuery = trpc.tuition.getMonthlyStatus.useQuery({ year, month, studentId, page: 1, limit: 1 })
+  const statusQuery = trpc.tuition.getMonthlyStatus.useQuery(
+    { year, month, studentId, page: 1, limit: 1 },
+    { initialData: { items: [data], totalCount: 1, totalPages: 1 } }
+  )
   const row = statusQuery.data?.items[0] ?? data
-  const paymentsQuery = trpc.payment.list.useQuery({ studentId, year, month }, { enabled: !paymentsLocked })
-  // Ghi nhận thu, tất toán và phiếu báo cùng gói Plus (P3, P7).
+  const batchesQuery = trpc.payment.listBatches.useQuery({ studentId, year, month }, { enabled: !paymentsLocked })
+
   const lockPlus = () => openUpgrade({ plan: "plus" })
   const lockedLabel = t("plan_available_in").replace("{plan}", "Plus")
-  const payments = paymentsQuery.data ?? []
+  const batches = batchesQuery.data ?? []
 
-  // Chỉ giữ phần người dùng đã sửa; phần chưa sửa theo `row` mới nhất để `dirty` không sáng sai.
-  const [edits, setEdits] = useState<{ isFullPaid?: boolean; notes?: string }>({})
-  const isFullPaid = edits.isFullPaid ?? row.isFullPaid
-  const notes = edits.notes ?? row.notes ?? ""
-  const [form, setForm] = useState<{ open: false } | { open: true; payment?: PaymentDTO }>({ open: false })
-  const [deleteTarget, setDeleteTarget] = useState<PaymentDTO | null>(null)
+  const [notes, setNotes] = useState(row.notes ?? "")
+  const [notesSaved, setNotesSaved] = useState(false)
+  const [waiveOpen, setWaiveOpen] = useState(false)
+  const [editingBatch, setEditingBatch] = useState<PaymentBatchDTO | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<PaymentBatchDTO | null>(null)
   const [noticeOpen, setNoticeOpen] = useState(false)
 
   const setNoticeSentMut = trpc.tuition.setNoticeSent.useMutation({
     onSuccess: () => {
-      utils.tuition.getMonthlyStatus.invalidate()
+      void utils.tuition.getMonthlyStatus.invalidate()
     },
     onError: (e) => toast.error(e.message),
   })
 
-  const settlementMut = trpc.tuition.updateSettlement.useMutation({
+  const updateSettlementMut = trpc.tuition.updateSettlement.useMutation({
     onSuccess: () => {
-      toast.success(t("settlement_saved"))
-      onSaved()
+      void utils.tuition.invalidate()
     },
     onError: (e) => toast.error(e.message),
   })
-  const deleteMut = trpc.payment.delete.useMutation({
-    onSuccess: () => toast.success(t("payment_deleted")),
+
+  const deleteBatchMut = trpc.payment.deleteBatch.useMutation({
+    onSuccess: () => {
+      void utils.tuition.invalidate()
+      void utils.payment.invalidate()
+      toast.success(t("payment_deleted"))
+    },
     onError: (e) => toast.error(e.message),
   })
 
-  const summary = paymentSummaryLine(row)
-  const summaryLabel = { remaining: t("remaining"), overpaid: t("overpaid_amount"), waived: t("waived") }[summary.kind]
-  const shortfall = Math.max(0, row.totalAmountDue) - row.paidAmount
-  const showWaivedWarning = isFullPaid && shortfall > 0
-  const dirty = isFullPaid !== row.isFullPaid || notes !== (row.notes ?? "")
+  // Đóng sheet bằng Esc/vuốt không bắn blur → lưu ghi chú còn dở khi unmount (client thường, không phụ thuộc component).
+  const pendingNotes = useRef({ notes, saved: row.notes ?? "" })
+  pendingNotes.current = { notes, saved: row.notes ?? "" }
+  useEffect(() => {
+    return () => {
+      const { notes: n, saved } = pendingNotes.current
+      if (n !== saved) {
+        void utils.client.tuition.updateSettlement
+          .mutate({ studentId, year, month, notes: n === "" ? null : n })
+          .then(() => utils.tuition.invalidate())
+          .catch((e: Error) => toast.error(e.message))
+      }
+    }
+  }, [utils, studentId, year, month])
 
-  const settlementBlock = (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
-        <Checkbox
-          id="tuition-full-paid"
-          checked={isFullPaid}
-          onCheckedChange={(v) => setEdits((e) => ({ ...e, isFullPaid: v === true }))}
-        />
-        <Label htmlFor="tuition-full-paid" className="text-sm font-medium">
-          {t("mark_fully_paid")}
-        </Label>
-      </div>
+  const due = dueNow(row)
+  const prevM = month === 1 ? 12 : month - 1
+  const isProv = isProvisional(row)
 
-      {showWaivedWarning && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
-          <p className="text-xs leading-relaxed text-amber-800">
-            {t("settled_waived_warning")} {formatCurrency(shortfall)}. {t("settled_waived_warning_suffix")}
-          </p>
-        </div>
-      )}
+  const handleBlurNotes = () => {
+    if (notes !== (row.notes ?? "")) {
+      updateSettlementMut.mutate(
+        { studentId, year, month, notes: notes === "" ? null : notes },
+        {
+          onSuccess: () => {
+            setNotesSaved(true)
+            setTimeout(() => setNotesSaved(false), 2000)
+          },
+        }
+      )
+    }
+  }
 
-      <div className="space-y-2">
-        <Label htmlFor="tuition-notes" className="text-xs font-bold text-slate-400">
-          {t("notes")}
-        </Label>
-        <Textarea
-          id="tuition-notes"
-          placeholder={t("notes_placeholder")}
-          className="min-h-[80px] text-sm"
-          value={notes}
-          onChange={(ev) => setEdits((e) => ({ ...e, notes: ev.target.value }))}
-        />
-      </div>
-    </div>
-  )
+  const handleConfirmWaive = () => {
+    updateSettlementMut.mutate(
+      { studentId, year, month, isFullPaid: true },
+      {
+        onSuccess: () => {
+          setWaiveOpen(false)
+          toast.success(t("settlement_saved"))
+        },
+      }
+    )
+  }
+
+  const handleUnwaive = () => {
+    updateSettlementMut.mutate(
+      { studentId, year, month, isFullPaid: false },
+      {
+        onSuccess: () => toast.success(t("settlement_saved")),
+      }
+    )
+  }
+
+  const noticeAge = row.noticeSentAt ? noticeAgeDays(row.noticeSentAt) : 0
+  const noticeOverdue = noticeAge >= NOTICE_OVERDUE_DAYS && due > 0
 
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex flex-col gap-6 p-6">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-xl font-bold text-slate-900">
-              <Receipt className="size-5 text-blue-600" />
-              {t("tuition_detail")}
+          {/* Header */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col gap-1 min-w-0">
+              <h2 className="text-xl font-bold text-slate-900 truncate">{row.fullName}</h2>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                <span>
+                  {t("tuition_month_title").replace("{m}", String(month)).replace("{y}", String(year))}
+                </span>
+                <TuitionStatusBadge item={row} />
+              </div>
             </div>
-            <div className="text-sm text-slate-500">
-              {t("student")}: <span className="font-medium text-slate-900">{row.fullName}</span> • {t("month")}{" "}
-              {month}/{year}
-            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-9 shrink-0">
+                  <MoreHorizontal className="size-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {row.isFullPaid ? (
+                  <DropdownMenuItem onClick={handleUnwaive}>
+                    {t("unwaive")}
+                  </DropdownMenuItem>
+                ) : (
+                  // Tháng đang học tạm tính: miễn sẽ xoá luôn tiền các buổi còn lại của tháng → chỉ miễn ở tháng nợ.
+                  due > 0 && !isProv && (
+                    <DropdownMenuItem onClick={() => setWaiveOpen(true)} className="text-amber-600">
+                      {t("waive_title")}
+                    </DropdownMenuItem>
+                  )
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          {/* Bảng tính */}
+          {/* Bảng tính tiền */}
           <div className="space-y-3">
             <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-500">
               <Calculator className="size-4" />
               {t("fee_breakdown")}
             </h3>
             <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
+              {row.previousBalance !== 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500">
+                    {row.previousBalance < 0
+                      ? t("prepaid_label")
+                      : row.debtMonths > 1
+                      ? t("debt_n_months_label").replace("{n}", String(row.debtMonths))
+                      : t("debt_prev_month_label").replace("{m}", String(prevM))}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-medium tabular-nums",
+                      row.previousBalance > 0 ? "text-debt" : "text-green-600"
+                    )}
+                  >
+                    {row.previousBalance > 0 ? "+" : ""}
+                    {formatCurrency(row.previousBalance)}
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">{t("previous_balance_short")}</span>
-                <span
-                  className={cn(
-                    "font-medium",
-                    row.previousBalance > 0
-                      ? "text-debt"
-                      : row.previousBalance < 0
-                      ? "text-green-600"
-                      : "text-slate-400"
-                  )}
-                >
-                  {row.previousBalance > 0 ? "+" : ""}
-                  {formatCurrency(row.previousBalance)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">
-                  {row.billingMode === "monthly"
+                <span className={cn("text-slate-500", isProv && "text-slate-400 italic")}>
+                  {isProv
+                    ? t("month_provisional_line").replace("{m}", String(month)).replace("{p}", String(row.presentSessions))
+                    : row.billingMode === "monthly"
                     ? t("tuition_monthly_package_line")
                         .replace("{p}", String(row.presentSessions))
                         .replace("{n}", String(row.totalSessions))
                     : `${t("current_month_fee")} (${row.presentSessions}/${row.totalSessions} ${t("sessions")})`}
                 </span>
-                <span className="font-medium text-slate-900">+{formatCurrency(row.totalExpected)}</span>
+                <span className={cn("font-medium tabular-nums", isProv ? "text-slate-400" : "text-slate-900")}>
+                  +{formatCurrency(row.totalExpected)}
+                </span>
               </div>
+
               <Separator />
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-slate-900">{t("total_amount_due")}</span>
-                <span className="text-lg font-medium text-slate-900">{formatCurrency(row.totalAmountDue)}</span>
-              </div>
+
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-500">{t("paid_total")}</span>
-                <span data-testid="paid-total" className="font-medium text-slate-900">
+                <span data-testid="paid-total" className="font-medium text-slate-900 tabular-nums">
                   {formatCurrency(row.paidAmount)}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">{summaryLabel}</span>
+
+              <div className="flex items-center justify-between font-semibold text-base">
+                <span>{isProv ? t("due_now") : t("remaining_due")}</span>
                 <span
                   data-testid="remaining-line"
                   className={cn(
-                    "font-medium",
-                    summary.kind === "overpaid"
-                      ? "text-green-600"
-                      : summary.kind === "waived"
+                    "tabular-nums",
+                    row.isFullPaid
                       ? "text-teal-700"
-                      : summary.amount > 0
+                      : due > 0
                       ? "text-debt"
                       : "text-slate-400"
                   )}
                 >
-                  {formatCurrency(summary.amount)}
+                  {row.isFullPaid
+                    ? `${t("waived")} ${formatCurrency(Math.max(0, row.totalAmountDue - row.paidAmount))}`
+                    : formatCurrency(due)}
                 </span>
               </div>
             </div>
           </div>
+
+          {/* Thu tiền */}
+          {paymentsLocked ? (
+            <LockedSection plan="plus" label={lockedLabel} testId="payments-locked">
+              <div className="h-24 rounded-lg border border-slate-200 bg-white" />
+            </LockedSection>
+          ) : (
+            <PayBlock studentId={studentId} year={year} month={month} due={due} />
+          )}
 
           {/* Phiếu báo */}
           <div className="space-y-3">
@@ -292,7 +340,7 @@ function TuitionDetailBody({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
               <div className="text-sm">
                 {row.noticeSentAt ? (
-                  <span className="font-medium text-slate-700">
+                  <span className={cn("font-medium", noticeOverdue ? "text-amber-700" : "text-slate-700")}>
                     {t("notice_sent_detail")
                       .replace("{d}", dayjs(row.noticeSentAt).tz("Asia/Ho_Chi_Minh").format("D/M"))
                       .replace("{t}", dayjs(row.noticeSentAt).tz("Asia/Ho_Chi_Minh").format("HH:mm"))}
@@ -306,144 +354,131 @@ function TuitionDetailBody({
                   </span>
                 )}
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 md:h-10 text-xs font-semibold"
-                disabled={setNoticeSentMut.isPending}
-                onClick={() =>
-                  setNoticeSentMut.mutate({
-                    studentId,
-                    year,
-                    month,
-                    sent: row.noticeStatus === "none",
-                  })
-                }
-              >
-                {row.noticeStatus === "none" ? t("mark_notice_sent") : t("unmark_notice_sent")}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 text-xs"
+                  onClick={() => (paymentsLocked ? lockPlus() : setNoticeOpen(true))}
+                >
+                  <Receipt className="mr-1.5 size-3.5" />
+                  {t("tuition_notice")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 text-xs text-slate-500"
+                  disabled={setNoticeSentMut.isPending}
+                  onClick={() =>
+                    setNoticeSentMut.mutate({
+                      studentId,
+                      year,
+                      month,
+                      sent: row.noticeStatus === "none",
+                    })
+                  }
+                >
+                  {row.noticeStatus === "none" ? t("mark_notice_sent") : t("unmark_notice_sent")}
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Lịch sử thu tiền */}
+          {/* Lịch sử thu tiền theo đợt */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-500">
-                <History className="size-4" />
-                {t("payment_history")}
-              </h3>
-              <Button
-                type="button"
-                onClick={() => (paymentsLocked ? lockPlus() : setForm({ open: true }))}
-                className="h-11 md:h-10"
-              >
-                <Plus className="mr-1.5 size-4" />
-                {t("add_payment")}
-                {paymentsLocked && <LockBadge plan="plus" className="ml-1.5" />}
-              </Button>
-            </div>
+            <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-500">
+              <History className="size-4" />
+              {t("payment_history")}
+            </h3>
 
             {paymentsLocked ? (
-              <LockedSection plan="plus" label={lockedLabel} testId="payments-locked">
-                <div className="space-y-2">
-                  <div className="h-16 rounded-lg border border-slate-200 bg-white" />
-                  <div className="h-16 rounded-lg border border-slate-200 bg-white" />
-                </div>
+              <LockedSection plan="plus" label={lockedLabel} testId="history-locked">
+                <div className="h-16 rounded-lg border border-slate-200 bg-white" />
               </LockedSection>
-            ) : paymentsQuery.isPending ? (
+            ) : batchesQuery.isPending ? (
               <div className="space-y-2">
                 <Skeleton className="h-16 w-full rounded-lg" />
-                <Skeleton className="h-16 w-full rounded-lg" />
               </div>
-            ) : payments.length === 0 ? (
+            ) : batches.length === 0 ? (
               <p className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-sm text-slate-500">
                 {t("no_payments")}
               </p>
             ) : (
               <ul className="space-y-2">
-                {payments.map((p) => (
-                  <li key={p.id} data-testid="payment-row" className="rounded-lg border border-slate-200 bg-white p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm text-slate-700">{formatDate(p.paidAt)}</span>
-                          <Badge variant="secondary" className="border-none bg-slate-100 font-medium text-slate-600">
-                            {p.method === "transfer" ? t("method_transfer") : t("method_cash")}
-                          </Badge>
+                {batches.map((b) => {
+                  const showParts =
+                    b.allocations.length > 1 ||
+                    (b.allocations.length === 1 && (b.allocations[0].year !== year || b.allocations[0].month !== month))
+                  const partsText = b.allocations
+                    .map((a) => `T${a.month} ${formatCurrency(a.amount)}`)
+                    .join(" · ")
+
+                  return (
+                    <li key={b.batchId} data-testid="payment-row" className="rounded-lg border border-slate-200 bg-white p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium text-slate-800">{formatDate(b.paidAt)}</span>
+                          </div>
+                          {showParts && (
+                            <p className="mt-0.5 text-xs text-slate-500 tabular-nums">
+                              {partsText}
+                            </p>
+                          )}
+                          {b.note && <p className="mt-1 line-clamp-2 text-xs text-slate-500">{b.note}</p>}
                         </div>
-                        {p.note && <p className="mt-1 line-clamp-2 text-sm text-slate-500">{p.note}</p>}
+                        <span className="shrink-0 whitespace-nowrap font-semibold text-slate-900 tabular-nums">
+                          {formatCurrency(b.amount)}
+                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-11 shrink-0 md:size-9"
+                              aria-label={t("actions")}
+                            >
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => setEditingBatch(b)}>
+                              <Pencil className="mr-2 size-4" />
+                              {t("edit")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setDeleteTarget(b)} className="text-red-600">
+                              <Trash2 className="mr-2 size-4" />
+                              {t("delete")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <span className="shrink-0 whitespace-nowrap font-semibold text-slate-900">
-                        {formatCurrency(p.amount)}
-                      </span>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-11 shrink-0 md:size-9"
-                            aria-label={t("actions")}
-                          >
-                            <MoreHorizontal className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => setForm({ open: true, payment: p })}>
-                            <Pencil className="mr-2 size-4" />
-                            {t("edit")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => setDeleteTarget(p)} className="text-red-600">
-                            <Trash2 className="mr-2 size-4" />
-                            {t("delete")}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>
 
-          {/* Tất toán & ghi chú tháng */}
-          {paymentsLocked ? (
-            <LockedSection plan="plus" label={lockedLabel} testId="settlement-locked">
-              {settlementBlock}
-            </LockedSection>
-          ) : (
-            settlementBlock
-          )}
-        </div>
-      </div>
-
-      <div className="shrink-0 space-y-4 border-t bg-white p-6">
-        <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-3">
-          <Info className="mt-0.5 size-4 shrink-0 text-amber-600" />
-          <p className="text-xs leading-relaxed text-amber-700">{t("payment_tip_snapshot")}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12 rounded-xl"
-            disabled={!paymentsLocked && dirty}
-            onClick={() => (paymentsLocked ? lockPlus() : setNoticeOpen(true))}
-          >
-            <Receipt className="mr-2 size-4" />
-            {t("tuition_notice")}
-            {paymentsLocked && <LockBadge plan="plus" className="ml-1.5" />}
-          </Button>
-          <Button
-            type="button"
-            className="h-12 flex-1 rounded-xl font-bold"
-            disabled={!paymentsLocked && (!dirty || settlementMut.isPending)}
-            onClick={() =>
-              paymentsLocked ? lockPlus() : settlementMut.mutate({ studentId, year, month, isFullPaid, notes })
-            }
-          >
-            {settlementMut.isPending ? t("saving") : t("save")}
-            {paymentsLocked && <LockBadge plan="plus" className="ml-1.5" />}
-          </Button>
+          {/* Ghi chú tháng */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="tuition-notes" className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                {t("notes")}
+              </label>
+              {notesSaved && <span className="text-xs text-teal-600 font-medium">{t("notes_saved")}</span>}
+            </div>
+            <Textarea
+              id="tuition-notes"
+              placeholder={t("notes_placeholder")}
+              className="min-h-[72px] text-sm"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              onBlur={handleBlurNotes}
+            />
+          </div>
         </div>
       </div>
 
@@ -456,17 +491,20 @@ function TuitionDetailBody({
         />
       )}
 
-      {form.open && (
+      {editingBatch && (
         <PaymentFormDialog
-          studentId={studentId}
-          year={year}
-          month={month}
-          totalAmountDue={row.totalAmountDue}
-          paidAmount={row.paidAmount}
-          payment={form.payment}
-          onClose={() => setForm({ open: false })}
+          batch={editingBatch}
+          onClose={() => setEditingBatch(null)}
         />
       )}
+
+      <WaiveDialog
+        open={waiveOpen}
+        onOpenChange={setWaiveOpen}
+        amount={due}
+        month={month}
+        onConfirm={handleConfirmWaive}
+      />
 
       <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
@@ -483,7 +521,7 @@ function TuitionDetailBody({
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={() => {
-                if (deleteTarget) deleteMut.mutate({ id: deleteTarget.id })
+                if (deleteTarget) deleteBatchMut.mutate({ batchId: deleteTarget.batchId })
                 setDeleteTarget(null)
               }}
             >
