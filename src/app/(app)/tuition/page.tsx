@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronLeft, ChevronRight, Receipt, Wallet } from "lucide-react"
+import { ChevronLeft, ChevronRight, Receipt } from "lucide-react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
@@ -17,7 +17,11 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { GRADES } from "@/lib/constants"
 import { cn, formatCurrency } from "@/lib/utils"
-import { getTuitionBadgeStatus, type TuitionBadgeStatus } from "@/lib/tuition-status"
+import { monthKey } from "@/lib/billing"
+import { vnDateParts } from "@/lib/utils"
+import { dueNow, isInProgressMonth } from "@/lib/tuition-display"
+import { useRecordPayment } from "@/hooks/useRecordPayment"
+import { TuitionAmountCell } from "@/components/tuition/TuitionAmountCell"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
 import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
 import { TuitionStatusBadge } from "@/components/tuition/TuitionStatusBadge"
@@ -31,19 +35,10 @@ import { FilterBar } from "@/components/common/FilterBar"
 import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
 import type { MonthlyTuitionFilterInput } from "@/lib/schemas/tuition"
 
-
 type TuitionStatusItem = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
 
-const SETTLED: TuitionBadgeStatus[] = ["fully_paid", "overpaid", "settled_waived"]
-
-// Chỉ "chưa đóng" tô đỏ nợ; đã đủ thì lùi về chữ phụ để mắt dồn vào HS còn phải thu.
-function amountClass(status: TuitionBadgeStatus) {
-  if (status === "unpaid") return "text-debt"
-  return SETTLED.includes(status) ? "text-muted-foreground" : "text-foreground"
-}
-
 export default function TuitionPage() {
-  const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
+  const { year, month, monthLabel, prevMonth, nextMonth, goToMonth } = useCalendar({ defaultOffset: -1 })
   const {
     selectedGrade,
     setGrade,
@@ -64,6 +59,7 @@ export default function TuitionPage() {
   const { t } = useTranslation()
   const paymentsGate = useFeatureGate("payments")
   const noticeGate = useFeatureGate("tuitionNotice")
+  const recordPayment = useRecordPayment()
 
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -110,22 +106,28 @@ export default function TuitionPage() {
   }, [selectedStudentId, query.data, year, month])
 
   const offset = (currentPage - 1) * pageSize
-  const payButton = (item: TuitionStatusItem, className?: string) => (
-    <Button
-      size="sm"
-      variant={SETTLED.includes(getTuitionBadgeStatus(item)) ? "outline" : "default"}
-      className={className}
-      onClick={(e) => {
-        e.stopPropagation()
-        if (paymentsGate.locked) paymentsGate.openUpgrade()
-        else handleOpenDetail(item)
-      }}
-    >
-      <Wallet className="mr-1.5 size-4" />
-      {t("record_payment")}
-      {paymentsGate.locked && <LockBadge plan={paymentsGate.requiredPlan} className="ml-1.5" />}
-    </Button>
-  )
+  const payFullButton = (item: TuitionStatusItem, className?: string) => {
+    const due = dueNow(item)
+    if (due === 0) return null
+    return (
+      <Button
+        size="sm"
+        className={className}
+        disabled={recordPayment.isPending}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.stopPropagation()
+        }}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (paymentsGate.locked) paymentsGate.openUpgrade()
+          else recordPayment.payFull({ studentId: item.studentId, year, month }, due)
+        }}
+      >
+        {t("pay_full").replace("{amount}", formatCurrency(due))}
+        {paymentsGate.locked && <LockBadge plan={paymentsGate.requiredPlan} className="ml-1.5" />}
+      </Button>
+    )
+  }
 
   const noticeButton = (item: TuitionStatusItem, className?: string) => (
     <Button
@@ -159,13 +161,17 @@ export default function TuitionPage() {
       className: "w-[80px] text-center",
     },
     { header: t("sessions_count"), cell: (item) => `${item.presentSessions}/${item.totalSessions}`, className: "w-[120px] text-center text-slate-600" },
-    { header: t("amount_to_pay"), cell: (item) => formatCurrency(item.totalAmountDue), className: "w-[160px] whitespace-nowrap text-right font-medium text-slate-900" },
+    {
+      header: t("amount_to_pay"),
+      cell: (item) => <TuitionAmountCell item={item} month={month} />,
+      className: "w-[200px] text-right",
+    },
     {
       header: t("status"),
       cell: (item) => (
         <div className="flex flex-col items-center gap-1">
           <TuitionStatusBadge item={item} />
-          <TuitionNoticeBadge item={item} />
+          <TuitionNoticeBadge item={{ ...item, due: dueNow(item) }} />
         </div>
       ),
       className: "w-[160px] text-center",
@@ -175,7 +181,7 @@ export default function TuitionPage() {
       cell: (item) => (
         <div className="flex justify-end gap-2">
           {noticeButton(item, "size-9")}
-          {payButton(item)}
+          {payFullButton(item)}
         </div>
       ),
       className: "w-[180px] text-right",
@@ -186,6 +192,12 @@ export default function TuitionPage() {
     (selectedGrade ? 1 : 0) +
     (selectedStatus && selectedStatus !== "all" ? 1 : 0) +
     (selectedNoticeFilter && selectedNoticeFilter !== "all" ? 1 : 0)
+
+  const nowVn = vnDateParts()
+  const prevMonthKey = monthKey(nowVn.year, nowVn.month) - 1
+  const viewingMonthKey = monthKey(year, month)
+  const isViewingPrev = viewingMonthKey === prevMonthKey
+  const isCurrentOrFuture = isInProgressMonth(year, month)
 
   return (
     <div className="flex flex-col gap-4">
@@ -252,6 +264,26 @@ export default function TuitionPage() {
         }
       />
 
+      {isViewingPrev && (
+        <div className="flex items-center justify-between rounded-lg bg-primary/[0.06] px-3 py-2 text-sm text-primary">
+          <span>{t("tuition_viewing_prev")}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto p-0 font-medium text-primary hover:bg-transparent hover:underline"
+            onClick={() => goToMonth(nowVn.year, nowVn.month)}
+          >
+            {t("tuition_view_month").replace("{m}", String(nowVn.month))}
+          </Button>
+        </div>
+      )}
+
+      {!isViewingPrev && isCurrentOrFuture && (
+        <div className="rounded-lg bg-primary/[0.06] px-3 py-2 text-sm text-primary">
+          {t("tuition_viewing_current")}
+        </div>
+      )}
+
       <ResponsiveList
         items={items}
         getKey={(item) => item.studentId}
@@ -280,8 +312,8 @@ export default function TuitionPage() {
               </div>
               <div className="flex flex-col items-end gap-1">
                 <div className="flex flex-wrap items-center justify-end gap-1">
-                  <TuitionStatusBadge item={item} />
-                  <TuitionNoticeBadge item={item} />
+                <TuitionStatusBadge item={item} />
+                <TuitionNoticeBadge item={{ ...item, due: dueNow(item) }} />
                 </div>
                 <span className="text-xs text-slate-500">
                   {item.presentSessions}/{item.totalSessions} {t("sessions")}
@@ -291,18 +323,11 @@ export default function TuitionPage() {
             <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-3">
               <div>
                 <div className="text-xs text-slate-500">{t("amount_to_pay")}</div>
-                <div
-                  className={cn(
-                    "whitespace-nowrap text-[17px] font-semibold tabular-nums tracking-tight",
-                    amountClass(getTuitionBadgeStatus(item))
-                  )}
-                >
-                  {formatCurrency(item.totalAmountDue)}
-                </div>
+                <TuitionAmountCell item={item} month={month} className="items-start" />
               </div>
               <div className="flex gap-2">
                 {noticeButton(item, "size-11")}
-                {payButton(item, "h-11")}
+                {payFullButton(item, "h-11 flex-1")}
               </div>
             </div>
           </div>

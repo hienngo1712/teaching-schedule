@@ -18,16 +18,19 @@ vi.mock("@/hooks/usePlan", () => ({
 }))
 vi.mock("@/lib/trpc", () => ({
   trpc: {
+    useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } } }),
     tuition: {
       getMonthlyStatus: {
         useQuery: () => ({ data: { items: [], totalCount: 0, totalPages: 0 }, isPending: false, isError: false, refetch: vi.fn() }),
       },
       getNotice: { useQuery: () => ({ data: undefined, isError: false, refetch: vi.fn() }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     payment: {
       list: { useQuery: () => ({ data: [], isPending: false }) },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      record: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }))
