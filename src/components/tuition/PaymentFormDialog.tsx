@@ -17,59 +17,50 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { trpc } from "@/lib/trpc"
 import { formatCurrency } from "@/lib/utils"
-import { remainingToFill, vnTodayIso } from "@/lib/payment-summary"
-import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/schemas/payment"
-import type { PaymentDTO } from "@/lib/types/models"
+import { vnTodayIso } from "@/lib/payment-summary"
+import type { PaymentBatchDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
-const METHOD_LABEL = { cash: "method_cash", transfer: "method_transfer" } as const
-
 type Props = {
-  studentId: number
-  year: number
-  month: number
-  totalAmountDue: number
-  paidAmount: number
-  payment?: PaymentDTO
+  batch: PaymentBatchDTO
   onClose: () => void
 }
 
-// Chỉ mount khi mở (xem TuitionDetailSheet) nên state khởi tạo thẳng từ props.
-export function PaymentFormDialog({ studentId, year, month, totalAmountDue, paidAmount, payment, onClose }: Props) {
+export function PaymentFormDialog({ batch, onClose }: Props) {
   const { t } = useTranslation()
-  const [amount, setAmount] = useState<number | undefined>(payment?.amount)
-  const [paidAt, setPaidAt] = useState(payment?.paidAt ?? vnTodayIso())
-  const [method, setMethod] = useState<PaymentMethod>(payment?.method ?? "cash")
-  const [note, setNote] = useState(payment?.note ?? "")
+  const [amount, setAmount] = useState<number | undefined>(batch.amount)
+  const [paidAt, setPaidAt] = useState(batch.paidAt ?? vnTodayIso())
+  const [note, setNote] = useState(batch.note ?? "")
 
-  const handlers = {
-    onSuccess: (saved: PaymentDTO) => {
-      toast.success(`${t("payment_saved")} ${formatCurrency(saved.amount)}`)
+  const utils = trpc.useUtils()
+  const updateBatchMut = trpc.payment.updateBatch.useMutation({
+    onSuccess: () => {
+      void utils.tuition.invalidate()
+      void utils.payment.invalidate()
+      toast.success(`${t("payment_saved")} ${formatCurrency(amount ?? 0)}`)
       onClose()
     },
-    onError: (e: { message: string }) => toast.error(e.message),
-  }
-  const createMut = trpc.payment.create.useMutation(handlers)
-  const updateMut = trpc.payment.update.useMutation(handlers)
-  const isPending = createMut.isPending || updateMut.isPending
+    onError: (e) => toast.error(e.message),
+  })
 
-  const fill = remainingToFill(totalAmountDue, paidAmount, payment?.amount ?? 0)
+  const isPending = updateBatchMut.isPending
   const canSave = !!amount && amount >= 1 && paidAt !== "" && !isPending
 
   const save = () => {
     if (!amount) return
-    const data = { amount, paidAt, method, note }
-    if (payment) updateMut.mutate({ id: payment.id, data })
-    else createMut.mutate({ studentId, year, month, ...data })
+    updateBatchMut.mutate({
+      batchId: batch.batchId,
+      amount,
+      paidAt,
+      note,
+    })
   }
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {payment ? t("edit_payment") : `${t("add_payment_title")} ${month}/${year}`}
-          </DialogTitle>
+          <DialogTitle>{t("edit_payment")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -82,17 +73,6 @@ export function PaymentFormDialog({ studentId, year, month, totalAmountDue, paid
               onChange={setAmount}
               className="h-11 text-lg md:h-10"
             />
-            {fill > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-11 md:h-9"
-                onClick={() => setAmount(fill)}
-              >
-                {t("fill_remaining")}: {formatCurrency(fill)}
-              </Button>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -104,24 +84,6 @@ export function PaymentFormDialog({ studentId, year, month, totalAmountDue, paid
               onChange={(e) => setPaidAt(e.target.value)}
               className="h-11 md:h-10"
             />
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t("payment_method")}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {PAYMENT_METHODS.map((m) => (
-                <Button
-                  key={m}
-                  type="button"
-                  variant={method === m ? "default" : "outline"}
-                  aria-pressed={method === m}
-                  onClick={() => setMethod(m)}
-                  className="h-11"
-                >
-                  {t(METHOD_LABEL[m])}
-                </Button>
-              ))}
-            </div>
           </div>
 
           <div className="space-y-2">
