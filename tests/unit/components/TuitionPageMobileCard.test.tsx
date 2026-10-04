@@ -52,12 +52,15 @@ vi.mock("@/lib/trpc", () => ({
     tuition: {
       getMonthlyStatus: { useQuery: () => getMonthlyStatusQuery },
       getNotice: { useQuery: () => ({ data: undefined, isError: false, refetch: vi.fn() }) },
+      ledgers: { useQuery: () => ({ data: [], isPending: false }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     payment: {
       list: { useQuery: () => ({ data: [], isPending: false }) },
+      listBatches: { useQuery: () => ({ data: [], isPending: false }) },
       delete: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      deleteBatch: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       record: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },

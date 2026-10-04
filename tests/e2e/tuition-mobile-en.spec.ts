@@ -26,8 +26,13 @@ test('thẻ học phí 390px, tiếng Anh, 100.000.000 đ không làm trang cu�
   await expect(page).toHaveURL(/.*dashboard/);
 
   const studentName = `HS tiền lớn ${Date.now()}`;
-  const title = `Ca tiền lớn ${Math.floor(Math.random() * 10000)}`;
-  const startHour = Math.floor(Math.random() * 5) + 13; // 13:00 tới 17:00, tránh trùng ca có sẵn
+  const stamp = Math.floor(Math.random() * 100000);
+  const title = `Ca tiền lớn ${stamp}`;
+  const startHour = Math.floor(Math.random() * 4) + 19; // 19:00 - 23:00, không trùng ca ban ngày
+  const startMin = ['00', '15', '30'][Math.floor(Math.random() * 3)];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
 
   // 1. HS học phí 100.000.000/buổi, 1 ca hôm nay có mặt
   await page.goto('/students');
@@ -43,8 +48,8 @@ test('thẻ học phí 390px, tiếng Anh, 100.000.000 đ không làm trang cu�
   await page.goto('/calendar');
   await page.getByRole('button', { name: 'Tạo ca dạy' }).first().click();
   const form = page.getByRole('dialog');
-  await form.getByLabel('Bắt đầu (HH:mm)').fill(`${startHour}00`);
-  await form.getByLabel('Kết thúc (HH:mm)').fill(`${startHour + 1}00`);
+  await form.getByLabel('Bắt đầu (HH:mm)').fill(`${startHour}${startMin}`);
+  await form.getByLabel('Kết thúc (HH:mm)').fill(`${startHour + 1}${startMin}`);
   await form.getByLabel('Môn học').click();
   await page.getByRole('option').first().click();
   await form.getByPlaceholder('Nhóm nâng cao').fill(title);
@@ -59,13 +64,13 @@ test('thẻ học phí 390px, tiếng Anh, 100.000.000 đ không làm trang cu�
   await expect(page.getByText('Đã lưu điểm danh')).toBeVisible();
   await page.keyboard.press('Escape');
 
-  // 2. Đổi sang tiếng Anh, xem thẻ học phí
+  // 2. Đổi sang tiếng Anh, xem thẻ học phí (chỉ định year/month của tháng hiện tại vì /tuition mặc định tháng trước)
   await page.evaluate(() => localStorage.setItem('language', 'en'));
-  await page.goto('/tuition');
+  await page.goto(`/tuition?year=${currentYear}&month=${currentMonth}`);
   await page.getByPlaceholder('Search student name...').fill(studentName);
   const card = page.getByTestId('list-card').filter({ hasText: studentName });
   await expect(card.getByText(/100\.000\.000/)).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Record Payment', exact: true })).toBeVisible();
+  // Tháng đang học (in_progress) không hiện nút 'Record Payment' hay 'Đã đóng đủ' ngoài card khi dueNow = 0
   const cardOverflow = await card.evaluate((el) => el.scrollWidth - el.clientWidth);
   expect(cardOverflow).toBeLessThanOrEqual(0);
   await expectNoHorizontalScroll(page);

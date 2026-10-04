@@ -84,18 +84,13 @@ test('Standard: đủ menu như Pro; Báo cáo, Cần chú ý, Ghi nhận, sheet
   await expect(page).toHaveURL(/dashboard/);
   await closeUpgrade(page);
 
-  // Học phí: nút Ghi nhận có khóa → popup Plus; bấm thẻ vẫn mở sheet xem tiền, lịch sử thu khóa.
+  // Học phí: bấm thẻ vẫn mở sheet xem tiền, khối thu tiền bị khóa.
   await page.goto('/tuition');
   const card = page.getByRole('button', { name: new RegExp(NAME) }).filter({ has: page.locator('text=' + NAME) }).first();
   await expect(card).toBeVisible();
-  const pay = card.getByRole('button', { name: /Ghi nhận/ });
-  await expect(pay.getByTestId('lock-badge')).toBeVisible();
-  await pay.click();
-  await expect(upgrade(page)).toContainText(PLUS_TEXT);
-  await closeUpgrade(page);
   await card.click();
   const detail = page.getByRole('dialog').filter({ hasText: 'Chi tiết học phí' });
-  await expect(detail.getByText('Tổng tiền cần đóng')).toBeVisible();
+  await expect(detail.getByText(/Cần đóng ngay|Còn thiếu/)).toBeVisible();
   await expect(detail.getByTestId('payments-locked')).toBeVisible();
   await detail.getByRole('button', { name: /Phiếu báo/ }).click();
   await expect(upgrade(page)).toContainText(PLUS_TEXT);

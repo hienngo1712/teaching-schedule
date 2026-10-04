@@ -69,8 +69,8 @@ describe("Đánh dấu đã gửi phiếu học phí (spec V)", () => {
       month: curMonth,
       sent: true,
     })
-    // Tổng nợ = 50k (tháng trước) + 100k (tháng này) = 150k
-    expect(resSent1.noticeSentAmount).toBe(150_000)
+    // Spec Y D9: tháng đang học theo buổi không cộng tạm tính vào số cần đóng ngay -> 50k
+    expect(resSent1.noticeSentAmount).toBe(50_000)
     expect(resSent1.noticeSentAt).toBeInstanceOf(Date)
 
     // Kiểm tra dòng trong DB được tạo với carry-over đúng
@@ -78,17 +78,17 @@ describe("Đánh dấu đã gửi phiếu học phí (spec V)", () => {
       where: { studentId_year_month: { studentId: st.id, year: curYear, month: curMonth } },
     })
     expect(dbTuition.previousBalance).toBe(50_000)
-    expect(dbTuition.noticeSentAmount).toBe(150_000)
+    expect(dbTuition.noticeSentAmount).toBe(50_000)
     expect(dbTuition.noticeSentAt).not.toBeNull()
 
     // getMonthlyStatus trả về noticeStatus = "sent"
     const status1 = await caller.tuition.getMonthlyStatus({ year: curYear, month: curMonth })
     const item1 = status1.items.find((i) => i.studentId === st.id)!
     expect(item1.noticeStatus).toBe("sent")
-    expect(item1.noticeSentAmount).toBe(150_000)
+    expect(item1.noticeSentAmount).toBe(50_000)
     expect(item1.noticeSentAt).not.toBeNull()
 
-    // 2. Thêm 1 ca có mặt 100k trong tháng này -> số tiền phải đóng đổi từ 150k lên 250k
+    // 2. Thêm 1 ca có mặt 100k trong tháng này -> vì đang học theo buổi nên số cần đóng ngay vẫn là 50k -> noticeStatus vẫn là "sent"
     const curSession2 = await caller.session.create({
       sessionDate: `${curYear}-${String(curMonth).padStart(2, "0")}-10`,
       startTime: "10:00",
@@ -101,32 +101,16 @@ describe("Đánh dấu đã gửi phiếu học phí (spec V)", () => {
       attendances: [{ studentId: st.id, attendance: "present", fee: 100_000 }],
     })
 
-    // getMonthlyStatus giờ trả về "changed"
     const status2 = await caller.tuition.getMonthlyStatus({ year: curYear, month: curMonth })
     const item2 = status2.items.find((i) => i.studentId === st.id)!
-    expect(item2.noticeStatus).toBe("changed")
-    expect(item2.noticeSentAmount).toBe(150_000)
+    expect(item2.noticeStatus).toBe("sent")
 
-    // Gửi lại -> "sent" với số tiền mới 250k
-    const resSent2 = await caller.tuition.setNoticeSent({
-      studentId: st.id,
-      year: curYear,
-      month: curMonth,
-      sent: true,
-    })
-    expect(resSent2.noticeSentAmount).toBe(250_000)
-
-    const status3 = await caller.tuition.getMonthlyStatus({ year: curYear, month: curMonth })
-    const item3 = status3.items.find((i) => i.studentId === st.id)!
-    expect(item3.noticeStatus).toBe("sent")
-    expect(item3.noticeSentAmount).toBe(250_000)
-
-    // 3. Thu thêm 50k -> số còn phải đóng đổi từ 250k xuống 200k -> "changed"
+    // 3. Thu 20k -> số nợ cũ giảm từ 50k xuống 30k -> "changed"
     await caller.payment.create({
       studentId: st.id,
       year: curYear,
       month: curMonth,
-      amount: 50_000,
+      amount: 20_000,
       paidAt: `${curYear}-${String(curMonth).padStart(2, "0")}-12`,
       method: "cash",
     })
@@ -134,6 +118,20 @@ describe("Đánh dấu đã gửi phiếu học phí (spec V)", () => {
     const status4 = await caller.tuition.getMonthlyStatus({ year: curYear, month: curMonth })
     const item4 = status4.items.find((i) => i.studentId === st.id)!
     expect(item4.noticeStatus).toBe("changed")
+
+    // Gửi lại -> "sent" với số tiền mới 30k
+    const resSent2 = await caller.tuition.setNoticeSent({
+      studentId: st.id,
+      year: curYear,
+      month: curMonth,
+      sent: true,
+    })
+    expect(resSent2.noticeSentAmount).toBe(30_000)
+
+    const status3 = await caller.tuition.getMonthlyStatus({ year: curYear, month: curMonth })
+    const item3 = status3.items.find((i) => i.studentId === st.id)!
+    expect(item3.noticeStatus).toBe("sent")
+    expect(item3.noticeSentAmount).toBe(30_000)
 
     // 4. setNoticeSent(sent: false) -> "none", 2 cột NULL
     const resSentFalse = await caller.tuition.setNoticeSent({
@@ -179,7 +177,11 @@ describe("Đánh dấu đã gửi phiếu học phí (spec V)", () => {
 
   it("Task 2: Bộ lọc noticeFilter (all / unsent / sent) và phân trang", async () => {
     const caller = await getAuthedCaller("teacher")
-    const { year, month } = vnDateParts()
+    const { year: curY, month: curM } = vnDateParts()
+    // Dùng tháng trước đã kết thúc để tiền buổi là số cần đóng thực tế (không phải tạm tính)
+    const targetK = (curY * 12 + curM - 1) - 1
+    const year = Math.floor(targetK / 12)
+    const month = (targetK % 12) + 1
     const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
 
     // 4 HS: A (sent), B (unsent nợ), C (đã đóng đủ chưa gửi), D (changed)
