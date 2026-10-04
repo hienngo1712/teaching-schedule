@@ -30,7 +30,7 @@ const item = {
   notes: null,
   previousBalance: 0,
   totalAmountDue: 400000,
-  billingMode: "per_session" as const,
+  billingMode: "per_session" as "per_session" | "monthly",
   monthlyFee: 0,
   noticeSentAt: null,
   noticeSentAmount: null,
@@ -171,5 +171,22 @@ describe("TuitionPage - số tiền to trên thẻ mobile (spec Y §4.1)", () =>
     getMonthlyStatusQuery.data = { items: [{ ...item, paidAmount: 400000 }], totalCount: 1, totalPages: 1 }
     renderPage()
     expect(cardAmount("0 đ").className).toContain("text-muted-foreground")
+  })
+})
+
+describe("TuitionPage - tháng đang học không có nút thu tiền", () => {
+  afterEach(() => {
+    getMonthlyStatusQuery.data = { items: [item], totalCount: 1, totalPages: 1 }
+  })
+
+  it("HS trọn tháng ở tháng đang học, cần đóng > 0 → vẫn không có nút Đã đóng đủ", () => {
+    getMonthlyStatusQuery.data = {
+      items: [{ ...item, inProgress: true, billingMode: "monthly" as const, monthlyFee: 400000 }],
+      totalCount: 1,
+      totalPages: 1,
+    }
+    renderPage()
+    const payBtn = screen.queryAllByRole("button").find((b) => b.tagName === "BUTTON" && b.textContent?.includes("Đã đóng đủ"))
+    expect(payBtn).toBeUndefined()
   })
 })

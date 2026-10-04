@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
@@ -21,7 +21,7 @@ const rowData = {
   notes: "ghi chú cũ",
   previousBalance: 200_000,
   totalAmountDue: 800_000,
-  billingMode: "per_session" as const,
+  billingMode: "per_session" as "per_session" | "monthly",
   monthlyFee: 0,
   noticeSentAt: null,
   noticeSentAmount: null,
@@ -143,5 +143,48 @@ describe("TuitionDetailSheet — sửa sau review Y", () => {
       </LanguageProvider>
     )
     expect(mockClientSettlement).not.toHaveBeenCalled()
+  })
+})
+
+describe("TuitionDetailSheet — khoá thu tiền tháng đang học (cả trọn tháng)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-10-15T03:00:00.000Z"))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const monthlyInProgress = {
+    ...rowData,
+    month: 10,
+    inProgress: true,
+    billingMode: "monthly" as const,
+    monthlyFee: 400_000,
+    previousBalance: 0,
+    totalExpected: 400_000,
+    totalAmountDue: 400_000,
+  }
+
+  it("HS trọn tháng ở tháng đang học: không có nút thu tiền, có dòng nhắc + nút Sang tháng 9", () => {
+    currentRow = monthlyInProgress
+    const onGoToMonth = vi.fn()
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionDetailSheet open data={monthlyInProgress} onOpenChange={() => {}} onSuccess={() => {}} onGoToMonth={onGoToMonth} />
+      </LanguageProvider>
+    )
+    expect(screen.queryByRole("button", { name: /^Đã đóng đủ/ })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Đóng một phần" })).toBeNull()
+    expect(screen.getByTestId("pay-month-in-progress").textContent).toContain("Tháng 10 chưa học xong")
+    fireEvent.click(screen.getByRole("button", { name: "Sang tháng 9" }))
+    expect(onGoToMonth).toHaveBeenCalledWith(2026, 9)
+  })
+
+  it("tháng đang học: menu ⋮ không có Miễn (kể cả trọn tháng)", () => {
+    currentRow = monthlyInProgress
+    renderSheet(monthlyInProgress)
+    openMenu()
+    expect(screen.queryByText("Miễn phần còn thiếu")).toBeNull()
   })
 })

@@ -76,10 +76,15 @@ describe("Payment batching & FIFO multi-month allocation (spec Y Task 2)", () =>
     // Dọn legacy payment này trước khi test ca 1
     await caller.payment.delete({ id: legacyP.id })
 
-    // 1. FIFO ghi ở tháng hiện tại: record({ year/month = M3, amount: 500_000 })
+    // Tháng đang học (M3) và tháng sau không cho ghi khoản thu (người dùng chốt 2026-10-04)
+    await expect(caller.payment.record({ studentId: st.id, ...M3, amount: 500_000 })).rejects.toThrow(/BAD_REQUEST|chưa học xong/)
+    const next = keyToYearMonth(curK + 1)
+    await expect(caller.payment.record({ studentId: st.id, ...next, amount: 500_000 })).rejects.toThrow(/BAD_REQUEST|chưa học xong/)
+
+    // 1. FIFO ghi ở tháng trước: record({ year/month = M2, amount: 500_000 })
     const rec1 = await caller.payment.record({
       studentId: st.id,
-      ...M3,
+      ...M2,
       amount: 500_000,
     })
     expect(rec1.allocations).toEqual([

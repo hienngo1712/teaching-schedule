@@ -457,6 +457,8 @@
   "plan_per_year": "/năm",
   "plan_per_2years": "/2 năm",
   "plan_save_percent": "Tiết kiệm {p}%",
+  "pay_month_in_progress": "Tháng {m} chưa học xong nên chưa thu tiền. Phụ huynh đóng tiền (kể cả đóng trước) thì ghi ở tháng {pm}, phần dư tự trừ sang tháng sau.",
+  "pay_go_to_month": "Sang tháng {pm}",
   "plan_bonus_months": "Tặng {n} tháng",
   "plan_includes_below": "Mọi thứ của gói {plan}, thêm:",
   "plan_compare": "So sánh các gói",

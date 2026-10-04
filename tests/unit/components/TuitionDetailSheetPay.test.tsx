@@ -186,7 +186,7 @@ describe("TuitionDetailSheetPay (spec Y §5)", () => {
     )
   })
 
-  it("8. Tháng đang học theo buổi: bảng có Tháng 10 tạm tính · đã học 3 buổi, nút Đã đóng đủ = số nợ cũ", () => {
+  it("8. Tháng đang học theo buổi: bảng có Tháng 10 tạm tính · đã học 3 buổi, không có nút thu tiền", () => {
     const inProgressRow = {
       ...rowData,
       year: 2026,
@@ -201,6 +201,8 @@ describe("TuitionDetailSheetPay (spec Y §5)", () => {
     renderSheet(inProgressRow)
     expect(screen.getByText("Tháng 10 tạm tính · đã học 3 buổi")).toBeDefined()
     expect(screen.getByText("Cần đóng ngay")).toBeDefined()
-    expect(screen.getByRole("button", { name: "Đã đóng đủ 800.000 đ" })).toBeDefined()
+    // Tháng đang học không thu tiền (người dùng chốt 2026-10-04): nợ cũ thu ở tháng trước
+    expect(screen.queryByRole("button", { name: /^Đã đóng đủ/ })).toBeNull()
+    expect(screen.getByTestId("pay-month-in-progress")).toBeDefined()
   })
 })

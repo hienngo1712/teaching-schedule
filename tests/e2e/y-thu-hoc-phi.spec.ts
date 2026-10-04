@@ -150,7 +150,14 @@ test.describe('E2E Luồng thu học phí mới (spec Y Task 8)', () => {
     await rowHuyM3.click();
     // Thấy dòng Tháng <m2> còn thiếu 300.000 đ
     await expect(sheet.getByText(`Tháng ${m2.month} còn thiếu`)).toBeVisible();
-    // Thu nốt 300k
+    // Tháng đang học không thu tiền: không có nút thu, có dòng nhắc + nút sang tháng đã học xong
+    await expect(rowHuyM3.getByRole('button', { name: /Đã đóng đủ/ })).toHaveCount(0);
+    await expect(sheet.getByRole('button', { name: /^Đã đóng đủ/ })).toHaveCount(0);
+    await expect(sheet.getByTestId('pay-month-in-progress')).toContainText(`Tháng ${m3.month} chưa học xong`);
+    await sheet.getByRole('button', { name: `Sang tháng ${m2.month}` }).click();
+    await expect(page).toHaveURL(new RegExp(`month=${m2.month}`));
+    // Sheet mở lại đúng HS ở tháng m2 → thu nốt 300k
+    await expect(sheet.getByText('E2E Y Huy')).toBeVisible();
     await sheet.getByRole('button', { name: 'Đã đóng đủ 300.000 đ' }).click();
     await expect(page.getByText(/Đã ghi 300\.000/)).toBeVisible();
     await page.keyboard.press('Escape');

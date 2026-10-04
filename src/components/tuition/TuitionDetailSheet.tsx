@@ -11,7 +11,9 @@ import {
   Trash2,
 } from "lucide-react"
 import { type RouterOutputs, trpc } from "@/lib/trpc"
-import { cn, formatCurrency, formatDate } from "@/lib/utils"
+import { cn, formatCurrency, formatDate, vnDateParts } from "@/lib/utils"
+import { monthKey } from "@/lib/billing"
+import { keyToYearMonth } from "@/lib/payment-allocation"
 import type { PaymentBatchDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import dayjs from "@/lib/dayjs"
@@ -56,6 +58,8 @@ interface TuitionDetailSheetProps {
   data: SheetData | null
   onSuccess: () => void
   paymentsLocked?: boolean
+  // Tháng đang học không thu tiền: nút trong sheet chuyển màn sang tháng đã học xong gần nhất.
+  onGoToMonth?: (year: number, month: number) => void
 }
 
 export function TuitionDetailSheet({
@@ -63,6 +67,7 @@ export function TuitionDetailSheet({
   onOpenChange,
   data,
   paymentsLocked = false,
+  onGoToMonth,
 }: TuitionDetailSheetProps) {
   const { t } = useTranslation()
   const isDesktop = useMediaQuery("(min-width: 768px)")
@@ -73,6 +78,7 @@ export function TuitionDetailSheet({
     <TuitionDetailBody
       data={data}
       paymentsLocked={paymentsLocked}
+      onGoToMonth={onGoToMonth}
     />
   )
 
@@ -104,9 +110,11 @@ export function TuitionDetailSheet({
 function TuitionDetailBody({
   data,
   paymentsLocked,
+  onGoToMonth,
 }: {
   data: SheetData
   paymentsLocked: boolean
+  onGoToMonth?: (year: number, month: number) => void
 }) {
   const { t } = useTranslation()
   const utils = trpc.useUtils()
@@ -171,6 +179,8 @@ function TuitionDetailBody({
   const due = dueNow(row)
   const prevM = month === 1 ? 12 : month - 1
   const isProv = isProvisional(row)
+  const today = vnDateParts()
+  const lastDone = keyToYearMonth(monthKey(today.year, today.month) - 1)
 
   const handleBlurNotes = () => {
     if (notes !== (row.notes ?? "")) {
@@ -238,8 +248,8 @@ function TuitionDetailBody({
                     {t("unwaive")}
                   </DropdownMenuItem>
                 ) : (
-                  // Tháng đang học tạm tính: miễn sẽ xoá luôn tiền các buổi còn lại của tháng → chỉ miễn ở tháng nợ.
-                  due > 0 && !isProv && (
+                  // Tháng đang học: miễn sẽ xoá luôn tiền các buổi còn lại của tháng → chỉ miễn ở tháng đã học xong.
+                  due > 0 && !row.inProgress && (
                     <DropdownMenuItem onClick={() => setWaiveOpen(true)} className="text-amber-600">
                       {t("waive_title")}
                     </DropdownMenuItem>
@@ -327,6 +337,15 @@ function TuitionDetailBody({
             <LockedSection plan="plus" label={lockedLabel} testId="payments-locked">
               <div className="h-24 rounded-lg border border-slate-200 bg-white" />
             </LockedSection>
+          ) : row.inProgress ? (
+            <div data-testid="pay-month-in-progress" className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              <p>{t("pay_month_in_progress").replace("{m}", String(month)).replace("{pm}", String(lastDone.month))}</p>
+              {onGoToMonth && (
+                <Button variant="outline" size="sm" className="h-11 bg-white sm:h-9" onClick={() => onGoToMonth(lastDone.year, lastDone.month)}>
+                  {t("pay_go_to_month").replace("{pm}", String(lastDone.month))}
+                </Button>
+              )}
+            </div>
           ) : (
             <PayBlock studentId={studentId} year={year} month={month} due={due} />
           )}

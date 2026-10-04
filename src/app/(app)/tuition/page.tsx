@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight, Receipt } from "lucide-react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
@@ -90,6 +91,18 @@ export default function TuitionPage() {
   const totalItems = query.data?.totalCount ?? 0
   const totalPages = query.data?.totalPages ?? 0
 
+  const router = useRouter()
+  // Từ sheet tháng đang học sang tháng đã học xong và mở lại sheet đúng HS (qua deep link studentId).
+  const handleGoToMonth = (y: number, m: number) => {
+    const qs = new URLSearchParams(window.location.search)
+    qs.set("year", String(y))
+    qs.set("month", String(m))
+    if (selectedStudent) qs.set("studentId", String(selectedStudent.studentId))
+    autoOpenedId.current = null
+    setIsSheetOpen(false)
+    router.push(`/tuition?${qs}`)
+  }
+
   const handleOpenDetail = (item: TuitionStatusItem) => {
     setSelectedStudent({ ...item, year, month })
     setIsSheetOpen(true)
@@ -108,7 +121,8 @@ export default function TuitionPage() {
   const offset = (currentPage - 1) * pageSize
   const payFullButton = (item: TuitionStatusItem, className?: string) => {
     const due = dueNow(item)
-    if (due === 0) return null
+    // Tháng chưa học xong (cả HS trọn tháng) không thu tiền (người dùng chốt 2026-10-04).
+    if (due === 0 || item.inProgress) return null
     return (
       <Button
         size="sm"
@@ -356,6 +370,7 @@ export default function TuitionPage() {
         onSuccess={() => {}}
         // Chưa biết gói cũng coi như khóa: sheet không gọi payment.list (tránh FORBIDDEN).
         paymentsLocked={!paymentsGate.allowed}
+        onGoToMonth={handleGoToMonth}
       />
 
       {noticeStudentId !== null && (

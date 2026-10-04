@@ -103,8 +103,12 @@ describe("Tuition in-progress & provisional logic (spec Y Task 3)", () => {
     expect(alertSt1).toBeDefined()
     expect(alertSt1?.noticeSentAt).toBeDefined()
 
-    // Thu 800k cho st1 -> vào fully_paid
-    await caller.payment.record({ studentId: st1.id, year: curY, month: curM, amount: 800_000 })
+    // Tháng đang học không cho ghi khoản thu, kể cả HS trọn tháng
+    await expect(caller.payment.record({ studentId: st1.id, year: curY, month: curM, amount: 800_000 })).rejects.toThrow(/BAD_REQUEST|chưa học xong/)
+    await expect(caller.payment.record({ studentId: st2.id, year: curY, month: curM, amount: 400_000 })).rejects.toThrow(/BAD_REQUEST|chưa học xong/)
+
+    // Thu 800k ở tháng trước -> tháng hiện tại st1 vào fully_paid (tháng này chỉ tạm tính)
+    await caller.payment.record({ studentId: st1.id, year: prevM.year, month: prevM.month, amount: 800_000 })
     const fullP = await caller.tuition.getMonthlyStatus({ year: curY, month: curM, status: "fully_paid" })
     expect(fullP.items.some((i) => i.studentId === st1.id)).toBe(true)
   })
