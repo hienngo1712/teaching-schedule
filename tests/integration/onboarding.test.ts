@@ -62,6 +62,14 @@ describe("onboarding (spec W §4)", () => {
     expect((await other.onboarding.status()).steps.payment).toBe(false)
   })
 
+  it("khoản thu của HS đã xoá mềm không tính bước thu tiền", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS W Del", grade: 5, tuitionFee: 100_000 })
+    await caller.payment.create({ studentId: st.id, year: 2026, month: 5, amount: 100_000, paidAt: "2026-05-10", method: "cash" })
+    await db.student.update({ where: { id: st.id }, data: { isDeleted: true, deletedAt: new Date() } })
+    expect((await caller.onboarding.status()).steps).toEqual(NONE)
+  })
+
   it("dismiss → dismissed true, chỉ ảnh hưởng chính mình", async () => {
     const caller = await getAuthedCaller("teacher")
     expect(await caller.onboarding.dismiss()).toEqual({ ok: true })

@@ -16,7 +16,7 @@ export async function getOnboardingStatus(db: PrismaClient, userId: number): Pro
       where: { attendance: { not: "pending" }, session: { userId, isDeleted: false }, student: { isDeleted: false } },
       select: { id: true },
     }),
-    db.payment.findFirst({ where: { monthlyTuition: { student: { userId } } }, select: { id: true } }),
+    db.payment.findFirst({ where: { monthlyTuition: { student: { userId, isDeleted: false } } }, select: { id: true } }),
   ])
   return {
     dismissed: user.onboardingDismissedAt !== null,
