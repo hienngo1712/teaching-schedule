@@ -448,7 +448,7 @@ export async function updateSettlement(
   return db.monthlyTuition.update({
     where: { id: mt.id },
     data: {
-      isFullPaid: input.isFullPaid,
+      ...(input.isFullPaid !== undefined && { isFullPaid: input.isFullPaid }),
       ...(input.notes !== undefined && { notes: input.notes }),
     },
   })

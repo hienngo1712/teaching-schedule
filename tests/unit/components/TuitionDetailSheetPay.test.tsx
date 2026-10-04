@@ -58,6 +58,7 @@ vi.mock("@/lib/trpc", () => ({
     useUtils: () => ({
       tuition: { getMonthlyStatus: { invalidate: vi.fn() }, invalidate: vi.fn() },
       payment: { invalidate: vi.fn() },
+      client: { tuition: { updateSettlement: { mutate: vi.fn().mockResolvedValue({}) } } },
     }),
     tuition: {
       getMonthlyStatus: {

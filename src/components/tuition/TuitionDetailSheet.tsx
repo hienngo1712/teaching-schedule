@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
   Calculator,
@@ -153,6 +153,21 @@ function TuitionDetailBody({
     onError: (e) => toast.error(e.message),
   })
 
+  // Đóng sheet bằng Esc/vuốt không bắn blur → lưu ghi chú còn dở khi unmount (client thường, không phụ thuộc component).
+  const pendingNotes = useRef({ notes, saved: row.notes ?? "" })
+  pendingNotes.current = { notes, saved: row.notes ?? "" }
+  useEffect(() => {
+    return () => {
+      const { notes: n, saved } = pendingNotes.current
+      if (n !== saved) {
+        void utils.client.tuition.updateSettlement
+          .mutate({ studentId, year, month, notes: n === "" ? null : n })
+          .then(() => utils.tuition.invalidate())
+          .catch((e: Error) => toast.error(e.message))
+      }
+    }
+  }, [utils, studentId, year, month])
+
   const due = dueNow(row)
   const prevM = month === 1 ? 12 : month - 1
   const isProv = isProvisional(row)
@@ -160,7 +175,7 @@ function TuitionDetailBody({
   const handleBlurNotes = () => {
     if (notes !== (row.notes ?? "")) {
       updateSettlementMut.mutate(
-        { studentId, year, month, isFullPaid: row.isFullPaid, notes: notes === "" ? null : notes },
+        { studentId, year, month, notes: notes === "" ? null : notes },
         {
           onSuccess: () => {
             setNotesSaved(true)
@@ -173,7 +188,7 @@ function TuitionDetailBody({
 
   const handleConfirmWaive = () => {
     updateSettlementMut.mutate(
-      { studentId, year, month, isFullPaid: true, notes: row.notes ?? undefined },
+      { studentId, year, month, isFullPaid: true },
       {
         onSuccess: () => {
           setWaiveOpen(false)
@@ -185,7 +200,7 @@ function TuitionDetailBody({
 
   const handleUnwaive = () => {
     updateSettlementMut.mutate(
-      { studentId, year, month, isFullPaid: false, notes: row.notes ?? undefined },
+      { studentId, year, month, isFullPaid: false },
       {
         onSuccess: () => toast.success(t("settlement_saved")),
       }
@@ -223,7 +238,8 @@ function TuitionDetailBody({
                     {t("unwaive")}
                   </DropdownMenuItem>
                 ) : (
-                  due > 0 && (
+                  // Tháng đang học tạm tính: miễn sẽ xoá luôn tiền các buổi còn lại của tháng → chỉ miễn ở tháng nợ.
+                  due > 0 && !isProv && (
                     <DropdownMenuItem onClick={() => setWaiveOpen(true)} className="text-amber-600">
                       {t("waive_title")}
                     </DropdownMenuItem>

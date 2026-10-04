@@ -17,7 +17,8 @@ export const updateSettlementSchema = z.object({
   studentId: z.number().int().positive(),
   year: z.number().int(),
   month: z.number().int().min(1).max(12),
-  isFullPaid: z.boolean(),
+  // Gửi riêng từng trường (spec Y §5): ghi chú tự lưu và nút miễn không được ghi đè nhau bằng dữ liệu cũ.
+  isFullPaid: z.boolean().optional(),
   notes: z.string().optional().nullable(),
 })
 

@@ -53,18 +53,19 @@ async function writeAllocation(
   return allocations
 }
 
-// Tạo trước dòng tháng (kèm carry-over đúng) cho mọi tháng có thể nhận tiền, ngoài transaction như createPayment.
-async function ensureLedgerMonths(db: PrismaClient, userId: number, studentId: number, year: number, month: number) {
+// Tạo trước dòng tháng (kèm carry-over đúng) cho các tháng dự kiến nhận tiền, ngoài transaction như createPayment.
+// Không tạo cho cả lịch sử: mỗi ensure tính lại toàn bộ chuỗi số dư, quét hết sẽ chậm dần theo số tháng.
+async function ensureLedgerMonths(db: PrismaClient, userId: number, studentId: number, year: number, month: number, amount: number) {
   const ledgers = await loadMonthLedgers(db, userId, studentId, year, month)
-  for (const l of ledgers) {
-    const ym = keyToYearMonth(l.key)
+  for (const part of allocatePayment(ledgers, amount)) {
+    const ym = keyToYearMonth(part.key)
     await ensureMonthlyTuition(db, userId, studentId, ym.year, ym.month)
   }
 }
 
 export async function recordPayment(db: PrismaClient, userId: number, input: PaymentRecordInput) {
   await ensureMonthlyTuition(db, userId, input.studentId, input.year, input.month) // kiểm quyền + HS còn sống
-  await ensureLedgerMonths(db, userId, input.studentId, input.year, input.month)
+  await ensureLedgerMonths(db, userId, input.studentId, input.year, input.month, input.amount)
   const batchId = randomUUID()
   const allocations = await db.$transaction(async (tx) => {
     await lockStudentPayments(tx, input.studentId)
@@ -75,12 +76,22 @@ export async function recordPayment(db: PrismaClient, userId: number, input: Pay
   return { batchId, allocations }
 }
 
-async function findBatchRows(db: PrismaClient | Prisma.TransactionClient, userId: number, batchId: string) {
-  const where = batchId.startsWith(LEGACY)
-    ? { id: Number(batchId.slice(LEGACY.length)) || -1 }
+function batchWhere(batchId: string) {
+  return batchId.startsWith(LEGACY)
+    ? { id: Number(batchId.slice(LEGACY.length)) || -1, batchId: null }
     : { batchId }
+}
+
+// Đọc lại dòng của đợt SAU khi giữ khoá HS: request khác có thể vừa xoá/sửa đợt này (dòng đọc ngoài khoá đã cũ).
+async function lockedBatchRows(tx: Prisma.TransactionClient, batchId: string) {
+  const rows = await tx.payment.findMany({ where: { ...batchWhere(batchId), isDeleted: false } })
+  if (rows.length === 0) throw new TRPCError({ code: "NOT_FOUND" })
+  return rows
+}
+
+async function findBatchRows(db: PrismaClient | Prisma.TransactionClient, userId: number, batchId: string) {
   const rows = await db.payment.findMany({
-    where,
+    where: batchWhere(batchId),
     include: { monthlyTuition: { select: { year: true, month: true, studentId: true, student: { select: { userId: true, isDeleted: true } } } } },
   })
   if (rows.length === 0 || rows.some((r) => r.monthlyTuition.student.userId !== userId || r.monthlyTuition.student.isDeleted)) {
@@ -92,10 +103,10 @@ async function findBatchRows(db: PrismaClient | Prisma.TransactionClient, userId
 export async function listBatches(db: PrismaClient, userId: number, { studentId, year, month }: PaymentListInput): Promise<PaymentBatchDTO[]> {
   const student = await db.student.findUnique({ where: { id: studentId } })
   assertOwnership(student, userId)
-  const own = await db.payment.findMany({ where: { monthlyTuition: { studentId, year, month } } })
+  const own = await db.payment.findMany({ where: { monthlyTuition: { studentId, year, month } }, orderBy: [{ paidAt: "desc" }, { id: "desc" }] })
   const batchIds = [...new Set(own.map((p) => p.batchId).filter((b): b is string => b !== null))]
   const batched = batchIds.length
-    ? await db.payment.findMany({ where: { batchId: { in: batchIds } }, include: { monthlyTuition: { select: { year: true, month: true } } } })
+    ? await db.payment.findMany({ where: { batchId: { in: batchIds } }, include: { monthlyTuition: { select: { year: true, month: true } } }, orderBy: [{ paidAt: "desc" }, { id: "desc" }] })
     : []
   const groups = new Map<string, PaymentBatchDTO>()
   for (const p of batched) {
@@ -118,7 +129,7 @@ export async function deleteBatch(db: PrismaClient, userId: number, batchId: str
   const rows = await findBatchRows(db, userId, batchId)
   await db.$transaction(async (tx) => {
     await lockStudentPayments(tx, rows[0].monthlyTuition.studentId)
-    for (const r of rows) {
+    for (const r of await lockedBatchRows(tx, batchId)) {
       await lockMonth(tx, r.monthlyTuitionId)
       await tx.payment.update({ where: { id: r.id }, data: softDeleteData() })
       await syncPaidAmount(tx, r.monthlyTuitionId)
@@ -139,10 +150,10 @@ export async function updateBatch(db: PrismaClient, userId: number, input: Payme
   const target = rows
     .map((r) => r.monthlyTuition)
     .reduce((a, b) => (monthKey(b.year, b.month) > monthKey(a.year, a.month) ? b : a))
-  await ensureLedgerMonths(db, userId, studentId, target.year, target.month)
+  await ensureLedgerMonths(db, userId, studentId, target.year, target.month, input.amount)
   await db.$transaction(async (tx) => {
     await lockStudentPayments(tx, studentId)
-    for (const r of rows) {
+    for (const r of await lockedBatchRows(tx, input.batchId)) {
       await lockMonth(tx, r.monthlyTuitionId)
       await tx.payment.update({ where: { id: r.id }, data: softDeleteData() })
       await syncPaidAmount(tx, r.monthlyTuitionId)
