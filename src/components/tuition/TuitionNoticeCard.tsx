@@ -112,19 +112,33 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
       </div>
 
       <div className="space-y-1 border-t border-slate-200 pt-3">
-        {row(t("notice_month_fee"), formatCurrency(notice.currentMonthFee))}
-        {notice.previousBalance > 0 && row(t("notice_prev_debt"), formatCurrency(notice.previousBalance))}
+        {notice.inProgress && notice.billingMode === "per_session"
+          ? row(
+              t("month_provisional_line")
+                .replace("{m}", String(notice.month))
+                .replace("{p}", String(notice.presentSessions)),
+              formatCurrency(notice.currentMonthFee),
+              "text-slate-400 italic"
+            )
+          : row(t("notice_month_fee"), formatCurrency(notice.currentMonthFee))}
+        {notice.previousBalance > 0 &&
+          row(
+            notice.debtMonths > 1
+              ? t("debt_n_months_label").replace("{n}", String(notice.debtMonths))
+              : t("debt_prev_month_label").replace("{m}", String(notice.month === 1 ? 12 : notice.month - 1)),
+            formatCurrency(notice.previousBalance)
+          )}
         {notice.previousBalance < 0 && row(t("notice_prev_credit"), formatCurrency(notice.previousBalance))}
-        {row(t("total_amount_due"), formatCurrency(notice.totalAmountDue), "font-semibold")}
+        {!(notice.inProgress && notice.billingMode === "per_session") &&
+          row(t("total_amount_due"), formatCurrency(notice.totalAmountDue), "font-semibold")}
         {row(t("paid_total"), formatCurrency(notice.paidAmount))}
         {notice.payments.map((p) => (
           <p key={p.id} className="pl-3 text-xs text-slate-500">
-            {formatDate(p.paidAt)} · {t(p.method === "cash" ? "method_cash" : "method_transfer")} ·{" "}
-            {formatCurrency(p.amount)}
+            {formatDate(p.paidAt)} · {formatCurrency(p.amount)}
           </p>
         ))}
         {row(
-          t("notice_remaining"),
+          notice.inProgress && notice.billingMode === "per_session" ? t("due_now") : t("notice_remaining"),
           formatCurrency(notice.remaining),
           "border-t border-slate-200 pt-2 text-lg font-bold"
         )}

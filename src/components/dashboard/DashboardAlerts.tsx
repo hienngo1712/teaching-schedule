@@ -15,8 +15,10 @@ import { useFeatureGate } from "@/hooks/useFeatureGate"
 import { LockBadge } from "@/components/plan/LockBadge"
 import { LockedSection } from "@/components/plan/LockedSection"
 import { PLAN_LABEL } from "@/lib/plans"
-import { formatCurrency, formatDate, formatDayOfWeek } from "@/lib/utils"
+import { cn, formatCurrency, formatDate, formatDayOfWeek } from "@/lib/utils"
 import type { SessionDTO, SessionListDTO } from "@/lib/types/models"
+import { noticeAgeDays, NOTICE_OVERDUE_DAYS } from "@/lib/tuition-display"
+import dayjs from "@/lib/dayjs"
 
 type Alerts = RouterOutputs["report"]["alerts"]
 type UnrescheduledSession = Omit<Alerts["unrescheduled"][number], "sessionDate"> & { sessionDate: Date }
@@ -151,6 +153,32 @@ export function DashboardAlerts() {
                       className="shrink-0 whitespace-nowrap border-slate-200 bg-slate-100 text-slate-600"
                     >
                       {t("dropped")}
+                    </Badge>
+                  )}
+                  {d.noticeSentAt ? (
+                    (() => {
+                      const age = noticeAgeDays(d.noticeSentAt)
+                      const isOverdue = age >= NOTICE_OVERDUE_DAYS
+                      const dateStr = dayjs(d.noticeSentAt).tz("Asia/Ho_Chi_Minh").format("D/M")
+                      const label = t("notice_sent_age").replace("{d}", dateStr).replace("{n}", String(age))
+                      return (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0 whitespace-nowrap border-none text-xs font-normal",
+                            isOverdue ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-700"
+                          )}
+                        >
+                          {label}
+                        </Badge>
+                      )
+                    })()
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 whitespace-nowrap border-none bg-slate-100 text-slate-500 text-xs font-normal"
+                    >
+                      {t("notice_unsent_badge")}
                     </Badge>
                   )}
                   <div className="shrink-0 text-right">

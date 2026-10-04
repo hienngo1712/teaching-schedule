@@ -33,6 +33,7 @@ const baseNotice: TuitionNoticeDTO = {
   remaining: 400000,
   overpaid: 0,
   inProgress: false,
+  debtMonths: 0,
   teacherName: "Giáo viên A",
   bankConfigured: false,
   qr: null,
@@ -95,5 +96,56 @@ describe("TuitionNoticeCard: hiển thị học phí trọn tháng vs theo buổ
     expect(screen.getByText(viText.notice_present_sessions)).toBeTruthy()
     // Hiện "Học phí/buổi"
     expect(screen.getByText(viText.notice_fee_per_session)).toBeTruthy()
+  })
+
+  it("dòng nợ trước hiển thị theo debtMonths; danh sách lần thu không có Tiền mặt/Chuyển khoản", () => {
+    const noticeWithDebt: TuitionNoticeDTO = {
+      ...baseNotice,
+      previousBalance: 200000,
+      debtMonths: 1,
+      payments: [
+        {
+          id: 1,
+          amount: 100000,
+          paidAt: "2026-05-10",
+          method: "cash",
+          note: null,
+        },
+      ],
+    }
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeCard notice={noticeWithDebt} />
+      </LanguageProvider>
+    )
+
+    expect(screen.getByText("Tháng 4 còn thiếu")).toBeTruthy()
+    expect(screen.queryByText("Tiền mặt")).toBeNull()
+    expect(screen.queryByText("Chuyển khoản")).toBeNull()
+    expect(screen.getByText(/10\/05\/2026 · 100\.000 đ/)).toBeTruthy()
+  })
+
+  it("tháng đang học theo buổi: hiển thị dòng tạm tính và Còn lại = nợ cũ", () => {
+    const inProgressNotice: TuitionNoticeDTO = {
+      ...baseNotice,
+      billingMode: "per_session",
+      inProgress: true,
+      previousBalance: 200000,
+      currentMonthFee: 150000,
+      totalAmountDue: 350000,
+      remaining: 200000,
+      presentSessions: 3,
+      totalSessions: 3,
+    }
+
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeCard notice={inProgressNotice} />
+      </LanguageProvider>
+    )
+
+    expect(screen.getByText("Tháng 5 tạm tính · đã học 3 buổi")).toBeTruthy()
+    expect(screen.getByText("Cần đóng ngay")).toBeTruthy()
   })
 })

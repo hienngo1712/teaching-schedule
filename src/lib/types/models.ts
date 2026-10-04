@@ -154,6 +154,7 @@ export interface TuitionNoticeDTO {
   remaining: number
   overpaid: number
   inProgress: boolean
+  debtMonths: number
   teacherName: string
   bankConfigured: boolean
   qr: {

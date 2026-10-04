@@ -823,6 +823,7 @@
   "remaining_due": "Remaining",
   "notes_saved": "Saved",
   "edit_payment": "Edit payment",
+  "notice_unsent_badge": "Notice not sent",
   "notice_marked": "Marked notice as sent",
   "undo": "Undo",
   "mark_notice_sent": "Mark as sent",
