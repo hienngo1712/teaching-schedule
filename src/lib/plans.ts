@@ -34,6 +34,13 @@ export const DEFAULT_TRIAL_DAYS = 60
 // Kỳ 2 năm luôn tặng tối thiểu 2 tháng (P1); gia hạn sớm thay bằng mức cao hơn, không cộng dồn.
 export const TWO_YEAR_BONUS_MONTHS = 2
 
+// % gói năm rẻ hơn mua lẻ 12 tháng (làm tròn, người dùng chọn 17% cho 16,7%); 0 = không rẻ hơn → ẩn nhãn.
+export function yearlySavingPercent(monthPrice: number, yearPrice: number): number {
+  const full = monthPrice * 12
+  if (full <= 0 || yearPrice >= full) return 0
+  return Math.round(((full - yearPrice) / full) * 100)
+}
+
 export const FEATURE_PLAN = {
   payments: "plus",
   tuitionNotice: "plus",

@@ -88,3 +88,24 @@ describe("PlanCompare", () => {
     expect(pro).toContain("2.580.000")
   })
 })
+
+describe("PlanCompare — tiết kiệm % và nhãn Khuyên dùng", () => {
+  it("dòng gói năm ghi Tiết kiệm 17%, gói 2 năm vẫn Tặng 2 tháng", () => {
+    renderCompare(makeMe())
+    for (const plan of ["plus", "pro"]) {
+      const card = screen.getByTestId(`plan-card-${plan}`).textContent ?? ""
+      expect(card).toContain("Tiết kiệm 17%")
+      expect(card).not.toContain("Tiết kiệm 2 tháng")
+      expect(card).toContain("Tặng 2 tháng")
+    }
+  })
+
+  it("Khuyên dùng nằm trên viền thẻ Pro (absolute), không chen cạnh tên gói", () => {
+    renderCompare(makeMe({ plan: "pro", source: "paid" } as Partial<Me>))
+    const card = screen.getByTestId("plan-card-pro")
+    const ribbon = within(card).getByTestId("plan-recommended")
+    expect(ribbon.className).toContain("absolute")
+    expect(card.className).toContain("relative")
+    expect(within(card).getByRole("heading").parentElement!.textContent).not.toContain("Khuyên dùng")
+  })
+})

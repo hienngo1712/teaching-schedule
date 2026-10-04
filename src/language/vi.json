@@ -456,7 +456,7 @@
   "plan_per_month": "/tháng",
   "plan_per_year": "/năm",
   "plan_per_2years": "/2 năm",
-  "plan_save_2_months": "Tiết kiệm 2 tháng",
+  "plan_save_percent": "Tiết kiệm {p}%",
   "plan_bonus_months": "Tặng {n} tháng",
   "plan_includes_below": "Mọi thứ của gói {plan}, thêm:",
   "plan_compare": "So sánh các gói",
