@@ -8,17 +8,23 @@ import { formatVnDate } from "@/lib/payment-notes"
 import { noticeFeePerSession, noticePaymentState } from "@/lib/tuition-notice"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
-type Props = { notice: TuitionNoticeDTO; onReady?: () => void; onError?: (e: unknown) => void }
+type Props = {
+  notice: TuitionNoticeDTO
+  variant?: "default" | "wide"
+  onReady?: () => void
+  onError?: (e: unknown) => void
+}
 
 const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
 
 // Thuần hiển thị, G render lại ở trang phụ huynh. Chỉ block/grid, không rounded-full/inline-flex/shadow:
 // html2canvas vẽ sai các thứ đó (xem useExport.ts).
 export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function TuitionNoticeCard(
-  { notice, onReady, onError },
+  { notice, variant = "default", onReady, onError },
   ref
 ) {
   const { t } = useTranslation()
+  const isWide = variant === "wide"
   const state = noticePaymentState(notice)
   const payload = state === "qr" && notice.qr ? notice.qr.payload : null
   const [qrSrc, setQrSrc] = useState<string | null>(null)
@@ -60,8 +66,8 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
     <div
       ref={ref}
       data-testid="notice-card"
-      style={{ width: 360 }}
-      className="space-y-4 border border-slate-200 bg-white p-5 text-sm text-slate-900"
+      style={isWide ? undefined : { width: 360 }}
+      className={cn("space-y-4 border border-slate-200 bg-white p-5 text-sm text-slate-900", isWide && "w-full")}
     >
       <h2 className="text-center text-base font-bold">
         {t("tuition_notice_title")} {notice.month}/{notice.year}
@@ -90,7 +96,7 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
                   .replace("{n}", String(notice.totalSessions))}
               </p>
             )}
-            {dates && (
+            {!isWide && dates && (
               <p>
                 <span className="text-slate-500">{t("notice_dates")}: </span>
                 {dates}
@@ -101,7 +107,7 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
           <>
             {row(t("notice_present_sessions"), String(notice.presentSessions))}
             {fee !== null && row(t("notice_fee_per_session"), formatCurrency(fee))}
-            {dates && (
+            {!isWide && dates && (
               <p>
                 <span className="text-slate-500">{t("notice_dates")}: </span>
                 {dates}
@@ -145,34 +151,67 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
       </div>
 
       {state === "qr" && notice.qr && (
-        <div className="space-y-1 border-t border-slate-200 pt-3 text-center">
-          {qrSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element -- data URL; html2canvas cần <img> thường
-            <img
-              src={qrSrc}
-              alt="VietQR"
-              width={200}
-              height={200}
-              className="mx-auto block"
-              onLoad={onReady}
-            />
-          ) : (
-            <div className="mx-auto bg-slate-100" style={{ width: 200, height: 200 }} />
-          )}
-          <p className="pt-2 font-semibold">{notice.qr.bankShortName}</p>
-          <p>
-            {t("account_number")}: {notice.qr.accountNumber}
-          </p>
-          <p>
-            {t("account_name")}: {notice.qr.accountName}
-          </p>
-          <p>
-            {t("payment_amount")}: {formatCurrency(notice.qr.amount)}
-          </p>
-          <p>
-            {t("notice_transfer_content")}: {notice.qr.content}
-          </p>
-        </div>
+        isWide ? (
+          <div data-testid="notice-qr-side" className="grid grid-cols-[160px_1fr] items-center gap-4 border-t border-slate-200 pt-3 text-left">
+            {qrSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element -- data URL; html2canvas cần <img> thường
+              <img
+                src={qrSrc}
+                alt="VietQR"
+                width={160}
+                height={160}
+                className="block"
+                onLoad={onReady}
+              />
+            ) : (
+              <div className="bg-slate-100" style={{ width: 160, height: 160 }} />
+            )}
+            <div className="space-y-1">
+              <p className="font-semibold">{notice.qr.bankShortName}</p>
+              <p>
+                {t("account_number")}: {notice.qr.accountNumber}
+              </p>
+              <p>
+                {t("account_name")}: {notice.qr.accountName}
+              </p>
+              <p>
+                {t("payment_amount")}: {formatCurrency(notice.qr.amount)}
+              </p>
+              <p>
+                {t("notice_transfer_content")}: {notice.qr.content}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1 border-t border-slate-200 pt-3 text-center">
+            {qrSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element -- data URL; html2canvas cần <img> thường
+              <img
+                src={qrSrc}
+                alt="VietQR"
+                width={200}
+                height={200}
+                className="mx-auto block"
+                onLoad={onReady}
+              />
+            ) : (
+              <div className="mx-auto bg-slate-100" style={{ width: 200, height: 200 }} />
+            )}
+            <p className="pt-2 font-semibold">{notice.qr.bankShortName}</p>
+            <p>
+              {t("account_number")}: {notice.qr.accountNumber}
+            </p>
+            <p>
+              {t("account_name")}: {notice.qr.accountName}
+            </p>
+            <p>
+              {t("payment_amount")}: {formatCurrency(notice.qr.amount)}
+            </p>
+            <p>
+              {t("notice_transfer_content")}: {notice.qr.content}
+            </p>
+          </div>
+        )
       )}
 
       {state === "settled" && (

@@ -6,6 +6,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { TuitionNoticeCard } from "@/components/tuition/TuitionNoticeCard"
 import { ATTENDANCE_LABEL } from "@/lib/constants"
 import { cn, formatDate, formatDayOfWeek, vnDateParts } from "@/lib/utils"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 import type { ParentSessionDTO, ParentViewDTO } from "@/lib/types/models"
 
 const ATTENDANCE_STYLE: Record<ParentSessionDTO["attendance"], string> = {
@@ -38,86 +39,118 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
   const { t } = useTranslation()
   const pathname = usePathname()
   const today = todayVn()
+  const isWide = useMediaQuery("(min-width: 1024px)")
   const monthHref = (ym: string | null) => (ym ? `${pathname}?thang=${ym}` : null)
-  const attended = view.attendance.filter(
+
+  const presentCount = view.attendance.filter(
     (s) => s.attendance === "present" || s.attendance === "late"
   ).length
+  const absentCount = view.attendance.filter((s) => s.attendance === "absent").length
+  const totalCount = view.attendance.length
 
   return (
     <main className="min-h-screen bg-page">
-      <div className="mx-auto max-w-md space-y-6 px-4 py-6">
-        <header className="space-y-1">
-          <h1 className="text-xl font-bold text-slate-900">{view.student.fullName}</h1>
-          <p className="text-sm text-slate-600">{`${t("grade")} ${view.student.grade}`}</p>
-          <p className="text-sm text-slate-600">{`${t("teacher_fallback")}: ${view.notice.teacherName}`}</p>
+      <div className="mx-auto max-w-md space-y-6 px-4 py-6 lg:max-w-6xl lg:px-8">
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-xl font-bold text-slate-900">{view.student.fullName}</h1>
+            <p className="hidden text-sm text-slate-600 lg:block">
+              {`${t("grade")} ${view.student.grade} · ${t("teacher_fallback")}: ${view.notice.teacherName}`}
+            </p>
+            <p className="text-sm text-slate-600 lg:hidden">{`${t("grade")} ${view.student.grade}`}</p>
+            <p className="text-sm text-slate-600 lg:hidden">{`${t("teacher_fallback")}: ${view.notice.teacherName}`}</p>
+          </div>
+
+          <nav className="flex items-center justify-between rounded-lg border border-slate-200 bg-white lg:min-w-[360px]">
+            <MonthLink href={monthHref(view.prevMonth)} label={`‹ ${t("prev_month")}`} />
+            <span className="text-sm font-semibold text-slate-900" data-testid="parent-month">
+              {`${t("month")} ${view.month}/${view.year}`}
+            </span>
+            <MonthLink href={monthHref(view.nextMonth)} label={`${t("next_month")} ›`} />
+          </nav>
         </header>
 
-        <nav className="flex items-center justify-between rounded-lg border border-slate-200 bg-white">
-          <MonthLink href={monthHref(view.prevMonth)} label={`‹ ${t("prev_month")}`} />
-          <span className="text-sm font-semibold text-slate-900" data-testid="parent-month">
-            {`${t("month")} ${view.month}/${view.year}`}
-          </span>
-          <MonthLink href={monthHref(view.nextMonth)} label={`${t("next_month")} ›`} />
-        </nav>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+          {/* Cột trái: Điểm danh & Lịch sắp tới */}
+          <div className="space-y-6">
+            <section className="rounded-lg border border-slate-200 bg-white p-4">
+              <h2 className="font-semibold text-slate-900">{`${t("parent_attendance")} ${view.month}`}</h2>
 
-        <section>
-          {/* Card của C rộng cố định 360px: máy hẹp hơn thì cuộn riêng card, không tràn cả trang. */}
-          <div className="overflow-x-auto">
-            <div className="mx-auto w-fit">
-              <TuitionNoticeCard notice={view.notice} />
-            </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div data-testid="parent-stat" className="rounded-md bg-slate-50 p-2.5 text-center">
+                  <p className="text-xs text-slate-500">{t("parent_stat_present")}</p>
+                  <p className="mt-1 text-lg font-bold text-emerald-700">{presentCount}</p>
+                </div>
+                <div data-testid="parent-stat" className="rounded-md bg-slate-50 p-2.5 text-center">
+                  <p className="text-xs text-slate-500">{t("parent_stat_absent")}</p>
+                  <p className="mt-1 text-lg font-bold text-rose-600">{absentCount}</p>
+                </div>
+                <div data-testid="parent-stat" className="rounded-md bg-slate-50 p-2.5 text-center">
+                  <p className="text-xs text-slate-500">{t("parent_stat_total")}</p>
+                  <p className="mt-1 text-lg font-bold text-slate-800">{totalCount}</p>
+                </div>
+              </div>
+
+              {view.attendance.length === 0 ? (
+                <p className="mt-4 text-sm text-slate-500">{t("parent_no_sessions")}</p>
+              ) : (
+                <ul className="mt-4 divide-y divide-slate-100">
+                  {view.attendance.map((s) => (
+                    <li key={`${s.date}-${s.startTime}`} className="flex items-center justify-between gap-3 py-2 text-sm">
+                      <span className="min-w-0 truncate text-slate-700">{sessionLine(s)}</span>
+                      <span className={cn("shrink-0 rounded px-2 py-0.5 text-xs font-medium", ATTENDANCE_STYLE[s.attendance])}>
+                        {ATTENDANCE_LABEL[s.attendance]}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="rounded-lg border border-slate-200 bg-white p-4">
+              <h2 className="font-semibold text-slate-900">{t("parent_upcoming")}</h2>
+              {view.upcoming.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500">{t("parent_no_upcoming")}</p>
+              ) : (
+                <ul className="mt-2 divide-y divide-slate-100">
+                  {view.upcoming.map((s) => (
+                    <li key={`${s.date}-${s.startTime}`} className="flex items-center justify-between gap-3 py-2 text-sm">
+                      <span className="min-w-0 truncate text-slate-700">{sessionLine(s)}</span>
+                      {s.date === today && (
+                        <span className="shrink-0 rounded bg-primary/[0.08] px-2 py-0.5 text-xs font-medium text-primary">
+                          {t("today_badge")}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </div>
-          {view.notice.qr && (
-            <p className="mt-2 text-center text-xs text-slate-500">{t("parent_qr_hint")}</p>
-          )}
-        </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="font-semibold text-slate-900">{`${t("parent_attendance")} ${view.month}`}</h2>
-          {view.attendance.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">{t("parent_no_sessions")}</p>
-          ) : (
-            <>
-              <p className="mt-1 text-sm text-slate-600">
-                {t("parent_present_summary")
-                  .replace("{n}", String(attended))
-                  .replace("{total}", String(view.attendance.length))}
-              </p>
-              <ul className="mt-2 divide-y divide-slate-100">
-                {view.attendance.map((s) => (
-                  <li key={`${s.date}-${s.startTime}`} className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="min-w-0 truncate text-slate-700">{sessionLine(s)}</span>
-                    <span className={cn("shrink-0 rounded px-2 py-0.5 text-xs font-medium", ATTENDANCE_STYLE[s.attendance])}>
-                      {ATTENDANCE_LABEL[s.attendance]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
+          {/* Cột phải: Phiếu báo */}
+          <aside className="order-first space-y-2 lg:order-last lg:sticky lg:top-4">
+            {isWide ? (
+              <TuitionNoticeCard notice={view.notice} variant="wide" />
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="mx-auto w-fit">
+                  <TuitionNoticeCard notice={view.notice} variant="default" />
+                </div>
+              </div>
+            )}
+            {view.notice.qr && (
+              <p className="mt-2 text-center text-xs text-slate-500">{t("parent_qr_hint")}</p>
+            )}
+            <footer className="hidden pt-4 text-center text-xs text-slate-500 lg:block">
+              {t("parent_footer")}
+            </footer>
+          </aside>
+        </div>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="font-semibold text-slate-900">{t("parent_upcoming")}</h2>
-          {view.upcoming.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">{t("parent_no_upcoming")}</p>
-          ) : (
-            <ul className="mt-2 divide-y divide-slate-100">
-              {view.upcoming.map((s) => (
-                <li key={`${s.date}-${s.startTime}`} className="flex items-center justify-between gap-3 py-2 text-sm">
-                  <span className="min-w-0 truncate text-slate-700">{sessionLine(s)}</span>
-                  {s.date === today && (
-                    <span className="shrink-0 rounded bg-primary/[0.08] px-2 py-0.5 text-xs font-medium text-primary">
-                      {t("today_badge")}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <footer className="pb-4 text-center text-xs text-slate-500">{t("parent_footer")}</footer>
+        <footer className="pb-4 text-center text-xs text-slate-500 lg:hidden">
+          {t("parent_footer")}
+        </footer>
       </div>
     </main>
   )
