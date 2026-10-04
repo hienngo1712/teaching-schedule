@@ -13,6 +13,20 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.11.1",
+    date: "2026-10-07",
+    title: "Sửa lỗi nhỏ",
+    summary: "Một số chỉnh sửa nhỏ ở Học phí, Sao lưu và trang Đăng ký.",
+    notify: false,
+    items: [
+      { kind: "improve", title: "Miễn có ghi lý do", body: "Khi miễn phần còn thiếu, bạn có thể ghi lý do. Lý do được lưu vào ghi chú tháng đó.", guideId: "hoc-phi" },
+      { kind: "fix", title: "Số tiền ghi rõ nợ cũ", body: "Học sinh còn nợ tháng trước mà tháng này không học vẫn thấy rõ số tiền là nợ tháng nào.", guideId: "hoc-phi" },
+      { kind: "fix", title: "Mở đúng tháng", body: "Học phí, Lịch dạy và Báo cáo mở đúng tháng theo giờ Việt Nam, kể cả khi máy để múi giờ khác." },
+      { kind: "fix", title: "File sao lưu", body: "Bỏ cột Hình thức trong sheet Lần thu vì ứng dụng không còn ghi hình thức thu." },
+      { kind: "fix", title: "Trang đăng ký", body: "Báo mật khẩu nhập lại không khớp ngay lần bấm đầu, không báo khi bạn còn đang gõ." },
+    ],
+  },
+  {
     version: "0.11.0",
     date: "2026-10-04",
     title: "Hướng dẫn sử dụng và thông báo bản mới",
