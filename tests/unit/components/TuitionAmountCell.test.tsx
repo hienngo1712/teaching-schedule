@@ -93,4 +93,28 @@ describe("TuitionAmountCell (spec Y §4.4)", () => {
     expect(screen.getByText("600.000 đ")).toBeDefined()
     expect(container.querySelectorAll("span")).toHaveLength(1)
   })
+
+  it("nợ cũ 1 tháng, học phí tháng này 0đ: dòng nhỏ chỉ 'T8 còn 200.000 đ', không có 'T9 0 đ'", () => {
+    const item: Item = { ...baseItem, previousBalance: 200_000, totalExpected: 0, totalAmountDue: 200_000, debtMonths: 1 }
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionAmountCell item={item} month={9} />
+      </LanguageProvider>
+    )
+    expect(screen.getByText("200.000 đ")).toBeDefined()
+    expect(screen.getByText("T8 còn 200.000 đ")).toBeDefined()
+    expect(screen.queryByText(/T9/)).toBeNull()
+  })
+
+  it("tháng đang học chưa có buổi (0đ) còn nợ 3 tháng: dòng nhỏ 'Nợ 3 tháng trước …', không có tạm tính", () => {
+    const item: Item = { ...baseItem, inProgress: true, previousBalance: 500_000, totalExpected: 0, totalAmountDue: 500_000, debtMonths: 3 }
+    const { container } = render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionAmountCell item={item} month={10} />
+      </LanguageProvider>
+    )
+    expect(container.textContent).toContain("500.000 đ")
+    expect(container.textContent).not.toContain("tạm tính")
+    expect(container.querySelector("span.text-xs")?.textContent).toMatch(/3 tháng/)
+  })
 })

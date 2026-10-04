@@ -10,17 +10,20 @@ export function TuitionAmountCell({ item, month, className, amountClassName }: {
   const due = dueNow(item)
   const prevM = month === 1 ? 12 : month - 1
   const parts: string[] = []
-  if (item.previousBalance > 0 && item.totalExpected > 0) {
+  if (item.previousBalance > 0) {
     parts.push(
       item.debtMonths > 1
         ? t("debt_n_months").replace("{n}", String(item.debtMonths)).replace("{amount}", formatCurrency(item.previousBalance))
         : t("debt_prev_month").replace("{m}", String(prevM)).replace("{amount}", formatCurrency(item.previousBalance))
     )
   }
-  if (isProvisional(item) && item.totalExpected > 0) {
-    parts.push(t("month_provisional").replace("{m}", String(month)).replace("{amount}", formatCurrency(item.totalExpected)))
-  } else if (parts.length > 0) {
-    parts.push(t("month_fee_short").replace("{m}", String(month)).replace("{amount}", formatCurrency(item.totalExpected)))
+  // Tháng này 0đ (nghỉ cả tháng) thì chỉ ghi phần nợ cũ để biết số to là nợ tháng nào.
+  if (item.totalExpected > 0) {
+    if (isProvisional(item)) {
+      parts.push(t("month_provisional").replace("{m}", String(month)).replace("{amount}", formatCurrency(item.totalExpected)))
+    } else if (parts.length > 0) {
+      parts.push(t("month_fee_short").replace("{m}", String(month)).replace("{amount}", formatCurrency(item.totalExpected)))
+    }
   }
   const status = getRowStatus(item)
   return (
