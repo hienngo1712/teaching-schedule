@@ -119,4 +119,12 @@ describe("RegisterForm: nhập lại mật khẩu (spec X §4)", () => {
     )
     expect(registerMutate.mock.calls[0][0]).not.toHaveProperty("confirmPassword")
   })
+
+  it("chưa bấm Đăng ký: sửa ô Mật khẩu khác ô Nhập lại → chưa báo lỗi", async () => {
+    render(<LanguageProvider><RegisterForm /></LanguageProvider>)
+    fill("MatKhau123456", "MatKhau123456")
+    fireEvent.change(screen.getByLabelText(viText.password), { target: { value: "MatKhau999999" } })
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByText(viText.register_password_mismatch)).toBeNull()
+  })
 })

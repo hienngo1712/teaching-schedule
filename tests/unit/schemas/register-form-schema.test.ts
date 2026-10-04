@@ -21,4 +21,14 @@ describe("registerFormSchema (spec X §4)", () => {
   it("ô xác nhận trống → không hợp lệ", () => {
     expect(registerFormSchema("x").safeParse({ ...base, confirmPassword: "" }).success).toBe(false)
   })
+
+  it("tên đăng nhập sai + không khớp → có cả 2 lỗi trong 1 lần kiểm", () => {
+    const r = registerFormSchema("Không khớp").safeParse({ ...base, username: "a", confirmPassword: "Khac123456" })
+    expect(r.success).toBe(false)
+    if (!r.success) {
+      const paths = r.error.issues.map((i) => i.path.join("."))
+      expect(paths).toContain("username")
+      expect(paths).toContain("confirmPassword")
+    }
+  })
 })
