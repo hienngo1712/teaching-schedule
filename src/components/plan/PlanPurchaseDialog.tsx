@@ -20,6 +20,7 @@ import {
   featuresAddedIn,
   formatValidUntil,
   orderBlockedUntil,
+  yearlySavingPercent,
   type PaidPlan,
   type Period,
   type PlanFields,
@@ -154,16 +155,16 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
                       disabled={blocked}
                       data-testid={`purchase-plan-${plan}`}
                       onClick={() => setChoice((c) => ({ ...c, plan }))}
-                      className={cn(optionClass(selected), PLAN_ORDER[plan])}
+                      className={cn(optionClass(selected), "relative", PLAN_ORDER[plan])}
                     >
+                      {plan === "pro" && (
+                        <span data-testid="plan-recommended" className="absolute -top-2.5 left-4 rounded-full bg-primary px-2.5 text-[11px] font-semibold uppercase leading-5 tracking-wide text-primary-foreground">
+                          {t("plan_recommended")}
+                        </span>
+                      )}
                       <span className="flex flex-wrap items-center gap-2">
                         <RadioDot selected={selected} />
                         <span className="text-lg font-semibold text-foreground">{PLAN_LABEL[plan]}</span>
-                        {plan === "pro" && (
-                          <span className="rounded-full bg-primary px-2 text-xs font-medium leading-5 text-primary-foreground">
-                            {t("plan_recommended")}
-                          </span>
-                        )}
                       </span>
                       <span className="text-sm text-slate-600">
                         <span className="text-xl font-semibold text-foreground">{formatCurrency(prices[plan].month)}</span>
@@ -200,8 +201,9 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
                   {PERIODS.map((period) => {
                     const selected = choice.period === period
                     const b = bonusOf(period)
-                    // Q11: ghi đúng số tháng tặng hôm nay; năm không tặng thì nhắc tiết kiệm 2 tháng.
-                    const tag = b > 0 ? t("plan_bonus_months").replace("{n}", String(b)) : period === "year" ? t("plan_save_2_months") : null
+                    // Q11: ghi đúng số tháng tặng hôm nay; năm không tặng thì ghi % rẻ hơn mua lẻ 12 tháng.
+                    const saving = period === "year" ? yearlySavingPercent(prices[choice.plan].month, prices[choice.plan].year) : 0
+                    const tag = b > 0 ? t("plan_bonus_months").replace("{n}", String(b)) : saving > 0 ? t("plan_save_percent").replace("{p}", String(saving)) : null
                     return (
                       <button
                         key={period}

@@ -456,7 +456,7 @@
   "plan_per_month": "/month",
   "plan_per_year": "/year",
   "plan_per_2years": "/2 years",
-  "plan_save_2_months": "Save 2 months",
+  "plan_save_percent": "Save {p}%",
   "plan_bonus_months": "+{n} months free",
   "plan_includes_below": "Everything in {plan}, plus:",
   "plan_compare": "Compare plans",

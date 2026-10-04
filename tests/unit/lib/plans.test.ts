@@ -29,6 +29,7 @@ import {
   trialDaysOf,
   trialEndFor,
   vnStartOfDay,
+  yearlySavingPercent,
   type PlanFields,
 } from "@/lib/plans"
 import { formatVnDate } from "@/lib/payment-notes"
@@ -402,5 +403,18 @@ describe("orderExpiresAt (spec P7)", () => {
   it("đúng 7 × 24 giờ sau lúc tạo, không làm tròn ngày VN", () => {
     expect(ORDER_TTL_DAYS).toBe(7)
     expect(orderExpiresAt(new Date("2026-09-20T10:15:00.000Z")).toISOString()).toBe("2026-09-27T10:15:00.000Z")
+  })
+})
+
+describe("yearlySavingPercent", () => {
+  it("gói năm so với mua lẻ 12 tháng, làm tròn: 49k/490k và 99k/990k → 17%", () => {
+    expect(yearlySavingPercent(49_000, 490_000)).toBe(17)
+    expect(yearlySavingPercent(99_000, 990_000)).toBe(17)
+    expect(yearlySavingPercent(50_000, 450_000)).toBe(25)
+  })
+  it("gói năm không rẻ hơn (hoặc giá tháng 0) → 0 để ẩn nhãn", () => {
+    expect(yearlySavingPercent(50_000, 600_000)).toBe(0)
+    expect(yearlySavingPercent(50_000, 700_000)).toBe(0)
+    expect(yearlySavingPercent(0, 0)).toBe(0)
   })
 })

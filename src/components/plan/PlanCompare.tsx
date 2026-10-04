@@ -11,6 +11,7 @@ import {
   STUDENT_LIMITS,
   TWO_YEAR_BONUS_MONTHS,
   featuresAddedIn,
+  yearlySavingPercent,
   formatValidUntil,
   type PaidPlan,
   type Plan,
@@ -40,23 +41,25 @@ export function PlanCompare({ me, plusBlocked, onChoose }: Props) {
           const below = BELOW[plan]
           const limit = STUDENT_LIMITS[plan]
           const inUse = me.plan === plan
+          const saving = plan === "standard" ? 0 : yearlySavingPercent(me.prices[plan].month, me.prices[plan].year)
           return (
             <article
               key={plan}
               data-testid={`plan-card-${plan}`}
               className={cn(
-                "flex flex-col gap-3 rounded-xl p-4 md:p-5",
+                "relative flex flex-col gap-3 rounded-xl p-4 md:p-5",
                 CARD_ORDER[plan],
                 pro ? "border-2 border-primary bg-primary/[0.04]" : "border border-slate-200 bg-white"
               )}
             >
+              {/* Nhãn nằm trên viền thẻ để dòng tên gói chỉ còn "Đang dùng". */}
+              {pro && (
+                <span data-testid="plan-recommended" className="absolute -top-2.5 left-4 rounded-full bg-primary px-2.5 text-[11px] font-semibold uppercase leading-5 tracking-wide text-primary-foreground">
+                  {t("plan_recommended")}
+                </span>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-lg font-semibold text-foreground">{PLAN_LABEL[plan]}</h3>
-                {pro && (
-                  <span className="rounded-full bg-primary px-2 text-xs font-medium leading-5 text-primary-foreground">
-                    {t("plan_recommended")}
-                  </span>
-                )}
                 {inUse && (
                   <span className="rounded-full border border-slate-300 bg-white px-2 text-xs leading-5 text-slate-600">
                     {t(me.source === "trial" ? "plan_source_trial" : "plan_in_use")}
@@ -74,7 +77,8 @@ export function PlanCompare({ me, plusBlocked, onChoose }: Props) {
                   </p>
                   <p>
                     {formatCurrency(me.prices[plan].year)}
-                    {t("plan_per_year")} · {t("plan_save_2_months")}
+                    {t("plan_per_year")}
+                    {saving > 0 && ` · ${t("plan_save_percent").replace("{p}", String(saving))}`}
                   </p>
                   <p>
                     {formatCurrency(me.prices[plan]["2year"])}
