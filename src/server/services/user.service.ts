@@ -7,6 +7,7 @@ import { seedSubjectsForUser } from "./subject-defaults"
 import { trialEndFor } from "@/lib/plans"
 import { getDefaultTrialDays } from "./trial.service"
 import { CONSENT_TEXT_VERSION } from "@/lib/consent"
+import { RELEASES } from "@/lib/releases"
 
 // Re-export để giữ tương thích cho code đang import từ module này.
 export { DEFAULT_SUBJECTS, seedSubjectsForUser } from "./subject-defaults"
@@ -39,6 +40,8 @@ export async function registerUser(
           // D4: gán ở đây (không dùng default DB) để tài khoản cũ không bị gán nhầm dùng thử.
           // Số ngày đọc lúc đăng ký: đổi mặc định chỉ ảnh hưởng tài khoản tạo sau (spec L mục 15 T2).
           trialEndsAt: trialEndFor(new Date(), trialDays),
+          // Tài khoản mới chưa dùng bản cũ → không tự mở "Có gì mới" (spec W §5.4).
+          lastSeenRelease: RELEASES[0].version,
         },
       })
 

@@ -7,6 +7,7 @@ import { db } from "@/server/db"
 import bcrypt from "bcryptjs"
 import { beforeAll, afterAll } from "vitest"
 import { EXPECTED_TEST_ENDPOINT, FORBIDDEN_PROD_ENDPOINT } from "./env-setup"
+import { RELEASES } from "@/lib/releases"
 
 function extractEndpoint(url: string): string {
   const match = url.match(/@([^/]+)\//)
@@ -65,6 +66,9 @@ beforeAll(async () => {
       fullName: "Giáo viên Test",
       plan: "pro",
       planExpiresAt: PRO_UNTIL_2099,
+      // Không để ô "Có gì mới" / thẻ Bắt đầu che e2e cũ; e2e của W tự đặt lại null (spec W).
+      lastSeenRelease: RELEASES[0].version,
+      onboardingDismissedAt: new Date(),
     },
   })
 
@@ -75,6 +79,9 @@ beforeAll(async () => {
       fullName: "Giáo viên Test 2",
       plan: "pro",
       planExpiresAt: PRO_UNTIL_2099,
+      // Không để ô "Có gì mới" / thẻ Bắt đầu che e2e cũ; e2e của W tự đặt lại null (spec W).
+      lastSeenRelease: RELEASES[0].version,
+      onboardingDismissedAt: new Date(),
     },
   })
 
@@ -83,6 +90,9 @@ beforeAll(async () => {
       username: "teacher_std",
       passwordHash: await bcrypt.hash("teacher123", 4),
       fullName: "Giáo viên Standard",
+      // Không để ô "Có gì mới" / thẻ Bắt đầu che e2e cũ; e2e của W tự đặt lại null (spec W).
+      lastSeenRelease: RELEASES[0].version,
+      onboardingDismissedAt: new Date(),
     },
   })
 
@@ -91,6 +101,9 @@ beforeAll(async () => {
       username: "admin_test",
       passwordHash: await bcrypt.hash("teacher123", 4),
       fullName: "Quản trị Test",
+      // Không để ô "Có gì mới" / thẻ Bắt đầu che e2e cũ; e2e của W tự đặt lại null (spec W).
+      lastSeenRelease: RELEASES[0].version,
+      onboardingDismissedAt: new Date(),
     },
   })
 
