@@ -457,6 +457,8 @@
   "plan_per_year": "/year",
   "plan_per_2years": "/2 years",
   "plan_save_percent": "Save {p}%",
+  "pay_month_in_progress": "Month {m} isn't finished yet, so payments can't be recorded here. Record any payment (including prepayments) in month {pm}; any extra carries over to the next month.",
+  "pay_go_to_month": "Go to month {pm}",
   "plan_bonus_months": "+{n} months free",
   "plan_includes_below": "Everything in {plan}, plus:",
   "plan_compare": "Compare plans",
