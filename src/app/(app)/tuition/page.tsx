@@ -320,15 +320,16 @@ export default function TuitionPage() {
                 </span>
               </div>
             </div>
-            <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-3">
-              <div>
-                <div className="text-xs text-slate-500">{t("amount_to_pay")}</div>
-                <TuitionAmountCell item={item} month={month} className="items-start" amountClassName="text-[17px]" />
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <div className="flex items-end justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs text-slate-500">{t("amount_to_pay")}</div>
+                  <TuitionAmountCell item={item} month={month} className="items-start" amountClassName="text-[17px]" />
+                </div>
+                {noticeButton(item, "size-11 shrink-0")}
               </div>
-              <div className="flex gap-2">
-                {noticeButton(item, "size-11")}
-                {payFullButton(item, "h-11 flex-1")}
-              </div>
+              {/* Nút rộng cả thẻ (spec Y §4.1): "Paid in full 100.000.000 đ" đặt cạnh số tiền sẽ tràn ngang ở 390px. */}
+              {payFullButton(item, "mt-2 h-11 w-full")}
             </div>
           </div>
         )}

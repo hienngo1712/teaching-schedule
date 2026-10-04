@@ -107,7 +107,8 @@ test('giáo viên tạo link, phụ huynh xem không cần đăng nhập, tạo 
   await expect(parent.page.getByRole('heading', { name: NAME })).toBeVisible();
   // Tháng đang học theo buổi: nhãn là "Cần đóng ngay", tháng đã kết thúc là "Còn phải trả"
   await expect(parent.page.getByText(/Cần đóng ngay|Còn phải trả/).first()).toBeVisible();
-  await expect(parent.page.getByText('Có mặt', { exact: true }).first()).toBeVisible();
+  // Nhãn điểm danh trong danh sách buổi (3 ô tóm tắt cũng có chữ 'Có mặt' nhưng ẩn trên điện thoại).
+  await expect(parent.page.getByText('Có mặt', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await expect(parent.page.getByRole('heading', { name: 'Lịch sắp tới' })).toBeVisible();
   const [y, m, d] = vnDay(7).split('-');
   // Ca +7 ngày cùng tháng thì hiện cả ở Lịch sắp tới lẫn danh sách tháng → lấy dòng đầu.

@@ -59,20 +59,22 @@ async function createPresentSession(page: Page, studentName: string, startHour: 
   await page.keyboard.press('Escape');
 }
 
-async function deleteSession(page: Page, title: string) {
-  await page.goto('/calendar');
-  await page.getByText(title).filter({ visible: true }).first().click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Menu hành động' }).click();
-  await page.getByRole('menuitem', { name: 'Xóa ca dạy' }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa ca dạy' }).click();
-  await expect(page.getByText('Đã xóa ca dạy').first()).toBeVisible();
+// Màn Học phí mở tháng trước; tháng đang học theo buổi chỉ tạm tính (cần đóng = 0) → dời ca tạo hôm nay về tháng trước
+// để phiếu có số tiền thật và mã QR (spec Y §3.4).
+async function moveSessionToPrevMonth(title: string) {
+  const now = new Date();
+  const prev = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, Math.min(now.getDate(), 28)));
+  const res = await db.teachingSession.updateMany({ where: { title }, data: { sessionDate: prev } });
+  expect(res.count).toBe(1);
+}
+
+async function deleteSessionRow(title: string) {
+  await db.sessionStudent.deleteMany({ where: { session: { title } } });
+  await db.teachingSession.deleteMany({ where: { title } });
 }
 
 async function openNoticeFromCard(page: Page, studentName: string) {
-  const now = new Date();
-  const curY = now.getFullYear();
-  const curM = now.getMonth() + 1;
-  await page.goto(`/tuition?year=${curY}&month=${curM}`);
+  await page.goto('/tuition');
   await page.getByPlaceholder('Tìm tên học sinh...').fill(studentName);
   const card = page.getByTestId('list-card').filter({ hasText: studentName });
   // Thẻ mobile bọc ngoài cũng có role="button" (bấm cả thẻ mở chi tiết) → tên chính xác
@@ -179,17 +181,16 @@ test.describe('Phiếu báo học phí (390px)', () => {
     await expect(page.getByText('Đã thêm học sinh')).toBeVisible();
     await createPresentSession(page, studentName, startHour, titles[0]);
     await createPresentSession(page, studentName, startHour + 2, titles[1]);
+    for (const title of titles) await moveSessionToPrevMonth(title);
 
-    // 3. Mở phiếu từ thẻ mobile
+    // 3. Mở phiếu từ thẻ mobile (tháng trước)
     const card = await openNoticeFromCard(page, studentName);
     const notice = page.getByTestId('tuition-notice');
     const noticeCard = notice.getByTestId('notice-card');
     await expect(noticeCard.getByText(studentName)).toBeVisible();
-    await expect(noticeCard.getByText('Cần đóng ngay')).toBeVisible();
-    await expect(noticeCard.getByText('0 đ').first()).toBeVisible();
+    await expect(noticeCard.getByText('Còn phải trả')).toBeVisible();
     await expect(noticeCard.getByText('300.000 đ').first()).toBeVisible();
-    // Tháng đang học + theo buổi (dueNow = 0): phiếu chưa có QR vì remaining = 0
-    await expect(noticeCard.locator('img[src^="data:image/png"]')).toHaveCount(0);
+    await expect(noticeCard.locator('img[src^="data:image/png"]')).toBeVisible();
     await expect(notice.getByRole('button', { name: 'Chia sẻ' })).toHaveCount(0);
     await expectNoHorizontalScroll(page);
     await downloadAndCheck(page, notice);
@@ -200,22 +201,23 @@ test.describe('Phiếu báo học phí (390px)', () => {
     await card.click();
     await page.getByRole('dialog').getByRole('button', { name: 'Phiếu báo' }).click();
     await expect(noticeCard.getByText(studentName)).toBeVisible();
+    await expect(noticeCard.locator('img[src^="data:image/png"]')).toBeVisible();
     await downloadAndCheck(page, notice);
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
 
-    // 5. Xoá thông tin ngân hàng
+    // 5. Xoá thông tin ngân hàng → phiếu có dòng nhắc, không QR
     await page.goto('/settings');
     await page.getByRole('button', { name: 'Xoá thông tin' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Xoá thông tin' }).click();
     await expect(page.getByLabel('Số tài khoản')).toHaveValue('');
     await openNoticeFromCard(page, studentName);
-    // Khi remaining = 0 (tháng đang học, theo buổi), không hiện cảnh báo thiếu ngân hàng
-    await expect(noticeCard.getByText(studentName)).toBeVisible();
+    await expect(notice.getByText('Chưa cài tài khoản ngân hàng nên phiếu chưa có mã QR.')).toBeVisible();
+    await expect(notice.getByRole('link', { name: 'Mở Cài đặt' })).toHaveAttribute('href', '/settings');
     await expect(noticeCard.locator('img')).toHaveCount(0);
     await page.keyboard.press('Escape');
 
-    // 6. Dọn ca để lần chạy sau cùng ngày không vướng trùng giờ
-    for (const title of titles) await deleteSession(page, title);
+    // 6. Dọn ca (đã dời sang tháng trước nên lịch hôm nay không còn thấy) để lần chạy sau không vướng
+    for (const title of titles) await deleteSessionRow(title);
   });
 });

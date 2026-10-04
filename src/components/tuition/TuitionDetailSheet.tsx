@@ -437,7 +437,7 @@ function TuitionDetailBody({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="size-9 shrink-0"
+                              className="size-11 shrink-0 md:size-9"
                               aria-label={t("actions")}
                             >
                               <MoreHorizontal className="size-4" />

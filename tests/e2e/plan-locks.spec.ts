@@ -54,12 +54,28 @@ test.beforeAll(async () => {
   await db.planOrder.deleteMany({ where: { userId: stdId } });
   await db.student.deleteMany({ where: { userId: stdId } });
   await setStd('standard');
-  await db.student.create({ data: { userId: stdId, fullName: NAME, grade: 5, tuitionFee: 100000 } });
+  const st = await db.student.create({ data: { userId: stdId, fullName: NAME, grade: 5, tuitionFee: 100000 } });
+  // 1 ca có mặt ở tháng trước (màn Học phí mở sẵn tháng này) → còn nợ, nút "Đã đóng đủ" hiện (có khoá).
+  const subject = (await db.subject.findFirst({ where: { userId: stdId, isDeleted: false } }))
+    ?? (await db.subject.create({ data: { userId: stdId, name: 'E2E môn khoá gói' } }));
+  const now = new Date();
+  await db.teachingSession.create({
+    data: {
+      userId: stdId,
+      subjectId: subject.id,
+      title: NAME,
+      sessionDate: new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, 10)),
+      startTime: new Date('1970-01-01T08:00:00.000Z'),
+      endTime: new Date('1970-01-01T09:30:00.000Z'),
+      sessionStudents: { create: { studentId: st.id, attendance: 'present', fee: 100000, grade: 5 } },
+    },
+  });
 });
 
 test.afterAll(async () => {
   await db.monthlyTuition.deleteMany({ where: { student: { userId: stdId } } });
   await db.student.deleteMany({ where: { userId: stdId } });
+  await db.teachingSession.deleteMany({ where: { userId: stdId, title: NAME } });
   await setStd('standard');
   await db.$disconnect();
 });
@@ -84,10 +100,15 @@ test('Standard: đủ menu như Pro; Báo cáo, Cần chú ý, Ghi nhận, sheet
   await expect(page).toHaveURL(/dashboard/);
   await closeUpgrade(page);
 
-  // Học phí: bấm thẻ vẫn mở sheet xem tiền, khối thu tiền bị khóa.
+  // Học phí: nút Đã đóng đủ có khóa → popup Plus; bấm thẻ vẫn mở sheet xem tiền, khối thu tiền bị khóa.
   await page.goto('/tuition');
   const card = page.getByRole('button', { name: new RegExp(NAME) }).filter({ has: page.locator('text=' + NAME) }).first();
   await expect(card).toBeVisible();
+  const pay = card.getByRole('button', { name: /Đã đóng đủ/ });
+  await expect(pay.getByTestId('lock-badge')).toBeVisible();
+  await pay.click();
+  await expect(upgrade(page)).toContainText(PLUS_TEXT);
+  await closeUpgrade(page);
   await card.click();
   const detail = page.getByRole('dialog').filter({ hasText: 'Chi tiết học phí' });
   await expect(detail.getByText(/Cần đóng ngay|Còn thiếu/)).toBeVisible();

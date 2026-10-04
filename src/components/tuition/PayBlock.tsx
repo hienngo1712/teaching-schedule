@@ -48,6 +48,7 @@ export function PayBlock({
         {due > 0 && (
           <Button
             size="sm"
+            className="h-11 sm:h-9"
             disabled={isPending}
             onClick={() => payFull({ studentId, year, month }, due)}
           >
@@ -57,6 +58,7 @@ export function PayBlock({
         <Button
           size="sm"
           variant="outline"
+          className="h-11 sm:h-9"
           onClick={() => {
             setPartial(!partial)
             if (partial) {
@@ -110,6 +112,7 @@ export function PayBlock({
 
             <Button
               size="sm"
+              className="h-11 sm:h-9"
               disabled={amount <= 0 || isPending}
               onClick={() => {
                 pay({ studentId, year, month }, amount, paidAt)

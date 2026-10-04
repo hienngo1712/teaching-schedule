@@ -1,6 +1,17 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
+import { PrismaClient } from '@prisma/client';
+
+const db = new PrismaClient();
+test.afterAll(async () => {
+  await db.$disconnect();
+});
 
 test.use({ viewport: { width: 390, height: 844 } });
+
+async function expectTouchTarget(locator: Locator) {
+  const box = await locator.boundingBox();
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+}
 
 async function expectNoHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(
@@ -63,12 +74,13 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await detail.getByRole('button', { name: 'Lưu điểm danh' }).click();
     await expect(page.getByText('Đã lưu điểm danh')).toBeVisible();
     await page.keyboard.press('Escape');
-
-    // 3. /tuition → sang tháng hiện tại (do tạo ca hôm nay) rồi mở sheet chi tiết
+    // Dời ca về tháng trước (tháng đã học xong, màn Học phí mở sẵn tháng này) để cần đóng = học phí thật.
     const now = new Date();
-    const curY = now.getFullYear();
-    const curM = now.getMonth() + 1;
-    await page.goto(`/tuition?year=${curY}&month=${curM}`);
+    const prev = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, Math.min(now.getDate(), 28)));
+    expect((await db.teachingSession.updateMany({ where: { title }, data: { sessionDate: prev } })).count).toBe(1);
+
+    // 3. /tuition (tháng trước) → mở sheet chi tiết
+    await page.goto('/tuition');
     await page.getByPlaceholder('Tìm tên học sinh...').fill(studentName);
     const card = page.getByTestId('list-card').filter({ hasText: studentName });
     await card.click();
@@ -77,12 +89,15 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await expectNoHorizontalScroll(page);
 
     // 4. Lần 1: Đóng một phần 100.000
+    await expectTouchTarget(sheet.getByRole('button', { name: /^Đã đóng đủ/ }));
+    await expectTouchTarget(sheet.getByRole('button', { name: 'Đóng một phần' }));
     await sheet.getByRole('button', { name: 'Đóng một phần' }).click();
     await sheet.getByLabel('Số tiền phụ huynh đưa').fill('100000');
     await sheet.getByRole('button', { name: 'Ghi nhận' }).click();
     await expect(page.getByText(/Đã ghi/).first()).toBeVisible();
     await expect(sheet.getByTestId('payment-row')).toHaveCount(1);
     await expect(sheet.getByTestId('paid-total')).toHaveText(/100\.000/);
+    await expectTouchTarget(sheet.getByTestId('payment-row').first().getByRole('button', { name: 'Menu hành động' }));
 
     // 5. Lần 2: Đóng một phần 100.000 tiếp
     await sheet.getByRole('button', { name: 'Đóng một phần' }).click();
@@ -92,13 +107,13 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await expect(sheet.getByTestId('payment-row')).toHaveCount(2);
     await expect(sheet.getByTestId('paid-total')).toHaveText(/200\.000/);
 
-    // Badge trên thẻ đổi thành "Đã đóng đủ" hoặc "Đang học"
+    // Badge trên thẻ đổi thành "Đã đóng đủ"
     await page.keyboard.press('Escape');
-    await expect(card.getByText(/Đã đóng đủ|Đang học/)).toBeVisible();
+    await expect(card.getByText('Đã đóng đủ')).toBeVisible();
     await card.click();
 
-    // 6. Sửa đợt đầu tiên thành 50.000
-    const rowToEdit = sheet.getByTestId('payment-row').first();
+    // 6. Sửa 1 đợt 100.000 thành 50.000
+    const rowToEdit = sheet.getByTestId('payment-row').filter({ hasText: '100.000' }).first();
     await rowToEdit.getByRole('button', { name: 'Menu hành động' }).click();
     await page.getByRole('menuitem', { name: 'Sửa' }).click();
     const editForm = page.getByRole('dialog', { name: 'Sửa lần thu' });
@@ -106,8 +121,8 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await editForm.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(sheet.getByTestId('paid-total')).toHaveText(/150\.000/);
 
-    // 7. Xoá dòng đầu tiên (dòng 100k ban đầu, còn lại dòng 50k vừa sửa)
-    const rowToDelete = sheet.getByTestId('payment-row').first();
+    // 7. Xoá đợt 100.000 còn lại, giữ đợt 50.000 vừa sửa
+    const rowToDelete = sheet.getByTestId('payment-row').filter({ hasText: '100.000' });
     await rowToDelete.getByRole('button', { name: 'Menu hành động' }).click();
     await page.getByRole('menuitem', { name: 'Xóa' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa' }).click();
@@ -124,14 +139,10 @@ test.describe('Lịch sử thu tiền (390px)', () => {
     await expect(page.getByText('Đã xoá lần thu')).toBeVisible();
     await expect(sheet.getByTestId('paid-total')).toHaveText(/0 đ/);
 
-    // 8. Dọn dữ liệu: xoá ca rồi xoá HS (xoá mềm)
+    // 8. Dọn dữ liệu: xoá ca (đã dời sang tháng trước) rồi xoá HS (xoá mềm)
     await page.keyboard.press('Escape');
-    await page.goto('/calendar');
-    await page.getByText(title).filter({ visible: true }).first().click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Menu hành động' }).click();
-    await page.getByRole('menuitem', { name: 'Xóa ca dạy' }).click();
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Xóa ca dạy' }).click();
-    await expect(page.getByText('Đã xóa ca dạy')).toBeVisible();
+    await db.sessionStudent.deleteMany({ where: { session: { title } } });
+    await db.teachingSession.deleteMany({ where: { title } });
 
     await page.goto('/students');
     const studentCard = page.getByTestId('list-card').filter({ hasText: studentName });

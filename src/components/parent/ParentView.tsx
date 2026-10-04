@@ -70,9 +70,9 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
           </nav>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
           {/* Cột trái: Điểm danh & Lịch sắp tới */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <section className="rounded-lg border border-slate-200 bg-white p-4">
               <h2 className="font-semibold text-slate-900">{`${t("parent_attendance")} ${view.month}`}</h2>
 
