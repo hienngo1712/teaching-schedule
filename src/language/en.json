@@ -845,5 +845,10 @@
   "start_step_bank_hint": "Needed for the QR code on tuition notices.",
   "start_open": "Open",
   "start_guide": "View guide",
-  "start_dismiss": "Hide Getting started"
+  "start_dismiss": "Hide Getting started",
+  "guide_title": "User guide",
+  "guide_toc": "Contents",
+  "guide_menu": "User guide",
+  "print_pdf": "Download PDF",
+  "guide_back_login": "Back to login"
 }

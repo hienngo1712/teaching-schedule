@@ -48,7 +48,7 @@ describe("AppHeader", () => {
     renderHeader()
     expect(screen.getByTestId("renew-offer-slot")).toBeTruthy()
     const items = await screen.findAllByRole("menuitem")
-    expect(items.map((i) => i.textContent)).toEqual(["Sao lưu dữ liệu", "Đổi mật khẩu", "Đăng xuất"])
+    expect(items.map((i) => i.textContent)).toEqual(["Sao lưu dữ liệu", "Hướng dẫn sử dụng", "Đổi mật khẩu", "Đăng xuất"])
   })
 
   it("bấm Sao lưu dữ liệu → hiện dialog cảnh báo, bấm Tôi hiểu tải xuống mới gọi download", async () => {
@@ -67,7 +67,7 @@ describe("AppHeader", () => {
     renderHeader("admin")
     expect(screen.queryByTestId("renew-offer-slot")).toBeNull()
     const items = await screen.findAllByRole("menuitem")
-    expect(items.map((i) => i.textContent)).toEqual(["Quản trị", "Đổi mật khẩu", "Đăng xuất"])
+    expect(items.map((i) => i.textContent)).toEqual(["Quản trị", "Hướng dẫn sử dụng", "Đổi mật khẩu", "Đăng xuất"])
     expect(screen.getByRole("menuitem", { name: "Quản trị" }).getAttribute("href")).toBe("/admin/overview")
   })
 

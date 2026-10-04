@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { DatabaseBackup, KeyRound, LogOut, Languages, ShieldCheck } from "lucide-react"
+import { BookOpen, DatabaseBackup, KeyRound, LogOut, Languages, ShieldCheck } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { BackupConfirmDialog } from "./BackupConfirmDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -94,6 +94,12 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
                 {t("backup_data")}
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem asChild>
+              <a href="/guide" target="_blank" rel="noopener noreferrer">
+                <BookOpen className="size-4 mr-2" />
+                {t("guide_menu")}
+              </a>
+            </DropdownMenuItem>
             <ChangePasswordDialog
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

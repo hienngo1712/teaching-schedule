@@ -20,7 +20,8 @@ const stats = {
 vi.mock("@/lib/trpc", () => ({
   trpc: { report: { dashboard: { useQuery: () => ({ data: stats, isLoading: false }) } } },
 }))
-// Hai khối dưới có test riêng; ở đây chỉ kiểm thẻ số liệu.
+// Các khối dưới có test riêng; ở đây chỉ kiểm thẻ số liệu.
+vi.mock("@/components/dashboard/StartCard", () => ({ StartCard: () => null }))
 vi.mock("@/components/dashboard/DashboardAlerts", () => ({ DashboardAlerts: () => null }))
 vi.mock("@/components/dashboard/TodaySessions", () => ({ TodaySessions: () => null }))
 

@@ -845,5 +845,10 @@
   "start_step_bank_hint": "Cần để phiếu báo học phí có mã QR chuyển khoản.",
   "start_open": "Mở",
   "start_guide": "Xem hướng dẫn",
-  "start_dismiss": "Ẩn thẻ Bắt đầu"
+  "start_dismiss": "Ẩn thẻ Bắt đầu",
+  "guide_title": "Hướng dẫn sử dụng",
+  "guide_toc": "Mục lục",
+  "guide_menu": "Hướng dẫn sử dụng",
+  "print_pdf": "Tải PDF",
+  "guide_back_login": "Về trang đăng nhập"
 }
