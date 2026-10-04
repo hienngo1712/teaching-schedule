@@ -103,7 +103,10 @@ export function LoginForm() {
         </Link>
       </div>
 
-      <div className="text-center">
+      <div className="flex justify-center gap-4">
+        <Link href="/guide" className="mt-2 inline-flex min-h-11 items-center text-xs text-slate-500 hover:underline">
+          {t("guide_menu")}
+        </Link>
         <Link href="/privacy" className="mt-2 inline-flex min-h-11 items-center text-xs text-slate-500 hover:underline">
           {t("privacy_title")}
         </Link>

@@ -20,6 +20,11 @@ describe("middleware matcher", () => {
     expect(needsAuth("/privacy")).toBe(false)
   })
 
+  it("/guide và /updates là route công khai (spec W)", () => {
+    expect(needsAuth("/guide")).toBe(false)
+    expect(needsAuth("/updates")).toBe(false)
+  })
+
   it("các route khác vẫn phải đăng nhập, kể cả route bắt đầu bằng 'p'", () => {
     for (const path of ["/", "/dashboard", "/students", "/profile", "/pay", "/p", "/tuition", "/api/other"]) {
       expect(needsAuth(path), path).toBe(true)

@@ -275,6 +275,16 @@ API routes/tRPC: max 10s execution time
 
 ---
 
+## Mỗi lần nâng version
+
+1. Sửa `package.json` `version` (phần lớn → minor, sửa nhỏ → patch).
+2. Thêm 1 mục **đầu** `RELEASES` trong `src/lib/releases.ts`: `version` trùng `package.json`, `date` = ngày deploy, `title`, `summary`, `items` (mỗi mục 1–2 câu, viết cho giáo viên đọc, không thuật ngữ kỹ thuật; gắn `guideId` nếu có mục hướng dẫn liên quan).
+3. `notify: true` khi giáo viên thấy được thay đổi (tính năng mới, đổi cách dùng); `false` cho sửa lỗi nhỏ. Bản `notify: true` sẽ tự mở ô "Có gì mới" 1 lần cho mọi giáo viên.
+4. Tính năng mới đổi cách dùng → sửa mục tương ứng trong `src/lib/guide-content.ts`.
+5. `tests/unit/lib/releases.test.ts` đỏ nếu quên bước 2.
+
+---
+
 ## Khoá mã hoá dữ liệu cá nhân (spec O)
 
 **Biến env** (Vercel → Production, kiểu Sensitive; không đặt ở Preview, không đặt trong `.env`):

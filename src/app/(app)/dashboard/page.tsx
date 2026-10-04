@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { StatCard } from "@/components/common/StatCard"
 import { TodaySessions } from "@/components/dashboard/TodaySessions"
 import { DashboardAlerts } from "@/components/dashboard/DashboardAlerts"
+import { StartCard } from "@/components/dashboard/StartCard"
 import { trpc } from "@/lib/trpc"
 import { cn, formatCurrency } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -20,6 +21,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("dashboard")} />
+
+      <StartCard />
 
       <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         <StatCard

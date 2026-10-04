@@ -11,12 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { DatabaseBackup, KeyRound, LogOut, Languages, ShieldCheck } from "lucide-react"
+import { BookOpen, DatabaseBackup, KeyRound, LogOut, Languages, ShieldCheck } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { BackupConfirmDialog } from "./BackupConfirmDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
 import { RenewOffer } from "@/components/plan/RenewOffer"
+import { WhatsNew } from "@/components/whats-new/WhatsNew"
 import { CurrentPlanBadge } from "@/components/plan/CurrentPlanBadge"
 import { ADMIN_HOME } from "@/lib/admin"
 
@@ -47,6 +48,7 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
       <div className="flex shrink-0 items-center gap-2">
         {/* Admin không dùng gói: không gọi plan.me, không nhắc gia hạn. */}
         {!admin && <RenewOffer />}
+        {!admin && <WhatsNew />}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="size-11 text-slate-600 md:size-10">
@@ -94,6 +96,12 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
                 {t("backup_data")}
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem asChild>
+              <a href="/guide" target="_blank" rel="noopener noreferrer">
+                <BookOpen className="size-4 mr-2" />
+                {t("guide_menu")}
+              </a>
+            </DropdownMenuItem>
             <ChangePasswordDialog
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

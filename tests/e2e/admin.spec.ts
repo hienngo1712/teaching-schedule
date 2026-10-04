@@ -181,7 +181,7 @@ test('admin_test: route giáo viên → /admin/overview; tab bar và menu avatar
 
   await admin.getByRole('button', { name: 'Mở menu tài khoản' }).click();
   const menu = admin.getByRole('menu');
-  await expect(menu.getByRole('menuitem')).toHaveText(['Quản trị', 'Đổi mật khẩu', 'Đăng xuất']);
+  await expect(menu.getByRole('menuitem')).toHaveText(['Quản trị', 'Hướng dẫn sử dụng', 'Đổi mật khẩu', 'Đăng xuất']);
   await menu.getByRole('menuitem', { name: 'Quản trị' }).click();
   await expect(admin).toHaveURL(/\/admin\/overview$/);
 
