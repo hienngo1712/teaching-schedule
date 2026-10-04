@@ -18,7 +18,7 @@ const rowData = {
   totalExpected: 600_000,
   paidAmount: 0,
   isFullPaid: false,
-  notes: "ghi chú cũ",
+  notes: "ghi chú cũ" as string | null,
   previousBalance: 200_000,
   totalAmountDue: 800_000,
   billingMode: "per_session" as "per_session" | "monthly",
@@ -188,3 +188,49 @@ describe("TuitionDetailSheet — khoá thu tiền tháng đang học (cả trọ
     expect(screen.queryByText("Miễn phần còn thiếu")).toBeNull()
   })
 })
+
+describe("TuitionDetailSheet — Miễn có lý do", () => {
+  beforeEach(() => {
+    mockUpdateSettlementMutate.mockReset()
+    currentRow = rowData
+  })
+
+  function openWaive() {
+    renderSheet()
+    openMenu()
+    fireEvent.click(screen.getByText("Miễn phần còn thiếu"))
+  }
+
+  it("nhập lý do → gửi isFullPaid + notes nối 'Miễn: <lý do>' xuống dòng sau ghi chú cũ", () => {
+    openWaive()
+    fireEvent.change(screen.getByLabelText("Lý do (không bắt buộc)"), { target: { value: "  hoàn cảnh khó khăn  " } })
+    fireEvent.click(screen.getByRole("button", { name: /^Miễn 800\.000/ }))
+    expect(mockUpdateSettlementMutate.mock.calls[0][0]).toEqual({
+      studentId: 1, year: 2026, month: 9, isFullPaid: true, notes: "ghi chú cũ\nMiễn: hoàn cảnh khó khăn",
+    })
+  })
+
+  it("ghi chú trống → notes chỉ là 'Miễn: <lý do>'", () => {
+    const empty = { ...rowData, notes: null }
+    currentRow = empty
+    renderSheet(empty)
+    openMenu()
+    fireEvent.click(screen.getByText("Miễn phần còn thiếu"))
+    fireEvent.change(screen.getByLabelText("Lý do (không bắt buộc)"), { target: { value: "con thứ 2" } })
+    fireEvent.click(screen.getByRole("button", { name: /^Miễn 800\.000/ }))
+    expect(mockUpdateSettlementMutate.mock.calls[0][0]).toEqual({
+      studentId: 1, year: 2026, month: 9, isFullPaid: true, notes: "Miễn: con thứ 2",
+    })
+  })
+
+  it("nối vào ghi chú đang gõ dở (chưa lưu), không mất chữ", () => {
+    renderSheet()
+    fireEvent.change(screen.getByPlaceholderText("Nhập ghi chú thanh toán (nếu có)..."), { target: { value: "đang gõ" } })
+    openMenu()
+    fireEvent.click(screen.getByText("Miễn phần còn thiếu"))
+    fireEvent.change(screen.getByLabelText("Lý do (không bắt buộc)"), { target: { value: "x" } })
+    fireEvent.click(screen.getByRole("button", { name: /^Miễn 800\.000/ }))
+    expect(mockUpdateSettlementMutate.mock.calls.at(-1)![0].notes).toBe("đang gõ\nMiễn: x")
+  })
+})
+
