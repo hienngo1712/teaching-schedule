@@ -833,5 +833,17 @@
   "undo": "Undo",
   "mark_notice_sent": "Mark as sent",
   "unmark_notice_sent": "Unmark sent",
-  "notice_sent_detail": "Notice: Sent {d} at {t}"
+  "notice_sent_detail": "Notice: Sent {d} at {t}",
+  "start_title": "Getting started",
+  "start_progress": "{n}/{total} done",
+  "start_step_student": "Add your first student",
+  "start_step_session": "Create your first session",
+  "start_step_session_hint": "Some subjects are created for you; edit them under Subjects.",
+  "start_step_attendance": "Take attendance for a session",
+  "start_step_payment": "Record your first tuition payment",
+  "start_step_bank": "Set up your bank account",
+  "start_step_bank_hint": "Needed for the QR code on tuition notices.",
+  "start_open": "Open",
+  "start_guide": "View guide",
+  "start_dismiss": "Hide Getting started"
 }

@@ -833,5 +833,17 @@
   "undo": "Hoàn tác",
   "mark_notice_sent": "Đánh dấu đã gửi",
   "unmark_notice_sent": "Bỏ đánh dấu",
-  "notice_sent_detail": "Phiếu báo: Đã gửi {d} lúc {t}"
+  "notice_sent_detail": "Phiếu báo: Đã gửi {d} lúc {t}",
+  "start_title": "Bắt đầu sử dụng",
+  "start_progress": "Đã xong {n}/{total}",
+  "start_step_student": "Thêm học sinh đầu tiên",
+  "start_step_session": "Tạo ca dạy đầu tiên",
+  "start_step_session_hint": "App đã tạo sẵn vài môn học, sửa ở mục Môn học.",
+  "start_step_attendance": "Điểm danh 1 ca",
+  "start_step_payment": "Thu học phí lần đầu",
+  "start_step_bank": "Cài tài khoản nhận học phí",
+  "start_step_bank_hint": "Cần để phiếu báo học phí có mã QR chuyển khoản.",
+  "start_open": "Mở",
+  "start_guide": "Xem hướng dẫn",
+  "start_dismiss": "Ẩn thẻ Bắt đầu"
 }
