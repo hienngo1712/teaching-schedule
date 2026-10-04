@@ -168,7 +168,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
     expect(alerts.month).toBe(9)
     expect(page.items[0].previousBalance).toBe(100000)
     expect(alerts.debts).toEqual([
-      { studentId: st.id, fullName: "HS Nợ", grade: 6, amount: page.items[0].previousBalance, months: 1, isActive: true },
+      { studentId: st.id, fullName: "HS Nợ", grade: 6, amount: page.items[0].previousBalance, months: 1, isActive: true, noticeSentAt: null },
     ])
   })
 
@@ -222,8 +222,8 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
 
     const { debts } = await getDashboardAlerts(db, userId, NOW)
     expect(debts).toEqual([
-      { studentId: a.id, fullName: "HS Nợ Dài", grade: 6, amount: 300000, months: 3, isActive: true },
-      { studentId: b.id, fullName: "HS Nợ Ngắn", grade: 2, amount: 100000, months: 1, isActive: true },
+      { studentId: a.id, fullName: "HS Nợ Dài", grade: 6, amount: 300000, months: 3, isActive: true, noticeSentAt: null },
+      { studentId: b.id, fullName: "HS Nợ Ngắn", grade: 2, amount: 100000, months: 1, isActive: true, noticeSentAt: null },
     ])
   })
 
@@ -280,7 +280,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
 
     expect(page.items[0].previousBalance).toBe(100000)
     expect(alerts.debts).toEqual([
-      { studentId: st.id, fullName: "HS Đã Nghỉ", grade: 6, amount: 100000, months: 1, isActive: false },
+      { studentId: st.id, fullName: "HS Đã Nghỉ", grade: 6, amount: 100000, months: 1, isActive: false, noticeSentAt: null },
     ])
     // Nhóm "lâu không có ca" vẫn chỉ HS đang học.
     expect(alerts.idleStudents).toEqual([])
@@ -297,7 +297,7 @@ describe("getDashboardAlerts — còn nợ tháng trước", () => {
 
     const { debts } = await getDashboardAlerts(db, userId, NOW)
     expect(debts).toEqual([
-      { studentId: st.id, fullName: "HS Nghỉ Có Ca", grade: 6, amount: 100000, months: 1, isActive: false },
+      { studentId: st.id, fullName: "HS Nghỉ Có Ca", grade: 6, amount: 100000, months: 1, isActive: false, noticeSentAt: null },
     ])
   })
 

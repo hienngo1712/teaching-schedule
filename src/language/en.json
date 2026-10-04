@@ -792,6 +792,8 @@
   "notice_sent": "Sent",
   "all_notice": "All",
   "notice_sent_on": "Sent {d}",
+  "notice_sent_age": "Sent {d} · {n} days",
+  "tuition_in_progress": "In progress",
   "notice_changed": "Sent · amount changed",
   "notice_marked": "Marked notice as sent",
   "undo": "Undo",

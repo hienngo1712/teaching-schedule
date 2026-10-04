@@ -32,6 +32,7 @@ const baseNotice: TuitionNoticeDTO = {
   payments: [],
   remaining: 400000,
   overpaid: 0,
+  inProgress: false,
   teacherName: "Giáo viên A",
   bankConfigured: false,
   qr: null,

@@ -8,6 +8,7 @@ import type { TuitionNoticeDTO } from "@/lib/types/models"
 import { getMonthlyTuitionStatus } from "./tuition.service"
 import { listPayments } from "./payment.service"
 import { getBankAccount } from "./settings.service"
+import { dueNow, isInProgressMonth } from "@/lib/tuition-display"
 
 // Chỉ đọc: persist=false, không ghi MonthlyTuition/Payment.
 export async function getTuitionNotice(
@@ -50,8 +51,9 @@ export async function getTuitionNotice(
   )
 
   const { totalAmountDue, paidAmount, isFullPaid } = status
-  // Khớp sheet chi tiết của B và getMonthlyOutstanding (spec C S8).
-  const remaining = isFullPaid ? 0 : Math.max(0, totalAmountDue - paidAmount)
+  const inProgress = isInProgressMonth(year, month)
+  // Khớp số cần đóng ngay theo spec Y D9 (tháng đang học không cộng tạm tính).
+  const remaining = dueNow(status)
   const surplus = paidAmount - Math.max(0, totalAmountDue)
   const overpaid = !isFullPaid && surplus > 0 ? surplus : 0
 
@@ -96,6 +98,7 @@ export async function getTuitionNotice(
     payments: noticePayments,
     remaining,
     overpaid,
+    inProgress,
     teacherName: user.fullName ?? user.username,
     // BIN không còn trong VN_BANKS → coi như chưa cài để không tạo QR sai ngân hàng.
     bankConfigured: Boolean(bankInfo),

@@ -26,6 +26,8 @@ const row = {
   noticeSentAt: null,
   noticeSentAmount: null,
   noticeStatus: "none" as const,
+  inProgress: false,
+  debtMonths: 0,
 }
 
 const mockCalls = vi.hoisted(() => ({ list: [] as unknown[] }))

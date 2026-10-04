@@ -8,6 +8,7 @@ export type TuitionBadgeStatus =
   | "partial"
   | "unpaid"
   | "no_sessions"
+  | "in_progress"
 
 export type TuitionStatusInput = {
   paidAmount: number
@@ -25,6 +26,7 @@ export function getTuitionBadgeStatus(item: TuitionStatusInput): TuitionBadgeSta
   if (item.isFullPaid && item.paidAmount < adjustedAmount) return "settled_waived"
   if (item.isFullPaid) return "fully_paid"
   if (item.paidAmount >= adjustedAmount && adjustedAmount > 0) return "fully_paid"
+  if (adjustedAmount === 0 && item.paidAmount > 0) return "fully_paid"
   if (
     item.paidAmount >= item.totalExpected &&
     item.totalExpected > 0 &&
@@ -51,7 +53,7 @@ export function matchesTuitionStatusFilter(
   const status = getTuitionBadgeStatus(item)
   switch (filter) {
     case "fully_paid":
-      return status === "fully_paid" || status === "overpaid" || status === "settled_waived"
+      return status === "fully_paid" || status === "overpaid" || status === "settled_waived" || status === "in_progress"
     case "paid_this_month":
       return status === "paid_this_month"
     case "partial":

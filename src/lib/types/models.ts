@@ -91,6 +91,8 @@ export interface TuitionStatusDTO {
   noticeSentAt: Date | string | null
   noticeSentAmount: number | null
   noticeStatus: NoticeStatus
+  inProgress: boolean
+  debtMonths: number
 }
 
 export type NoticeStatus = "none" | "sent" | "changed"
@@ -151,6 +153,7 @@ export interface TuitionNoticeDTO {
   payments: PaymentDTO[]
   remaining: number
   overpaid: number
+  inProgress: boolean
   teacherName: string
   bankConfigured: boolean
   qr: {

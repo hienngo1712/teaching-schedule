@@ -792,6 +792,8 @@
   "notice_sent": "Đã gửi",
   "all_notice": "Tất cả",
   "notice_sent_on": "Đã gửi {d}",
+  "notice_sent_age": "Đã gửi {d} · {n} ngày",
+  "tuition_in_progress": "Đang học",
   "notice_changed": "Đã gửi · số tiền đã đổi",
   "notice_marked": "Đã đánh dấu đã gửi phiếu",
   "undo": "Hoàn tác",

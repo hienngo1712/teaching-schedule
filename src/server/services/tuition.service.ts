@@ -1,6 +1,5 @@
 import { Prisma, type PrismaClient, type MonthlyTuition, type SessionStudent } from "@prisma/client"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
-import { matchesTuitionStatusFilter } from "@/lib/tuition-status"
 import { assertOwnership } from "./_base.service"
 import type { MonthlyTuitionFilterInput, UpdateSettlementInput, SetNoticeSentInput } from "@/lib/schemas/tuition"
 import type { PaginatedResponse } from "@/lib/schemas/common"
@@ -9,6 +8,7 @@ import { byGradeThenName, nameMatches } from "@/lib/name-search"
 import { monthFee, monthKey, resolveBilling, type Billing, type BillingChange } from "@/lib/billing"
 import { loadBillingChanges } from "./billing.service"
 import type { MonthLedger } from "@/lib/payment-allocation"
+import { dueNow, getRowStatus, isInProgressMonth } from "@/lib/tuition-display"
 
 type AttendanceRecord = SessionStudent & { session: { sessionDate: Date } }
 
@@ -253,17 +253,36 @@ export async function getMonthlyTuitionStatus(
 
   // 5. Tính kết quả cho từng học sinh
   const targetKey = monthKey(year, month)
+  const inProgress = isInProgressMonth(year, month)
   const results = students.map(student => {
     const attendance = attendanceMap.get(student.id) ?? []
     const snapshot = snapshotMap.get(student.id)
     const changes = billingMap.get(student.id) ?? []
     const billing = resolveBilling(changes, targetKey)
+    const studentClosing = closingBalances.get(student.id)
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
-      calcStudentTuition(attendance, snapshot, closingBalances.get(student.id)?.get(year * 12 + month - 2) ?? 0, billing)
+      calcStudentTuition(attendance, snapshot, studentClosing?.get(year * 12 + month - 2) ?? 0, billing)
+
+    let debtMonths = 0
+    if (previousBalance > 0 && studentClosing) {
+      for (let k = year * 12 + month - 2; k >= year * 12 + month - 13; k--) {
+        const bal = studentClosing.get(k)
+        if (bal !== undefined && bal > 0) debtMonths++
+        else break
+      }
+    }
 
     const paidAmount = snapshot?.paidAmount ?? 0
     const isFullPaid = snapshot?.isFullPaid ?? false
-    const remaining = isFullPaid ? 0 : Math.max(0, totalAmountDue - paidAmount)
+    const remaining = dueNow({
+      previousBalance,
+      totalExpected: currentMonthFee,
+      totalAmountDue,
+      paidAmount,
+      isFullPaid,
+      billingMode: billing.mode,
+      inProgress,
+    })
     const noticeSentAt = snapshot?.noticeSentAt ?? null
     const noticeSentAmount = snapshot?.noticeSentAmount ?? null
     let noticeStatus: NoticeStatus = "none"
@@ -290,6 +309,8 @@ export async function getMonthlyTuitionStatus(
       noticeSentAt,
       noticeSentAmount,
       noticeStatus,
+      inProgress,
+      debtMonths,
     }
   })
 
@@ -327,7 +348,21 @@ export async function getMonthlyTuitionStatus(
   // 7. Lọc theo status và noticeFilter — dùng chung helper với badge client.
   let filteredResults =
     status && status !== "all"
-      ? results.filter(item => matchesTuitionStatusFilter(item, status))
+      ? results.filter(item => {
+          const rowStatus = getRowStatus(item)
+          if (status === "fully_paid") {
+            return (
+              rowStatus === "fully_paid" ||
+              rowStatus === "overpaid" ||
+              rowStatus === "settled_waived" ||
+              rowStatus === "in_progress"
+            )
+          }
+          if (status === "paid_this_month") return rowStatus === "paid_this_month"
+          if (status === "partial") return rowStatus === "partial"
+          if (status === "unpaid") return rowStatus === "unpaid"
+          return true
+        })
       : results
 
   if (noticeFilter && noticeFilter !== "all") {
@@ -336,7 +371,7 @@ export async function getMonthlyTuitionStatus(
         return item.noticeStatus === "sent"
       }
       if (noticeFilter === "unsent") {
-        const remaining = item.isFullPaid ? 0 : Math.max(0, item.totalAmountDue - item.paidAmount)
+        const remaining = dueNow(item)
         return (item.noticeStatus === "none" || item.noticeStatus === "changed") && remaining > 0
       }
       return true
@@ -366,6 +401,8 @@ export async function getMonthlyTuitionStatus(
       noticeSentAt: item.noticeSentAt,
       noticeSentAmount: item.noticeSentAmount,
       noticeStatus: item.noticeStatus,
+      inProgress: item.inProgress,
+      debtMonths: item.debtMonths,
     })),
     totalCount,
     totalPages: Math.ceil(totalCount / limit),
@@ -450,7 +487,7 @@ export async function setNoticeSent(
     [input.studentId]
   )
   const item = statusRes.items[0]
-  const remaining = item ? (item.isFullPaid ? 0 : Math.max(0, item.totalAmountDue - item.paidAmount)) : 0
+  const remaining = item ? dueNow(item) : 0
 
   return db.monthlyTuition.update({
     where: { id: mt.id },
