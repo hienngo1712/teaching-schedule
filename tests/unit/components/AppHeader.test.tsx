@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { AppHeader } from "@/components/layout/AppHeader"
+import { RELEASES } from "@/lib/releases"
 import viText from "@/language/vi.json"
 
 // jsdom không có ResizeObserver mà Radix dialog cần.
@@ -15,6 +16,16 @@ globalThis.ResizeObserver ??= class {
 } as unknown as typeof ResizeObserver
 
 const download = vi.hoisted(() => vi.fn())
+
+vi.mock("@/lib/trpc", () => ({
+  trpc: {
+    useUtils: () => ({ release: { status: { setData: vi.fn() } } }),
+    release: {
+      status: { useQuery: () => ({ data: { lastSeenRelease: RELEASES[0].version } }) },
+      markSeen: { useMutation: () => ({ mutate: vi.fn() }) },
+    },
+  },
+}))
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: { username: "admin_test", fullName: "Quản trị Test" } } }),
@@ -42,6 +53,16 @@ function renderHeader(variant?: "teacher" | "admin") {
 describe("AppHeader", () => {
   beforeEach(() => {
     download.mockReset()
+    window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+      matches: false,
+      media: q,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia
   })
 
   it("mặc định (giáo viên): có RenewOffer; menu Sao lưu dữ liệu, Đổi mật khẩu, Đăng xuất; không có Quản trị", async () => {

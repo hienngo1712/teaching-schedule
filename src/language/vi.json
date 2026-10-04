@@ -850,5 +850,15 @@
   "guide_toc": "Mục lục",
   "guide_menu": "Hướng dẫn sử dụng",
   "print_pdf": "Tải PDF",
-  "guide_back_login": "Về trang đăng nhập"
+  "guide_back_login": "Về trang đăng nhập",
+  "whatsnew_button": "Có gì mới",
+  "whatsnew_label": "CÓ GÌ MỚI",
+  "whatsnew_more": "và {n} thay đổi khác",
+  "whatsnew_learn_more": "Tìm hiểu thêm",
+  "whatsnew_close": "Đóng",
+  "whatsnew_kind_new": "MỚI",
+  "whatsnew_kind_improve": "CẢI TIẾN",
+  "whatsnew_kind_fix": "SỬA LỖI",
+  "updates_title": "Các bản cập nhật",
+  "updates_guide_link": "Xem hướng dẫn"
 }
