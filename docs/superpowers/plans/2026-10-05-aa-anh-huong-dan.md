@@ -4,7 +4,7 @@
 
 **Goal:** Các bước chính trong `/guide` có ảnh chụp màn hình thật, gồm khổ máy tính và khổ điện thoại. File Word tải về cũng chèn cả 2 ảnh. Version `0.12.0`.
 
-**Architecture:** Một script Playwright chạy tay tự tạo tài khoản mẫu trên DB test và chụp ảnh. Ảnh JPEG lưu vào `public/guide/`. Bước có ảnh trong `guide-content.ts` mang mã `shot`. Trang `/guide` hiện khung ảnh có nút chuyển Máy tính / Điện thoại. File Word lấy chính các file JPEG đó chèn vào.
+**Architecture:** Một script Playwright chạy tay tự tạo tài khoản mẫu trên DB test và chụp ảnh. Ảnh JPEG lưu vào `public/guide/`. Bước có ảnh trong `guide-content.ts` mang mã `shot`. Trang `/guide` hiện khung ảnh có nút chuyển Máy tính / Điện thoại. File Word dựng sẵn bằng `pnpm guide:docx` (chèn chính các file JPEG đó) thành file tĩnh, nút Tải Word tải thẳng.
 
 **Tech Stack:** Next.js 15, React 19, Playwright, Vitest + Testing Library, `docx` v9 (`ImageRun`), `jszip` (chỉ trong test).
 
@@ -17,6 +17,7 @@
 - Ảnh chụp bằng **dữ liệu giả trên DB test**. Tuyệt đối không chụp từ prod hay dữ liệu thật.
 - Trang `/guide`: ảnh nằm ngay dưới bước, có 2 nút **Máy tính | Điện thoại**. Mặc định chọn theo thiết bị người xem. Bấm ảnh để phóng to. Ảnh tải lười (`loading="lazy"`).
 - File Word: **chèn cả 2 ảnh**, ảnh máy tính to, ảnh điện thoại nhỏ ngay bên dưới.
+- (Bổ sung sau duyệt) File Word hướng dẫn **làm sẵn** thành file tĩnh, nút Tải Word là link tải thẳng cho nhẹ. Trang Các bản cập nhật giữ cách cũ. Chi tiết ở Task 4.
 
 ## Global Constraints
 
@@ -95,7 +96,7 @@
 
 1. Ảnh không được lộ dữ liệu thật hay khoá bí mật: chỉ có tài khoản `guide_demo` với tên giả, số TK giả `0123456789`. Script chạy nhầm `.env` (prod) phải dừng ngay trước khi ghi.
 2. Một file ảnh bị thiếu (bị xoá, đổi tên shot) thì test đỏ. Không được để ảnh vỡ lọt lên prod. Ngược lại, file ảnh thừa không còn dùng cũng làm test đỏ.
-3. Khi tải Word mà 1 ảnh tải lỗi (mạng chập chờn), vẫn phải ra file Word: bỏ ảnh đó, giữ chữ. Không hiện "Không tạo được file".
+3. Sửa chữ trong `guide-content.ts` hoặc chụp lại ảnh mà quên chạy `pnpm guide:docx` thì test đỏ. Không bao giờ lên prod file Word cũ.
 4. Người dùng màn hình nhỏ mở `/guide` thì mặc định hiện ảnh điện thoại, máy tính thì hiện ảnh máy tính. Bấm nút chuyển không đổi cuộn trang. Ảnh phóng to đóng được bằng phím Esc và nút đóng.
 5. Script chụp chạy lại lần 2 trên cùng DB vẫn ra đúng ảnh: dọn sạch dữ liệu `guide_demo` cũ trước khi tạo, và dọn lại sau khi xong.
 
@@ -539,42 +540,55 @@ git commit -m "feat: khung ảnh máy tính/điện thoại trong trang hướng
 
 ---
 
-### Task 4: File Word chèn ảnh
+### Task 4: File Word làm sẵn có ảnh, nút tải thẳng
+
+> **Đổi theo quyết định người dùng 2026-10-05 (sau khi duyệt plan):** file Word hướng dẫn **làm sẵn** thành file tĩnh `public/guide/huong-dan-su-dung.docx`. Nút **Tải Word** ở `/guide` là link tải thẳng, không dựng file trên trình duyệt nữa. Trang **Các bản cập nhật** GIỮ nguyên cách cũ: dựng trên trình duyệt, chỉ có chữ.
 
 **Files:**
 - Modify: `src/lib/guide-docx.ts`
+- Modify: `src/lib/guide-content.ts` (thêm 2 hằng đường dẫn/tên file)
+- Create: `scripts/build-guide-docx.ts`
+- Create: `public/guide/huong-dan-su-dung.docx` (do script sinh)
+- Modify: `package.json` (thêm script `"guide:docx": "tsx scripts/build-guide-docx.ts"`, không cài gì)
 - Modify: `src/components/common/DocxDownloadButton.tsx`
-- Test: `tests/unit/lib/guide-docx.test.ts`, `tests/unit/components/GuideContent.test.tsx`
+- Modify: `LENH.md` (mục "Chụp lại ảnh hướng dẫn" của Task 1: thêm dòng chạy `pnpm guide:docx` sau khi chụp ảnh hoặc sửa `guide-content.ts`)
+- Test: `tests/unit/lib/guide-docx.test.ts`, `tests/unit/lib/guide-docx-file.test.ts` (mới), `tests/unit/components/GuideContent.test.tsx`, `tests/unit/lib/guide-content.test.ts`
 
 **Interfaces:**
-- Consumes: `stepShot`, `stepText`, `guideShotSrc`, `GUIDE_SHOTS` từ Task 2.
-- Produces (trong `src/lib/guide-docx.ts`):
+- Consumes: `stepShot`, `stepText`, `GUIDE_SHOTS` từ Task 2; 48 ảnh từ Task 1.
+- Produces:
   ```ts
-  export type GuideShotImages = Map<string, { desktop?: ArrayBuffer; mobile?: ArrayBuffer }>
-  export async function loadGuideShotImages(shots: readonly string[], fetcher?: typeof fetch): Promise<GuideShotImages>
-  export async function buildGuideDocx(sections: GuideSection[], version: string, images?: GuideShotImages): Promise<Blob>
+  // src/lib/guide-content.ts (hằng chuỗi, import tĩnh không kéo thư viện docx vào trang)
+  export const GUIDE_DOCX_PATH = "/guide/huong-dan-su-dung.docx"
+  export const GUIDE_DOCX_FILENAME = "huong-dan-su-dung.docx"
+
+  // src/lib/guide-docx.ts
+  export type GuideShotImages = Map<string, { desktop?: Uint8Array; mobile?: Uint8Array }>
+  // Bỏ tham số version: file làm sẵn không được cũ đi mỗi lần nâng version.
+  export async function buildGuideDocx(sections: GuideSection[], images?: GuideShotImages): Promise<Blob>
+  export { GUIDE_DOCX_FILENAME } from "@/lib/guide-content" // giữ tên export cũ cho code/test đang dùng
   ```
 
-Quy tắc:
-- `loadGuideShotImages` gọi `fetcher(guideShotSrc(shot, kind))` song song cho mọi ảnh.
-- Response `!ok` hoặc fetch ném lỗi thì **bỏ ảnh đó**, không ném lỗi ra ngoài.
-- `buildGuideDocx` chèn ảnh ngay sau đoạn `Bước N.` có shot:
-  - ảnh desktop: `new ImageRun({ type: "jpg", data, transformation: { width: 576, height: 360 } })`, đoạn `indent: { left: 360 }`, `spacing: { after: 80 }`;
-  - ảnh mobile: `transformation: { width: 166, height: 360 }`, cùng indent, `spacing: { after: 160 }`.
-- Ảnh nào không có trong `images` thì bỏ, chữ giữ nguyên.
+**Quy tắc dựng file**
+- Dòng phụ đề dưới tiêu đề đổi từ `Bản v${version}` thành `Kèm ảnh minh hoạ máy tính và điện thoại`.
+- Ngay sau đoạn `Bước N.` có shot, chèn đoạn ảnh với `indent: { left: 360 }`:
+  - ảnh máy tính: `new ImageRun({ type: "jpg", data, transformation: { width: 576, height: 360 } })`, `spacing: { after: 80 }`;
+  - ảnh điện thoại: `transformation: { width: 166, height: 360 }`, `spacing: { after: 160 }`.
+- Shot nào không có ảnh trong `images` thì bỏ ảnh, giữ chữ.
 
-- [ ] **Step 1: Viết test (đỏ)**
+- [ ] **Step 1: Viết test dựng file (đỏ)**
 
-Trong `tests/unit/lib/guide-docx.test.ts`, đếm ảnh trong file docx bằng `jszip` như test sẵn có đọc `word/document.xml`:
+Trong `tests/unit/lib/guide-docx.test.ts`:
+- đổi `buildGuideDocx(GUIDE_SECTIONS, "0.11.1")` thành `buildGuideDocx(GUIDE_SECTIONS)`;
+- nếu có kiểm chữ `Bản v...` thì đổi sang kiểm `Kèm ảnh minh hoạ máy tính và điện thoại`, ghi Ruling;
+- thêm:
 
 ```ts
 import JSZip from "jszip"
-import { buildGuideDocx, loadGuideShotImages } from "@/lib/guide-docx"
 import type { GuideSection } from "@/lib/guide-content"
 
 // JPEG 1×1 hợp lệ, đủ để docx nhúng.
-const JPG = Uint8Array.from(atob("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="), (c) => c.charCodeAt(0)).buffer
-
+const JPG = Uint8Array.from(atob("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="), (c) => c.charCodeAt(0))
 const SECTIONS: GuideSection[] = [{ id: "a", title: "A", steps: ["chữ", { text: "có ảnh", shot: "s1" }, { text: "thiếu ảnh", shot: "s2" }] }]
 
 async function mediaCount(blob: Blob) {
@@ -584,70 +598,146 @@ async function mediaCount(blob: Blob) {
 
 describe("Word có ảnh (plan AA)", () => {
   it("chèn đủ 2 ảnh của shot có dữ liệu, bỏ qua shot thiếu, chữ đủ", async () => {
-    const blob = await buildGuideDocx(SECTIONS, "0.12.0", new Map([["s1", { desktop: JPG, mobile: JPG }]]))
+    const blob = await buildGuideDocx(SECTIONS, new Map([["s1", { desktop: JPG, mobile: JPG }]]))
     expect(await mediaCount(blob)).toBe(2)
     const xml = await (await JSZip.loadAsync(await blob.arrayBuffer())).file("word/document.xml")!.async("string")
     expect(xml).toContain("có ảnh")
     expect(xml).toContain("thiếu ảnh")
+    expect(xml).toContain("Kèm ảnh minh hoạ máy tính và điện thoại")
   })
 
   it("không truyền images → không có ảnh, vẫn ra file", async () => {
-    expect(await mediaCount(await buildGuideDocx(SECTIONS, "0.12.0"))).toBe(0)
-  })
-
-  it("loadGuideShotImages: ảnh lỗi/404 bị bỏ, ảnh tốt giữ", async () => {
-    const fetcher = vi.fn(async (url: string) => {
-      if (url === "/guide/s1-desktop.jpg") return new Response(JPG, { status: 200 })
-      if (url === "/guide/s1-mobile.jpg") throw new Error("mạng lỗi")
-      return new Response("", { status: 404 })
-    }) as unknown as typeof fetch
-    const map = await loadGuideShotImages(["s1", "s2"], fetcher)
-    expect(map.get("s1")?.desktop).toBeInstanceOf(ArrayBuffer)
-    expect(map.get("s1")?.mobile).toBeUndefined()
-    expect(map.get("s2")?.desktop).toBeUndefined()
+    expect(await mediaCount(await buildGuideDocx(SECTIONS))).toBe(0)
   })
 })
 ```
 
-Nhớ import `vi` từ `vitest` nếu file chưa có. Nếu chuỗi base64 JPEG trên bị `docx` báo lỗi, sinh JPEG 1×1 khác hợp lệ rồi ghi Ruling. Không đổi sang PNG.
+Nếu `docx` báo lỗi với chuỗi base64 JPEG trên, sinh một JPEG 1×1 hợp lệ khác và ghi Ruling. Không đổi sang PNG.
 
-Sửa test "bấm Tải Word" trong `GuideContent.test.tsx`:
-- mock `@/lib/guide-docx` thêm `loadGuideShotImages: vi.fn(async () => new Map())`;
-- kiểm `buildGuideDocx` được gọi với tham số thứ 3 là `Map`.
+- [ ] **Step 2: Viết test kiểm file làm sẵn khớp nội dung (đỏ)**
 
-- [ ] **Step 2: Chạy test, thấy đỏ**
-
-Run: `pnpm exec cross-env NODE_ENV=test vitest run tests/unit/lib/guide-docx.test.ts tests/unit/components/GuideContent.test.tsx`
-Expected: FAIL.
-
-- [ ] **Step 3: Viết code**
-
-`guide-docx.ts`:
-- import thêm `ImageRun` từ `docx`, và `guideShotSrc`, `stepShot`, `stepText` từ `@/lib/guide-content`;
-- viết `loadGuideShotImages` (dùng `fetcher = fetch` mặc định, `Promise.all`, từng ảnh có try/catch riêng);
-- trong vòng `s.steps.forEach`, sau đoạn chữ của bước, nếu có ảnh thì push các đoạn ảnh theo quy tắc trên.
-
-`DocxDownloadButton.tsx` nhánh `guide`:
+Tạo `tests/unit/lib/guide-docx-file.test.ts`. Test này là chốt chặn để không bao giờ lên prod một file Word cũ:
 
 ```ts
-const images = await lib.loadGuideShotImages(GUIDE_SHOTS)
-saveAs(await lib.buildGuideDocx(GUIDE_SECTIONS, process.env.NEXT_PUBLIC_APP_VERSION ?? "", images), lib.GUIDE_DOCX_FILENAME)
+import { describe, it, expect } from "vitest"
+import { readFileSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { join } from "node:path"
+import JSZip from "jszip"
+import { buildGuideDocx } from "@/lib/guide-docx"
+import { GUIDE_SECTIONS, GUIDE_SHOTS } from "@/lib/guide-content"
+
+const DIR = join(process.cwd(), "public/guide")
+const sha = (b: Uint8Array) => createHash("sha256").update(b).digest("hex")
+// Chỉ so chữ hiển thị (các <w:t>), không so cả XML vì id nội bộ của docx có thể khác giữa 2 lần dựng.
+const texts = (xml: string) => [...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]).join("|")
+
+async function open(buf: Uint8Array) {
+  const zip = await JSZip.loadAsync(buf)
+  const xml = await zip.file("word/document.xml")!.async("string")
+  const media = await Promise.all(Object.keys(zip.files).filter((f) => f.startsWith("word/media/")).map((f) => zip.file(f)!.async("uint8array")))
+  return { xml, media }
+}
+
+describe("public/guide/huong-dan-su-dung.docx (plan AA)", () => {
+  it("chữ khớp nội dung hướng dẫn hiện tại; ảnh trong file đúng là 48 ảnh hiện tại (sai → chạy pnpm guide:docx)", async () => {
+    const saved = await open(readFileSync(join(DIR, "huong-dan-su-dung.docx")))
+    const fresh = await open(new Uint8Array(await (await buildGuideDocx(GUIDE_SECTIONS)).arrayBuffer()))
+    expect(texts(saved.xml)).toBe(texts(fresh.xml))
+    const want = GUIDE_SHOTS.flatMap((s) => ["desktop", "mobile"].map((k) => sha(readFileSync(join(DIR, `${s}-${k}.jpg`))))).sort()
+    expect(saved.media.map(sha).sort()).toEqual(want)
+  })
+})
 ```
 
-- [ ] **Step 4: Chạy test, thấy xanh**
+Trong `tests/unit/lib/guide-content.test.ts` (test của Task 2), test "không có file ảnh thừa" chỉ được xét file `.jpg`. Đổi dòng tạo `files` thành:
 
-Run: lệnh như Step 2, rồi chạy `pnpm test`.
-Expected: PASS hết.
+```ts
+const files = new Set(readdirSync(join(process.cwd(), "public/guide")).filter((f) => f.endsWith(".jpg")))
+```
 
-- [ ] **Step 5: Tạo file Word mẫu cho Claude kiểm**
+Ghi Ruling: thư mục giờ có thêm file `.docx`.
 
-Viết script tạm trong scratchpad, không commit. Script đọc 48 file trong `public/guide` bằng `fs`, gọi `buildGuideDocx(GUIDE_SECTIONS, "0.12.0", images)` và lưu ra `.superpowers/sdd/2026-10-05-aa-anh-huong-dan/huong-dan-mau.docx`. Ghi kích thước file vào ledger, kỳ vọng dưới 12 MB.
+- [ ] **Step 3: Chạy test, thấy đỏ**
 
-- [ ] **Step 6: Commit**
+Run: `pnpm exec cross-env NODE_ENV=test vitest run tests/unit/lib/guide-docx.test.ts tests/unit/lib/guide-docx-file.test.ts`
+Expected: FAIL, vì chữ ký `buildGuideDocx` còn cũ và chưa có file `.docx`.
+
+- [ ] **Step 4: Sửa `guide-docx.ts` và `guide-content.ts`**
+
+- `guide-content.ts`: thêm `GUIDE_DOCX_PATH` và `GUIDE_DOCX_FILENAME` như mục Interfaces.
+- `guide-docx.ts`:
+  - bỏ khai báo `GUIDE_DOCX_FILENAME` cũ, re-export từ `guide-content`;
+  - import thêm `ImageRun` từ `docx`, và `stepShot`, `stepText` từ `@/lib/guide-content`;
+  - đổi chữ ký thành `buildGuideDocx(sections, images?)`, dùng phụ đề mới, chèn ảnh theo quy tắc.
+
+- [ ] **Step 5: Viết `scripts/build-guide-docx.ts` rồi tạo file**
+
+```ts
+// Dựng sẵn file Word hướng dẫn (kèm ảnh) vào public/guide. Chạy lại sau khi chụp ảnh hoặc sửa guide-content.ts.
+import { readFileSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
+import { buildGuideDocx, type GuideShotImages } from "../src/lib/guide-docx"
+import { GUIDE_SECTIONS, GUIDE_SHOTS } from "../src/lib/guide-content"
+
+const DIR = join(process.cwd(), "public/guide")
+const images: GuideShotImages = new Map(
+  GUIDE_SHOTS.map((s) => [s, { desktop: readFileSync(join(DIR, `${s}-desktop.jpg`)), mobile: readFileSync(join(DIR, `${s}-mobile.jpg`)) }])
+)
+
+buildGuideDocx(GUIDE_SECTIONS, images).then(async (blob) => {
+  const out = join(DIR, "huong-dan-su-dung.docx")
+  writeFileSync(out, Buffer.from(await blob.arrayBuffer()))
+  console.log(`OK ${out} (${Math.round(blob.size / 1024)} KB)`)
+})
+```
+
+`tsx` đã giải được alias `@/` khi chạy `prisma/seed.ts` và `tests/helpers/trpc`. Nếu ở đây vẫn lỗi alias thì chỉ sửa import trong script, không sửa `guide-docx.ts`, và ghi Ruling.
+
+Thêm vào mục `scripts` của `package.json`: `"guide:docx": "tsx scripts/build-guide-docx.ts"`. Sau đó chạy:
+
+```
+pnpm guide:docx
+```
+
+Expected: in ra `OK ...huong-dan-su-dung.docx (<N> KB)` với N dưới 12000. Ghi N vào ledger.
+
+- [ ] **Step 6: Đổi nút Tải Word ở /guide thành link tải thẳng**
+
+Trong `DocxDownloadButton.tsx`:
+- `doc === "guide"`: render một link, không import động thư viện nào:
+  ```tsx
+  <Button asChild variant="outline" className="h-11 gap-2 md:h-10 print:hidden">
+    <a href={GUIDE_DOCX_PATH} download={GUIDE_DOCX_FILENAME}>
+      <FileDown className="size-4" aria-hidden />
+      {t("guide_download_docx")}
+    </a>
+  </Button>
+  ```
+  2 hằng import tĩnh từ `@/lib/guide-content`, không import từ `@/lib/guide-docx`.
+- `doc === "updates"`: giữ nguyên luồng cũ (import động, `buildUpdatesDocx`, `saveAs`). Hook (`useState` và các hook khác) phải gọi trước nhánh `if (doc === "guide") return ...` để đúng luật hook.
+- Bỏ import `GUIDE_SECTIONS` nếu không còn dùng.
+
+Sửa `tests/unit/components/GuideContent.test.tsx`:
+- Test đầu đang dùng `getByRole("button", { name: viText.guide_download_docx })`: đổi sang `getByRole("link", ...)`, vẫn kiểm class `print:hidden`.
+- Test "bấm Tải Word": đổi thành kiểm link có `href="/guide/huong-dan-su-dung.docx"` và `download="huong-dan-su-dung.docx"`.
+- Bỏ mock `file-saver` và `@/lib/guide-docx` trong file này nếu không còn cần.
+- Ghi Ruling: đây là thay đổi hành vi có chủ đích. `UpdatesContent.test.tsx` không đổi gì và vẫn phải xanh.
+
+- [ ] **Step 7: Chạy test, thấy xanh**
+
+Run: `pnpm exec cross-env NODE_ENV=test vitest run tests/unit/lib tests/unit/components/GuideContent.test.tsx tests/unit/components/UpdatesContent.test.tsx`, rồi chạy `pnpm test`.
+Expected: tất cả PASS.
+
+- [ ] **Step 8: Để file mẫu cho Claude kiểm**
+
+Chép `public/guide/huong-dan-su-dung.docx` vào `.superpowers/sdd/2026-10-05-aa-anh-huong-dan/huong-dan-mau.docx`.
+
+- [ ] **Step 9: Commit**
 
 ```bash
-git add src/lib/guide-docx.ts src/components/common/DocxDownloadButton.tsx tests/unit/lib/guide-docx.test.ts tests/unit/components/GuideContent.test.tsx
-git commit -m "feat: file Word hướng dẫn chèn ảnh máy tính và điện thoại"
+git add src/lib/guide-docx.ts src/lib/guide-content.ts scripts/build-guide-docx.ts public/guide/huong-dan-su-dung.docx package.json src/components/common/DocxDownloadButton.tsx LENH.md tests/unit
+git commit -m "feat: file Word hướng dẫn làm sẵn có ảnh, nút tải thẳng"
 ```
 
 ---
