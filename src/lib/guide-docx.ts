@@ -1,5 +1,5 @@
 import { AlignmentType, BorderStyle, Document, HeadingLevel, Packer, Paragraph, ShadingType, TextRun } from "docx"
-import type { GuideSection } from "@/lib/guide-content"
+import { type GuideSection, stepText } from "@/lib/guide-content"
 import { formatReleaseDate, type Release } from "@/lib/releases"
 
 export const GUIDE_DOCX_FILENAME = "huong-dan-su-dung.docx"
@@ -80,7 +80,7 @@ export async function buildGuideDocx(sections: GuideSection[], version: string):
         new Paragraph({
           indent: { left: 360 },
           spacing: { after: 100 },
-          children: [new TextRun({ text: `Bước ${j + 1}. `, bold: true, color: TEAL }), ...runs(step)],
+          children: [new TextRun({ text: `Bước ${j + 1}. `, bold: true, color: TEAL }), ...runs(stepText(step))],
         })
       )
     )

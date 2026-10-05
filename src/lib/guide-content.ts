@@ -1,4 +1,23 @@
-export type GuideSection = { id: string; title: string; intro?: string; steps: string[]; tips?: string[] }
+export type GuideShotKind = "desktop" | "mobile"
+export type GuideStep = string | { text: string; shot: string }
+export type GuideSection = { id: string; title: string; intro?: string; steps: GuideStep[]; tips?: string[] }
+
+export const GUIDE_SHOT_SIZE: Record<GuideShotKind, { width: number; height: number }> = {
+  desktop: { width: 1280, height: 800 },
+  mobile: { width: 780, height: 1688 },
+}
+
+export function stepText(step: GuideStep): string {
+  return typeof step === "string" ? step : step.text
+}
+
+export function stepShot(step: GuideStep): string | undefined {
+  return typeof step === "string" ? undefined : step.shot
+}
+
+export function guideShotSrc(shot: string, kind: GuideShotKind): string {
+  return `/guide/${shot}-${kind}.jpg`
+}
 
 // Nguồn duy nhất cho /guide (và file Word tải từ trang này). Chỉ tiếng Việt (spec W §3.1).
 export const GUIDE_SECTIONS: GuideSection[] = [
@@ -7,10 +26,10 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     title: "Bắt đầu",
     intro: "Mỗi giáo viên dùng 1 tài khoản riêng, chỉ bạn xem được dữ liệu của mình.",
     steps: [
-      "Mở trang **Đăng ký**, nhập tên đăng nhập (chữ, số, dấu gạch dưới), mật khẩu ít nhất 10 ký tự và **Nhập lại mật khẩu**.",
+      { text: "Mở trang **Đăng ký**, nhập tên đăng nhập (chữ, số, dấu gạch dưới), mật khẩu ít nhất 10 ký tự và **Nhập lại mật khẩu**.", shot: "dang-ky" },
       "Đọc khung tóm tắt chính sách bảo mật, tick ô đồng ý rồi bấm **Đăng ký**.",
       "Đăng nhập. Tick **Ghi nhớ đăng nhập** nếu dùng máy riêng để không phải đăng nhập lại mỗi ngày.",
-      "Trên **Tổng quan** có thẻ **Bắt đầu sử dụng** gồm 5 bước. Làm lần lượt, bước xong tự được đánh dấu.",
+      { text: "Trên **Tổng quan** có thẻ **Bắt đầu sử dụng** gồm 5 bước. Làm lần lượt, bước xong tự được đánh dấu.", shot: "tong-quan-bat-dau" },
       "Đổi mật khẩu: bấm vào avatar góc phải trên, chọn **Đổi mật khẩu**.",
     ],
     tips: ["Không nên dùng số điện thoại làm tên đăng nhập.", "Tài khoản mới dùng gói Standard. Quản trị viên có thể cho dùng thử gói Pro một số ngày, xem hạn ở **Gói của tôi**."],
@@ -21,7 +40,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     intro: "App đã tạo sẵn vài môn khi bạn đăng ký.",
     steps: [
       "Mở **Môn học** (trên điện thoại: tab **Thêm** rồi **Môn học**).",
-      "Bấm **Thêm môn** để thêm môn mới, chọn màu để dễ nhìn trên lịch.",
+      { text: "Bấm **Thêm môn** để thêm môn mới, chọn màu để dễ nhìn trên lịch.", shot: "mon-hoc-them" },
       "Tắt các môn không dạy để danh sách chọn môn gọn hơn.",
       "Đặt 1 môn làm mặc định để khi tạo ca app chọn sẵn môn đó.",
     ],
@@ -30,9 +49,9 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "hoc-sinh",
     title: "Học sinh",
     steps: [
-      "Mở **Học sinh**, bấm **Thêm học sinh**.",
+      { text: "Mở **Học sinh**, bấm **Thêm học sinh**.", shot: "hoc-sinh-danh-sach" },
       "Nhập họ tên, lớp, tên và số điện thoại phụ huynh (không bắt buộc).",
-      "Chọn **Cách thu học phí**: **Theo buổi** (nhập học phí mỗi buổi) hoặc **Trọn tháng** (nhập học phí cả tháng, không phụ thuộc số buổi).",
+      { text: "Chọn **Cách thu học phí**: **Theo buổi** (nhập học phí mỗi buổi) hoặc **Trọn tháng** (nhập học phí cả tháng, không phụ thuộc số buổi).", shot: "hoc-sinh-them" },
       "Tick ô đồng ý lưu dữ liệu rồi bấm **Thêm**.",
       "Học sinh nghỉ hẳn: mở học sinh, tắt **Đang học**. Học sinh vẫn còn trong lịch sử và học phí cũ.",
     ],
@@ -47,7 +66,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     steps: [
       "Ở **Học sinh**, bấm **Nhập Excel** rồi **Tải file mẫu**.",
       "Điền mỗi học sinh 1 dòng theo đúng cột trong file mẫu, lưu lại.",
-      "Chọn file đã điền. App hiện bảng xem trước, dòng lỗi được tô đỏ kèm lý do.",
+      { text: "Chọn file đã điền. App hiện bảng xem trước, dòng lỗi được tô đỏ kèm lý do.", shot: "nhap-excel-xem-truoc" },
       "Sửa dòng lỗi trong file rồi chọn lại, hoặc bỏ qua dòng lỗi. Tick ô đồng ý và bấm nhập.",
     ],
   },
@@ -55,11 +74,11 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "lich-day",
     title: "Lịch dạy",
     steps: [
-      "Mở **Lịch dạy**, bấm **+ Thêm ca dạy mới**.",
-      "Chọn ngày, giờ bắt đầu, giờ kết thúc, môn và các học sinh trong ca.",
+      { text: "Mở **Lịch dạy**, bấm **+ Thêm ca dạy mới**.", shot: "lich-day-thang" },
+      { text: "Chọn ngày, giờ bắt đầu, giờ kết thúc, môn và các học sinh trong ca.", shot: "lich-day-tao-ca" },
       "Muốn ca lặp hằng tuần: chọn **Lặp lại vào các thứ** và khoảng ngày.",
-      "Bấm vào ca để xem chi tiết, sửa, chuyển sang ngày giờ khác, huỷ ca (ghi lý do) hoặc tạo **Ca bù**.",
-      "Cuối tháng dùng **Chép lịch tháng** để chép lịch sang tháng sau.",
+      { text: "Bấm vào ca để xem chi tiết, sửa, chuyển sang ngày giờ khác, huỷ ca (ghi lý do) hoặc tạo **Ca bù**.", shot: "lich-day-chi-tiet-ca" },
+      { text: "Cuối tháng dùng **Chép lịch tháng** để chép lịch sang tháng sau.", shot: "lich-day-chep-thang" },
     ],
     tips: ["App báo khi ca mới trùng giờ với ca đã có."],
   },
@@ -68,23 +87,23 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     title: "Điểm danh",
     steps: [
       "Mở ca cần điểm danh trên **Lịch dạy**.",
-      "Chọn trạng thái cho từng học sinh: có mặt, vắng có phép hoặc vắng không phép.",
+      { text: "Chọn trạng thái cho từng học sinh: có mặt, vắng có phép hoặc vắng không phép.", shot: "diem-danh" },
       "Bấm **Lưu**. Học phí theo buổi được tính theo điểm danh này.",
-      "Dùng nút mũi tên để sang ca trước / ca sau trong tháng mà không cần quay lại lịch.",
+      { text: "Dùng nút mũi tên để sang ca trước / ca sau trong tháng mà không cần quay lại lịch.", shot: "diem-danh-ca-ke" },
     ],
   },
   {
     id: "hoc-phi",
     title: "Học phí",
     steps: [
-      "Mở **Học phí**: app mở sẵn **tháng trước** (tháng vừa học xong). Mỗi học sinh có số cần đóng, ghi rõ phần nợ tháng cũ và tiền tháng đó.",
-      "Phụ huynh đóng đủ: bấm **Đã đóng đủ** trên dòng học sinh. Lỡ tay thì bấm **Hoàn tác** trên thông báo.",
-      "Đóng thiếu hoặc đóng nhiều tháng: bấm vào học sinh → **Đóng một phần**, nhập số tiền. Tiền tự trừ vào tháng cũ nhất trước, có dòng xem trước trừ tháng nào.",
+      { text: "Mở **Học phí**: app mở sẵn **tháng trước** (tháng vừa học xong). Mỗi học sinh có số cần đóng, ghi rõ phần nợ tháng cũ và tiền tháng đó.", shot: "hoc-phi-danh-sach" },
+      { text: "Phụ huynh đóng đủ: bấm **Đã đóng đủ** trên dòng học sinh. Lỡ tay thì bấm **Hoàn tác** trên thông báo.", shot: "hoc-phi-da-dong-du" },
+      { text: "Đóng thiếu hoặc đóng nhiều tháng: bấm vào học sinh → **Đóng một phần**, nhập số tiền. Tiền tự trừ vào tháng cũ nhất trước, có dòng xem trước trừ tháng nào.", shot: "hoc-phi-dong-mot-phan" },
       "Tháng đang học (chưa học xong) chỉ **tạm tính** và **không ghi được tiền**, kể cả học sinh đóng trọn tháng. Phụ huynh đóng trước thì ghi ở tháng trước, phần dư tự trừ sang tháng sau.",
-      "Muốn miễn phần còn thiếu: mở học sinh ở tháng đã học xong → menu ⋮ → **Miễn phần còn thiếu**.",
-      "Bấm **Phiếu báo** để tạo phiếu học phí có mã QR, rồi lưu ảnh hoặc chia sẻ cho phụ huynh.",
+      { text: "Muốn miễn phần còn thiếu: mở học sinh ở tháng đã học xong → menu ⋮ → **Miễn phần còn thiếu**.", shot: "hoc-phi-mien" },
+      { text: "Bấm **Phiếu báo** để tạo phiếu học phí có mã QR, rồi lưu ảnh hoặc chia sẻ cho phụ huynh.", shot: "hoc-phi-phieu-bao" },
       "Gửi xong, bấm **Đánh dấu đã gửi** để lọc được học sinh chưa gửi phiếu. Số tiền đổi sau khi gửi sẽ có nhãn báo; phiếu gửi từ 7 ngày mà chưa đóng có nhãn màu cam.",
-      "**Link phụ huynh**: phụ huynh mở link là xem được học phí, điểm danh và lịch học của con, không cần đăng nhập.",
+      { text: "**Link phụ huynh**: phụ huynh mở link là xem được học phí, điểm danh và lịch học của con, không cần đăng nhập.", shot: "link-phu-huynh" },
     ],
     tips: ["Không chia sẻ công khai link phụ huynh."],
   },
@@ -93,7 +112,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     title: "Báo cáo tháng",
     steps: [
       "Mở **Báo cáo** (gói có tính năng báo cáo tháng).",
-      "Chọn tháng để xem doanh thu, số đã thu, còn nợ và điểm danh.",
+      { text: "Chọn tháng để xem doanh thu, số đã thu, còn nợ và điểm danh.", shot: "bao-cao" },
       "Học sinh đã xoá vẫn được tính trong số liệu các tháng cũ.",
     ],
   },
@@ -102,7 +121,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     title: "Tài khoản nhận học phí",
     steps: [
       "Mở **Cài đặt**, phần **Tài khoản nhận học phí**.",
-      "Gõ tên để tìm ngân hàng, nhập số tài khoản và tên chủ tài khoản.",
+      { text: "Gõ tên để tìm ngân hàng, nhập số tài khoản và tên chủ tài khoản.", shot: "cai-dat-ngan-hang" },
       "Tick ô đồng ý rồi bấm **Lưu**. Phiếu báo học phí sẽ có mã QR chuyển khoản đúng số tiền.",
     ],
   },
@@ -110,7 +129,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "goi-dich-vu",
     title: "Gói dịch vụ",
     steps: [
-      "Mở **Gói của tôi** để xem gói đang dùng, hạn dùng và tính năng của từng gói Standard, Plus, Pro.",
+      { text: "Mở **Gói của tôi** để xem gói đang dùng, hạn dùng và tính năng của từng gói Standard, Plus, Pro.", shot: "goi-dich-vu" },
       "Bấm mua hoặc gia hạn, chọn thời hạn. App hiện mã đơn và số tiền cần chuyển khoản.",
       "Chuyển khoản đúng nội dung mã đơn. Gói được kích hoạt sau khi quản trị viên xác nhận.",
     ],
@@ -121,7 +140,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     title: "Thùng rác",
     steps: [
       "Học sinh, môn, ca dạy, lần thu đã xoá đều vào **Thùng rác**.",
-      "Mở **Thùng rác**, chọn loại, bấm **Khôi phục** để lấy lại.",
+      { text: "Mở **Thùng rác**, chọn loại, bấm **Khôi phục** để lấy lại.", shot: "thung-rac" },
       "Khôi phục ca hoặc lần thu cần học sinh và môn của nó còn tồn tại.",
     ],
   },
@@ -129,9 +148,9 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "sao-luu",
     title: "Sao lưu Excel",
     steps: [
-      "Bấm avatar góc phải trên, chọn **Sao lưu dữ liệu**.",
+      { text: "Bấm avatar góc phải trên, chọn **Sao lưu dữ liệu**.", shot: "sao-luu-menu" },
       "Đọc cảnh báo: file sao lưu không mã hoá, chỉ lưu ở nơi an toàn.",
-      "Bấm **Tôi hiểu, tải xuống** để tải file Excel chứa toàn bộ dữ liệu của bạn.",
+      { text: "Bấm **Tôi hiểu, tải xuống** để tải file Excel chứa toàn bộ dữ liệu của bạn.", shot: "sao-luu-canh-bao" },
     ],
   },
   {
@@ -147,3 +166,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
 ]
 
 export const GUIDE_IDS: ReadonlySet<string> = new Set(GUIDE_SECTIONS.map((s) => s.id))
+
+export const GUIDE_SHOTS: readonly string[] = GUIDE_SECTIONS.flatMap((s) =>
+  s.steps.map(stepShot).filter((x): x is string => !!x)
+)
