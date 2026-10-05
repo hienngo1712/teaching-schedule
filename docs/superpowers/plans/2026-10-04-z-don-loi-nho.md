@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Sửa 8 lỗi nhỏ còn hoãn sau Y (thu học phí) và X (chính sách mật khẩu). Version `0.11.1` (patch).
+**Goal:** Sửa 8 lỗi nhỏ còn hoãn sau Y (thu học phí) và X (chính sách mật khẩu), đưa HD sử dụng ra sidebar, tải hướng dẫn bản Word. Version `0.11.1` (patch).
 
 **Architecture:** Toàn sửa nhỏ tại chỗ, không migration, không router mới. Mỗi task 1 khu vực: lịch/tháng mặc định, ô số tiền, file sao lưu, hộp Miễn, form đăng ký, khung tóm tắt chính sách, rồi version + kiểm toàn bộ.
 
@@ -583,7 +583,7 @@ git commit -m "fix: tóm tắt chính sách báo mở tab mới cho trình đọ
 
 ---
 
-### Task 7: Version 0.11.1 + mục cập nhật + kiểm toàn bộ
+### Task 7: Version 0.11.1 + mục cập nhật
 
 **Files:**
 - Modify: `package.json` (`"version": "0.11.1"`)
@@ -612,7 +612,371 @@ Nếu `guideId` "hoc-phi" không có trong `guide-content.ts` (test của W canh
 
 - [ ] **Step 2: Version** — `package.json` → `"version": "0.11.1"`.
 
-- [ ] **Step 3: Kiểm toàn bộ**
+- [ ] **Step 3: Commit** (chưa chạy full test ở đây, để Task 10)
+
+```bash
+pnpm exec tsc --noEmit && pnpm exec vitest run tests/unit/lib/releases.test.ts
+git add package.json src/lib/releases.ts
+git commit -m "chore: v0.11.1 + mục cập nhật dọn lỗi nhỏ"
+```
+
+---
+
+> **Cập nhật 2026-10-04 (người dùng thêm vào Z):** Task 8 chuyển "Hướng dẫn sử dụng" ra sidebar tên "HD sử dụng", Task 9 thay nút in PDF của trang hướng dẫn bằng tải file Word `.docx` có tiêu đề nổi bật dễ đọc. Người dùng **đã đồng ý thêm thư viện `docx`** (và `jszip` cho test). Kiểm toàn bộ chuyển xuống Task 10.
+
+### Task 8: "HD sử dụng" ra sidebar nhóm Quản lý (và tab Thêm trên mobile), bỏ khỏi menu avatar
+
+Quyết định:
+- Mục mới cuối `MANAGE_ITEMS` và cuối `MORE_ITEMS`, nhãn **"HD sử dụng"** (key mới `guide_nav`, en `"User guide"`), mô tả mobile key `more_guide_desc`: vi `"Các bước dùng app, tải bản Word"`, en `"How to use the app, download as Word"`.
+- Icon **`CircleHelp`** (lucide). Môn học giữ `BookOpen`: 2 icon phải khác nhau.
+- Bấm mở `/guide` ở **tab mới** (`target="_blank" rel="noopener noreferrer"`), vì `/guide` nằm ngoài khung app, mở cùng tab là mất sidebar.
+- Bỏ mục "Hướng dẫn sử dụng" khỏi menu avatar (`AppHeader.tsx`) cho cả giáo viên và admin. Link ở trang đăng nhập (`LoginForm.tsx`) giữ nguyên.
+
+**Files:**
+- Modify: `src/components/layout/nav-items.ts`
+- Modify: `src/components/layout/AppSidebar.tsx` (`SidebarLink`)
+- Modify: `src/components/layout/MoreSheet.tsx`
+- Modify: `src/components/layout/AppHeader.tsx:99-104` (xoá mục guide, xoá import `BookOpen` nếu không còn dùng)
+- Modify: `src/language/vi.json`, `src/language/en.json`
+- Test: `tests/unit/layout/nav-items.test.ts`, `tests/unit/components/AppHeader.test.tsx`, `tests/e2e/admin.spec.ts:184`, `tests/e2e/mobile.spec.ts:100-104`
+
+**Interfaces:**
+- `NavItem` thêm trường tuỳ chọn `external?: boolean` (true = mở tab mới bằng `<a>`, không dùng `next/link`, không tính active).
+
+- [ ] **Step 1: Viết test đỏ**
+  - `tests/unit/layout/nav-items.test.ts`: kỳ vọng `MANAGE_ITEMS` thêm dòng cuối `["/guide", "guide_nav"]`, `MORE_ITEMS` thêm dòng cuối `["/guide", "guide_nav", "more_guide_desc"]`, và thêm test:
+
+```ts
+  it("HD sử dụng mở tab mới, icon khác Môn học", () => {
+    const guide = MANAGE_ITEMS.find((i) => i.href === "/guide")!
+    const subject = MANAGE_ITEMS.find((i) => i.href === "/subjects")!
+    expect(guide.external).toBe(true)
+    expect(guide.icon).not.toBe(subject.icon)
+    expect(MORE_ITEMS.find((i) => i.href === "/guide")?.external).toBe(true)
+  })
+```
+
+  - `tests/unit/components/AppHeader.test.tsx:72,91`: menu avatar còn `["Sao lưu dữ liệu", "Đổi mật khẩu", "Đăng xuất"]` và `["Quản trị", "Đổi mật khẩu", "Đăng xuất"]`.
+  - Thêm test sidebar mới `tests/unit/components/AppSidebarGuide.test.tsx` (mock `next/navigation` `usePathname: () => "/dashboard"`, mock `@/hooks/usePlan` trả `{ ready: true, has: () => true }`; đọc `tests/unit/components/AppHeader.test.tsx` để chép cách mock và bọc `LanguageProvider forcedLanguage="vi"`):
+
+```tsx
+  it("sidebar có link HD sử dụng tới /guide, mở tab mới", () => {
+    renderSidebar()
+    const link = screen.getByRole("link", { name: /HD sử dụng/ })
+    expect(link.getAttribute("href")).toBe("/guide")
+    expect(link.getAttribute("target")).toBe("_blank")
+    expect(link.getAttribute("rel")).toContain("noopener")
+  })
+```
+
+- [ ] **Step 2: Chạy, xác nhận đỏ**
+
+Run: `pnpm exec vitest run tests/unit/layout/nav-items.test.ts tests/unit/components/AppHeader.test.tsx tests/unit/components/AppSidebarGuide.test.tsx`
+Expected: FAIL ở các kỳ vọng mới.
+
+- [ ] **Step 3: Sửa**
+  - `nav-items.ts`: import `CircleHelp`; type `NavItem` cho phép `external?: boolean` (đổi khai báo `NAV_ITEMS` sang kiểu có `external?: boolean` hoặc khai báo type riêng rồi dùng chung). Thêm cuối `MANAGE_ITEMS`: `{ href: "/guide", labelKey: "guide_nav", icon: CircleHelp, external: true }`; cuối `MORE_ITEMS`: `{ href: "/guide", labelKey: "guide_nav", icon: CircleHelp, descKey: "more_guide_desc", external: true }`.
+  - `AppSidebar.tsx` `SidebarLink`: trước nhánh `<Link>`, nếu `item.external` thì render:
+
+```tsx
+  if (item.external) {
+    // /guide nằm ngoài khung app → mở tab mới để không mất sidebar.
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex min-h-10 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium text-[#4B5563] transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <Icon className="size-4" />
+        <span>{label}</span>
+      </a>
+    )
+  }
+```
+
+  - `MoreSheet.tsx`: mục `external` dùng `<a href target="_blank" rel="noopener noreferrer" onClick={() => onOpenChange(false)}>` cùng className với `<Link>` hiện có (giữ `min-h-14`, `ChevronRight`).
+  - `AppHeader.tsx`: xoá khối `<DropdownMenuItem asChild><a href="/guide" …>`.
+  - i18n: thêm `guide_nav`, `more_guide_desc` vào cả 2 file. Giữ `guide_menu` nếu `LoginForm.tsx` còn dùng.
+  - e2e: `admin.spec.ts:184` → `['Quản trị', 'Đổi mật khẩu', 'Đăng xuất']`; `mobile.spec.ts:100-104` đổi tên test và kỳ vọng menu avatar không còn "Hướng dẫn sử dụng" (số mục giảm 1), thêm kiểm tab **Thêm** có mục "HD sử dụng". Ghi `Ruling:` cho các kỳ vọng cũ đã đổi.
+
+- [ ] **Step 4: Chạy lại**
+
+Run: `pnpm exec vitest run tests/unit/layout tests/unit/components/AppHeader.test.tsx tests/unit/components/AppSidebarGuide.test.tsx tests/unit/components/MoreSheet.test.tsx`
+Expected: PASS (bỏ `MoreSheet.test.tsx` khỏi lệnh nếu file không tồn tại).
+
+- [ ] **Step 5: tsc + lint + commit**
+
+```bash
+pnpm exec tsc --noEmit && pnpm lint
+git add src/components/layout src/language/vi.json src/language/en.json tests/unit/layout tests/unit/components/AppHeader.test.tsx tests/unit/components/AppSidebarGuide.test.tsx tests/e2e/admin.spec.ts tests/e2e/mobile.spec.ts docs/superpowers/plans/2026-10-04-z-don-loi-nho.md
+git commit -m "feat: HD sử dụng ra sidebar nhóm Quản lý và tab Thêm, bỏ khỏi menu avatar"
+```
+
+---
+
+### Task 9: Trang hướng dẫn tải file Word (.docx) thay cho in PDF
+
+Quyết định:
+- Trang `/guide`: nút **"Tải Word (.docx)"** (key `guide_download_docx`, en `"Download Word (.docx)"`) thay `PrintButton`. Trang `/updates` giữ `PrintButton` như cũ.
+- File tạo ngay trên trình duyệt từ `GUIDE_SECTIONS` (không gọi server), tên `huong-dan-su-dung.docx`, lưu bằng `saveAs` của `file-saver` (đã có). Thư viện `docx` chỉ `import()` lúc bấm nút.
+- **Dễ đọc, tiêu đề nổi bật** (yêu cầu người dùng):
+  - Font Arial (đủ dấu tiếng Việt), chữ thường 11pt, giãn dòng 1.15.
+  - Tiêu đề tài liệu: "Hướng dẫn sử dụng Lịch dạy", 24pt, đậm, màu `0F766E`, căn giữa; dòng phụ "Bản v<version>" 10pt màu xám `64748B`.
+  - Mục lục: "Mục lục" đậm 13pt, rồi 1 dòng mỗi mục "1. Bắt đầu"…
+  - Mỗi mục: tiêu đề **Heading 1** (để Word hiện ở Navigation Pane) dạng "1. Bắt đầu", 16pt, đậm, chữ màu `0F766E`, nền `E6F4F1`, viền dưới màu `0F766E`, cách trên 18pt; mục 2 trở đi sang trang mới không bắt buộc (không ngắt trang).
+  - Đoạn giới thiệu (`intro`): nghiêng, màu `334155`.
+  - Các bước: mỗi bước 1 đoạn, mở đầu **"Bước N. "** đậm màu `0F766E`, thụt trái 0.25 inch.
+  - Mẹo (`tips`): khung nền `FEF3C7` (amber nhạt), viền trái amber `D97706`, mở đầu **"Mẹo: "** đậm.
+  - Chữ trong `**…**` (tên nút, tên màn) in đậm màu `0F172A`.
+- Sửa chữ "PDF" liên quan trang hướng dẫn: ghi chú đầu `guide-content.ts`; mục `0.11.0` trong `releases.ts` (body "Hướng dẫn sử dụng") thành `"Mở mục HD sử dụng ở thanh bên (điện thoại: tab Thêm). Có nút Tải Word để lưu hoặc gửi cho đồng nghiệp."`; bước nào trong `guide-content.ts` nhắc "menu tài khoản"/"avatar" để mở hướng dẫn thì đổi sang "mục **HD sử dụng** ở thanh bên (điện thoại: tab **Thêm**)" (tìm bằng `grep -n "Hướng dẫn\|PDF" src/lib/guide-content.ts`).
+- Mục `0.11.1` trong `releases.ts` (Task 7) thêm 2 dòng đầu `items`:
+
+```ts
+      { kind: "improve", title: "HD sử dụng ở thanh bên", body: "Hướng dẫn chuyển ra mục HD sử dụng ở thanh bên (điện thoại: tab Thêm).", guideId: "bat-dau" },
+      { kind: "improve", title: "Tải hướng dẫn bản Word", body: "Trang hướng dẫn có nút Tải Word (.docx) để mở bằng Word, không cần in.", guideId: "bat-dau" },
+```
+
+**Files:**
+- `package.json`: `pnpm add docx` và `pnpm add -D jszip` (người dùng đã đồng ý; KHÔNG `pnpm install` lại toàn bộ, KHÔNG đổi version thư viện khác).
+- Create: `src/lib/guide-docx.ts`
+- Create: `src/components/guide/GuideDocxButton.tsx`
+- Modify: `src/components/guide/GuideContent.tsx`, `src/lib/guide-content.ts`, `src/lib/releases.ts`, `src/language/vi.json`, `src/language/en.json`
+- Test: `tests/unit/lib/guide-docx.test.ts`, `tests/unit/components/GuideContent.test.tsx`
+
+**Interfaces:**
+- `splitBold(text: string): { text: string; bold: boolean }[]` — tách theo `**`, bỏ phần rỗng.
+- `buildGuideDocx(sections: GuideSection[], version: string): Promise<Blob>` — dùng `Packer.toBlob`.
+- `GUIDE_DOCX_FILENAME = "huong-dan-su-dung.docx"`.
+
+- [ ] **Step 1: Cài thư viện**
+
+```bash
+pnpm add docx
+pnpm add -D jszip
+```
+
+Expected: `package.json` thêm đúng 2 dòng, `pnpm-lock.yaml` đổi. Đọc README trong `node_modules/docx` (hoặc `node_modules/docx/dist/index.d.ts`) để xác nhận tên `Document`, `Packer`, `Paragraph`, `TextRun`, `HeadingLevel`, `AlignmentType`, `BorderStyle`, `ShadingType` trước khi viết code. Tên khác plan → dùng tên thật, ghi `Ruling:`.
+
+- [ ] **Step 2: Viết test đỏ** — `tests/unit/lib/guide-docx.test.ts`:
+
+```ts
+import { describe, it, expect } from "vitest"
+import JSZip from "jszip"
+import { buildGuideDocx, splitBold, GUIDE_DOCX_FILENAME } from "@/lib/guide-docx"
+import { GUIDE_SECTIONS } from "@/lib/guide-content"
+
+async function documentXml(blob: Blob): Promise<string> {
+  const zip = await JSZip.loadAsync(await blob.arrayBuffer())
+  return zip.file("word/document.xml")!.async("string")
+}
+
+describe("guide-docx", () => {
+  it("splitBold tách **…** thành đoạn đậm, bỏ phần rỗng", () => {
+    expect(splitBold("Bấm **Thêm** rồi **Lưu**")).toEqual([
+      { text: "Bấm ", bold: false },
+      { text: "Thêm", bold: true },
+      { text: " rồi ", bold: false },
+      { text: "Lưu", bold: true },
+    ])
+    expect(splitBold("**A**")).toEqual([{ text: "A", bold: true }])
+  })
+
+  it("tên file .docx", () => {
+    expect(GUIDE_DOCX_FILENAME).toBe("huong-dan-su-dung.docx")
+  })
+
+  it("file đủ mọi mục: tiêu đề Heading1 đánh số, Bước N, Mẹo, không còn dấu **", async () => {
+    const xml = await documentXml(await buildGuideDocx(GUIDE_SECTIONS, "0.11.1"))
+    expect(xml).toContain("Hướng dẫn sử dụng Lịch dạy")
+    expect(xml).toContain("0.11.1")
+    GUIDE_SECTIONS.forEach((s, i) => expect(xml).toContain(`${i + 1}. ${s.title}`))
+    expect((xml.match(/w:pStyle w:val="Heading1"/g) ?? []).length).toBe(GUIDE_SECTIONS.length)
+    expect(xml).toContain("Bước 1. ")
+    expect(xml).toContain("Mẹo: ")
+    expect(xml).not.toContain("**")
+    expect(xml).toContain('w:fill="E6F4F1"')
+  })
+})
+```
+
+Nếu `docx` ghi style id khác `Heading1` (đọc `xml` thật bằng `console.log` 1 lần), sửa regex theo id thật, ghi `Ruling:`.
+
+- `tests/unit/components/GuideContent.test.tsx`: test đầu đổi phần nút: không còn nút `viText.print_pdf`; có nút `viText.guide_download_docx` và nút đó có class `print:hidden`. Thêm test bấm nút gọi tải (mock module):
+
+```tsx
+vi.mock("@/lib/guide-docx", () => ({
+  GUIDE_DOCX_FILENAME: "huong-dan-su-dung.docx",
+  buildGuideDocx: vi.fn(async () => new Blob(["x"])),
+}))
+vi.mock("file-saver", () => ({ saveAs: vi.fn() }))
+// …
+  it("bấm Tải Word → tạo file từ GUIDE_SECTIONS và lưu huong-dan-su-dung.docx", async () => {
+    const { saveAs } = await import("file-saver")
+    render(<LanguageProvider forcedLanguage="vi"><GuideContent /></LanguageProvider>)
+    fireEvent.click(screen.getByRole("button", { name: viText.guide_download_docx }))
+    await waitFor(() => expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), "huong-dan-su-dung.docx"))
+  })
+```
+
+(Giữ cách render/bọc provider mà file test hiện có đang dùng; thêm import `vi`, `fireEvent`, `waitFor`.)
+
+- [ ] **Step 3: Chạy, xác nhận đỏ**
+
+Run: `pnpm exec vitest run tests/unit/lib/guide-docx.test.ts tests/unit/components/GuideContent.test.tsx`
+Expected: FAIL (chưa có module `@/lib/guide-docx`, chưa có nút).
+
+- [ ] **Step 4: Viết `src/lib/guide-docx.ts`**
+
+```ts
+import { AlignmentType, BorderStyle, Document, HeadingLevel, Packer, Paragraph, ShadingType, TextRun } from "docx"
+import type { GuideSection } from "@/lib/guide-content"
+
+export const GUIDE_DOCX_FILENAME = "huong-dan-su-dung.docx"
+
+const TEAL = "0F766E"
+const FONT = "Arial" // đủ dấu tiếng Việt trên mọi máy có Word
+
+export function splitBold(text: string): { text: string; bold: boolean }[] {
+  return text
+    .split("**")
+    .map((part, i) => ({ text: part, bold: i % 2 === 1 }))
+    .filter((p) => p.text !== "")
+}
+
+function runs(text: string, base: { italics?: boolean; color?: string } = {}) {
+  return splitBold(text).map(
+    (p) => new TextRun({ text: p.text, bold: p.bold, italics: base.italics, color: p.bold ? "0F172A" : base.color })
+  )
+}
+
+export async function buildGuideDocx(sections: GuideSection[], version: string): Promise<Blob> {
+  const children: Paragraph[] = [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 80 },
+      children: [new TextRun({ text: "Hướng dẫn sử dụng Lịch dạy", bold: true, size: 48, color: TEAL })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 360 },
+      children: [new TextRun({ text: `Bản v${version}`, size: 20, color: "64748B" })],
+    }),
+    new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: "Mục lục", bold: true, size: 26 })] }),
+    ...sections.map((s, i) => new Paragraph({ spacing: { after: 40 }, children: [new TextRun(`${i + 1}. ${s.title}`)] })),
+  ]
+
+  sections.forEach((s, i) => {
+    children.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 360, after: 160 },
+        shading: { type: ShadingType.CLEAR, color: "auto", fill: "E6F4F1" },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: TEAL, space: 4 } },
+        children: [new TextRun({ text: `${i + 1}. ${s.title}`, bold: true, size: 32, color: TEAL })],
+      })
+    )
+    if (s.intro) children.push(new Paragraph({ spacing: { after: 120 }, children: runs(s.intro, { italics: true, color: "334155" }) }))
+    s.steps.forEach((step, j) =>
+      children.push(
+        new Paragraph({
+          indent: { left: 360 },
+          spacing: { after: 100 },
+          children: [new TextRun({ text: `Bước ${j + 1}. `, bold: true, color: TEAL }), ...runs(step)],
+        })
+      )
+    )
+    s.tips?.forEach((tip) =>
+      children.push(
+        new Paragraph({
+          indent: { left: 360 },
+          spacing: { before: 60, after: 60 },
+          shading: { type: ShadingType.CLEAR, color: "auto", fill: "FEF3C7" },
+          border: { left: { style: BorderStyle.SINGLE, size: 18, color: "D97706", space: 6 } },
+          children: [new TextRun({ text: "Mẹo: ", bold: true }), ...runs(tip)],
+        })
+      )
+    )
+  })
+
+  const doc = new Document({
+    creator: "Lịch dạy",
+    title: "Hướng dẫn sử dụng",
+    styles: {
+      default: { document: { run: { font: FONT, size: 22 }, paragraph: { spacing: { line: 276 } } } },
+      // Heading1 mặc định của docx màu xanh dương; ép về teal + Arial cho đồng bộ app.
+      paragraphStyles: [
+        { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: 32, bold: true, color: TEAL } },
+      ],
+    },
+    sections: [{ children }],
+  })
+  return Packer.toBlob(doc)
+}
+```
+
+Chạy test trong môi trường node: nếu `Packer.toBlob` lỗi vì thiếu `Blob` (Node < 18) thì báo; Node hiện tại có `Blob` sẵn.
+
+- [ ] **Step 5: Viết `src/components/guide/GuideDocxButton.tsx`**
+
+```tsx
+"use client"
+
+import { useState } from "react"
+import { FileDown } from "lucide-react"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { useTranslation } from "@/components/providers/LanguageProvider"
+import { GUIDE_SECTIONS } from "@/lib/guide-content"
+
+export function GuideDocxButton() {
+  const { t } = useTranslation()
+  const [busy, setBusy] = useState(false)
+  const download = async () => {
+    setBusy(true)
+    try {
+      // Chỉ tải thư viện docx khi bấm, trang hướng dẫn mở nhanh như cũ.
+      const [{ buildGuideDocx, GUIDE_DOCX_FILENAME }, { saveAs }] = await Promise.all([import("@/lib/guide-docx"), import("file-saver")])
+      saveAs(await buildGuideDocx(GUIDE_SECTIONS, process.env.NEXT_PUBLIC_APP_VERSION ?? ""), GUIDE_DOCX_FILENAME)
+    } catch {
+      toast.error(t("guide_download_failed"))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Button variant="outline" className="h-11 gap-2 md:h-10 print:hidden" onClick={download} disabled={busy}>
+      <FileDown className="size-4" aria-hidden />
+      {t("guide_download_docx")}
+    </Button>
+  )
+}
+```
+
+i18n mới: `guide_download_docx` (vi `"Tải Word (.docx)"`, en `"Download Word (.docx)"`), `guide_download_failed` (vi `"Không tạo được file, thử lại sau"`, en `"Couldn't create the file, please try again"`).
+
+- [ ] **Step 6: Sửa `GuideContent.tsx`** — thay `<PrintButton label={t("print_pdf")} />` bằng `<GuideDocxButton />`, đổi import. Sửa ghi chú đầu `guide-content.ts` ("bản PDF in từ trang này" → "file Word tải từ trang này"), sửa `releases.ts` mục 0.11.0 + 0.11.1 như phần Quyết định, sửa bước trong `guide-content.ts` nhắc chỗ mở hướng dẫn.
+
+- [ ] **Step 7: Chạy lại**
+
+Run: `pnpm exec vitest run tests/unit/lib/guide-docx.test.ts tests/unit/components/GuideContent.test.tsx tests/unit/lib/guide-content.test.ts tests/unit/lib/releases.test.ts tests/unit/components/UpdatesContent.test.tsx`
+Expected: PASS.
+
+- [ ] **Step 8: Mở file thật 1 lần** — viết tạm 1 script trong `.superpowers/sdd/2026-10-04-z-don-loi-nho/` (KHÔNG commit) gọi `buildGuideDocx` rồi ghi `huong-dan-su-dung.docx` vào thư mục đó, để Claude mở bằng Word kiểm mắt. Ghi đường dẫn file vào báo cáo.
+
+- [ ] **Step 9: tsc + lint + commit**
+
+```bash
+pnpm exec tsc --noEmit && pnpm lint
+git add package.json pnpm-lock.yaml src/lib/guide-docx.ts src/components/guide src/lib/guide-content.ts src/lib/releases.ts src/language/vi.json src/language/en.json tests/unit/lib/guide-docx.test.ts tests/unit/components/GuideContent.test.tsx
+git commit -m "feat: trang hướng dẫn tải file Word (.docx) thay in PDF"
+```
+
+---
+
+### Task 10: Kiểm toàn bộ + báo cáo
+
+- [ ] **Step 1: Kiểm toàn bộ**
 
 ```bash
 pnpm exec tsc --noEmit
@@ -620,15 +984,8 @@ pnpm lint
 pnpm test > .superpowers/sdd/2026-10-04-z-don-loi-nho/test.log 2>&1; tail -n 30 .superpowers/sdd/2026-10-04-z-don-loi-nho/test.log
 ```
 
-Expected: tsc/lint sạch, vitest PASS toàn bộ (số test = trước Z + số test mới).
+Expected: tsc/lint sạch, vitest PASS toàn bộ.
 
-- [ ] **Step 4: e2e đủ 2 nửa** (RAM ≥ 3000 MB trước mỗi nửa, foreground, dọn đúng PID mình tạo sau mỗi nửa). Thêm file e2e mới của W vào nửa ít file hơn. Expected: tất cả PASS (skipped giữ như trước). Đỏ → đọc lỗi, sửa code (không nới test), chạy lại file đó rồi chạy lại nửa đó.
+- [ ] **Step 2: e2e đủ 2 nửa** theo `.superpowers/sdd/2026-10-03-y-thu-hoc-phi/half1.txt` và `half2.txt` (half2 đã có file e2e W). RAM ≥ 3000 MB trước mỗi nửa, foreground, dọn đúng PID mình tạo sau mỗi nửa. Expected: tất cả PASS (skipped giữ như trước). Đỏ → đọc lỗi, sửa code (không nới test), chạy lại file đó rồi chạy lại nửa đó.
 
-- [ ] **Step 5: Commit + báo cáo**
-
-```bash
-git add package.json src/lib/releases.ts
-git commit -m "chore: v0.11.1 + mục cập nhật dọn lỗi nhỏ"
-```
-
-Ghi `.superpowers/gehihi/bao-cao-Z.md`: HEAD, số vitest, số e2e từng nửa, mọi `Ruling:`, test cũ nào đã sửa kỳ vọng và vì sao. Ghi kênh `DONE Z`.
+- [ ] **Step 3: Báo cáo** — `.superpowers/gehihi/bao-cao-Z.md`: HEAD, số vitest, số e2e từng nửa, mọi `Ruling:`, test cũ nào đã sửa kỳ vọng và vì sao, đường dẫn file `.docx` mẫu. Ghi kênh `DONE Z`.
