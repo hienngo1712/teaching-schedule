@@ -12,7 +12,9 @@ vi.mock("@/lib/guide-docx", () => ({
   GUIDE_DOCX_FILENAME: "huong-dan-su-dung.docx",
   buildGuideDocx: vi.fn(async () => new Blob(["x"])),
 }))
-vi.mock("file-saver", () => ({ saveAs: vi.fn() }))
+// Đúng hình dạng webpack trả cho import() động của file-saver (CJS): chỉ có default, không có saveAs.
+const { fileSaver } = vi.hoisted(() => ({ fileSaver: vi.fn() }))
+vi.mock("file-saver", () => ({ default: fileSaver }))
 
 describe("GuideContent (spec W §3.2 & Task 9)", () => {
   it("h1, mục lục link tới từng anchor, mỗi mục 1 section có id, nút Tải Word ẩn khi in", () => {
@@ -30,9 +32,8 @@ describe("GuideContent (spec W §3.2 & Task 9)", () => {
   })
 
   it("bấm Tải Word → tạo file từ GUIDE_SECTIONS và lưu huong-dan-su-dung.docx", async () => {
-    const { saveAs } = await import("file-saver")
     render(<LanguageProvider forcedLanguage="vi"><GuideContent /></LanguageProvider>)
     fireEvent.click(screen.getByRole("button", { name: viText.guide_download_docx }))
-    await waitFor(() => expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), "huong-dan-su-dung.docx"))
+    await waitFor(() => expect(fileSaver).toHaveBeenCalledWith(expect.any(Blob), "huong-dan-su-dung.docx"))
   })
 })

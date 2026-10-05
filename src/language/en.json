@@ -856,7 +856,6 @@
   "guide_menu": "User guide",
   "guide_nav": "User guide",
   "more_guide_desc": "How to use the app, download as Word",
-  "print_pdf": "Download PDF",
   "guide_download_docx": "Download Word (.docx)",
   "guide_download_failed": "Couldn't create the file, please try again",
   "guide_back_login": "Back to login",
