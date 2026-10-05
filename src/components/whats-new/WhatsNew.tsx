@@ -53,7 +53,7 @@ export function WhatsNew() {
     return (
       <Popover open={open} onOpenChange={change}>
         <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-        <PopoverContent align="end" className="w-[420px] max-w-[calc(100vw-2rem)] p-0">{panel}</PopoverContent>
+        <PopoverContent align="end" className="w-[340px] max-w-[calc(100vw-2rem)] p-0">{panel}</PopoverContent>
       </Popover>
     )
   }
