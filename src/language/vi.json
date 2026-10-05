@@ -857,6 +857,8 @@
   "guide_nav": "HD sử dụng",
   "more_guide_desc": "Các bước dùng app, tải bản Word",
   "print_pdf": "Tải PDF",
+  "guide_download_docx": "Tải Word (.docx)",
+  "guide_download_failed": "Không tạo được file, thử lại sau",
   "guide_back_login": "Về trang đăng nhập",
   "whatsnew_button": "Có gì mới",
   "whatsnew_label": "CÓ GÌ MỚI",

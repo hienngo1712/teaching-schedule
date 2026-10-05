@@ -19,6 +19,8 @@ export const RELEASES: Release[] = [
     summary: "Một số chỉnh sửa nhỏ ở Học phí, Sao lưu và trang Đăng ký.",
     notify: false,
     items: [
+      { kind: "improve", title: "HD sử dụng ở thanh bên", body: "Hướng dẫn chuyển ra mục HD sử dụng ở thanh bên (điện thoại: tab Thêm).", guideId: "bat-dau" },
+      { kind: "improve", title: "Tải hướng dẫn bản Word", body: "Trang hướng dẫn có nút Tải Word (.docx) để mở bằng Word, không cần in.", guideId: "bat-dau" },
       { kind: "improve", title: "Miễn có ghi lý do", body: "Khi miễn phần còn thiếu, bạn có thể ghi lý do. Lý do được lưu vào ghi chú tháng đó.", guideId: "hoc-phi" },
       { kind: "fix", title: "Số tiền ghi rõ nợ cũ", body: "Học sinh còn nợ tháng trước mà tháng này không học vẫn thấy rõ số tiền là nợ tháng nào.", guideId: "hoc-phi" },
       { kind: "fix", title: "Mở đúng tháng", body: "Học phí, Lịch dạy và Báo cáo mở đúng tháng theo giờ Việt Nam, kể cả khi máy để múi giờ khác." },
@@ -33,7 +35,7 @@ export const RELEASES: Release[] = [
     summary: "Có trang hướng dẫn đầy đủ, thẻ Bắt đầu cho người mới, và ô này để bạn biết mỗi bản có gì.",
     notify: true,
     items: [
-      { kind: "new", title: "Hướng dẫn sử dụng", body: "Mở ở menu tài khoản (góc phải trên). Có nút Tải PDF để lưu hoặc gửi cho đồng nghiệp.", guideId: "bat-dau" },
+      { kind: "new", title: "Hướng dẫn sử dụng", body: "Mở mục HD sử dụng ở thanh bên (điện thoại: tab Thêm). Có nút Tải Word để lưu hoặc gửi cho đồng nghiệp.", guideId: "bat-dau" },
       { kind: "new", title: "Thẻ Bắt đầu trên Tổng quan", body: "5 bước làm quen, tự đánh dấu khi bạn làm xong, có thể ẩn đi.", guideId: "bat-dau" },
       { kind: "new", title: "Có gì mới", body: "Mỗi bản có tính năng mới, ô này tự mở 1 lần. Bấm nút Có gì mới để xem lại." },
       // Ô chỉ hiện bản notify mới nhất → nhắc lại thay đổi lớn của 0.10.0 để giáo viên chưa từng thấy ô vẫn biết.
