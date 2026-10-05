@@ -44,7 +44,7 @@ describe("guide-content (spec W §3.1)", () => {
 })
 
 describe("ảnh hướng dẫn (plan AA)", () => {
-  const files = new Set(readdirSync(join(process.cwd(), "public/guide")))
+  const files = new Set(readdirSync(join(process.cwd(), "public/guide")).filter((f) => f.endsWith(".jpg")))
 
   it("có 24 shot, không trùng, đúng dạng kebab-case", () => {
     expect(GUIDE_SHOTS.length).toBe(24)

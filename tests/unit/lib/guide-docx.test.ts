@@ -1,12 +1,38 @@
 import { describe, it, expect } from "vitest"
 import JSZip from "jszip"
-import { buildGuideDocx, buildUpdatesDocx, splitBold, GUIDE_DOCX_FILENAME, UPDATES_DOCX_FILENAME } from "@/lib/guide-docx"
+import {
+  buildGuideDocx,
+  buildUpdatesDocx,
+  splitBold,
+  GUIDE_DOCX_FILENAME,
+  UPDATES_DOCX_FILENAME,
+} from "@/lib/guide-docx"
 import { RELEASES } from "@/lib/releases"
-import { GUIDE_SECTIONS } from "@/lib/guide-content"
+import { GUIDE_SECTIONS, type GuideSection } from "@/lib/guide-content"
 
 async function documentXml(blob: Blob): Promise<string> {
   const zip = await JSZip.loadAsync(await blob.arrayBuffer())
   return zip.file("word/document.xml")!.async("string")
+}
+
+// JPEG 1×1 hợp lệ, đủ để docx nhúng.
+const JPG = Uint8Array.from(
+  atob(
+    "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="
+  ),
+  (c) => c.charCodeAt(0)
+)
+const SECTIONS: GuideSection[] = [
+  {
+    id: "a",
+    title: "A",
+    steps: ["chữ", { text: "có ảnh", shot: "s1" }, { text: "thiếu ảnh", shot: "s2" }],
+  },
+]
+
+async function mediaCount(blob: Blob) {
+  const zip = await JSZip.loadAsync(await blob.arrayBuffer())
+  return Object.keys(zip.files).filter((f) => f.startsWith("word/media/")).length
 }
 
 describe("guide-docx", () => {
@@ -25,9 +51,9 @@ describe("guide-docx", () => {
   })
 
   it("file đủ mọi mục: tiêu đề Heading1 đánh số, Bước N, Mẹo, không còn dấu **", async () => {
-    const xml = await documentXml(await buildGuideDocx(GUIDE_SECTIONS, "0.11.1"))
+    const xml = await documentXml(await buildGuideDocx(GUIDE_SECTIONS))
     expect(xml).toContain("Hướng dẫn sử dụng Lịch dạy")
-    expect(xml).toContain("0.11.1")
+    expect(xml).toContain("Kèm ảnh minh hoạ máy tính và điện thoại")
     GUIDE_SECTIONS.forEach((s, i) => expect(xml).toContain(`${i + 1}. ${s.title}`))
     expect((xml.match(/w:pStyle w:val="Heading1"/g) ?? []).length).toBe(GUIDE_SECTIONS.length)
     expect(xml).toContain("Bước 1. ")
@@ -47,5 +73,20 @@ describe("guide-docx", () => {
     }
     expect(xml).toContain("05/10/2026")
     expect(xml).toContain("[Mới] ")
+  })
+})
+
+describe("Word có ảnh (plan AA)", () => {
+  it("chèn đủ 2 ảnh của shot có dữ liệu, bỏ qua shot thiếu, chữ đủ", async () => {
+    const blob = await buildGuideDocx(SECTIONS, new Map([["s1", { desktop: JPG, mobile: JPG }]]))
+    expect(await mediaCount(blob)).toBe(2)
+    const xml = await (await JSZip.loadAsync(await blob.arrayBuffer())).file("word/document.xml")!.async("string")
+    expect(xml).toContain("có ảnh")
+    expect(xml).toContain("thiếu ảnh")
+    expect(xml).toContain("Kèm ảnh minh hoạ máy tính và điện thoại")
+  })
+
+  it("không truyền images → không có ảnh, vẫn ra file", async () => {
+    expect(await mediaCount(await buildGuideDocx(SECTIONS))).toBe(0)
   })
 })

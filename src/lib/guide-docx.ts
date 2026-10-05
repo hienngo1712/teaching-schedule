@@ -1,8 +1,18 @@
-import { AlignmentType, BorderStyle, Document, HeadingLevel, Packer, Paragraph, ShadingType, TextRun } from "docx"
-import { type GuideSection, stepText } from "@/lib/guide-content"
+import {
+  AlignmentType,
+  BorderStyle,
+  Document,
+  HeadingLevel,
+  ImageRun,
+  Packer,
+  Paragraph,
+  ShadingType,
+  TextRun,
+} from "docx"
+import { type GuideSection, stepShot, stepText } from "@/lib/guide-content"
 import { formatReleaseDate, type Release } from "@/lib/releases"
 
-export const GUIDE_DOCX_FILENAME = "huong-dan-su-dung.docx"
+export { GUIDE_DOCX_FILENAME } from "@/lib/guide-content"
 export const UPDATES_DOCX_FILENAME = "cac-ban-cap-nhat.docx"
 
 const TEAL = "0F766E"
@@ -63,9 +73,11 @@ function pack(title: string, children: Paragraph[]): Promise<Blob> {
   return Packer.toBlob(doc)
 }
 
-export async function buildGuideDocx(sections: GuideSection[], version: string): Promise<Blob> {
+export type GuideShotImages = Map<string, { desktop?: Uint8Array; mobile?: Uint8Array }>
+
+export async function buildGuideDocx(sections: GuideSection[], images?: GuideShotImages): Promise<Blob> {
   const children: Paragraph[] = [
-    ...docTitle("Hướng dẫn sử dụng Lịch dạy", `Bản v${version}`),
+    ...docTitle("Hướng dẫn sử dụng Lịch dạy", "Kèm ảnh minh hoạ máy tính và điện thoại"),
     new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: "Mục lục", bold: true, size: 26 })] }),
     ...sections.map((s, i) => new Paragraph({ spacing: { after: 40 }, children: [new TextRun(`${i + 1}. ${s.title}`)] })),
   ]
@@ -75,7 +87,7 @@ export async function buildGuideDocx(sections: GuideSection[], version: string):
       heading1(`${i + 1}. ${s.title}`)
     )
     if (s.intro) children.push(new Paragraph({ spacing: { after: 120 }, children: runs(s.intro, { italics: true, color: "334155" }) }))
-    s.steps.forEach((step, j) =>
+    s.steps.forEach((step, j) => {
       children.push(
         new Paragraph({
           indent: { left: 360 },
@@ -83,7 +95,41 @@ export async function buildGuideDocx(sections: GuideSection[], version: string):
           children: [new TextRun({ text: `Bước ${j + 1}. `, bold: true, color: TEAL }), ...runs(stepText(step))],
         })
       )
-    )
+      const shot = stepShot(step)
+      if (shot && images?.has(shot)) {
+        const pair = images.get(shot)
+        if (pair?.desktop) {
+          children.push(
+            new Paragraph({
+              indent: { left: 360 },
+              spacing: { after: 80 },
+              children: [
+                new ImageRun({
+                  type: "jpg",
+                  data: pair.desktop,
+                  transformation: { width: 576, height: 360 },
+                }),
+              ],
+            })
+          )
+        }
+        if (pair?.mobile) {
+          children.push(
+            new Paragraph({
+              indent: { left: 360 },
+              spacing: { after: 160 },
+              children: [
+                new ImageRun({
+                  type: "jpg",
+                  data: pair.mobile,
+                  transformation: { width: 166, height: 360 },
+                }),
+              ],
+            })
+          )
+        }
+      }
+    })
     s.tips?.forEach((tip) =>
       children.push(
         new Paragraph({

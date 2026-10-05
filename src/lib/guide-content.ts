@@ -19,6 +19,9 @@ export function guideShotSrc(shot: string, kind: GuideShotKind): string {
   return `/guide/${shot}-${kind}.jpg`
 }
 
+export const GUIDE_DOCX_PATH = "/guide/huong-dan-su-dung.docx"
+export const GUIDE_DOCX_FILENAME = "huong-dan-su-dung.docx"
+
 // Nguồn duy nhất cho /guide (và file Word tải từ trang này). Chỉ tiếng Việt (spec W §3.1).
 export const GUIDE_SECTIONS: GuideSection[] = [
   {

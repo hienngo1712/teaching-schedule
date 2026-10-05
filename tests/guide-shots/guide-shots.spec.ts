@@ -34,6 +34,14 @@ async function clean(page: Page) {
 }
 
 async function mark(target: Locator) {
+  await target.page().evaluate(() => {
+    document.querySelectorAll("*").forEach((el) => {
+      if ((el as HTMLElement).style.outline?.includes("rgb(239, 68, 68)") || (el as HTMLElement).style.outline?.includes("#ef4444")) {
+        ;(el as HTMLElement).style.outline = ""
+        ;(el as HTMLElement).style.outlineOffset = ""
+      }
+    })
+  })
   await target.first().evaluate((el) => {
     ;(el as HTMLElement).style.outline = "3px solid #ef4444"
     ;(el as HTMLElement).style.outlineOffset = "2px"
@@ -150,7 +158,7 @@ test("capture-24-shots", async ({ page, browser }, testInfo) => {
   await sessionItem.click()
   const sessionDetailDialog = page.getByRole("dialog")
   await expect(sessionDetailDialog).toBeVisible()
-  const actionHeader = sessionDetailDialog.locator(".flex.items-center.justify-between").first()
+  const actionHeader = sessionDetailDialog.getByRole("button", { name: "Menu hành động" })
   await mark(actionHeader)
   await shot(page, "lich-day-chi-tiet-ca", kind)
 
@@ -160,7 +168,7 @@ test("capture-24-shots", async ({ page, browser }, testInfo) => {
   await shot(page, "diem-danh", kind)
 
   // 12. diem-danh-ca-ke: chi tiết ca, viền đỏ nút mũi tên ca trước/ca sau
-  const navBar = sessionDetailDialog.locator("div:has(> button[aria-label*='trước'])").first()
+  const navBar = sessionDetailDialog.getByRole("button", { name: "Ca sau" }).locator("xpath=..")
   await mark(navBar)
   await shot(page, "diem-danh-ca-ke", kind)
   await page.keyboard.press("Escape")
