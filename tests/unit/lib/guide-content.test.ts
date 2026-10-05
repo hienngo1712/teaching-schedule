@@ -25,4 +25,11 @@ describe("guide-content (spec W §3.1)", () => {
     expect(text).not.toMatch(/[—–]/)
     expect(text).not.toMatch(/TODO|TBD|\.\.\./)
   })
+
+  it("mẹo dùng thử đúng thực tế: không hứa tài khoản mới tự có Pro, nói rõ do quản trị viên đặt", () => {
+    const tips = GUIDE_SECTIONS.find((s) => s.id === "bat-dau")!.tips!.join(" ")
+    expect(tips).not.toContain("Tài khoản mới được dùng thử gói Pro")
+    expect(tips).toContain("Standard")
+    expect(tips.toLowerCase()).toContain("quản trị viên")
+  })
 })

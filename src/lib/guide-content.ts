@@ -13,7 +13,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       "Trên **Tổng quan** có thẻ **Bắt đầu sử dụng** gồm 5 bước. Làm lần lượt, bước xong tự được đánh dấu.",
       "Đổi mật khẩu: bấm vào avatar góc phải trên, chọn **Đổi mật khẩu**.",
     ],
-    tips: ["Không nên dùng số điện thoại làm tên đăng nhập.", "Tài khoản mới được dùng thử gói Pro miễn phí một thời gian."],
+    tips: ["Không nên dùng số điện thoại làm tên đăng nhập.", "Tài khoản mới dùng gói Standard. Quản trị viên có thể cho dùng thử gói Pro một số ngày, xem hạn ở **Gói của tôi**."],
   },
   {
     id: "mon-hoc",
