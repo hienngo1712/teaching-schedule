@@ -2,6 +2,7 @@ import {
   BarChart3,
   BookOpen,
   CalendarDays,
+  CircleHelp,
   Crown,
   LayoutDashboard,
   Settings,
@@ -13,7 +14,15 @@ import {
 import type vi from "@/language/vi.json"
 import type { Feature } from "@/lib/plans"
 
-export const NAV_ITEMS: { href: string; labelKey: keyof typeof vi; icon: LucideIcon; feature?: Feature }[] = [
+export type NavItem = {
+  href: string
+  labelKey: keyof typeof vi
+  icon: LucideIcon
+  feature?: Feature
+  external?: boolean
+}
+
+export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/calendar", labelKey: "calendar", icon: CalendarDays },
   { href: "/students", labelKey: "students", icon: Users },
@@ -25,13 +34,12 @@ export function isNavActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/")
 }
 
-export type NavItem = (typeof NAV_ITEMS)[number]
-
 export const MANAGE_ITEMS: NavItem[] = [
   { href: "/subjects", labelKey: "subject", icon: BookOpen },
   { href: "/settings", labelKey: "settings", icon: Settings },
   { href: "/plan", labelKey: "my_plan", icon: Crown },
   { href: "/trash", labelKey: "trash", icon: Trash2 },
+  { href: "/guide", labelKey: "guide_nav", icon: CircleHelp, external: true },
 ]
 
 // Tab "Thêm" trên mobile gom các màn không có tab riêng.
@@ -41,6 +49,7 @@ export const MORE_ITEMS: (NavItem & { descKey: keyof typeof vi })[] = [
   { href: "/settings", labelKey: "settings", icon: Settings, descKey: "more_settings_desc" },
   { href: "/plan", labelKey: "my_plan", icon: Crown, descKey: "more_plan_desc" },
   { href: "/trash", labelKey: "trash", icon: Trash2, descKey: "more_trash_desc" },
+  { href: "/guide", labelKey: "guide_nav", icon: CircleHelp, descKey: "more_guide_desc", external: true },
 ]
 
 export function isMoreActive(pathname: string) {

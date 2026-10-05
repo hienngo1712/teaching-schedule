@@ -67,6 +67,22 @@ export function MoreSheet({ open, onOpenChange, children }: Props) {
                 </li>
               )
             }
+            if (item.external) {
+              return (
+                <li key={item.href}>
+                  <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => onOpenChange(false)}
+                    className="flex min-h-14 items-center gap-3.5 rounded-xl px-3 hover:bg-accent"
+                  >
+                    {content}
+                    <ChevronRight className="size-5 shrink-0 text-[#9CA3AF]" />
+                  </a>
+                </li>
+              )
+            }
             return (
               <li key={item.href}>
                 <Link
