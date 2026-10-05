@@ -13,6 +13,17 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.12.0",
+    date: "2026-10-05",
+    title: "Hướng dẫn có ảnh minh hoạ",
+    summary: "Các bước chính trong Hướng dẫn sử dụng có ảnh chụp màn hình máy tính và điện thoại.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Ảnh minh hoạ từng bước", body: "Bước chính có ảnh chụp màn hình, chỗ cần bấm có viền đỏ. Chọn Máy tính hoặc Điện thoại, bấm ảnh để phóng to.", guideId: "bat-dau" },
+      { kind: "improve", title: "File Word có ảnh", body: "File Word tải từ trang hướng dẫn có kèm ảnh minh hoạ." },
+    ],
+  },
+  {
     version: "0.11.5",
     date: "2026-10-05",
     title: "Gói của tôi gọn hơn",

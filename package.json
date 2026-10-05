@@ -1,6 +1,6 @@
 {
   "name": "student-managerment",
-  "version": "0.11.5",
+  "version": "0.12.0",
   "private": true,
   "engines": {
     "node": "24.x"
@@ -25,7 +25,8 @@
     "user:create": "tsx scripts/create-user.ts",
     "user:list": "tsx scripts/list-users.ts",
     "user:deactivate": "tsx scripts/deactivate-user.ts",
-    "user:reset-pw": "tsx scripts/reset-password.ts"
+    "user:reset-pw": "tsx scripts/reset-password.ts",
+    "guide:docx": "tsx scripts/build-guide-docx.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

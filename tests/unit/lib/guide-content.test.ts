@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest"
-import { GUIDE_SECTIONS, GUIDE_IDS } from "@/lib/guide-content"
+import { readdirSync } from "node:fs"
+import { join } from "node:path"
+import {
+  GUIDE_SECTIONS,
+  GUIDE_IDS,
+  GUIDE_SHOTS,
+  guideShotSrc,
+  stepShot,
+  stepText,
+} from "@/lib/guide-content"
 import { RELEASES } from "@/lib/releases"
 
 const EXPECTED_IDS = [
@@ -26,10 +35,48 @@ describe("guide-content (spec W §3.1)", () => {
     expect(text).not.toMatch(/TODO|TBD|\.\.\./)
   })
 
+  it("tên nút khớp giao diện thật (đối chiếu ảnh chụp AA)", () => {
+    const text = JSON.stringify(GUIDE_SECTIONS)
+    expect(text).toContain("**+ Tạo ca dạy**")
+    expect(text).not.toContain("Thêm ca dạy mới")
+    expect(text).toContain("**Lưu điểm danh**")
+    expect(text).not.toContain("vắng có phép")
+  })
+
   it("mẹo dùng thử đúng thực tế: không hứa tài khoản mới tự có Pro, nói rõ do quản trị viên đặt", () => {
     const tips = GUIDE_SECTIONS.find((s) => s.id === "bat-dau")!.tips!.join(" ")
     expect(tips).not.toContain("Tài khoản mới được dùng thử gói Pro")
     expect(tips).toContain("Standard")
     expect(tips.toLowerCase()).toContain("quản trị viên")
+  })
+})
+
+describe("ảnh hướng dẫn (plan AA)", () => {
+  const files = new Set(readdirSync(join(process.cwd(), "public/guide")).filter((f) => f.endsWith(".jpg")))
+
+  it("có 24 shot, không trùng, đúng dạng kebab-case", () => {
+    expect(GUIDE_SHOTS.length).toBe(24)
+    expect(new Set(GUIDE_SHOTS).size).toBe(GUIDE_SHOTS.length)
+    for (const s of GUIDE_SHOTS) expect(s).toMatch(/^[a-z0-9-]+$/)
+  })
+
+  it("mỗi shot có đủ ảnh máy tính và điện thoại", () => {
+    for (const s of GUIDE_SHOTS) {
+      expect(files.has(`${s}-desktop.jpg`), s).toBe(true)
+      expect(files.has(`${s}-mobile.jpg`), s).toBe(true)
+    }
+  })
+
+  it("không có file ảnh thừa không bước nào dùng", () => {
+    const used = new Set(GUIDE_SHOTS.flatMap((s) => [`${s}-desktop.jpg`, `${s}-mobile.jpg`]))
+    expect([...files].filter((f) => !used.has(f))).toEqual([])
+  })
+
+  it("stepText / stepShot / guideShotSrc", () => {
+    expect(stepText("a **b**")).toBe("a **b**")
+    expect(stepShot("a")).toBeUndefined()
+    expect(stepText({ text: "x", shot: "y" })).toBe("x")
+    expect(stepShot({ text: "x", shot: "y" })).toBe("y")
+    expect(guideShotSrc("hoc-phi-mien", "mobile")).toBe("/guide/hoc-phi-mien-mobile.jpg")
   })
 })

@@ -4,7 +4,8 @@ import Link from "next/link"
 import { Fragment } from "react"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { DocxDownloadButton } from "@/components/common/DocxDownloadButton"
-import { GUIDE_SECTIONS } from "@/lib/guide-content"
+import { GUIDE_SECTIONS, stepShot, stepText } from "@/lib/guide-content"
+import { GuideShot } from "@/components/guide/GuideShot"
 
 // "**Nút**" → <strong>; nội dung tĩnh trong code nên không cần thư viện markdown.
 function Rich({ text }: { text: string }) {
@@ -44,7 +45,15 @@ export function GuideContent() {
           <h2 className="text-lg font-semibold text-slate-900">{i + 1}. {s.title}</h2>
           {s.intro && <p className="leading-relaxed"><Rich text={s.intro} /></p>}
           <ol className="list-decimal space-y-2 pl-5 leading-relaxed">
-            {s.steps.map((step, j) => <li key={j} className="break-inside-avoid"><Rich text={step} /></li>)}
+            {s.steps.map((step, j) => {
+              const shot = stepShot(step)
+              return (
+                <li key={j} className="break-inside-avoid">
+                  <Rich text={stepText(step)} />
+                  {shot && <GuideShot shot={shot} alt={stepText(step).replaceAll("**", "")} />}
+                </li>
+              )
+            })}
           </ol>
           {s.tips && (
             <ul className="space-y-1 rounded-md border-l-4 border-primary bg-primary/5 p-3 text-sm">
