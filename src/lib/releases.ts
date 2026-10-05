@@ -13,6 +13,16 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.11.5",
+    date: "2026-10-05",
+    title: "Gói của tôi gọn hơn",
+    summary: "Đầu trang Gói của tôi hiện rõ gói đang dùng, hạn dùng và số học sinh.",
+    notify: false,
+    items: [
+      { kind: "improve", title: "Gói hiện tại ở đầu trang", body: "Gói đang dùng, hạn dùng và số học sinh đang học hiện nổi bật ở đầu trang, thẻ gói bớt chữ.", guideId: "goi-dich-vu" },
+    ],
+  },
+  {
     version: "0.11.4",
     date: "2026-10-05",
     title: "Ô Có gì mới gọn hơn",

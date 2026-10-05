@@ -12,7 +12,6 @@ import {
   TWO_YEAR_BONUS_MONTHS,
   featuresAddedIn,
   yearlySavingPercent,
-  formatValidUntil,
   type PaidPlan,
   type Plan,
 } from "@/lib/plans"
@@ -84,14 +83,6 @@ export function PlanCompare({ me, plusBlocked, onChoose }: Props) {
                     {formatCurrency(me.prices[plan]["2year"])}
                     {t("plan_per_2years")} · {t("plan_bonus_months").replace("{n}", String(TWO_YEAR_BONUS_MONTHS))}
                   </p>
-                </div>
-              )}
-
-              {/* Q14: thay cho thẻ "Gói hiện tại" đã bỏ. */}
-              {inUse && (
-                <div className="space-y-0.5 text-sm font-medium text-foreground">
-                  {me.expiresAt && <p>{t("plan_valid_until").replace("{date}", formatValidUntil(new Date(me.expiresAt)))}</p>}
-                  <p>{t("plan_active_now").replace("{count}", String(me.activeStudents))}</p>
                 </div>
               )}
 
