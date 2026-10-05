@@ -67,4 +67,16 @@ test.describe('Spec W', () => {
     ]);
     await expect(tab).toHaveURL(new RegExp(`/updates#v${LATEST_NOTIFY.version.replace(/\./g, '\\.')}$`));
   });
+
+  test('/guide: ảnh minh hoạ tải được, chuyển Điện thoại đổi ảnh', async ({ page }) => {
+    await page.goto('/guide');
+    const fig = page.locator('section#hoc-phi [data-testid="guide-shot"]').first();
+    await fig.scrollIntoViewIfNeeded();
+    const img = fig.locator('img');
+    await expect(img).toHaveAttribute('src', /-desktop\.jpg$/);
+    await expect.poll(() => img.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBe(1280);
+    await fig.getByRole('button', { name: 'Điện thoại' }).click();
+    await expect(img).toHaveAttribute('src', /-mobile\.jpg$/);
+    await expect.poll(() => img.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBe(780);
+  });
 });
