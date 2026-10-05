@@ -64,16 +64,17 @@ test.describe('Mobile 390px', () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test('sheet Thêm: 5 mục cao ≥ 56px có mô tả; vào Cài đặt rồi Môn học', async ({ page }) => {
+  test('sheet Thêm: 6 mục cao ≥ 56px có mô tả; vào Cài đặt rồi Môn học', async ({ page }) => {
     const more = mainNav(page).getByRole('button', { name: 'Thêm', exact: true });
     let sheet = await openMore(page);
-    await expect(sheet.getByRole('link')).toHaveCount(5);
+    await expect(sheet.getByRole('link')).toHaveCount(6);
     const items = [
       { name: /Báo cáo/, desc: 'Doanh thu, công nợ theo tháng và năm' },
       { name: /Môn học/, desc: 'Thêm, đổi màu, ẩn môn' },
       { name: /Cài đặt/, desc: 'Tài khoản ngân hàng nhận học phí' },
       { name: /Gói của tôi/, desc: 'Gói hiện tại, nâng cấp, gia hạn' },
       { name: /Thùng rác/, desc: 'Khôi phục ca, học sinh, lần thu, môn đã xoá' },
+      { name: /HD sử dụng/, desc: 'Các bước dùng app, tải bản Word' },
     ];
     for (const it of items) {
       const link = sheet.getByRole('link', { name: it.name });
@@ -97,14 +98,13 @@ test.describe('Mobile 390px', () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test('menu avatar có Sao lưu dữ liệu, Hướng dẫn sử dụng, Đổi mật khẩu, Đăng xuất', async ({ page }) => {
+  test('menu avatar có Sao lưu dữ liệu, Đổi mật khẩu, Đăng xuất', async ({ page }) => {
     await page.getByRole('button', { name: 'Mở menu tài khoản' }).click();
     const menu = page.getByRole('menu');
     await expect(menu.getByRole('menuitem', { name: 'Sao lưu dữ liệu' })).toBeVisible();
-    await expect(menu.getByRole('menuitem', { name: 'Hướng dẫn sử dụng' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: 'Đổi mật khẩu' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: 'Đăng xuất' })).toBeVisible();
-    await expect(menu.getByRole('menuitem')).toHaveCount(4);
+    await expect(menu.getByRole('menuitem')).toHaveCount(3);
     await page.keyboard.press('Escape');
     await expectNoHorizontalScroll(page);
   });

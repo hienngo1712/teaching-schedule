@@ -4,6 +4,9 @@ import { useCallback, useMemo } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import type { SessionListDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { vnDateParts } from "@/lib/utils"
+import { monthKey } from "@/lib/billing"
+import { keyToYearMonth } from "@/lib/payment-allocation"
 
 export type CalendarCell = {
   date: string // "YYYY-MM-DD"
@@ -129,23 +132,21 @@ export function useCalendar(options: { defaultOffset?: number } = {}) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const defaultDate = useMemo(() => {
-    const d = new Date()
-    if (defaultOffset !== 0) {
-      return new Date(d.getFullYear(), d.getMonth() + defaultOffset, 1)
-    }
-    return d
+  // Tháng mặc định theo giờ VN: máy để múi giờ khác thì sáng ngày 1 vẫn ra đúng tháng.
+  const defaultYm = useMemo(() => {
+    const now = vnDateParts()
+    return keyToYearMonth(monthKey(now.year, now.month) + defaultOffset)
   }, [defaultOffset])
-  
+
   const year = useMemo(() => {
     const y = searchParams.get("year")
-    return y ? parseInt(y, 10) : defaultDate.getFullYear()
-  }, [searchParams, defaultDate])
+    return y ? parseInt(y, 10) : defaultYm.year
+  }, [searchParams, defaultYm])
 
   const month = useMemo(() => {
     const m = searchParams.get("month")
-    return m ? parseInt(m, 10) : defaultDate.getMonth() + 1
-  }, [searchParams, defaultDate])
+    return m ? parseInt(m, 10) : defaultYm.month
+  }, [searchParams, defaultYm])
 
   const monthLabel = useMemo(() => buildMonthLabel(year, month, t), [year, month, t])
 

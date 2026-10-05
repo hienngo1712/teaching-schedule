@@ -1,6 +1,6 @@
 export type GuideSection = { id: string; title: string; intro?: string; steps: string[]; tips?: string[] }
 
-// Nguồn duy nhất cho /guide (và bản PDF in từ trang này). Chỉ tiếng Việt (spec W §3.1).
+// Nguồn duy nhất cho /guide (và file Word tải từ trang này). Chỉ tiếng Việt (spec W §3.1).
 export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "bat-dau",

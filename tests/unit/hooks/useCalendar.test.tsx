@@ -49,4 +49,19 @@ describe("useCalendar - defaultOffset (spec Y §4)", () => {
     expect(result.current.year).toBe(2026)
     expect(result.current.month).toBe(7)
   })
+
+  it("máy để múi giờ UTC, 01:00 ngày 1/10 giờ VN → vẫn là tháng 10 (offset 0) và tháng 9 (offset -1)", () => {
+    const oldTz = process.env.TZ
+    process.env.TZ = "UTC"
+    try {
+      vi.setSystemTime(new Date("2026-09-30T18:00:00.000Z")) // 01:00 1/10 giờ VN, còn 30/9 giờ UTC
+      const now = renderHook(() => useCalendar(), { wrapper })
+      expect(now.result.current.month).toBe(10)
+      const prev = renderHook(() => useCalendar({ defaultOffset: -1 }), { wrapper })
+      expect(prev.result.current.year).toBe(2026)
+      expect(prev.result.current.month).toBe(9)
+    } finally {
+      process.env.TZ = oldTz
+    }
+  })
 })

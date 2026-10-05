@@ -37,7 +37,7 @@ const HEADERS: Record<string, string[]> = {
   ],
   "Lần thu": [
     "ID", "ID học phí tháng", "ID học sinh", "Học sinh", "Năm", "Tháng", "Ngày thu", "Số tiền",
-    "Hình thức", "Ghi chú", "Ngày tạo", "Cập nhật lần cuối",
+    "Ghi chú", "Ngày tạo", "Cập nhật lần cuối",
   ],
   "Lịch sử lên lớp": ["ID", "Năm học", "Thời điểm chạy", "Cách chạy", "Số HS lên lớp", "Số HS cho nghỉ"],
   "Cài đặt": ["Mục", "Giá trị"],
@@ -357,9 +357,10 @@ describe("buildBackupWorkbook", () => {
     expect(cellOf(ws, mt.id, "Đã tất toán").value).toBe(mt.isFullPaid ? "Có" : "Không")
   })
 
-  it("Lần thu: nhãn Chuyển khoản, ngày thu Date, số tiền nguyên, năm/tháng từ học phí tháng", async () => {
+  it("Lần thu: không còn cột Hình thức, ngày thu Date, số tiền nguyên, năm/tháng từ học phí tháng", async () => {
     const ws = sheet(await loadBackup(teacherId), "Lần thu")
-    expect(cellOf(ws, paymentId, "Hình thức").value).toBe("Chuyển khoản")
+    const headers = (ws.getRow(1).values as unknown[]).slice(1)
+    expect(headers).not.toContain("Hình thức")
     expect(cellOf(ws, paymentId, "Số tiền").value).toBe(150000)
     const paidAt = cellOf(ws, paymentId, "Ngày thu")
     expect((paidAt.value as Date).toISOString()).toBe("2026-05-10T00:00:00.000Z")

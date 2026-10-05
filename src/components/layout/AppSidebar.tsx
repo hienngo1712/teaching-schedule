@@ -15,6 +15,20 @@ import { MANAGE_ITEMS, NAV_ITEMS, isNavActive, type NavItem } from "./nav-items"
 function SidebarLink({ item, pathname, label, locked }: { item: NavItem; pathname: string; label: string; locked: boolean }) {
   const Icon = item.icon
   const active = isNavActive(pathname, item.href)
+  if (item.external) {
+    // /guide nằm ngoài khung app → mở tab mới để không mất sidebar.
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex min-h-10 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium text-[#4B5563] transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <Icon className="size-4" />
+        <span>{label}</span>
+      </a>
+    )
+  }
   if (locked && item.feature) {
     const plan = FEATURE_PLAN[item.feature]
     // P12: vẫn hiện như gói Pro, bấm mở popup nâng cấp thay vì điều hướng.

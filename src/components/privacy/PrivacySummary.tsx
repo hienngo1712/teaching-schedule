@@ -20,7 +20,8 @@ export function PrivacySummary({ showFullLink = false }: { showFullLink?: boolea
     <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm text-slate-700">
       <p className="flex items-center gap-2 font-semibold text-slate-900">
         <ShieldCheck className="size-5 shrink-0 text-primary" aria-hidden />
-        {t("privacy_summary_title")}
+        {/* Trang đăng ký có link Đọc đầy đủ; /privacy cho cả người đã có tài khoản nên không ghi "Trước khi đăng ký". */}
+        {t(showFullLink ? "privacy_summary_title" : "privacy_summary_title_page")}
       </p>
       <ul className="space-y-2">
         {POINTS.map(({ icon: Icon, lead, body }) => (
@@ -42,6 +43,7 @@ export function PrivacySummary({ showFullLink = false }: { showFullLink?: boolea
         >
           {t("privacy_read_full")}
           <ExternalLink className="size-4" aria-hidden />
+          <span className="sr-only">{t("opens_new_tab")}</span>
         </a>
       )}
     </div>

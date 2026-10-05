@@ -40,10 +40,10 @@ export function RegisterForm() {
     },
   })
 
-  // Resolver chỉ cập nhật lỗi của ô vừa sửa → đổi Mật khẩu phải tự kiểm lại ô Nhập lại.
+  // Chỉ kiểm lại ô Nhập lại sau lần bấm Đăng ký đầu, để không báo lỗi khi người dùng còn đang gõ.
   const password = form.watch("password")
   useEffect(() => {
-    if (form.getValues("confirmPassword")) void form.trigger("confirmPassword")
+    if (form.formState.isSubmitted && form.getValues("confirmPassword")) void form.trigger("confirmPassword")
   }, [password, form])
 
   const mutation = trpc.auth.register.useMutation({

@@ -15,7 +15,8 @@ function renderVi(ui: React.ReactElement) {
 describe("PrivacySummary (spec X §3)", () => {
   it("hiện tiêu đề + 4 ý, thay {contact}, không dùng heading", () => {
     const { container } = renderVi(<PrivacySummary />)
-    expect(screen.getByText(viText.privacy_summary_title)).toBeTruthy()
+    expect(screen.getByText(viText.privacy_summary_title_page)).toBeTruthy()
+    expect(screen.queryByText(viText.privacy_summary_title)).toBeNull()
     for (const lead of [
       viText.privacy_summary_store_lead,
       viText.privacy_summary_protect_lead,
@@ -41,5 +42,13 @@ describe("PrivacySummary (spec X §3)", () => {
     expect(link.getAttribute("target")).toBe("_blank")
     expect(link.getAttribute("rel")).toContain("noopener")
     expect(link.className).toContain("min-h-11")
+  })
+
+  it("showFullLink (trang đăng ký): tiêu đề Trước khi đăng ký, link có chữ ẩn báo mở tab mới", () => {
+    renderVi(<PrivacySummary showFullLink />)
+    expect(screen.getByText(viText.privacy_summary_title)).toBeTruthy()
+    const link = screen.getByRole("link", { name: new RegExp(viText.privacy_read_full) })
+    const hint = link.querySelector(".sr-only")
+    expect(hint?.textContent).toBe(viText.opens_new_tab)
   })
 })

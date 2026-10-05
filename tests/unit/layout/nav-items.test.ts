@@ -19,6 +19,7 @@ describe("danh sách mục điều hướng", () => {
       ["/settings", "settings"],
       ["/plan", "my_plan"],
       ["/trash", "trash"],
+      ["/guide", "guide_nav"],
     ])
     expect(MORE_ITEMS.map((i) => [i.href, i.labelKey, i.descKey])).toEqual([
       ["/reports", "reports", "more_reports_desc"],
@@ -26,11 +27,20 @@ describe("danh sách mục điều hướng", () => {
       ["/settings", "settings", "more_settings_desc"],
       ["/plan", "my_plan", "more_plan_desc"],
       ["/trash", "trash", "more_trash_desc"],
+      ["/guide", "guide_nav", "more_guide_desc"],
     ])
   })
 
   it("mục Báo cáo gắn tính năng monthlyReport (để khóa ở gói Standard)", () => {
     expect(NAV_ITEMS.find((i) => i.href === "/reports")?.feature).toBe("monthlyReport")
     expect(MORE_ITEMS.find((i) => i.href === "/reports")?.feature).toBe("monthlyReport")
+  })
+
+  it("HD sử dụng mở tab mới, icon khác Môn học", () => {
+    const guide = MANAGE_ITEMS.find((i) => i.href === "/guide")!
+    const subject = MANAGE_ITEMS.find((i) => i.href === "/subjects")!
+    expect(guide.external).toBe(true)
+    expect(guide.icon).not.toBe(subject.icon)
+    expect(MORE_ITEMS.find((i) => i.href === "/guide")?.external).toBe(true)
   })
 })

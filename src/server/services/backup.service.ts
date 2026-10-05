@@ -2,7 +2,6 @@ import ExcelJS from "exceljs"
 import type { PrismaClient } from "@prisma/client"
 import { ATTENDANCE_LABEL } from "@/lib/constants"
 import { formatDayOfWeek, formatTime } from "@/lib/utils"
-import type { PAYMENT_METHODS } from "@/lib/schemas/payment"
 import { findBank } from "@/lib/vn-banks"
 import { LIVE_LINK } from "@/server/soft-delete"
 import { byGradeThenName } from "@/lib/name-search"
@@ -32,11 +31,6 @@ const NOTE_TUITION = "Học phí tháng là số đã lưu; tháng chưa mở tr
 const NOTE_SENSITIVE = "File chứa dữ liệu cá nhân chưa mã hoá. Không gửi qua mạng xã hội hay email, xoá khi không còn cần."
 
 const SESSION_STATUS_LABEL: Record<string, string> = { scheduled: "Đã lên lịch", cancelled: "Đã hủy" }
-// Gắn kiểu theo PAYMENT_METHODS của B: B thêm hình thức mới thì tsc báo ở đây.
-const PAYMENT_METHOD_LABEL: Record<(typeof PAYMENT_METHODS)[number], string> = {
-  cash: "Tiền mặt",
-  transfer: "Chuyển khoản",
-}
 const UPGRADE_TRIGGER_LABEL: Record<string, string> = { auto: "Tự động", manual: "Thủ công" }
 
 function label(map: Readonly<Record<string, string>>, value: string): string {
@@ -149,7 +143,7 @@ export async function buildBackupWorkbook(
       where: { monthlyTuition: { student: { userId, isDeleted: false } } },
       orderBy: [{ paidAt: "asc" }, { id: "asc" }],
       select: {
-        id: true, monthlyTuitionId: true, amount: true, paidAt: true, method: true, note: true,
+        id: true, monthlyTuitionId: true, amount: true, paidAt: true, note: true,
         createdAt: true, updatedAt: true,
         monthlyTuition: {
           select: { studentId: true, year: true, month: true, student: { select: { fullName: true } } },
@@ -270,7 +264,6 @@ export async function buildBackupWorkbook(
     { header: "Tháng", width: 7, value: (p) => p.monthlyTuition.month },
     { header: "Ngày thu", width: 12, kind: "date", value: (p) => p.paidAt },
     { header: "Số tiền", width: 13, kind: "money", value: (p) => p.amount },
-    { header: "Hình thức", width: 13, value: (p) => label(PAYMENT_METHOD_LABEL, p.method) },
     { header: "Ghi chú", width: 30, value: (p) => p.note },
     { header: "Ngày tạo", width: 17, kind: "datetime", value: (p) => vnTime(p.createdAt) },
     { header: "Cập nhật lần cuối", width: 17, kind: "datetime", value: (p) => vnTime(p.updatedAt) },

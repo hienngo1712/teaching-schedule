@@ -13,7 +13,7 @@ test.describe('Spec O: đồng ý chia sẻ dữ liệu, chính sách, cảnh b�
     await page.goto('/privacy');
     await expect(page).toHaveURL(/\/privacy$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Chính sách bảo mật' })).toBeVisible();
-    await expect(page.getByText('Trước khi đăng ký, bạn nên biết')).toBeVisible();
+    await expect(page.getByText('Tóm tắt nhanh')).toBeVisible();
     await expect(page.getByRole('heading', { level: 2 })).toHaveCount(5);
   });
 
