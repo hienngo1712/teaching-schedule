@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Locator } from "@playwright/test"
 import { mkdirSync } from "node:fs"
-import { resolve } from "node:path"
+import { dirname } from "node:path"
 import ExcelJS from "exceljs"
 import { buildImportTemplate } from "@/lib/student-import-excel"
 import { seedDemo, cleanupDemo, setDemoBank, setDemoPayments } from "./demo-data"
@@ -13,7 +13,6 @@ let sampleExcelPath = ""
 
 test.beforeAll(async () => {
   mkdirSync(OUT, { recursive: true })
-  await cleanupDemo()
   parentToken = await seedDemo()
 
   // Tạo sẵn file excel đúng chuẩn template có 1 dòng đúng, 1 dòng lỗi cho shot 6
@@ -23,9 +22,13 @@ test.beforeAll(async () => {
   const ws = wb.getWorksheet("Hoc sinh")!
   ws.addRow(["Nguyễn Minh Khang", 6, "Chị Hoa", "0912345678", 150000, "buổi", ""])
   ws.addRow(["", 7, "Anh Tuấn", "", 150000, "buổi", ""]) // Lỗi: thiếu tên
-  sampleExcelPath = resolve(process.cwd(), "tests/guide-shots/sample-import.xlsx")
+  // Ghi ra thư mục tạm của Playwright, không ghi đè file trong repo mỗi lần chạy.
+  sampleExcelPath = test.info().outputPath("sample-import.xlsx")
+  mkdirSync(dirname(sampleExcelPath), { recursive: true })
   await wb.xlsx.writeFile(sampleExcelPath)
 })
+
+test.afterAll(cleanupDemo)
 
 async function clean(page: Page) {
   await page.addStyleTag({

@@ -34,15 +34,8 @@ export function getDemoMonths() {
 export async function cleanupDemo() {
   expect(process.env.DATABASE_URL ?? "").toContain(`@${EXPECTED_TEST_ENDPOINT}/`)
 
-  // Xoá toàn bộ loginAttempts để không bao giờ bị rate limit
-  await db.loginAttempt.deleteMany({
-    where: {
-      OR: [
-        { username: "guide_demo" },
-        { ipAddress: { in: ["::1", "127.0.0.1", "localhost"] } },
-      ],
-    },
-  })
+  // Rate limit chỉ đếm lần đăng nhập sai; chỉ dọn log của guide_demo, không đụng tài khoản khác.
+  await db.loginAttempt.deleteMany({ where: { username: "guide_demo" } })
 
   const user = await db.user.findUnique({ where: { username: "guide_demo" } })
   if (!user) return

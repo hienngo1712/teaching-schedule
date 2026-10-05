@@ -77,7 +77,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "lich-day",
     title: "Lịch dạy",
     steps: [
-      { text: "Mở **Lịch dạy**, bấm **+ Thêm ca dạy mới**.", shot: "lich-day-thang" },
+      { text: "Mở **Lịch dạy**, bấm **+ Tạo ca dạy**.", shot: "lich-day-thang" },
       { text: "Chọn ngày, giờ bắt đầu, giờ kết thúc, môn và các học sinh trong ca.", shot: "lich-day-tao-ca" },
       "Muốn ca lặp hằng tuần: chọn **Lặp lại vào các thứ** và khoảng ngày.",
       { text: "Bấm vào ca để xem chi tiết, sửa, chuyển sang ngày giờ khác, huỷ ca (ghi lý do) hoặc tạo **Ca bù**.", shot: "lich-day-chi-tiet-ca" },
@@ -90,8 +90,8 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     title: "Điểm danh",
     steps: [
       "Mở ca cần điểm danh trên **Lịch dạy**.",
-      { text: "Chọn trạng thái cho từng học sinh: có mặt, vắng có phép hoặc vắng không phép.", shot: "diem-danh" },
-      "Bấm **Lưu**. Học phí theo buổi được tính theo điểm danh này.",
+      { text: "Bấm dấu tích (có mặt) hoặc dấu X (vắng) cho từng học sinh. Bấm **Tất cả có mặt** để đánh dấu nhanh cả ca.", shot: "diem-danh" },
+      "Bấm **Lưu điểm danh**. Học phí theo buổi được tính theo điểm danh này.",
       { text: "Dùng nút mũi tên để sang ca trước / ca sau trong tháng mà không cần quay lại lịch.", shot: "diem-danh-ca-ke" },
     ],
   },

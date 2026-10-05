@@ -1,27 +1,31 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Maximize2 } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { GUIDE_SHOT_SIZE, guideShotSrc, type GuideShotKind } from "@/lib/guide-content"
 
+const KINDS: GuideShotKind[] = ["desktop", "mobile"]
+// Chưa chọn: CSS tự ẩn ảnh sai khổ; ảnh lazy bị ẩn không tải nên điện thoại không tốn ảnh máy tính.
+const AUTO_CLASS: Record<GuideShotKind, string> = { desktop: "hidden md:block w-full", mobile: "md:hidden max-w-[240px]" }
+const PICKED_CLASS: Record<GuideShotKind, string> = { desktop: "w-full", mobile: "max-w-[240px]" }
+
 export function GuideShot({ shot, alt }: { shot: string; alt: string }) {
   const { t } = useTranslation()
   const isMobile = useMediaQuery("(max-width: 767px)")
-  const [kind, setKind] = useState<GuideShotKind>("desktop")
+  // null = theo thiết bị; người dùng bấm chọn thì giữ nguyên dù xoay màn hình.
+  const [picked, setPicked] = useState<GuideShotKind | null>(null)
   const [zoom, setZoom] = useState(false)
-  // Mặc định theo thiết bị người xem; useMediaQuery trả false ở lần render đầu nên đồng bộ sau.
-  useEffect(() => setKind(isMobile ? "mobile" : "desktop"), [isMobile])
-  const size = GUIDE_SHOT_SIZE[kind]
-  const src = guideShotSrc(shot, kind)
+  const active: GuideShotKind = picked ?? (isMobile ? "mobile" : "desktop")
+  const shown = picked ? [picked] : KINDS
   const tab = (k: GuideShotKind, label: string) => (
     <button
       type="button"
-      aria-pressed={kind === k}
-      onClick={() => setKind(k)}
-      className={`h-11 rounded-md px-3 text-sm font-medium md:h-8 ${kind === k ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100"}`}
+      aria-pressed={active === k}
+      onClick={() => setPicked(k)}
+      className={`h-11 rounded-md px-3 text-sm font-medium md:h-8 ${active === k ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100"}`}
     >
       {label}
     </button>
@@ -41,22 +45,30 @@ export function GuideShot({ shot, alt }: { shot: string; alt: string }) {
         </button>
       </div>
       <button type="button" onClick={() => setZoom(true)} className="block w-full" tabIndex={-1}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- ảnh tĩnh đã nén sẵn, không tốn quota tối ưu ảnh của Vercel */}
-        <img
-          src={src}
-          alt={alt}
-          width={size.width}
-          height={size.height}
-          loading="lazy"
-          className={`mx-auto h-auto rounded border bg-white ${kind === "mobile" ? "max-w-[240px]" : "w-full"}`}
-        />
+        {shown.map((k) => (
+          // eslint-disable-next-line @next/next/no-img-element -- ảnh tĩnh đã nén sẵn, không tốn quota tối ưu ảnh của Vercel
+          <img
+            key={k}
+            src={guideShotSrc(shot, k)}
+            alt={alt}
+            width={GUIDE_SHOT_SIZE[k].width}
+            height={GUIDE_SHOT_SIZE[k].height}
+            loading="lazy"
+            className={`mx-auto h-auto rounded border bg-white ${picked ? PICKED_CLASS[k] : AUTO_CLASS[k]}`}
+          />
+        ))}
       </button>
       <Dialog open={zoom} onOpenChange={setZoom}>
-        <DialogContent className="max-h-[95vh] max-w-[95vw] overflow-auto p-2 sm:max-w-5xl">
+        <DialogContent aria-describedby={undefined} className="max-h-[95vh] max-w-[95vw] overflow-auto p-2 sm:max-w-5xl">
           <DialogTitle className="sr-only">{alt}</DialogTitle>
-          <DialogDescription className="sr-only">{alt}</DialogDescription>
           {/* eslint-disable-next-line @next/next/no-img-element -- như trên */}
-          <img src={src} alt={alt} width={size.width} height={size.height} className={`mx-auto h-auto ${kind === "mobile" ? "max-w-[390px]" : "w-full"}`} />
+          <img
+            src={guideShotSrc(shot, active)}
+            alt={alt}
+            width={GUIDE_SHOT_SIZE[active].width}
+            height={GUIDE_SHOT_SIZE[active].height}
+            className={`mx-auto h-auto w-full ${active === "mobile" ? "max-w-[390px]" : ""}`}
+          />
         </DialogContent>
       </Dialog>
     </figure>

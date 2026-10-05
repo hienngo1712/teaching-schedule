@@ -45,12 +45,15 @@ export function GuideContent() {
           <h2 className="text-lg font-semibold text-slate-900">{i + 1}. {s.title}</h2>
           {s.intro && <p className="leading-relaxed"><Rich text={s.intro} /></p>}
           <ol className="list-decimal space-y-2 pl-5 leading-relaxed">
-            {s.steps.map((step, j) => (
-              <li key={j} className="break-inside-avoid">
-                <Rich text={stepText(step)} />
-                {stepShot(step) && <GuideShot shot={stepShot(step)!} alt={stepText(step).replaceAll("**", "")} />}
-              </li>
-            ))}
+            {s.steps.map((step, j) => {
+              const shot = stepShot(step)
+              return (
+                <li key={j} className="break-inside-avoid">
+                  <Rich text={stepText(step)} />
+                  {shot && <GuideShot shot={shot} alt={stepText(step).replaceAll("**", "")} />}
+                </li>
+              )
+            })}
           </ol>
           {s.tips && (
             <ul className="space-y-1 rounded-md border-l-4 border-primary bg-primary/5 p-3 text-sm">
