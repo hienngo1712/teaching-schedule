@@ -35,6 +35,7 @@ describe("AppSidebar", () => {
       "/settings",
       "/plan",
       "/trash",
+      "/guide",
     ])
     expect(screen.getByText("Quản lý")).toBeTruthy()
     const subjects = screen.getByRole("link", { name: "Môn học" })
