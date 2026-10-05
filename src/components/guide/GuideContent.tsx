@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Fragment } from "react"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-import { GuideDocxButton } from "@/components/guide/GuideDocxButton"
+import { DocxDownloadButton } from "@/components/common/DocxDownloadButton"
 import { GUIDE_SECTIONS } from "@/lib/guide-content"
 
 // "**Nút**" → <strong>; nội dung tĩnh trong code nên không cần thư viện markdown.
@@ -23,7 +23,7 @@ export function GuideContent() {
     <main className="mx-auto max-w-3xl space-y-8 px-4 py-8 text-slate-700 print:max-w-none print:px-0 print:py-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-slate-900">{t("guide_title")}</h1>
-        <GuideDocxButton />
+        <DocxDownloadButton doc="guide" />
       </div>
 
       <nav aria-label={t("guide_toc")} className="rounded-lg border bg-slate-50 p-4 print:hidden">

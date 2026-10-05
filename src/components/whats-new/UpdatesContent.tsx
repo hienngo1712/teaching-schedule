@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-import { PrintButton } from "@/components/common/PrintButton"
+import { DocxDownloadButton } from "@/components/common/DocxDownloadButton"
 import { RELEASES, formatReleaseDate } from "@/lib/releases"
 import type vi from "@/language/vi.json"
 
@@ -18,7 +18,7 @@ export function UpdatesContent() {
     <main className="mx-auto max-w-3xl space-y-8 px-4 py-8 text-slate-700 print:max-w-none print:px-0 print:py-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-slate-900">{t("updates_title")}</h1>
-        <PrintButton label={t("print_pdf")} />
+        <DocxDownloadButton doc="updates" />
       </div>
       {RELEASES.map((r) => (
         <section key={r.version} id={`v${r.version}`} className="scroll-mt-4 space-y-3 border-t pt-6 break-inside-avoid">
