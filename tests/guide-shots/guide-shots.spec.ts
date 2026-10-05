@@ -258,10 +258,9 @@ test("capture-24-shots", async ({ page, browser }, testInfo) => {
   await mark(bankCombobox)
   await shot(page, "cai-dat-ngan-hang", kind)
 
-  // 21. goi-dich-vu: trang Gói của tôi, viền đỏ thẻ gói đang dùng
+  // 21. goi-dich-vu: trang Gói của tôi, viền đỏ khung Gói hiện tại ở đầu trang (bản 0.11.5)
   await page.goto("/plan")
-  const proCard = page.locator(".rounded-xl, .border").filter({ hasText: "Pro" }).locator("visible=true").first()
-  await mark(proCard)
+  await mark(page.getByTestId("plan-current"))
   await shot(page, "goi-dich-vu", kind)
 
   // 22. thung-rac: /trash có 1 HS mẫu đã xoá, viền đỏ nút Khôi phục
