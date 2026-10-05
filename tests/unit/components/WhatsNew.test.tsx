@@ -81,10 +81,10 @@ describe("WhatsNewPanel (spec W §5.3)", () => {
     items: Array.from({ length: 7 }, (_, i) => ({ kind: "new" as const, title: `Mục ${i + 1}`, body: "Mô tả" })),
   }
 
-  it("tối đa 5 mục + 'và 2 thay đổi khác'; ngày dd/MM/yyyy; Tìm hiểu thêm mở /updates#v9.0.0 tab mới", () => {
+  it("gọn: tối đa 3 mục + 'và 4 thay đổi khác'; ngày dd/MM/yyyy; Tìm hiểu thêm mở /updates#v9.0.0 tab mới", () => {
     renderVi(<WhatsNewPanel release={many} onClose={() => {}} />)
-    expect(screen.getAllByTestId("whatsnew-item")).toHaveLength(5)
-    expect(screen.getByText(viText.whatsnew_more.replace("{n}", "2"))).toBeTruthy()
+    expect(screen.getAllByTestId("whatsnew-item")).toHaveLength(3)
+    expect(screen.getByText(viText.whatsnew_more.replace("{n}", "4"))).toBeTruthy()
     expect(screen.getByText("01/12/2026")).toBeTruthy()
     const more = screen.getByRole("link", { name: new RegExp(viText.whatsnew_learn_more) })
     expect(more.getAttribute("href")).toBe("/updates#v9.0.0")
