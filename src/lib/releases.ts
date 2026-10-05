@@ -14,7 +14,7 @@ export type Release = {
 export const RELEASES: Release[] = [
   {
     version: "0.11.1",
-    date: "2026-10-07",
+    date: "2026-10-05",
     title: "Sửa lỗi nhỏ",
     summary: "Một số chỉnh sửa nhỏ ở Học phí, Sao lưu và trang Đăng ký.",
     notify: false,

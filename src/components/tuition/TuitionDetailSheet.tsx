@@ -199,11 +199,12 @@ function TuitionDetailBody({
   const handleConfirmWaive = (reason: string) => {
     // Lý do nối vào ghi chú đang có trong ô (kể cả chưa lưu); không nhập thì chỉ gửi isFullPaid như cũ.
     const nextNotes = reason ? [notes.trim(), t("waive_note").replace("{reason}", reason)].filter(Boolean).join("\n") : null
-    if (nextNotes !== null) setNotes(nextNotes)
     updateSettlementMut.mutate(
       { studentId, year, month, isFullPaid: true, ...(nextNotes !== null && { notes: nextNotes }) },
       {
         onSuccess: () => {
+          // Đổi ô ghi chú chỉ khi miễn thành công: lỗi mà đổi trước thì lần lưu khi đóng sheet sẽ ghi "Miễn" dù chưa miễn.
+          if (nextNotes !== null) setNotes(nextNotes)
           setWaiveOpen(false)
           toast.success(t("settlement_saved"))
         },

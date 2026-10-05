@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, act } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
 
@@ -200,6 +200,17 @@ describe("TuitionDetailSheet — Miễn có lý do", () => {
     openMenu()
     fireEvent.click(screen.getByText("Miễn phần còn thiếu"))
   }
+
+  it("miễn có lý do chưa thành công (lỗi mạng) → ô ghi chú giữ nguyên, onSuccess mới đổi", () => {
+    openWaive()
+    fireEvent.change(screen.getByLabelText("Lý do (không bắt buộc)"), { target: { value: "x" } })
+    fireEvent.click(screen.getByRole("button", { name: /^Miễn 800\.000/ }))
+    const notesBox = screen.getByDisplayValue("ghi chú cũ")
+    expect(notesBox).toBeDefined()
+    const opts = mockUpdateSettlementMutate.mock.calls[0][1]
+    act(() => opts.onSuccess())
+    expect((notesBox as HTMLTextAreaElement).value).toBe("ghi chú cũ\nMiễn: x")
+  })
 
   it("nhập lý do → gửi isFullPaid + notes nối 'Miễn: <lý do>' xuống dòng sau ghi chú cũ", () => {
     openWaive()
