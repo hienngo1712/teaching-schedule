@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { usePlan } from "@/hooks/usePlan"
 import { PlanCompare } from "@/components/plan/PlanCompare"
+import { CurrentPlanSummary } from "@/components/plan/CurrentPlanSummary"
 import { PlanPurchaseDialog } from "@/components/plan/PlanPurchaseDialog"
 import { PendingOrderCard } from "@/components/plan/PendingOrderCard"
 import { isPeriod, orderBlockedUntil, planLabel, type PaidPlan } from "@/lib/plans"
@@ -53,7 +54,7 @@ export default function PlanPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader title={t("my_plan")} />
+      <CurrentPlanSummary me={me} />
 
       {me.pendingOrder && <PendingOrderCard order={me.pendingOrder} paymentReady={me.paymentReady} />}
 

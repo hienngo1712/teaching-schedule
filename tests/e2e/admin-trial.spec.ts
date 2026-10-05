@@ -92,7 +92,7 @@ test('desktop: thẻ dùng thử mặc định 60 ngày; admin đặt 120 ngày 
   await teacher.goto('/plan');
   const pro = teacher.getByTestId('plan-card-pro');
   await expect(pro).toContainText('Dùng thử');
-  await expect(pro).toContainText(`Dùng đến hết ngày ${lastDay}`);
+  await expect(teacher.getByTestId('plan-current')).toContainText(`Dùng đến hết ngày ${lastDay}`);
   await teacher.context().close();
 });
 

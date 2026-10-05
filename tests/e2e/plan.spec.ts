@@ -54,7 +54,7 @@ test.describe('Gói của tôi (390px)', () => {
     await expect(page.getByTestId('current-plan')).toHaveCount(0);
     const stdCard = page.getByTestId('plan-card-standard');
     await expect(stdCard).toContainText('Đang dùng');
-    await expect(stdCard).toContainText(/Đang có \d+ học sinh đang học/);
+    await expect(page.getByTestId('plan-current')).toContainText(/Gói hiện tại: Standard.*Đang có \d+ học sinh đang học/);
 
     // Mobile: Pro → Plus → Standard từ trên xuống.
     const y = async (id: string) => (await page.getByTestId(id).boundingBox())!.y;
