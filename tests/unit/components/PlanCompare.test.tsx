@@ -41,22 +41,22 @@ function renderCompare(me: Me, plusBlocked = false) {
 }
 
 describe("PlanCompare", () => {
-  it("Standard miễn phí: thẻ Standard có Đang dùng + số HS, không có dòng hạn; thẻ khác không có Đang dùng", () => {
+  it("Standard miễn phí: thẻ Standard có Đang dùng; hạn và số HS không nằm trong thẻ (đã lên đầu trang); thẻ khác không có Đang dùng", () => {
     renderCompare(makeMe({ activeStudents: 3 }))
     const std = screen.getByTestId("plan-card-standard")
     expect(std.textContent).toContain("Đang dùng")
-    expect(std.textContent).toContain("Đang có 3 học sinh đang học")
+    expect(std.textContent).not.toContain("Đang có 3 học sinh đang học")
     expect(std.textContent).not.toContain("Dùng đến hết ngày")
     expect(screen.getByTestId("plan-card-plus").textContent).not.toContain("Đang dùng")
     expect(screen.getByTestId("plan-card-pro").textContent).not.toContain("Đang dùng")
   })
 
-  it("dùng thử Pro: thẻ Pro có nhãn Dùng thử + Dùng đến hết ngày", () => {
+  it("dùng thử Pro: thẻ Pro có nhãn Dùng thử, không lặp hạn và số HS", () => {
     renderCompare(makeMe({ plan: "pro", source: "trial", expiresAt: "2026-11-01T17:00:00.000Z", activeStudents: 12 }))
     const pro = screen.getByTestId("plan-card-pro")
     expect(pro.textContent).toContain("Dùng thử")
-    expect(pro.textContent).toContain("Dùng đến hết ngày 01/11/2026")
-    expect(pro.textContent).toContain("Đang có 12 học sinh đang học")
+    expect(pro.textContent).not.toContain("Dùng đến hết ngày")
+    expect(pro.textContent).not.toContain("học sinh đang học")
     expect(screen.getByTestId("plan-card-standard").textContent).not.toContain("Đang dùng")
   })
 

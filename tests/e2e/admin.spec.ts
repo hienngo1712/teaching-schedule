@@ -90,7 +90,8 @@ test('teacher_std tạo đơn Plus tháng → admin_test xác nhận ở /admin/
   await std2.goto('/plan');
   const plusCard = std2.getByTestId('plan-card-plus');
   await expect(plusCard).toContainText('Đang dùng');
-  await expect(plusCard).toContainText('Dùng đến hết ngày');
+  await expect(std2.getByTestId('plan-current')).toContainText('Gói hiện tại: Plus');
+  await expect(std2.getByTestId('plan-current')).toContainText('Dùng đến hết ngày');
   await expect(std2.getByTestId('current-plan')).toHaveCount(0);
   await std2.context().close();
 });
