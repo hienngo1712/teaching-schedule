@@ -13,6 +13,16 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.11.3",
+    date: "2026-10-05",
+    title: "Sửa hướng dẫn",
+    summary: "Sửa mẹo về dùng thử gói Pro trong trang hướng dẫn cho đúng thực tế.",
+    notify: false,
+    items: [
+      { kind: "fix", title: "Mẹo dùng thử", body: "Tài khoản mới dùng gói Standard; quản trị viên có thể cho dùng thử Pro một số ngày.", guideId: "bat-dau" },
+    ],
+  },
+  {
     version: "0.11.2",
     date: "2026-10-05",
     title: "Tải bản Word",
