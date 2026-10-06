@@ -312,3 +312,47 @@ DATABASE_URL=... DATA_ENCRYPTION_KEYS=... DATA_ENCRYPTION_ACTIVE_KID=... [CONFIR
 **Theo dõi:** Vercel log có `[crypto] còn bản rõ ở trường <tên>` = có đường ghi vòng qua extension → tìm và sửa, rồi chạy `--apply` lại. `FieldDecryptError` = thiếu/sai khoá.
 
 **Neon branch chứa bản rõ:** branch backup tạo trước O2 còn dữ liệu chưa mã hoá → xoá sau khi O3 chạy ổn (người dùng tự xoá).
+
+---
+
+## Khôi phục khi Vercel bị khoá / chuyển sang project mới (Pro)
+
+Vercel chỉ chạy code và giữ biến môi trường. **Dữ liệu nằm ở Neon, code nằm ở GitHub** (`hienngo1712/teaching-schedule`), nên Vercel bị khoá thì không mất dữ liệu. Thứ phải tự giữ là giá trị các biến env.
+
+**Bản lưu giá trị:** file `private_key.7z` (7-Zip, AES-256), một bản trên máy, một bản trên Drive. Mật khẩu file ghi giấy, để riêng, không để cùng chỗ với file. Đổi khoá nào thì sửa file đó ngay. Không ghi giá trị vào repo, chat hay ảnh chụp.
+
+### Biến env Production cần có
+
+| Biến | Lấy lại ở đâu nếu mất | Mất thì sao |
+|---|---|---|
+| `DATA_ENCRYPTION_KEYS` (`k1:<base64 32 byte>`) | **Chỉ có trong bản lưu.** Không sinh lại được | **Mất vĩnh viễn** tên HS, SĐT, số tài khoản đã mã hoá |
+| `DATA_ENCRYPTION_ACTIVE_KID` | `k1` (đổi khi xoay khoá, xem mục trên) | App báo lỗi cấu hình |
+| `DATABASE_URL` | Neon → Connect, **bật** Connection pooling (host có `-pooler`) | App không kết nối DB |
+| `DIRECT_URL` | Neon → Connect, **tắt** Connection pooling | `prisma migrate deploy` lỗi khi build |
+| `NEXTAUTH_SECRET` | Sinh mới bằng lệnh ở mục "Khoá mã hoá" (bỏ tiền tố `k1:`) | Không mất dữ liệu, mọi người phải đăng nhập lại 1 lần |
+| `NEXTAUTH_URL` | Địa chỉ trang mới, vd `https://student-manager-vn.vercel.app` | Đăng nhập chuyển hướng sai |
+| `ADMIN_USERNAMES` | Tên đăng nhập admin, cách nhau dấu phẩy | Không vào được `/admin` |
+| `PLAN_BANK_BIN`, `PLAN_BANK_ACCOUNT_NUMBER`, `PLAN_BANK_ACCOUNT_NAME` | Tài khoản nhận tiền gói của chủ app | QR thanh toán gói trống |
+| `NEXT_PUBLIC_PRIVACY_CONTACT` | Email/SĐT liên hệ trên `/privacy` | Trang chính sách thiếu liên hệ |
+
+`NEXT_PUBLIC_*` được gắn vào lúc build: đổi giá trị thì phải Redeploy.
+
+### Dựng lại project
+1. Vercel → **Add New → Project** → import repo `hienngo1712/teaching-schedule`, framework Next.js.
+2. Kiểm cấu hình có sẵn trong repo, không cần chỉnh:
+   - Build Command: lấy từ `package.json` (`prisma generate && prisma migrate deploy && next build`).
+   - Node: `24.x` (`engines`).
+   - Region function: `sin1` (`vercel.json`, gần Neon Singapore).
+3. **Settings → Environment Variables**: dán các biến trong bảng, chọn **Production**. Bật Sensitive cho 4 biến bí mật (`DATA_ENCRYPTION_KEYS`, `DATABASE_URL`, `DIRECT_URL`, `NEXTAUTH_SECRET`). Không đặt cho Preview.
+4. Deploy. Build tự chạy `migrate deploy`; DB đã có đủ bảng nên không có migration mới.
+5. Kiểm sau deploy:
+   - Đăng nhập tài khoản giáo viên → danh sách học sinh hiện đúng tên (khoá mã hoá đúng). Thấy lỗi `FieldDecryptError` trong log nghĩa là sai/thiếu `DATA_ENCRYPTION_KEYS`.
+   - Đăng nhập admin → vào được `/admin/overview`.
+   - Trang Gói của tôi → QR thanh toán có số tài khoản.
+   - `/updates` hiện đúng bản mới nhất.
+
+### Tên miền
+Địa chỉ `*.vercel.app` gắn với project cũ. Project cũ còn tồn tại (kể cả bị khoá) thì project mới **không lấy lại được** tên đó, phải dùng tên khác và báo giáo viên link mới. Muốn đổi nhà không đổi link thì nên mua tên miền riêng (mục Custom Domain ở trên) và trỏ về project đang chạy.
+
+### Nâng Hobby → Pro (không chuyển project)
+Vercel → Settings → Billing → nâng gói cho team đang chứa project. Project, env, tên miền giữ nguyên, không cần làm các bước trên.
