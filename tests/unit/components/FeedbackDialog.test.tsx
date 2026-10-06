@@ -13,8 +13,9 @@ globalThis.ResizeObserver ??= class {
   disconnect() {}
 } as unknown as typeof ResizeObserver
 
+let pathname = "/students"
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/students",
+  usePathname: () => pathname,
 }))
 
 vi.mock("sonner", () => ({
@@ -25,10 +26,12 @@ vi.mock("sonner", () => ({
 }))
 
 const mutate = vi.fn()
+const setPromptData = vi.fn()
 let mutationOpts: { onSuccess?: () => void; onError?: (e: { data?: { code: string }; message: string }) => void } = {}
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
+    useUtils: () => ({ feedback: { promptStatus: { setData: setPromptData } } }),
     feedback: {
       submit: {
         useMutation: (opts: typeof mutationOpts) => {
@@ -46,6 +49,7 @@ describe("FeedbackDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mutationOpts = {}
+    pathname = "/students"
   })
 
   function ui(props: { prompted?: boolean } = {}) {
@@ -108,5 +112,25 @@ describe("FeedbackDialog", () => {
     unmount()
     render(ui())
     expect(screen.queryByRole("button", { name: "Để sau" })).toBeNull()
+  })
+
+  it("gửi xong từ menu → cache promptStatus thành false (không tự hỏi nữa)", () => {
+    render(ui())
+    mutationOpts.onSuccess!()
+    expect(setPromptData).toHaveBeenCalledWith(undefined, { shouldPrompt: false })
+  })
+
+  it("đường dẫn dài hơn 100 ký tự → cắt còn 100, không để server từ chối", () => {
+    pathname = "/" + "a".repeat(150)
+    render(ui())
+    fireEvent.click(screen.getByRole("radio", { name: "5 sao" }))
+    fireEvent.click(screen.getByRole("button", { name: "Gửi" }))
+    expect(mutate.mock.calls[0][0].page).toHaveLength(100)
+  })
+
+  it("lỗi khác giới hạn → báo câu chung, không hiện nội dung lỗi kỹ thuật", () => {
+    render(ui())
+    mutationOpts.onError!({ data: { code: "BAD_REQUEST" }, message: '[{"code":"too_big"}]' })
+    expect(toast.error).toHaveBeenCalledWith("Đã có lỗi xảy ra")
   })
 })

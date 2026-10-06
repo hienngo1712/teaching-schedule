@@ -39,9 +39,9 @@ vi.mock("@/lib/trpc", () => ({
   },
 }))
 
-function ui() {
+function ui(lang: "vi" | "en" = "vi") {
   return (
-    <LanguageProvider forcedLanguage="vi">
+    <LanguageProvider forcedLanguage={lang}>
       <AdminFeedback />
     </LanguageProvider>
   )
@@ -94,5 +94,10 @@ describe("AdminFeedback", () => {
     render(ui())
     expect(screen.getByText("Chưa có góp ý nào")).toBeTruthy()
     expect(screen.getByTestId("feedback-average").textContent).toContain("-")
+  })
+
+  it("giao diện tiếng Anh → điểm trung bình dùng dấu chấm", () => {
+    render(ui("en"))
+    expect(screen.getByTestId("feedback-average").textContent).toContain("3.5")
   })
 })

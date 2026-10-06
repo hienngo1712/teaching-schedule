@@ -243,4 +243,17 @@ describe("ImportStudentsDialog", () => {
     await screen.findByTestId("import-summary")
     expect(screen.queryByTestId("import-missing-fee")).toBeNull()
   })
+
+  it("khối Google Form có mũi tên báo mở/gập (summary dạng flex mất tam giác mặc định)", () => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <ImportStudentsDialog onClose={() => {}} />
+      </LanguageProvider>
+    )
+    const box = screen.getByTestId("import-google-form")
+    expect(box.className).toContain("group")
+    const icon = box.querySelector("summary svg")
+    expect(icon).not.toBeNull()
+    expect(icon!.getAttribute("class")).toContain("group-open:rotate-90")
+  })
 })

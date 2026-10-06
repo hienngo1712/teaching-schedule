@@ -10,6 +10,8 @@ import {
   type ParsedImportRow,
 } from "@/lib/student-import"
 
+const MAX_IMPORT_COLUMNS = 100
+
 export type ImportReadError = "file" | "size" | "template" | "empty" | "too_many"
 export type ImportReadResult =
   | { ok: true; rows: ParsedImportRow[]; missingFee: boolean }
@@ -68,8 +70,9 @@ export async function readImportWorkbook(data: ArrayBuffer): Promise<ImportReadR
   const sheet = wb.worksheets[0]
   if (!sheet) return { ok: false, error: "file" }
 
-  // File Google có thể nhiều hơn 7 cột (Dấu thời gian, câu hỏi thầy cô tự thêm).
-  const width = Math.max(sheet.columnCount, IMPORT_COLUMNS.length)
+  // File Google có thể nhiều hơn 7 cột (Dấu thời gian, câu hỏi thầy cô tự thêm); chặn 100 cột vì
+  // sheet tô định dạng kéo dài tới cột cuối khiến columnCount lên hàng nghìn, đọc mỗi dòng rất chậm.
+  const width = Math.min(Math.max(sheet.columnCount, IMPORT_COLUMNS.length), MAX_IMPORT_COLUMNS)
   const readCells = (row: Row) => Array.from({ length: width }, (_, i) => row.getCell(i + 1).value)
   const header = readCells(sheet.getRow(1))
   const headerLayout = parseImportHeader(header)

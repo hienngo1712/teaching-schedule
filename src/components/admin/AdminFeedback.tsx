@@ -19,7 +19,7 @@ function Stars({ value, label }: { value: number; label: string }) {
 }
 
 export function AdminFeedback() {
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   const query = trpc.admin.feedbackList.useInfiniteQuery({}, { getNextPageParam: (last) => last.nextCursor ?? undefined })
   const first = query.data?.pages[0]
   const items = query.data?.pages.flatMap((p) => p.items) ?? []
@@ -41,7 +41,7 @@ export function AdminFeedback() {
             <div>
               <p className="text-sm text-slate-500">{t("admin_feedback_avg")}</p>
               <p data-testid="feedback-average" className="text-3xl font-semibold text-slate-900">
-                {first.average === null ? "-" : first.average.toLocaleString("vi-VN")}
+                {first.average === null ? "-" : first.average.toLocaleString(language === "vi" ? "vi-VN" : "en-US")}
               </p>
               <p className="text-sm text-slate-500">{t("admin_feedback_total").replace("{n}", String(first.total))}</p>
             </div>

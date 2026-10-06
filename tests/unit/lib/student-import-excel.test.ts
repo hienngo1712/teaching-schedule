@@ -160,4 +160,17 @@ describe("readImportWorkbook — file Google Form (spec AB)", () => {
     expect(res.missingFee).toBe(false)
     expect(res.rows[0].input).toMatchObject({ billingMode: "monthly", monthlyFee: 150000 })
   })
+
+  it("chỉ đọc tối đa 100 cột đầu: cột tô định dạng kéo dài không làm đọc chậm", async () => {
+    const data = await makeFile((s) => {
+      s.getRow(1).values = ["Họ tên", "Lớp"]
+      s.getCell(1, 150).value = "Ghi chú"
+      s.getRow(2).values = ["An", 5]
+      s.getCell(2, 150).value = "không được đọc"
+    })
+    const res = await readImportWorkbook(data)
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.rows[0].input.notes).toBeUndefined()
+  })
 })

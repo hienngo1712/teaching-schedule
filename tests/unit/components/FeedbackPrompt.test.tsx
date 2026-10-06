@@ -2,16 +2,21 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, cleanup } from "@testing-library/react"
 import { FeedbackPrompt } from "@/components/feedback/FeedbackPrompt"
 import { RELEASES } from "@/lib/releases"
 
 let promptData: { shouldPrompt: boolean } | undefined
 let releaseData: { lastSeenRelease: string | null } | undefined
 const dismiss = vi.fn()
+// Giả cache React Query dùng chung: setData ghi thẳng vào dữ liệu mà useQuery trả về.
+const setPromptData = vi.fn((_: undefined, v: { shouldPrompt: boolean }) => {
+  promptData = v
+})
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
+    useUtils: () => ({ feedback: { promptStatus: { setData: setPromptData } } }),
     feedback: {
       promptStatus: {
         useQuery: () => ({ data: promptData }),
@@ -80,8 +85,34 @@ describe("FeedbackPrompt", () => {
     expect(screen.queryByTestId("fb-dialog")).toBeNull()
     unmount()
     dismiss.mockClear()
+    promptData = { shouldPrompt: true }
     render(<FeedbackPrompt />)
     fireEvent.click(screen.getByText("sent"))
     expect(dismiss).not.toHaveBeenCalled()
+  })
+
+  it("đóng (Để sau hoặc đã gửi) → cache promptStatus thành false, quay lại Tổng quan không hỏi lại", () => {
+    for (const btn of ["close", "sent"]) {
+      promptData = { shouldPrompt: true }
+      releaseData = { lastSeenRelease: RELEASES[0].version }
+      const { unmount } = render(<FeedbackPrompt />)
+      fireEvent.click(screen.getByText(btn))
+      expect(setPromptData).toHaveBeenLastCalledWith(undefined, { shouldPrompt: false })
+      unmount()
+      render(<FeedbackPrompt />)
+      expect(screen.queryByTestId("fb-dialog")).toBeNull()
+      cleanup()
+    }
+  })
+
+  it("Có gì mới chưa xem lúc tải, bị đóng trước khi promptStatus về → vẫn không hỏi trong lượt này", () => {
+    promptData = undefined
+    releaseData = { lastSeenRelease: null }
+    const { rerender } = render(<FeedbackPrompt />)
+    releaseData = { lastSeenRelease: RELEASES[0].version }
+    rerender(<FeedbackPrompt />)
+    promptData = { shouldPrompt: true }
+    rerender(<FeedbackPrompt />)
+    expect(screen.queryByTestId("fb-dialog")).toBeNull()
   })
 })

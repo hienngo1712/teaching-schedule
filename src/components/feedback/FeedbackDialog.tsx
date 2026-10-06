@@ -17,16 +17,19 @@ const STARS = [1, 2, 3, 4, 5]
 
 export function FeedbackDialog({ onClose, prompted = false }: { onClose: (sent: boolean) => void; prompted?: boolean }) {
   const { t } = useTranslation()
-  const page = usePathname() ?? "/"
+  // Server giới hạn 100 ký tự: cắt ở đây để đường dẫn dài không làm hỏng lần gửi.
+  const page = (usePathname() ?? "/").slice(0, 100)
+  const utils = trpc.useUtils()
   const [rating, setRating] = useState(0)
   const [message, setMessage] = useState("")
   const starRefs = useRef<(HTMLButtonElement | null)[]>([])
   const submit = trpc.feedback.submit.useMutation({
     onSuccess: () => {
       toast.success(t("feedback_thanks"))
+      utils.feedback.promptStatus.setData(undefined, { shouldPrompt: false })
       onClose(true)
     },
-    onError: (e) => toast.error(e.data?.code === "TOO_MANY_REQUESTS" ? t("feedback_limit") : e.message),
+    onError: (e) => toast.error(e.data?.code === "TOO_MANY_REQUESTS" ? t("feedback_limit") : t("generic_error")),
   })
 
   const pick = (n: number) => {

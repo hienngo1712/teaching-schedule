@@ -3,7 +3,7 @@
 import { useRef, useState } from "react"
 import { saveAs } from "file-saver"
 import Link from "next/link"
-import { Copy, Download, ExternalLink, FileSpreadsheet, Loader2 } from "lucide-react"
+import { ChevronRight, Copy, Download, ExternalLink, FileSpreadsheet, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -165,9 +165,12 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
                 {t(`import_err_${readError}`)}
               </p>
             )}
-            <details data-testid="import-google-form" className="rounded-lg border bg-slate-50 text-sm">
+            <details data-testid="import-google-form" className="group rounded-lg border bg-slate-50 text-sm">
               {/* Gập sẵn: đa số thầy cô đã có file, không để khối dài che nút chọn file. */}
-              <summary className="flex min-h-11 cursor-pointer items-center px-3 font-medium text-slate-900">{t("import_form_title")}</summary>
+              <summary className="flex min-h-11 cursor-pointer items-center gap-1 px-3 font-medium text-slate-900">
+                <ChevronRight className="size-4 shrink-0 text-slate-500 transition-transform group-open:rotate-90" aria-hidden />
+                {t("import_form_title")}
+              </summary>
               <div className="space-y-3 px-3 pb-3">
                 <Button asChild variant="outline" className="h-11 md:h-10">
                   <a href={GOOGLE_FORM_NEW_URL} target="_blank" rel="noopener noreferrer">
