@@ -3,13 +3,17 @@ import {
   IMPORT_COLUMNS,
   MAX_IMPORT_FILE_BYTES,
   MAX_IMPORT_ROWS,
+  mapImportColumnsByName,
   parseImportHeader,
   parseImportRows,
+  remapImportCells,
   type ParsedImportRow,
 } from "@/lib/student-import"
 
 export type ImportReadError = "file" | "size" | "template" | "empty" | "too_many"
-export type ImportReadResult = { ok: true; rows: ParsedImportRow[] } | { ok: false; error: ImportReadError }
+export type ImportReadResult =
+  | { ok: true; rows: ParsedImportRow[]; missingFee: boolean }
+  | { ok: false; error: ImportReadError }
 
 const HEADER_BG = "FFCCFBF1" // cùng màu headerBg của useExcelExport
 
@@ -64,16 +68,22 @@ export async function readImportWorkbook(data: ArrayBuffer): Promise<ImportReadR
   const sheet = wb.worksheets[0]
   if (!sheet) return { ok: false, error: "file" }
 
-  const readCells = (row: Row) => Array.from({ length: 7 }, (_, i) => row.getCell(i + 1).value)
-  const headerLayout = parseImportHeader(readCells(sheet.getRow(1)))
-  if (!headerLayout.valid) return { ok: false, error: "template" }
+  // File Google có thể nhiều hơn 7 cột (Dấu thời gian, câu hỏi thầy cô tự thêm).
+  const width = Math.max(sheet.columnCount, IMPORT_COLUMNS.length)
+  const readCells = (row: Row) => Array.from({ length: width }, (_, i) => row.getCell(i + 1).value)
+  const header = readCells(sheet.getRow(1))
+  const headerLayout = parseImportHeader(header)
+  const byName = headerLayout.valid ? null : mapImportColumnsByName(header)
+  if (!headerLayout.valid && !byName) return { ok: false, error: "template" }
 
   const raw: { rowNumber: number; cells: unknown[] }[] = []
   sheet.eachRow((row, rowNumber) => {
-    if (rowNumber > 1) raw.push({ rowNumber, cells: readCells(row) })
+    if (rowNumber <= 1) return
+    const cells = readCells(row)
+    raw.push({ rowNumber, cells: byName ? remapImportCells(cells, byName) : cells.slice(0, IMPORT_COLUMNS.length) })
   })
-  const rows = parseImportRows(raw, { hasBillingColumn: headerLayout.hasBillingColumn })
+  const rows = parseImportRows(raw, { hasBillingColumn: byName ? true : headerLayout.hasBillingColumn })
   if (rows.length === 0) return { ok: false, error: "empty" }
   if (rows.length > MAX_IMPORT_ROWS) return { ok: false, error: "too_many" }
-  return { ok: true, rows }
+  return { ok: true, rows, missingFee: byName !== null && byName.tuitionFee === undefined }
 }

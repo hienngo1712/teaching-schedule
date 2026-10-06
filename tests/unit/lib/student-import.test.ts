@@ -8,6 +8,10 @@ import {
   nameKey,
   parseImportRows,
   toImportPayload,
+  mapImportColumnsByName,
+  remapImportCells,
+  googleFormCopyUrl,
+  GOOGLE_FORM_TEMPLATE_ID,
   type ParsedImportRow,
 } from "@/lib/student-import"
 
@@ -283,5 +287,37 @@ describe("toImportPayload", () => {
     expect(out[1].errors).toContain("tuitionFee")
     expect(out[2].errors).toEqual([])
   })
+})
+
+describe("mapImportColumnsByName (spec AB §2.2)", () => {
+  it("file Google: bỏ Dấu thời gian, nhận cột theo tên, bỏ dấu và hoa thường", () => {
+    const map = mapImportColumnsByName(["Dấu thời gian", "Họ tên", "Lớp", "Tên phụ huynh", "SĐT phụ huynh", "Ghi chú"])
+    expect(map).toEqual({ fullName: 1, grade: 2, parentName: 3, parentPhone: 4, notes: 5 })
+  })
+  it("tên khác được chấp nhận, Timestamp tiếng Anh, cột lạ bỏ qua, đổi thứ tự", () => {
+    const map = mapImportColumnsByName(["Timestamp", "LỚP", "Trường", "ho va ten", "Số điện thoại phụ huynh"])
+    expect(map).toEqual({ grade: 1, fullName: 3, parentPhone: 4 })
+  })
+  it("trùng tên lấy cột đầu; nhận cả Học phí/buổi, Cách thu, dấu * cuối", () => {
+    const map = mapImportColumnsByName(["Họ tên*", "Họ tên", "Lớp*", "Học phí/buổi", "Cách thu"])
+    expect(map).toEqual({ fullName: 0, grade: 2, tuitionFee: 3, billingMode: 4 })
+  })
+  it("thiếu Họ tên hoặc Lớp → null", () => {
+    expect(mapImportColumnsByName(["Dấu thời gian", "Họ tên", "Tên phụ huynh"])).toBeNull()
+    expect(mapImportColumnsByName(["Lớp", "Ghi chú"])).toBeNull()
+    expect(mapImportColumnsByName([])).toBeNull()
+  })
+})
+
+describe("remapImportCells", () => {
+  it("xếp về đúng thứ tự 7 cột mẫu, cột thiếu là null", () => {
+    const map = { fullName: 1, grade: 2, parentPhone: 4, notes: 5 }
+    expect(remapImportCells(["t", "An", "5", "x", 912345678, "Yếu"], map)).toEqual(["An", "5", null, 912345678, null, null, "Yếu"])
+  })
+})
+
+it("googleFormCopyUrl trỏ tới /copy của form mẫu", () => {
+  expect(googleFormCopyUrl()).toBe(`https://docs.google.com/forms/d/${GOOGLE_FORM_TEMPLATE_ID}/copy`)
+  expect(GOOGLE_FORM_TEMPLATE_ID.length).toBeGreaterThan(0)
 })
 

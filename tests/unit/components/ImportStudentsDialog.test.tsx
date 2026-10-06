@@ -72,7 +72,7 @@ describe("ImportStudentsDialog", () => {
         errors: [],
       },
     ]
-    vi.mocked(readImportWorkbook).mockResolvedValue({ ok: true, rows: mockRows })
+    vi.mocked(readImportWorkbook).mockResolvedValue({ ok: true, rows: mockRows, missingFee: false })
     checkMutateAsync.mockResolvedValue({ matches: [null] })
 
     render(
@@ -118,7 +118,7 @@ describe("ImportStudentsDialog", () => {
         errors: [],
       },
     ]
-    vi.mocked(readImportWorkbook).mockResolvedValue({ ok: true, rows: mockRows })
+    vi.mocked(readImportWorkbook).mockResolvedValue({ ok: true, rows: mockRows, missingFee: false })
     checkMutateAsync.mockResolvedValue({ matches: [null] })
 
     render(

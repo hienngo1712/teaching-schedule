@@ -116,6 +116,45 @@ export function isImportHeader(cells: unknown[]): boolean {
   return parseImportHeader(cells).valid
 }
 
+// Form Google mẫu (spec AB §2.1). Không phải bí mật; thầy cô bấm /copy để có bản riêng trong Drive.
+export const GOOGLE_FORM_TEMPLATE_ID = "THAY_ID_FORM_MAU"
+
+export function googleFormCopyUrl(): string {
+  return `https://docs.google.com/forms/d/${GOOGLE_FORM_TEMPLATE_ID}/copy`
+}
+
+const NAME_ALIASES: Record<ImportField, string[]> = {
+  fullName: ["ho ten", "ho ten hoc sinh", "ho va ten"],
+  grade: ["lop"],
+  parentName: ["ten phu huynh"],
+  parentPhone: ["sdt phu huynh", "so dien thoai phu huynh"],
+  tuitionFee: ["hoc phi", "hoc phi/buoi"],
+  billingMode: ["cach thu"],
+  notes: ["ghi chu"],
+}
+
+export type ImportColumnMap = Partial<Record<ImportField, number>>
+
+// File Google Form / tự làm: tìm cột theo tên, cột lạ bỏ qua, trùng tên lấy cột đầu.
+export function mapImportColumnsByName(cells: unknown[]): ImportColumnMap | null {
+  const map: ImportColumnMap = {}
+  cells.forEach((cell, i) => {
+    const label = stripDiacritics(cellToText(cell)).replace(/\s*\*$/, "")
+    for (const field of Object.keys(NAME_ALIASES) as ImportField[]) {
+      if (map[field] === undefined && NAME_ALIASES[field].includes(label)) map[field] = i
+    }
+  })
+  return map.fullName !== undefined && map.grade !== undefined ? map : null
+}
+
+// Xếp về đúng thứ tự 7 cột của mẫu để dùng chung parseImportRows.
+export function remapImportCells(cells: unknown[], map: ImportColumnMap): unknown[] {
+  return IMPORT_COLUMNS.map((c) => {
+    const i = map[c.field]
+    return i === undefined ? null : cells[i]
+  })
+}
+
 function parseGrade(raw: unknown): number {
   if (typeof raw === "number") return raw
   const m = normalizeText(cellToText(raw)).match(/^(?:lớp\s*)?(\d{1,2})$/)

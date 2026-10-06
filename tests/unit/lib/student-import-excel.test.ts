@@ -114,3 +114,50 @@ describe("buildImportTemplate", () => {
     expect(guide.getRow(3).getCell(3).value).toBe('Số từ 1 đến 12 (ghi "Lớp 5" cũng được)')
   })
 })
+
+describe("readImportWorkbook — file Google Form (spec AB)", () => {
+  it("có Dấu thời gian + cột lạ chen giữa: đọc đúng, học phí 0, theo buổi, missingFee=true", async () => {
+    const data = await makeFile((s) => {
+      s.getRow(1).values = ["Dấu thời gian", "Họ tên", "Lớp", "Trường", "Tên phụ huynh", "SĐT phụ huynh", "Ghi chú"]
+      s.getRow(2).values = ["06/10/2026 9:00:00", "Nguyễn An", "5", "TH Kim Đồng", "Chị Hoa", 912345678, "Yếu toán"]
+      s.getRow(3).values = ["06/10/2026 9:05:00", "Trần Bình", "Lớp 3"]
+    })
+    const res = await readImportWorkbook(data)
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.missingFee).toBe(true)
+    expect(res.rows).toHaveLength(2)
+    expect(res.rows[0].errors).toEqual([])
+    expect(res.rows[0].input).toMatchObject({ fullName: "Nguyễn An", grade: 5, parentName: "Chị Hoa", parentPhone: "0912345678", tuitionFee: 0, billingMode: "per_session", notes: "Yếu toán" })
+    expect(res.rows[1].input).toMatchObject({ fullName: "Trần Bình", grade: 3 })
+  })
+
+  it("đã xoá cột Dấu thời gian (không khớp mẫu vì cột 5 là Ghi chú) vẫn đọc theo tên", async () => {
+    const data = await makeFile((s) => {
+      s.getRow(1).values = ["Họ tên", "Lớp", "Tên phụ huynh", "SĐT phụ huynh", "Ghi chú"]
+      s.getRow(2).values = ["Lê Chi", 7, "", "0987654321", "Học tối"]
+    })
+    const res = await readImportWorkbook(data)
+    expect(res.ok && res.rows[0].input).toMatchObject({ fullName: "Lê Chi", grade: 7, parentPhone: "0987654321", notes: "Học tối" })
+  })
+
+  it("thiếu cột Lớp → template", async () => {
+    const data = await makeFile((s) => {
+      s.getRow(1).values = ["Dấu thời gian", "Họ tên", "SĐT phụ huynh"]
+      s.getRow(2).values = ["x", "An", "0912345678"]
+    })
+    expect(await readImportWorkbook(data)).toEqual({ ok: false, error: "template" })
+  })
+
+  it("mẫu chuẩn vẫn đi đường cũ, missingFee=false", async () => {
+    const data = await makeFile((s) => {
+      s.getRow(1).values = HEADER
+      s.getRow(2).values = ["Nguyễn An", 5, "", "", 150000, "tháng", ""]
+    })
+    const res = await readImportWorkbook(data)
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.missingFee).toBe(false)
+    expect(res.rows[0].input).toMatchObject({ billingMode: "monthly", monthlyFee: 150000 })
+  })
+})
