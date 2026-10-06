@@ -37,6 +37,8 @@ model User {
   // Bản "Có gì mới" đã xem gần nhất; null = chưa xem bản nào (spec W §5.4).
   lastSeenRelease       String?   @map("last_seen_release") @db.VarChar(20)
   onboardingDismissedAt DateTime? @map("onboarding_dismissed_at")
+  // Đã tự hỏi góp ý (gửi hay đóng đều tính); khác null thì không tự hỏi nữa (spec AB §3.1).
+  feedbackPromptAt      DateTime? @map("feedback_prompt_at")
   loginAttempts LoginAttempt[]
   students      Student[]
   subjects      Subject[]
@@ -44,6 +46,7 @@ model User {
   classUpgradeLogs ClassUpgradeLog[]
   planOrders    PlanOrder[]
   activityDays  UserActivityDay[]
+  feedbacks     Feedback[]
 
   @@map("users")
 }
@@ -336,3 +339,20 @@ model SecurityEvent {
   @@index([userId, createdAt])
   @@map("security_events")
 }
+
+// Góp ý của giáo viên (spec AB). CASCADE để tests/setup.ts xoá users không vỡ.
+model Feedback {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  rating     Int
+  message    String?  @db.VarChar(1000)
+  page       String   @db.VarChar(100)
+  appVersion String   @map("app_version") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("feedbacks")
+}
+
