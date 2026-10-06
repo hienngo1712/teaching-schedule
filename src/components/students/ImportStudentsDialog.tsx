@@ -185,7 +185,7 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
                     <ul className="mt-2 space-y-1">
                       {GOOGLE_FORM_QUESTIONS.map((q) => (
                         <li key={q.title} data-testid="google-form-question" className="flex items-center gap-2">
-                          <code className="rounded bg-white px-2 py-1 font-medium text-slate-900 ring-1 ring-slate-200">{q.title}</code>
+                          <span data-testid="google-form-question-title" className="rounded bg-white px-2 py-1 font-medium text-slate-900 ring-1 ring-slate-200">{q.title}</span>
                           {q.required && <span className="text-xs text-amber-700">{t("import_form_required")}</span>}
                           <Button
                             type="button"

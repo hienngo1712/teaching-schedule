@@ -13,6 +13,16 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.13.1",
+    date: "2026-10-06",
+    title: "Sửa chữ tên câu hỏi Google Form",
+    summary: "Tên câu hỏi gợi ý trong hộp Nhập Excel hiện đúng chữ có dấu.",
+    notify: false,
+    items: [
+      { kind: "fix", title: "Tên câu hỏi hiện đúng", body: "Tên câu hỏi như Họ tên, Lớp không còn bị vẽ lệch thành chữ hoa.", guideId: "nhap-excel" },
+    ],
+  },
+  {
     version: "0.13.0",
     date: "2026-10-06",
     title: "Phụ huynh tự điền danh sách, hòm thư góp ý",

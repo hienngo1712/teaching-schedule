@@ -163,7 +163,13 @@ describe("ImportStudentsDialog", () => {
     expect(link.getAttribute("rel")).toContain("noopener")
     expect(link.textContent).toContain("(mở tab mới)")
     const items = within(box).getAllByTestId("google-form-question")
-    expect(items.map((li) => li.querySelector("code")?.textContent)).toEqual(["Họ tên", "Lớp", "Tên phụ huynh", "SĐT phụ huynh", "Ghi chú"])
+    const titles = items.map((li) => li.querySelector('[data-testid="google-form-question-title"]')!)
+    expect(titles.map((el) => el.textContent)).toEqual(["Họ tên", "Lớp", "Tên phụ huynh", "SĐT phụ huynh", "Ghi chú"])
+    // Font đơn cách (<code>/font-mono) thiếu chữ Việt có dấu: "Họ" bị vẽ thành "HỌ".
+    for (const el of titles) {
+      expect(el.tagName).not.toBe("CODE")
+      expect(el.className).not.toContain("font-mono")
+    }
     expect(items[0].textContent).toContain("bật Bắt buộc")
     expect(items[2].textContent).not.toContain("bật Bắt buộc")
     expect(within(box).getByRole("link", { name: /Xem hướng dẫn chi tiết/ }).getAttribute("href")).toBe("/guide#nhap-excel")
