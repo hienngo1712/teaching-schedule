@@ -17,6 +17,10 @@ globalThis.ResizeObserver ??= class {
 
 const download = vi.hoisted(() => vi.fn())
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/dashboard",
+}))
+
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ release: { status: { setData: vi.fn() } } }),
@@ -24,11 +28,16 @@ vi.mock("@/lib/trpc", () => ({
       status: { useQuery: () => ({ data: { lastSeenRelease: RELEASES[0].version } }) },
       markSeen: { useMutation: () => ({ mutate: vi.fn() }) },
     },
+    feedback: {
+      submit: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+    },
   },
 }))
 
+let currentSession = { user: { username: "admin_test", fullName: "Quản trị Test" } }
+
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: { user: { username: "admin_test", fullName: "Quản trị Test" } } }),
+  useSession: () => ({ data: currentSession }),
   signOut: vi.fn(),
 }))
 vi.mock("@/hooks/useBackupDownload", () => ({ useBackupDownload: () => ({ download, isDownloading: false }) }))
@@ -65,14 +74,24 @@ describe("AppHeader", () => {
     })) as unknown as typeof window.matchMedia
   })
 
-  it("mặc định (giáo viên): có RenewOffer; menu Sao lưu dữ liệu, Đổi mật khẩu, Đăng xuất; không có Quản trị", async () => {
+  it("mặc định (giáo viên): có RenewOffer; menu Sao lưu dữ liệu, Góp ý, Đổi mật khẩu, Đăng xuất; không có Quản trị", async () => {
+    currentSession = { user: { username: "teacher", fullName: "Cô Mai" } }
     renderHeader()
     expect(screen.getByTestId("renew-offer-slot")).toBeTruthy()
     const items = await screen.findAllByRole("menuitem")
-    expect(items.map((i) => i.textContent)).toEqual(["Sao lưu dữ liệu", "Đổi mật khẩu", "Đăng xuất"])
+    expect(items.map((i) => i.textContent)).toEqual(["Sao lưu dữ liệu", "Góp ý", "Đổi mật khẩu", "Đăng xuất"])
+  })
+
+  it("giáo viên mở menu có Góp ý, bấm vào hiện dialog Góp ý cho app", async () => {
+    currentSession = { user: { username: "teacher", fullName: "Cô Mai" } }
+    renderHeader()
+    const feedbackItem = await screen.findByRole("menuitem", { name: "Góp ý" })
+    fireEvent.click(feedbackItem)
+    expect(await screen.findByRole("heading", { name: "Góp ý cho app" })).toBeTruthy()
   })
 
   it("bấm Sao lưu dữ liệu → hiện dialog cảnh báo, bấm Tôi hiểu tải xuống mới gọi download", async () => {
+    currentSession = { user: { username: "teacher", fullName: "Cô Mai" } }
     renderHeader()
     const backupItem = await screen.findByRole("menuitem", { name: "Sao lưu dữ liệu" })
     fireEvent.click(backupItem)
@@ -84,12 +103,14 @@ describe("AppHeader", () => {
     expect(download).toHaveBeenCalledTimes(1)
   })
 
-  it("admin: không RenewOffer; menu Quản trị (link /admin/overview), Đổi mật khẩu, Đăng xuất; không Sao lưu", async () => {
+  it("admin: không RenewOffer; menu Quản trị (link /admin/overview), Đổi mật khẩu, Đăng xuất; không Sao lưu, không Góp ý", async () => {
+    currentSession = { user: { username: "admin_test", fullName: "Quản trị Test" } }
     renderHeader("admin")
     expect(screen.queryByTestId("renew-offer-slot")).toBeNull()
     const items = await screen.findAllByRole("menuitem")
     expect(items.map((i) => i.textContent)).toEqual(["Quản trị", "Đổi mật khẩu", "Đăng xuất"])
     expect(screen.getByRole("menuitem", { name: "Quản trị" }).getAttribute("href")).toBe("/admin/overview")
+    expect(screen.queryByRole("menuitem", { name: "Góp ý" })).toBeNull()
   })
 
   it("giáo viên: nhãn gói nằm trong nút menu tài khoản, chỉ hiện ở mobile", () => {
