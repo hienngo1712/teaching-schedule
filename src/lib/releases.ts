@@ -13,6 +13,17 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.13.0",
+    date: "2026-10-06",
+    title: "Phụ huynh tự điền danh sách, hòm thư góp ý",
+    summary: "Gửi Google Form cho phụ huynh điền thông tin học sinh rồi nhập thẳng vào app. Thêm mục Góp ý để thầy cô chấm điểm và gửi ý kiến.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Nhờ phụ huynh điền qua Google Form", body: "Ở Nhập Excel, có hướng dẫn tạo Google Form 5 câu hỏi để phụ huynh điền. Tải câu trả lời về dạng .xlsx rồi nhập thẳng, không phải sửa file.", guideId: "nhap-excel" },
+      { kind: "new", title: "Hòm thư góp ý", body: "Mở menu tài khoản, chọn Góp ý để chấm 1 đến 5 sao và ghi điều cần thêm, cần sửa." },
+    ],
+  },
+  {
     version: "0.12.0",
     date: "2026-10-05",
     title: "Hướng dẫn có ảnh minh hoạ",

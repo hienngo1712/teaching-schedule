@@ -11,7 +11,7 @@ export function periodKey(p: string | null): keyof typeof vi {
   return p === "2year" ? "plan_period_2year" : p
 }
 
-export function dateOrDash(d: string | null): string {
+export function dateOrDash(d: string | Date | null): string {
   return d ? formatVnDate(new Date(d)) : "-"
 }
 

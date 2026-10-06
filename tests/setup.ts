@@ -47,6 +47,7 @@ beforeAll(async () => {
     await db.planOrder.deleteMany()
     await db.consentRecord.deleteMany()
     await db.securityEvent.deleteMany()
+    await db.feedback.deleteMany()
     await db.user.deleteMany()
   } catch (error) {
     console.error("\n❌ [DATABASE ERROR]: Không thể reset database test.")
@@ -69,6 +70,7 @@ beforeAll(async () => {
       // Không để ô "Có gì mới" / thẻ Bắt đầu che e2e cũ; e2e của W tự đặt lại null (spec W).
       lastSeenRelease: RELEASES[0].version,
       onboardingDismissedAt: new Date(),
+      feedbackPromptAt: new Date(),
     },
   })
 
@@ -82,6 +84,7 @@ beforeAll(async () => {
       // Không để ô "Có gì mới" / thẻ Bắt đầu che e2e cũ; e2e của W tự đặt lại null (spec W).
       lastSeenRelease: RELEASES[0].version,
       onboardingDismissedAt: new Date(),
+      feedbackPromptAt: new Date(),
     },
   })
 
@@ -93,6 +96,7 @@ beforeAll(async () => {
       // Không để ô "Có gì mới" / thẻ Bắt đầu che e2e cũ; e2e của W tự đặt lại null (spec W).
       lastSeenRelease: RELEASES[0].version,
       onboardingDismissedAt: new Date(),
+      feedbackPromptAt: new Date(),
     },
   })
 
@@ -104,6 +108,7 @@ beforeAll(async () => {
       // Không để ô "Có gì mới" / thẻ Bắt đầu che e2e cũ; e2e của W tự đặt lại null (spec W).
       lastSeenRelease: RELEASES[0].version,
       onboardingDismissedAt: new Date(),
+      feedbackPromptAt: new Date(),
     },
   })
 

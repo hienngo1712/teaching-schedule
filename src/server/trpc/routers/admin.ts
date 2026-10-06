@@ -1,3 +1,4 @@
+import { z } from "zod"
 import { adminProcedure, createTRPCRouter } from "@/server/trpc"
 import {
   accountTrendSchema,
@@ -20,6 +21,7 @@ import { adminDeleteUser, adminRestoreUser, listDeletedUsers } from "@/server/se
 import { getRevenue } from "@/server/services/revenue.service"
 import { getAccountTrend, getAdminStats } from "@/server/services/admin-stats.service"
 import { getNewAccounts, markAccountsSeen } from "@/server/services/new-accounts.service"
+import { listFeedback } from "@/server/services/feedback.service"
 
 export const adminRouter = createTRPCRouter({
   overview: adminProcedure.query(({ ctx }) => getAdminOverview(ctx.db)),
@@ -82,4 +84,8 @@ export const adminRouter = createTRPCRouter({
     .mutation(({ ctx, input }) => adminRestoreUser(ctx.db, ctx.session.user.username, input.userId)),
 
   deletedUsers: adminProcedure.query(({ ctx }) => listDeletedUsers(ctx.db)),
+
+  feedbackList: adminProcedure
+    .input(z.object({ cursor: z.number().int().positive().optional() }))
+    .query(({ ctx, input }) => listFeedback(ctx.db, input.cursor)),
 })

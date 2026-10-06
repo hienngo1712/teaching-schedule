@@ -8,6 +8,10 @@ import {
   nameKey,
   parseImportRows,
   toImportPayload,
+  mapImportColumnsByName,
+  remapImportCells,
+  GOOGLE_FORM_NEW_URL,
+  GOOGLE_FORM_QUESTIONS,
   type ParsedImportRow,
 } from "@/lib/student-import"
 
@@ -282,6 +286,46 @@ describe("toImportPayload", () => {
     expect(out[0].errors).toContain("tuitionFee")
     expect(out[1].errors).toContain("tuitionFee")
     expect(out[2].errors).toEqual([])
+  })
+})
+
+describe("mapImportColumnsByName (spec AB §2.2)", () => {
+  it("file Google: bỏ Dấu thời gian, nhận cột theo tên, bỏ dấu và hoa thường", () => {
+    const map = mapImportColumnsByName(["Dấu thời gian", "Họ tên", "Lớp", "Tên phụ huynh", "SĐT phụ huynh", "Ghi chú"])
+    expect(map).toEqual({ fullName: 1, grade: 2, parentName: 3, parentPhone: 4, notes: 5 })
+  })
+  it("tên khác được chấp nhận, Timestamp tiếng Anh, cột lạ bỏ qua, đổi thứ tự", () => {
+    const map = mapImportColumnsByName(["Timestamp", "LỚP", "Trường", "ho va ten", "Số điện thoại phụ huynh"])
+    expect(map).toEqual({ grade: 1, fullName: 3, parentPhone: 4 })
+  })
+  it("trùng tên lấy cột đầu; nhận cả Học phí/buổi, Cách thu, dấu * cuối", () => {
+    const map = mapImportColumnsByName(["Họ tên*", "Họ tên", "Lớp*", "Học phí/buổi", "Cách thu"])
+    expect(map).toEqual({ fullName: 0, grade: 2, tuitionFee: 3, billingMode: 4 })
+  })
+  it("thiếu Họ tên hoặc Lớp → null", () => {
+    expect(mapImportColumnsByName(["Dấu thời gian", "Họ tên", "Tên phụ huynh"])).toBeNull()
+    expect(mapImportColumnsByName(["Lớp", "Ghi chú"])).toBeNull()
+    expect(mapImportColumnsByName([])).toBeNull()
+  })
+})
+
+describe("remapImportCells", () => {
+  it("xếp về đúng thứ tự 7 cột mẫu, cột thiếu là null", () => {
+    const map = { fullName: 1, grade: 2, parentPhone: 4, notes: 5 }
+    expect(remapImportCells(["t", "An", "5", "x", 912345678, "Yếu"], map)).toEqual(["An", "5", null, 912345678, null, null, "Yếu"])
+  })
+})
+
+describe("câu hỏi Google Form gợi ý (spec AB §2.1)", () => {
+  it("5 tên câu hỏi đọc ra đủ 5 trường khi đứng sau Dấu thời gian", () => {
+    expect(GOOGLE_FORM_QUESTIONS.map((q) => q.title)).toEqual(["Họ tên", "Lớp", "Tên phụ huynh", "SĐT phụ huynh", "Ghi chú"])
+    expect(mapImportColumnsByName(["Dấu thời gian", ...GOOGLE_FORM_QUESTIONS.map((q) => q.title)])).toEqual({
+      fullName: 1, grade: 2, parentName: 3, parentPhone: 4, notes: 5,
+    })
+  })
+  it("chỉ Họ tên và Lớp bắt buộc; nút mở forms.new", () => {
+    expect(GOOGLE_FORM_QUESTIONS.filter((q) => q.required).map((q) => q.title)).toEqual(["Họ tên", "Lớp"])
+    expect(GOOGLE_FORM_NEW_URL).toBe("https://forms.new")
   })
 })
 

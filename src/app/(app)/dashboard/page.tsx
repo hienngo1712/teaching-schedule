@@ -8,6 +8,7 @@ import { StatCard } from "@/components/common/StatCard"
 import { TodaySessions } from "@/components/dashboard/TodaySessions"
 import { DashboardAlerts } from "@/components/dashboard/DashboardAlerts"
 import { StartCard } from "@/components/dashboard/StartCard"
+import { FeedbackPrompt } from "@/components/feedback/FeedbackPrompt"
 import { trpc } from "@/lib/trpc"
 import { cn, formatCurrency } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -23,6 +24,7 @@ export default function DashboardPage() {
       <PageHeader title={t("dashboard")} />
 
       <StartCard />
+      <FeedbackPrompt />
 
       <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         <StatCard

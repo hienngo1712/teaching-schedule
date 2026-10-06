@@ -11,9 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { DatabaseBackup, KeyRound, LogOut, Languages, ShieldCheck } from "lucide-react"
+import { DatabaseBackup, KeyRound, LogOut, Languages, MessageSquare, ShieldCheck } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { BackupConfirmDialog } from "./BackupConfirmDialog"
+import { FeedbackDialog } from "@/components/feedback/FeedbackDialog"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
 import { RenewOffer } from "@/components/plan/RenewOffer"
@@ -35,6 +36,7 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
   const { t, language, setLanguage } = useTranslation()
   const backup = useBackupDownload()
   const [confirmBackup, setConfirmBackup] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const fullName = session?.user?.fullName ?? session?.user?.username ?? t("teacher_fallback")
 
   return (
@@ -91,10 +93,16 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
                 </Link>
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem onSelect={() => setConfirmBackup(true)} disabled={backup.isDownloading}>
-                <DatabaseBackup className="size-4 mr-2" />
-                {t("backup_data")}
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem onSelect={() => setConfirmBackup(true)} disabled={backup.isDownloading}>
+                  <DatabaseBackup className="size-4 mr-2" />
+                  {t("backup_data")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setFeedbackOpen(true)}>
+                  <MessageSquare className="size-4 mr-2" />
+                  {t("feedback_menu")}
+                </DropdownMenuItem>
+              </>
             )}
             <ChangePasswordDialog
               trigger={
@@ -123,6 +131,8 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
             backup.download()
           }}
         />
+
+        {feedbackOpen && <FeedbackDialog onClose={() => setFeedbackOpen(false)} />}
       </div>
     </header>
   )

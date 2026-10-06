@@ -23,7 +23,7 @@ function renderVi(ui: React.ReactNode) {
 }
 
 describe("AdminSidebar", () => {
-  it("logo Lịch dạy + nhãn Quản trị; đúng 6 mục admin, mục đang mở aria-current; số đơn chờ; không có mục giáo viên", () => {
+  it("logo Lịch dạy + nhãn Quản trị; đúng 7 mục admin, mục đang mở aria-current; số đơn chờ; không có mục giáo viên", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/history")
     pending.data = { count: 2 }
     renderVi(<AdminSidebar />)
@@ -36,6 +36,7 @@ describe("AdminSidebar", () => {
       "/admin/history",
       "/admin/prices",
       "/admin/revenue",
+      "/admin/feedback",
     ])
     expect(screen.getByRole("link", { name: "Lịch sử đơn" }).getAttribute("aria-current")).toBe("page")
     expect(screen.getByRole("link", { name: /Tài khoản & gói/ }).getAttribute("aria-current")).toBeNull()
@@ -53,7 +54,7 @@ describe("AdminSidebar", () => {
 })
 
 describe("AdminTabBar", () => {
-  it("6 tab nhãn ngắn, tab đang mở aria-current", () => {
+  it("7 tab nhãn ngắn, tab đang mở aria-current", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/accounts")
     renderVi(<AdminTabBar />)
     const links = screen.getAllByRole("link")
@@ -64,10 +65,11 @@ describe("AdminTabBar", () => {
       ["/admin/history", "Lịch sử"],
       ["/admin/prices", "Bảng giá"],
       ["/admin/revenue", "Doanh thu"],
+      ["/admin/feedback", "Góp ý"],
     ])
     expect(screen.getByRole("link", { name: "Tài khoản" }).getAttribute("aria-current")).toBe("page")
     expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).className).toContain("md:hidden")
-    expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).querySelector("ul")?.className).toContain("grid-cols-6")
+    expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).querySelector("ul")?.className).toContain("grid-cols-7")
   })
 
   it("tab Đơn chờ có số đơn chờ ở góc icon; 0 đơn → không có", () => {
