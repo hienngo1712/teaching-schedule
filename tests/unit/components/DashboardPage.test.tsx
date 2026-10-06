@@ -24,6 +24,7 @@ vi.mock("@/lib/trpc", () => ({
 vi.mock("@/components/dashboard/StartCard", () => ({ StartCard: () => null }))
 vi.mock("@/components/dashboard/DashboardAlerts", () => ({ DashboardAlerts: () => null }))
 vi.mock("@/components/dashboard/TodaySessions", () => ({ TodaySessions: () => null }))
+vi.mock("@/components/feedback/FeedbackPrompt", () => ({ FeedbackPrompt: () => null }))
 
 function renderPage() {
   return render(
