@@ -10,8 +10,8 @@ import {
   toImportPayload,
   mapImportColumnsByName,
   remapImportCells,
-  googleFormCopyUrl,
-  GOOGLE_FORM_TEMPLATE_ID,
+  GOOGLE_FORM_NEW_URL,
+  GOOGLE_FORM_QUESTIONS,
   type ParsedImportRow,
 } from "@/lib/student-import"
 
@@ -316,8 +316,16 @@ describe("remapImportCells", () => {
   })
 })
 
-it("googleFormCopyUrl trỏ tới /copy của form mẫu", () => {
-  expect(googleFormCopyUrl()).toBe(`https://docs.google.com/forms/d/${GOOGLE_FORM_TEMPLATE_ID}/copy`)
-  expect(GOOGLE_FORM_TEMPLATE_ID.length).toBeGreaterThan(0)
+describe("câu hỏi Google Form gợi ý (spec AB §2.1)", () => {
+  it("5 tên câu hỏi đọc ra đủ 5 trường khi đứng sau Dấu thời gian", () => {
+    expect(GOOGLE_FORM_QUESTIONS.map((q) => q.title)).toEqual(["Họ tên", "Lớp", "Tên phụ huynh", "SĐT phụ huynh", "Ghi chú"])
+    expect(mapImportColumnsByName(["Dấu thời gian", ...GOOGLE_FORM_QUESTIONS.map((q) => q.title)])).toEqual({
+      fullName: 1, grade: 2, parentName: 3, parentPhone: 4, notes: 5,
+    })
+  })
+  it("chỉ Họ tên và Lớp bắt buộc; nút mở forms.new", () => {
+    expect(GOOGLE_FORM_QUESTIONS.filter((q) => q.required).map((q) => q.title)).toEqual(["Họ tên", "Lớp"])
+    expect(GOOGLE_FORM_NEW_URL).toBe("https://forms.new")
+  })
 })
 

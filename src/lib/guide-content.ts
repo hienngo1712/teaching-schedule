@@ -71,6 +71,10 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       "Điền mỗi học sinh 1 dòng theo đúng cột trong file mẫu, lưu lại.",
       { text: "Chọn file đã điền. App hiện bảng xem trước, dòng lỗi được tô đỏ kèm lý do.", shot: "nhap-excel-xem-truoc" },
       "Sửa dòng lỗi trong file rồi chọn lại, hoặc bỏ qua dòng lỗi. Tick ô đồng ý và bấm nhập.",
+      "Chưa có danh sách: trong hộp **Nhập Excel** mở **Chưa có danh sách? Nhờ phụ huynh điền qua Google Form**, bấm **Tạo Google Form** (cần tài khoản Google).",
+      "Tạo 5 câu hỏi đúng tên: **Họ tên**, **Lớp**, **Tên phụ huynh**, **SĐT phụ huynh**, **Ghi chú** (bấm nút sao chép cạnh từng tên rồi dán). Họ tên và Lớp bật **Bắt buộc**; Lớp nên dùng **Menu thả xuống** 1 đến 12.",
+      "Bấm **Xuất bản**, gửi link cho phụ huynh. Đủ câu trả lời: tab **Câu trả lời** → **Liên kết với Trang tính** → **Tệp → Tải xuống → Microsoft Excel (.xlsx)**.",
+      "Chọn file vừa tải ở hộp **Nhập Excel** như file mẫu. File từ form không có học phí: học sinh có học phí 0đ, sửa trong hồ sơ học sinh.",
     ],
   },
   {

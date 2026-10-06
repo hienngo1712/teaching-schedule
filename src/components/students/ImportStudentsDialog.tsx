@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react"
 import { saveAs } from "file-saver"
-import { Download, FileSpreadsheet, Loader2 } from "lucide-react"
+import Link from "next/link"
+import { Copy, Download, ExternalLink, FileSpreadsheet, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -17,7 +18,14 @@ import { Label } from "@/components/ui/label"
 import { trpc } from "@/lib/trpc"
 import { cn, formatCurrency } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-import { buildPreview, toImportPayload, MAX_IMPORT_FILE_BYTES, type PreviewRow } from "@/lib/student-import"
+import {
+  buildPreview,
+  GOOGLE_FORM_NEW_URL,
+  GOOGLE_FORM_QUESTIONS,
+  toImportPayload,
+  MAX_IMPORT_FILE_BYTES,
+  type PreviewRow,
+} from "@/lib/student-import"
 import { buildImportTemplate, readImportWorkbook, type ImportReadError } from "@/lib/student-import-excel"
 import { CONSENT_ACCEPTED, isConsentError } from "@/lib/consent"
 import { ConsentCheckbox } from "@/components/common/ConsentCheckbox"
@@ -27,6 +35,7 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<PreviewRow[] | null>(null)
+  const [missingFee, setMissingFee] = useState(false)
   const [allowed, setAllowed] = useState<Set<number>>(new Set())
   const [readError, setReadError] = useState<ImportReadError | null>(null)
   const [reading, setReading] = useState(false)
@@ -54,6 +63,15 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
     }
   }
 
+  const copyTitle = async (title: string) => {
+    try {
+      await navigator.clipboard.writeText(title)
+      toast.success(t("import_form_copied").replace("{title}", title))
+    } catch {
+      toast.error(t("import_form_copy_failed"))
+    }
+  }
+
   const handleFile = async (file: File) => {
     setReadError(null)
     setReading(true)
@@ -68,6 +86,7 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
         setReadError(result.error)
         return
       }
+      setMissingFee(result.missingFee)
       const valid = result.rows.filter((r) => r.errors.length === 0)
       const { matches } =
         valid.length > 0
@@ -146,6 +165,50 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
                 {t(`import_err_${readError}`)}
               </p>
             )}
+            <details data-testid="import-google-form" className="rounded-lg border bg-slate-50 text-sm">
+              {/* Gập sẵn: đa số thầy cô đã có file, không để khối dài che nút chọn file. */}
+              <summary className="flex min-h-11 cursor-pointer items-center px-3 font-medium text-slate-900">{t("import_form_title")}</summary>
+              <div className="space-y-3 px-3 pb-3">
+                <Button asChild variant="outline" className="h-11 md:h-10">
+                  <a href={GOOGLE_FORM_NEW_URL} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 size-4" aria-hidden />
+                    {t("import_form_button")}
+                    <span className="sr-only"> {t("opens_new_tab")}</span>
+                  </a>
+                </Button>
+                <ol className="list-decimal space-y-2 pl-5 text-slate-600">
+                  <li>
+                    {t("import_form_step1")}
+                    <ul className="mt-2 space-y-1">
+                      {GOOGLE_FORM_QUESTIONS.map((q) => (
+                        <li key={q.title} data-testid="google-form-question" className="flex items-center gap-2">
+                          <code className="rounded bg-white px-2 py-1 font-medium text-slate-900 ring-1 ring-slate-200">{q.title}</code>
+                          {q.required && <span className="text-xs text-amber-700">{t("import_form_required")}</span>}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => void copyTitle(q.title)}
+                            aria-label={t("import_form_copy").replace("{title}", q.title)}
+                            className="ml-auto size-11 md:size-8"
+                          >
+                            <Copy className="size-4" aria-hidden />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1 text-xs text-slate-500">{t("import_form_grade_tip")}</p>
+                  </li>
+                  <li>{t("import_form_step2")}</li>
+                  <li>{t("import_form_step3")}</li>
+                  <li>{t("import_form_step4")}</li>
+                </ol>
+                <Link href="/guide#nhap-excel" target="_blank" className="inline-flex min-h-11 items-center text-primary underline-offset-2 hover:underline md:min-h-0">
+                  {t("import_form_guide")}
+                  <span className="sr-only"> {t("opens_new_tab")}</span>
+                </Link>
+              </div>
+            </details>
           </div>
         ) : (
           <>
@@ -155,6 +218,11 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
                 .replace("{dup}", count("duplicate"))
                 .replace("{err}", count("error"))}
             </p>
+            {missingFee && (
+              <p data-testid="import-missing-fee" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {t("import_missing_fee")}
+              </p>
+            )}
             <ul className="space-y-2">
               {preview.map((row) => {
                 const isMonthly = row.input.billingMode === "monthly"

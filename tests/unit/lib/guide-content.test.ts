@@ -10,6 +10,7 @@ import {
   stepText,
 } from "@/lib/guide-content"
 import { RELEASES } from "@/lib/releases"
+import { GOOGLE_FORM_QUESTIONS } from "@/lib/student-import"
 
 const EXPECTED_IDS = [
   "bat-dau", "mon-hoc", "hoc-sinh", "nhap-excel", "lich-day", "diem-danh", "hoc-phi",
@@ -48,6 +49,13 @@ describe("guide-content (spec W §3.1)", () => {
     expect(tips).not.toContain("Tài khoản mới được dùng thử gói Pro")
     expect(tips).toContain("Standard")
     expect(tips.toLowerCase()).toContain("quản trị viên")
+  })
+
+  it("mục nhập Excel có cách tự tạo Google Form (spec AB)", () => {
+    const text = JSON.stringify(GUIDE_SECTIONS.find((s) => s.id === "nhap-excel"))
+    expect(text).toContain("**Tạo Google Form**")
+    for (const q of GOOGLE_FORM_QUESTIONS) expect(text).toContain(`**${q.title}**`)
+    expect(text).toContain("Microsoft Excel (.xlsx)")
   })
 })
 

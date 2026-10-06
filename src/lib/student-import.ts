@@ -116,12 +116,15 @@ export function isImportHeader(cells: unknown[]): boolean {
   return parseImportHeader(cells).valid
 }
 
-// Form Google mẫu (spec AB §2.1). Không phải bí mật; thầy cô bấm /copy để có bản riêng trong Drive.
-export const GOOGLE_FORM_TEMPLATE_ID = "THAY_ID_FORM_MAU"
-
-export function googleFormCopyUrl(): string {
-  return `https://docs.google.com/forms/d/${GOOGLE_FORM_TEMPLATE_ID}/copy`
-}
+// Thầy cô tự tạo form trong tài khoản Google của mình (spec AB §2.1); tên câu hỏi phải nằm trong NAME_ALIASES.
+export const GOOGLE_FORM_NEW_URL = "https://forms.new"
+export const GOOGLE_FORM_QUESTIONS = [
+  { title: "Họ tên", required: true },
+  { title: "Lớp", required: true },
+  { title: "Tên phụ huynh", required: false },
+  { title: "SĐT phụ huynh", required: false },
+  { title: "Ghi chú", required: false },
+] as const
 
 const NAME_ALIASES: Record<ImportField, string[]> = {
   fullName: ["ho ten", "ho ten hoc sinh", "ho va ten"],
