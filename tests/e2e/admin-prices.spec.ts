@@ -119,11 +119,11 @@ test('desktop: admin sửa giá Plus (xem trước, lỗi tại chỗ, xác nh�
   await std.context().close();
 });
 
-test('390px: tab bar 7 tab ≥44px, form Pro trên Plus, ô/nút ≥44px, lịch sử dạng thẻ, không tràn ngang', async ({ browser }) => {
+test('390px: tab bar 8 tab ≥44px, form Pro trên Plus, ô/nút ≥44px, lịch sử dạng thẻ, không tràn ngang', async ({ browser }) => {
   await db.planPriceChange.create({ data: { plan: 'plus', monthPrice: 59000, previousMonthPrice: 49000, changedBy: 'e2e_price' } });
   const admin = await loginAs(browser, 'admin_test', MOBILE);
   const tabs = admin.getByRole('navigation', { name: 'Điều hướng chính' });
-  await expect(tabs.getByRole('link')).toHaveCount(7);
+  await expect(tabs.getByRole('link')).toHaveCount(8);
   for (const link of await tabs.getByRole('link').all()) {
     expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }

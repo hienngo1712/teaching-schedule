@@ -13,6 +13,16 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.14.0",
+    date: "2026-10-07",
+    title: "Nhắn tin với hỗ trợ",
+    summary: "Bấm nút tin nhắn trên thanh trên cùng để hỏi cách dùng, báo lỗi hay góp ý. Admin trả lời ngay trong app.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Khung chat trực tiếp", body: "Nút tin nhắn có số tin chưa đọc. Mở ra để xem trả lời và gửi tiếp, không cần chuyển sang Zalo." },
+    ],
+  },
+  {
     version: "0.13.1",
     date: "2026-10-06",
     title: "Sửa chữ tên câu hỏi Google Form",

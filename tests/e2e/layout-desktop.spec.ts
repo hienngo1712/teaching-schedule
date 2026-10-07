@@ -74,6 +74,8 @@ test.describe('Sidebar desktop 1280px', () => {
     await page.goto('/calendar');
     const today = page.locator('.calendar-day-cell--today').first();
     await expect(today).toBeVisible();
+    // Chuột còn ở chỗ nút Đăng nhập; ngày nào ô hôm nay nằm đúng đó thì dính nền hover.
+    await page.mouse.move(0, 0);
     await expect(today).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     await expect(today).toHaveCSS('background-image', /rgba\(15, 118, 110, 0\.08\)/);
   });

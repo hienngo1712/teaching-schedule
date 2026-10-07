@@ -10,6 +10,7 @@ export const ENCRYPTED_FIELDS = {
   MonthlyTuition: ["notes"],
   Payment: ["note"],
   PlanOrder: ["note"],
+  ChatMessage: ["body"],
 } as const
 
 export const ENCRYPTED_KEYS: ReadonlySet<string> = new Set<string>(Object.values(ENCRYPTED_FIELDS).flat())

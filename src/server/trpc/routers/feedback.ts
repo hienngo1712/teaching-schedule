@@ -1,19 +1,11 @@
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
-import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
-import { isAdminUsername } from "@/lib/admin"
+import { createTRPCRouter, teacherProcedure } from "@/server/trpc"
 import {
   FEEDBACK_MESSAGE_MAX,
   dismissFeedbackPrompt,
   getFeedbackPromptStatus,
   submitFeedback,
 } from "@/server/services/feedback.service"
-
-// Góp ý chỉ dành cho giáo viên; admin không dùng app như giáo viên.
-const teacherProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (isAdminUsername(ctx.session.user.username)) throw new TRPCError({ code: "FORBIDDEN" })
-  return next()
-})
 
 export const feedbackRouter = createTRPCRouter({
   submit: teacherProcedure

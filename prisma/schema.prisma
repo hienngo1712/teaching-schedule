@@ -47,6 +47,7 @@ model User {
   planOrders    PlanOrder[]
   activityDays  UserActivityDay[]
   feedbacks     Feedback[]
+  chatConversation ChatConversation?
 
   @@map("users")
 }
@@ -354,5 +355,38 @@ model Feedback {
   @@index([createdAt])
   @@index([userId, createdAt])
   @@map("feedbacks")
+}
+
+// Mỗi giáo viên 1 cuộc trò chuyện với đội hỗ trợ (spec AC §4). CASCADE để tests/setup.ts xoá users không vỡ.
+model ChatConversation {
+  id               Int       @id @default(autoincrement())
+  userId           Int       @unique @map("user_id")
+  lastMessageAt    DateTime  @default(now()) @map("last_message_at")
+  // Bộ đếm chưa đọc lưu sẵn để badge chỉ cần 1 truy vấn nhẹ mỗi lần polling.
+  userUnreadCount  Int       @default(0) @map("user_unread_count")
+  adminUnreadCount Int       @default(0) @map("admin_unread_count")
+  userReadAt       DateTime? @map("user_read_at")
+  adminReadAt      DateTime? @map("admin_read_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages         ChatMessage[]
+
+  @@index([lastMessageAt])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             Int              @id @default(autoincrement())
+  conversationId Int              @map("conversation_id")
+  fromAdmin      Boolean          @map("from_admin")
+  // Username người gửi lúc gửi; danh sách admin theo env có thể đổi về sau.
+  senderName     String           @map("sender_name") @db.VarChar(50)
+  body           String           @db.Text
+  createdAt      DateTime         @default(now()) @map("created_at")
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, id])
+  @@index([conversationId, createdAt])
+  @@map("chat_messages")
 }
 
