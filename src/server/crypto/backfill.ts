@@ -21,6 +21,7 @@ export const FIELD_TARGETS: readonly FieldTarget[] = [
   { model: "MonthlyTuition", table: "monthly_tuition", column: "notes", field: "notes" },
   { model: "Payment", table: "payments", column: "note", field: "note" },
   { model: "PlanOrder", table: "plan_orders", column: "note", field: "note" },
+  { model: "ChatMessage", table: "chat_messages", column: "body", field: "body" },
 ]
 
 export type BackfillMode = "dry-run" | "apply" | "verify" | "decrypt" | "rotate"
