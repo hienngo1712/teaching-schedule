@@ -53,7 +53,7 @@ export function ChatSheet({ onClose }: { onClose: () => void }) {
           <div className="flex flex-1 items-center justify-center">
             <Loader2 className="size-6 animate-spin text-slate-400" />
           </div>
-        ) : query.isError ? (
+        ) : query.isError && !query.data ? (
           <div className="flex-1 p-6 text-center text-sm text-slate-600">
             {t("load_error")}{" "}
             <Button variant="link" onClick={() => query.refetch()}>{t("retry")}</Button>

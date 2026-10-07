@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { trpc } from "@/lib/trpc"
 import { CHAT_POLL_MS, chatTime } from "@/lib/chat"
-import { CHAT_INBOX_PAGE } from "@/lib/schemas/chat"
+import { CHAT_INBOX_MAX, CHAT_INBOX_PAGE } from "@/lib/schemas/chat"
 import { cn } from "@/lib/utils"
 import { AdminChatThread } from "./AdminChatThread"
 
@@ -19,7 +19,7 @@ export function AdminChat() {
 
   const list = inbox.isPending ? (
     <Loader2 className="mx-auto mt-6 size-6 animate-spin text-slate-400" />
-  ) : inbox.isError || !inbox.data ? (
+  ) : !inbox.data ? (
     <div className="p-4 text-center text-sm text-slate-600">
       {t("load_error")}{" "}
       <Button variant="link" onClick={() => inbox.refetch()}>{t("retry")}</Button>
@@ -59,9 +59,9 @@ export function AdminChat() {
           </button>
         </li>
       ))}
-      {inbox.data.hasMore && (
+      {inbox.data.hasMore && limit < CHAT_INBOX_MAX && (
         <li className="p-3 text-center">
-          <Button variant="outline" className="h-11 md:h-9" onClick={() => setLimit((n) => n + CHAT_INBOX_PAGE)}>
+          <Button variant="outline" className="h-11 md:h-9" onClick={() => setLimit((n) => Math.min(n + CHAT_INBOX_PAGE, CHAT_INBOX_MAX))}>
             {t("admin_feedback_more")}
           </Button>
         </li>

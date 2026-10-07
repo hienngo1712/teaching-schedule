@@ -8,9 +8,20 @@ import { AdminChat } from "@/components/admin/AdminChat"
 
 const inbox = vi.hoisted(() => ({
   data: undefined as undefined | { items: unknown[]; hasMore: boolean },
+  isError: false,
+  lastLimit: 0,
 }))
 vi.mock("@/lib/trpc", () => ({
-  trpc: { admin: { chatInbox: { useQuery: () => ({ data: inbox.data, isPending: !inbox.data, isError: false, refetch: vi.fn() }) } } },
+  trpc: {
+    admin: {
+      chatInbox: {
+        useQuery: (input: { limit: number }) => {
+          inbox.lastLimit = input.limit
+          return { data: inbox.data, isPending: !inbox.data && !inbox.isError, isError: inbox.isError, refetch: vi.fn() }
+        },
+      },
+    },
+  },
 }))
 vi.mock("@/components/admin/AdminChatThread", () => ({
   AdminChatThread: ({ userId, title, onBack }: { userId: number; title: string; onBack: () => void }) => (
@@ -28,6 +39,7 @@ const rows = [
 
 beforeEach(() => {
   inbox.data = { items: rows, hasMore: true }
+  inbox.isError = false
 })
 afterEach(cleanup)
 
@@ -59,5 +71,19 @@ describe("AdminChat", () => {
     inbox.data = { items: [], hasMore: false }
     renderVi()
     expect(screen.getByText("Chưa có cuộc trò chuyện nào.")).toBeTruthy()
+  })
+
+  it("1 lượt polling lỗi khi đã có dữ liệu thì vẫn giữ danh sách", () => {
+    inbox.isError = true
+    renderVi()
+    expect(screen.getAllByTestId("admin-chat-item")).toHaveLength(2)
+    expect(screen.queryByText("Thử lại")).toBeNull()
+  })
+
+  it("Xem thêm dừng ở 200 (giới hạn của API) rồi ẩn nút", () => {
+    renderVi()
+    for (let i = 0; i < 6; i++) fireEvent.click(screen.getByRole("button", { name: "Xem thêm" }))
+    expect(inbox.lastLimit).toBe(200)
+    expect(screen.queryByRole("button", { name: "Xem thêm" })).toBeNull()
   })
 })

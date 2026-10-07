@@ -65,4 +65,13 @@ describe("ChatComposer", () => {
     fireEvent.change(input, { target: { value: "abc" } })
     expect(button).toHaveProperty("disabled", true)
   })
+
+  it("ô nhập cao theo nội dung (max-h-32 chặn khoảng 4 dòng rồi cuộn), gửi xong về 1 dòng", async () => {
+    const { input } = setup()
+    Object.defineProperty(input, "scrollHeight", { configurable: true, value: 96 })
+    fireEvent.change(input, { target: { value: "dòng 1\ndòng 2\ndòng 3" } })
+    expect((input as HTMLTextAreaElement).style.height).toBe("96px")
+    fireEvent.keyDown(input, { key: "Enter" })
+    await waitFor(() => expect((input as HTMLTextAreaElement).style.height).toBe(""))
+  })
 })

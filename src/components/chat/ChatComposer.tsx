@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Loader2, SendHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,6 +13,7 @@ const COUNTER_FROM = CHAT_BODY_MAX - 200
 export function ChatComposer({ onSend, pending }: { onSend: (body: string) => Promise<unknown>; pending: boolean }) {
   const { t } = useTranslation()
   const [text, setText] = useState("")
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const trimmed = text.trim()
   const tooLong = text.length > CHAT_BODY_MAX
   const canSend = trimmed.length > 0 && !tooLong && !pending
@@ -22,6 +23,7 @@ export function ChatComposer({ onSend, pending }: { onSend: (body: string) => Pr
     try {
       await onSend(trimmed)
       setText("")
+      if (inputRef.current) inputRef.current.style.height = ""
     } catch {
       // Nơi gọi đã toast; giữ chữ để gửi lại.
     }
@@ -37,8 +39,14 @@ export function ChatComposer({ onSend, pending }: { onSend: (body: string) => Pr
     >
       <div className="min-w-0 flex-1">
         <Textarea
+          ref={inputRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value)
+            // Textarea không tự cao theo nội dung; max-h-32 chặn khoảng 4 dòng rồi cuộn.
+            e.target.style.height = "auto"
+            e.target.style.height = `${e.target.scrollHeight}px`
+          }}
           onKeyDown={(e) => {
             // Gõ Telex/VNI đang ghép chữ thì Enter chỉ chốt chữ, không gửi (Safari báo keyCode 229).
             if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing || e.keyCode === 229) return

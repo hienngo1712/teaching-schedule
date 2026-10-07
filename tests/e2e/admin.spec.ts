@@ -134,7 +134,7 @@ test('admin bấm Từ chối → hộp xác nhận; Hủy thì đơn vẫn ch�
   await admin.context().close();
 });
 
-test('desktop: sidebar khu quản trị 7 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
+test('desktop: sidebar khu quản trị 8 mục, nhãn Quản trị, số đơn chờ; không có mục giáo viên', async ({ browser }) => {
   await createPendingForStd('SB');
   const admin = await loginAs(browser, 'admin_test', DESKTOP);
   await admin.goto('/admin/orders');
@@ -143,6 +143,7 @@ test('desktop: sidebar khu quản trị 7 mục, nhãn Quản trị, số đơn 
   expect(await aside.getByRole('link').evaluateAll((els) => els.map((e) => e.getAttribute('href')))).toEqual([
     '/admin/overview',
     '/admin/orders',
+    '/admin/chat',
     '/admin/accounts',
     '/admin/history',
     '/admin/prices',
@@ -173,7 +174,7 @@ test('admin_test: route giáo viên → /admin/overview; tab bar và menu avatar
   await expect(admin.getByRole('banner').getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
 
   const tabs = admin.getByRole('navigation', { name: 'Điều hướng chính' });
-  await expect(tabs.getByRole('link')).toHaveCount(7);
+  await expect(tabs.getByRole('link')).toHaveCount(8);
   for (const link of await tabs.getByRole('link').all()) {
     expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }

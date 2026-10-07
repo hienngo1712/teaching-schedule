@@ -108,10 +108,10 @@ test('desktop: sidebar → Doanh thu; Năm/Khoảng/Tháng đúng số, biểu �
   await page.context().close();
 });
 
-test('390px: tab bar 7 tab ≥44px, không tràn ngang, nút/ô chọn ≥44px, bảng dạng thẻ', async ({ browser }) => {
+test('390px: tab bar 8 tab ≥44px, không tràn ngang, nút/ô chọn ≥44px, bảng dạng thẻ', async ({ browser }) => {
   const page = await loginAs(browser, 'admin_test', MOBILE);
   const tabs = page.getByRole('navigation', { name: 'Điều hướng chính' });
-  await expect(tabs.getByRole('link')).toHaveCount(7);
+  await expect(tabs.getByRole('link')).toHaveCount(8);
   for (const link of await tabs.getByRole('link').all()) {
     expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }
