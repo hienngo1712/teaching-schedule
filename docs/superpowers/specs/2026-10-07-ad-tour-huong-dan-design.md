@@ -27,10 +27,10 @@ Ký hiệu 👆 = bước **chờ người dùng tự bấm** phần tử đư�
 | id | Trang | Các bước |
 |---|---|---|
 | `student` | `/students` | 👆 nút **Thêm học sinh** (`student-add`) → hộp mở · Họ tên + Lớp (`student-form-basic`) · Phụ huynh, không bắt buộc (`student-form-parent`) · **Cách thu học phí** (`student-form-billing`) · ô đồng ý + nút **Thêm** (`student-form-submit`) |
-| `import` | `/students` | 👆 nút ▾ cạnh Thêm học sinh (`student-add-more`) · 👆 mục **Nhập Excel** (`student-import-item`) → hộp mở · **Tải file mẫu** (`import-template`) · khối **Google Form** (`import-google-form`) · ô chọn file, nội dung nói thêm "chọn file xong app hiện bảng xem trước, dòng lỗi tô đỏ; tick đồng ý rồi bấm nhập" (`import-file`, bước cuối). Bảng xem trước và nút nhập chỉ có sau khi chọn file thật nên không tô sáng. |
-| `session` | `/calendar` | 👆 **+ Tạo ca dạy** (`session-add`) → sheet mở · Ngày và giờ (`session-form-time`) · Môn (`session-form-subject`) · Chọn học sinh (`session-form-students`) · **Lặp lại vào các thứ** (`session-form-repeat`) · nút Lưu (`session-form-submit`) |
+| `import` | `/students` | 👆 nút ▾ cạnh Thêm học sinh (`student-add-more`) · 👆 mục **Nhập Excel** (`student-import-item`) → hộp mở · **Tải file mẫu** (`import-template`) · nút **Chọn file**, nội dung nói thêm "chọn file xong app hiện bảng xem trước, dòng lỗi tô đỏ; tick đồng ý rồi bấm nhập" (`import-file`) · khối **Google Form** (`import-google-form`). Bảng xem trước và nút nhập chỉ có sau khi chọn file thật nên không tô sáng. Gói chưa có tính năng nhập: bấm mục sẽ mở hộp nâng cấp, bước sau không thấy phần tử nên tour dừng theo §4.2. |
+| `session` | `/calendar` | 👆 **+ Tạo ca dạy** (`session-add`) → hộp mở · Ngày + Môn (`session-form-date`) · Giờ bắt đầu/kết thúc (`session-form-time`) · Học sinh trong ca (`session-form-students`) · nút Tạo ca dạy (`session-form-submit`), nội dung nhắc "muốn ca lặp hằng tuần dùng nút **Lịch lặp**" (hộp Lịch lặp là luồng riêng, không tô sáng) |
 | `attendance` | `/calendar` | 👆 một ca trên lịch (`session-card`, phần tử hiện đầu tiên) → hộp chi tiết mở · dấu tích / dấu X (`attendance-marks`) · **Tất cả có mặt** (`attendance-all-present`) · **Lưu điểm danh** (`attendance-save`) · mũi tên sang ca kế (`session-nav`) |
-| `tuition` | `/tuition` | ô chọn tháng, "app mở sẵn tháng vừa học xong" (`tuition-month`) · dòng học sinh: số cần đóng (`tuition-row`, dòng đầu) · **Đã đóng đủ** (`tuition-pay-full`) · 👆 bấm vào học sinh (`tuition-row`) → sheet mở · **Đóng một phần** (`tuition-pay-partial`) · **Phiếu báo** (`tuition-notice`) |
+| `tuition` | `/tuition` | ô đổi tháng, "app mở sẵn tháng vừa học xong" (`tuition-month`) · dòng học sinh đầu: số cần đóng (`tuition-row`) · **Đã đóng đủ** (`tuition-pay-full`) · **Phiếu báo** (`tuition-notice`) · 👆 bấm vào học sinh (`tuition-row`) → sheet mở · **Đóng một phần** (`tuition-pay-partial`) |
 | `bank` | `/settings` | ô tìm ngân hàng (`bank-select`) · số tài khoản (`bank-number`) · tên chủ tài khoản (`bank-name`) · ô đồng ý + nút Lưu (`bank-submit`) |
 
 - Giá trị `data-tour` ở bảng là **đề xuất**; plan chốt tên cuối sau khi đọc component thật. Một bước có thể gộp nhiều ô vào 1 vùng bao quanh nếu không có phần tử chung.
@@ -71,7 +71,8 @@ Thuần dữ liệu + hàm thuần, không import driver.js (test unit dễ).
 - **Dừng tour:** bấm X, Esc, chuyển trang (đổi `pathname`), hoặc hộp chứa bước hiện tại bị đóng (phần tử target biến mất khỏi DOM khi đang ở bước trong hộp) → `destroy()` sạch, không để lại lớp phủ.
 - **Không chồng popup:**
   - Có `[role="dialog"][data-state="open"]` đang mở lúc bắt đầu (vd Có gì mới, Góp ý) → không chạy tour, toast "Đóng hộp đang mở rồi bấm Chỉ cho tôi lại nhé".
-  - Trong lúc tour chạy, `WhatsNew` và `FeedbackPrompt` không tự bật: dùng trạng thái chung `useTourActive()` (module store nhỏ, `useSyncExternalStore`).
+  - Trong lúc tour chạy, `WhatsNew` không tự bật: dùng trạng thái chung `useTourActive()` (module store nhỏ, `useSyncExternalStore`). Bị chặn vì tour thì Có gì mới tự mở sau khi tour tắt. `FeedbackPrompt` chỉ gắn ở `/dashboard`, không tour nào chạy ở đó nên không cần sửa.
+- **Bước 👆 không tìm thấy phần tử** (vd tháng đang xem chưa có ca nào để bấm): không đi tiếp được nên tắt tour, toast "Không tìm thấy mục cần chỉ trên trang này". Bước thường không thấy thì bỏ qua như trên.
 
 ### 4.3 Hộp Radix (rủi ro chính, thử trước)
 Dialog/Sheet/DropdownMenu của Radix chặn tương tác ngoài nội dung (focus trap, `pointer-events` trên body, coi bấm ngoài là "bấm ra ngoài" → đóng hộp). Popover của driver.js mặc định gắn vào `body`, nằm ngoài hộp.
@@ -99,7 +100,7 @@ Dialog/Sheet/DropdownMenu của Radix chặn tương tác ngoài nội dung (foc
 - **Unit `tours.ts`:** 6 tour đủ id; `href` đúng; mỗi `titleKey`/`bodyKey` có ở cả vi và en; `parseTourParam` nhận đúng id, từ chối giá trị lạ; `tourHref`.
 - **Test canh `data-tour`:** mọi `target` khác null trong `TOURS` phải xuất hiện dưới dạng `data-tour="<target>"` trong `src/**/*.tsx` (đọc file bằng `fs`), để đổi giao diện không làm gãy tour mà không ai biết.
 - **Unit `TourRunner`** (mock driver.js): đọc và xoá `?tour=`; bỏ qua bước thiếu phần tử sau 3 giây (fake timers); không chạy khi đang có dialog mở; thiếu dữ liệu thì hiện bước báo + nút chuyển tour; `useTourActive` bật/tắt đúng.
-- **Component:** `StartCard` có 5 nút "Chỉ cho tôi" đúng href; `GuideContent` có 6 nút khi `canTour`, không có khi `!canTour`; `WhatsNew`/`FeedbackPrompt` không tự bật khi tour đang chạy.
+- **Component:** `StartCard` có 5 nút "Chỉ cho tôi" đúng href; `GuideContent` có 6 nút khi `canTour`, không có khi `!canTour`; `WhatsNew` không tự bật khi tour đang chạy.
 - **e2e** (`tests/e2e/ad-tour.spec.ts`, 390px và 1280px):
   - tour `student`: từ thẻ Bắt đầu → `/students` → bước 👆 → hộp mở → bấm Tiếp qua các bước trong hộp, **hộp vẫn mở**, tới bước nút Thêm; không tràn ngang;
   - tour `attendance` với tài khoản chưa có ca → bước báo → bấm "Chỉ cách tạo ca" → tour `session` chạy;
