@@ -10,12 +10,19 @@ import { AdminTabBar } from "@/components/admin/AdminTabBar"
 
 vi.mock("next/navigation", () => ({ usePathname: vi.fn() }))
 const pending = vi.hoisted(() => ({ data: undefined as undefined | { count: number; newAccounts?: number } }))
+const chat = vi.hoisted(() => ({ data: undefined as undefined | { conversations: number } }))
 vi.mock("@/lib/trpc", () => ({
-  trpc: { admin: { pendingCount: { useQuery: () => ({ data: pending.data }) } } },
+  trpc: {
+    admin: {
+      pendingCount: { useQuery: () => ({ data: pending.data }) },
+      chatUnread: { useQuery: () => ({ data: chat.data }) },
+    },
+  },
 }))
 
 beforeEach(() => {
   pending.data = undefined
+  chat.data = undefined
 })
 
 function renderVi(ui: React.ReactNode) {
@@ -23,7 +30,7 @@ function renderVi(ui: React.ReactNode) {
 }
 
 describe("AdminSidebar", () => {
-  it("logo Lịch dạy + nhãn Quản trị; đúng 7 mục admin, mục đang mở aria-current; số đơn chờ; không có mục giáo viên", () => {
+  it("logo Lịch dạy + nhãn Quản trị; đúng 8 mục admin, mục đang mở aria-current; số đơn chờ; không có mục giáo viên", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/history")
     pending.data = { count: 2 }
     renderVi(<AdminSidebar />)
@@ -32,6 +39,7 @@ describe("AdminSidebar", () => {
     expect(screen.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual([
       "/admin/overview",
       "/admin/orders",
+      "/admin/chat",
       "/admin/accounts",
       "/admin/history",
       "/admin/prices",
@@ -46,6 +54,17 @@ describe("AdminSidebar", () => {
     expect(screen.queryByText("Học phí")).toBeNull()
   })
 
+  it("badge chat chưa đọc ở sidebar và tab bar", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/overview")
+    chat.data = { conversations: 2 }
+    renderVi(<AdminSidebar />)
+    expect(screen.getByTestId("admin-chat-unread").textContent).toBe("2")
+    expect(screen.getByTestId("admin-chat-unread").getAttribute("aria-label")).toBe("2 cuộc trò chuyện chưa đọc")
+    cleanup()
+    renderVi(<AdminTabBar />)
+    expect(screen.getByTestId("admin-chat-unread").textContent).toBe("2")
+  })
+
   it("0 đơn chờ hoặc chưa tải → không hiện số", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/orders")
     renderVi(<AdminSidebar />)
@@ -54,13 +73,14 @@ describe("AdminSidebar", () => {
 })
 
 describe("AdminTabBar", () => {
-  it("7 tab nhãn ngắn, tab đang mở aria-current", () => {
+  it("8 tab nhãn ngắn, tab đang mở aria-current", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/accounts")
     renderVi(<AdminTabBar />)
     const links = screen.getAllByRole("link")
     expect(links.map((l) => [l.getAttribute("href"), l.textContent])).toEqual([
       ["/admin/overview", "Tổng quan"],
       ["/admin/orders", "Đơn chờ"],
+      ["/admin/chat", "Nhắn"],
       ["/admin/accounts", "Tài khoản"],
       ["/admin/history", "Lịch sử"],
       ["/admin/prices", "Bảng giá"],
@@ -69,7 +89,7 @@ describe("AdminTabBar", () => {
     ])
     expect(screen.getByRole("link", { name: "Tài khoản" }).getAttribute("aria-current")).toBe("page")
     expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).className).toContain("md:hidden")
-    expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).querySelector("ul")?.className).toContain("grid-cols-7")
+    expect(screen.getByRole("navigation", { name: "Điều hướng chính" }).querySelector("ul")?.className).toContain("grid-cols-8")
   })
 
   it("tab Đơn chờ có số đơn chờ ở góc icon; 0 đơn → không có", () => {

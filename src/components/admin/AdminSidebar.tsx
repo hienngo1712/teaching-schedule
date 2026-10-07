@@ -8,6 +8,7 @@ import { trpc } from "@/lib/trpc"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { isNavActive } from "@/components/layout/nav-items"
 import { ADMIN_NAV_ITEMS } from "./admin-nav"
+import { CHAT_POLL_MS } from "@/lib/chat"
 
 export function AdminSidebar() {
   const pathname = usePathname()
@@ -16,6 +17,7 @@ export function AdminSidebar() {
   const pendingData = trpc.admin.pendingCount.useQuery().data
   const pendingCount = pendingData?.count ?? 0
   const newAccounts = pendingData?.newAccounts ?? 0
+  const chatUnread = trpc.admin.chatUnread.useQuery(undefined, { refetchInterval: CHAT_POLL_MS.adminUnread }).data?.conversations ?? 0
 
   return (
     <aside className="flex h-full w-[232px] shrink-0 flex-col gap-7 border-r bg-white px-3.5 py-5">
@@ -62,6 +64,15 @@ export function AdminSidebar() {
                   className="ml-1 rounded-full border border-primary px-1.5 text-xs font-semibold text-primary"
                 >
                   {newAccounts}
+                </span>
+              )}
+              {item.href === "/admin/chat" && chatUnread > 0 && (
+                <span
+                  data-testid="admin-chat-unread"
+                  aria-label={t("admin_chat_unread_label").replace("{n}", String(chatUnread))}
+                  className="rounded-full bg-amber-100 px-1.5 text-[11px] font-semibold leading-5 text-amber-800"
+                >
+                  {chatUnread}
                 </span>
               )}
             </Link>

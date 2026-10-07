@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { isNavActive } from "@/components/layout/nav-items"
 import { ADMIN_NAV_ITEMS } from "./admin-nav"
+import { CHAT_POLL_MS } from "@/lib/chat"
 
 // Chép kiểu tab của BottomTabBar thay vì trích chung, để không đụng tab bar giáo viên.
 function tabClass(active: boolean) {
@@ -26,12 +27,13 @@ export function AdminTabBar() {
   const pendingData = trpc.admin.pendingCount.useQuery().data
   const pendingCount = pendingData?.count ?? 0
   const newAccounts = pendingData?.newAccounts ?? 0
+  const chatUnread = trpc.admin.chatUnread.useQuery(undefined, { refetchInterval: CHAT_POLL_MS.adminUnread }).data?.conversations ?? 0
   return (
     <nav
       aria-label={t("main_navigation")}
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      <ul className="grid grid-cols-7">
+      <ul className="grid grid-cols-8">
         {ADMIN_NAV_ITEMS.map((item) => {
           const Icon = item.icon
           const active = isNavActive(pathname, item.href)
@@ -52,6 +54,15 @@ export function AdminTabBar() {
                       className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full bg-amber-100 px-1 text-center text-[10px] font-semibold leading-4 text-amber-800"
                     >
                       {pendingCount}
+                    </span>
+                  )}
+                  {item.href === "/admin/chat" && chatUnread > 0 && (
+                    <span
+                      data-testid="admin-chat-unread"
+                      aria-label={t("admin_chat_unread_label").replace("{n}", String(chatUnread))}
+                      className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full bg-amber-100 px-1 text-center text-[10px] font-semibold leading-4 text-amber-800"
+                    >
+                      {chatUnread}
                     </span>
                   )}
                 </span>
