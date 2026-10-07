@@ -31,9 +31,6 @@ vi.mock("@/lib/trpc", () => ({
     feedback: {
       submit: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
-    chat: {
-      unread: { useQuery: () => ({ data: { count: 0 } }) },
-    },
   },
 }))
 
@@ -81,7 +78,6 @@ describe("AppHeader", () => {
     currentSession = { user: { username: "teacher", fullName: "Cô Mai" } }
     renderHeader()
     expect(screen.getByTestId("renew-offer-slot")).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Nhắn hỗ trợ", hidden: true })).toBeTruthy()
     const items = await screen.findAllByRole("menuitem")
     expect(items.map((i) => i.textContent)).toEqual(["Sao lưu dữ liệu", "Góp ý", "Đổi mật khẩu", "Đăng xuất"])
   })
@@ -111,7 +107,6 @@ describe("AppHeader", () => {
     currentSession = { user: { username: "admin_test", fullName: "Quản trị Test" } }
     renderHeader("admin")
     expect(screen.queryByTestId("renew-offer-slot")).toBeNull()
-    expect(screen.queryByRole("button", { name: "Nhắn hỗ trợ" })).toBeNull()
     const items = await screen.findAllByRole("menuitem")
     expect(items.map((i) => i.textContent)).toEqual(["Quản trị", "Đổi mật khẩu", "Đăng xuất"])
     expect(screen.getByRole("menuitem", { name: "Quản trị" }).getAttribute("href")).toBe("/admin/overview")

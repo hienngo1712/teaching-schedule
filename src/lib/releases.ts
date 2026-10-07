@@ -13,13 +13,13 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
-    version: "0.14.0",
+    version: "0.14.1",
     date: "2026-10-07",
-    title: "Nhắn tin với hỗ trợ",
-    summary: "Bấm nút tin nhắn trên thanh trên cùng để hỏi cách dùng, báo lỗi hay góp ý. Admin trả lời ngay trong app.",
-    notify: true,
+    title: "Tạm gỡ khung nhắn tin hỗ trợ",
+    summary: "Khung nhắn tin với hỗ trợ được tạm gỡ để hoàn thiện thêm, sẽ quay lại ở bản sau.",
+    notify: false,
     items: [
-      { kind: "new", title: "Khung chat trực tiếp", body: "Nút tin nhắn có số tin chưa đọc. Mở ra để xem trả lời và gửi tiếp, không cần chuyển sang Zalo." },
+      { kind: "fix", title: "Tạm gỡ nhắn tin", body: "Nút nhắn hỗ trợ trên đầu trang tạm ẩn. Cần hỗ trợ, thầy cô dùng mục Góp ý trong menu tài khoản." },
     ],
   },
   {
