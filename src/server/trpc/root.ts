@@ -15,7 +15,6 @@ import { trashRouter } from "@/server/trpc/routers/trash"
 import { releaseRouter } from "@/server/trpc/routers/release"
 import { onboardingRouter } from "@/server/trpc/routers/onboarding"
 import { feedbackRouter } from "@/server/trpc/routers/feedback"
-import { chatRouter } from "@/server/trpc/routers/chat"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -34,7 +33,6 @@ export const appRouter = createTRPCRouter({
   release: releaseRouter,
   onboarding: onboardingRouter,
   feedback: feedbackRouter,
-  chat: chatRouter,
 })
 
 export type AppRouter = typeof appRouter

@@ -19,7 +19,6 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
 import { RenewOffer } from "@/components/plan/RenewOffer"
 import { WhatsNew } from "@/components/whats-new/WhatsNew"
-import { ChatButton } from "@/components/chat/ChatButton"
 import { CurrentPlanBadge } from "@/components/plan/CurrentPlanBadge"
 import { ADMIN_HOME } from "@/lib/admin"
 
@@ -52,7 +51,6 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
         {/* Admin không dùng gói: không gọi plan.me, không nhắc gia hạn. */}
         {!admin && <RenewOffer />}
         {!admin && <WhatsNew />}
-        {!admin && <ChatButton />}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="size-11 text-slate-600 md:size-10">
