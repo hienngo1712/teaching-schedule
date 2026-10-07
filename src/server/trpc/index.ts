@@ -95,3 +95,9 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (!isAdminUsername(ctx.session.user.username)) throw new TRPCError({ code: "FORBIDDEN" })
   return next()
 })
+
+// Thủ tục chỉ cho giáo viên: admin không dùng app như giáo viên (góp ý, chat).
+export const teacherProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (isAdminUsername(ctx.session.user.username)) throw new TRPCError({ code: "FORBIDDEN" })
+  return next()
+})
