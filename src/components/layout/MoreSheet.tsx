@@ -78,6 +78,7 @@ export function MoreSheet({ open, onOpenChange, children }: Props) {
                     className="flex min-h-14 items-center gap-3.5 rounded-xl px-3 hover:bg-accent"
                   >
                     {content}
+                    <span className="sr-only"> {t("opens_new_tab")}</span>
                     <ChevronRight className="size-5 shrink-0 text-[#9CA3AF]" />
                   </a>
                 </li>

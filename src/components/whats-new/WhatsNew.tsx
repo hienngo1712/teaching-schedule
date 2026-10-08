@@ -42,8 +42,8 @@ export function WhatsNew() {
     markSeen.mutate({ version: latest.version })
   }
 
-  const trigger = (
-    <Button variant="outline" className="relative h-11 gap-2 px-3 text-slate-700 md:h-10" aria-label={t("whatsnew_button")}>
+  const trigger = (extra?: React.ComponentProps<typeof Button>) => (
+    <Button variant="outline" className="relative h-11 gap-2 px-3 text-slate-700 md:h-10" aria-label={t("whatsnew_button")} {...extra}>
       <Sparkles className="size-5 text-primary" aria-hidden />
       <span className="hidden md:inline">{t("whatsnew_button")}</span>
       <span className="hidden rounded bg-primary/10 px-1.5 text-xs font-semibold text-primary md:inline">{shortVersion(latest.version)}</span>
@@ -55,14 +55,14 @@ export function WhatsNew() {
   if (isDesktop) {
     return (
       <Popover open={open} onOpenChange={change}>
-        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-        <PopoverContent align="end" className="w-[340px] max-w-[calc(100vw-2rem)] p-0">{panel}</PopoverContent>
+        <PopoverTrigger asChild>{trigger()}</PopoverTrigger>
+        <PopoverContent aria-label={t("whatsnew_button")} align="end" className="w-[340px] max-w-[calc(100vw-2rem)] p-0">{panel}</PopoverContent>
       </Popover>
     )
   }
   return (
     <>
-      <span onClick={() => change(true)}>{trigger}</span>
+      {trigger({ onClick: () => change(true), "aria-haspopup": "dialog", "aria-expanded": open })}
       <Sheet open={open} onOpenChange={change}>
         <SheetContent side="bottom" hideClose className="max-h-[85vh] overflow-y-auto p-0 [&>button]:hidden">
           <SheetTitle className="sr-only">{t("whatsnew_button")}</SheetTitle>

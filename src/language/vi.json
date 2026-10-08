@@ -975,5 +975,7 @@
   "tour_bank_3_title": "Tên chủ tài khoản",
   "tour_bank_3_body": "Nhập đúng tên chủ tài khoản như trên ứng dụng ngân hàng.",
   "tour_bank_4_title": "Lưu tài khoản",
-  "tour_bank_4_body": "Tick ô đồng ý rồi bấm Lưu. Phiếu báo học phí sẽ có mã QR chuyển khoản."
+  "tour_bank_4_body": "Tick ô đồng ý rồi bấm Lưu. Phiếu báo học phí sẽ có mã QR chuyển khoản.",
+  "guide_back_home": "Về trang chính",
+  "tour_load_error": "Không tải được hướng dẫn, thử lại sau nhé."
 }

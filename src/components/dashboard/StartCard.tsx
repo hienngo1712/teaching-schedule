@@ -37,7 +37,7 @@ export function StartCard() {
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="font-semibold text-slate-900">{t("start_title")}</p>
+            <h2 className="font-semibold text-slate-900">{t("start_title")}</h2>
             <p className="text-sm text-slate-500">
               {t("start_progress").replace("{n}", String(done)).replace("{total}", String(START_STEPS.length))}
             </p>
@@ -53,7 +53,14 @@ export function StartCard() {
             <X className="size-5" />
           </Button>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          role="progressbar"
+          aria-label={t("start_title")}
+          aria-valuemin={0}
+          aria-valuemax={START_STEPS.length}
+          aria-valuenow={done}
+          className="h-2 overflow-hidden rounded-full bg-slate-100"
+        >
           <div className="h-full bg-primary" style={{ width: `${(done / START_STEPS.length) * 100}%` }} />
         </div>
         <ul className="divide-y">

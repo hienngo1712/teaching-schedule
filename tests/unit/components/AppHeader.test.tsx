@@ -103,14 +103,22 @@ describe("AppHeader", () => {
     expect(download).toHaveBeenCalledTimes(1)
   })
 
-  it("admin: không RenewOffer; menu Quản trị (link /admin/overview), Đổi mật khẩu, Đăng xuất; không Sao lưu, không Góp ý", async () => {
+  it("admin: không RenewOffer; menu Quản trị (link /admin/overview), HD sử dụng, Đổi mật khẩu, Đăng xuất; không Sao lưu, không Góp ý", async () => {
     currentSession = { user: { username: "admin_test", fullName: "Quản trị Test" } }
     renderHeader("admin")
     expect(screen.queryByTestId("renew-offer-slot")).toBeNull()
     const items = await screen.findAllByRole("menuitem")
-    expect(items.map((i) => i.textContent)).toEqual(["Quản trị", "Đổi mật khẩu", "Đăng xuất"])
+    expect(items.map((i) => i.textContent)).toEqual(["Quản trị", "HD sử dụng (mở tab mới)", "Đổi mật khẩu", "Đăng xuất"])
     expect(screen.getByRole("menuitem", { name: "Quản trị" }).getAttribute("href")).toBe("/admin/overview")
     expect(screen.queryByRole("menuitem", { name: "Góp ý" })).toBeNull()
+  })
+
+  it("admin: menu avatar có HD sử dụng mở /guide tab mới", async () => {
+    currentSession = { user: { username: "admin_test", fullName: "Quản trị Test" } }
+    renderHeader("admin")
+    const link = await screen.findByRole("menuitem", { name: /HD sử dụng/ })
+    expect(link.getAttribute("href")).toBe("/guide")
+    expect(link.getAttribute("target")).toBe("_blank")
   })
 
   it("giáo viên: nhãn gói nằm trong nút menu tài khoản, chỉ hiện ở mobile", () => {

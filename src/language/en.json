@@ -975,5 +975,7 @@
   "tour_bank_3_title": "Account name",
   "tour_bank_3_body": "Enter the account holder name exactly as in your banking app.",
   "tour_bank_4_title": "Save account",
-  "tour_bank_4_body": "Tick consent and tap Save. Fee notices will show a transfer QR code."
+  "tour_bank_4_body": "Tick consent and tap Save. Fee notices will show a transfer QR code.",
+  "guide_back_home": "Back to home",
+  "tour_load_error": "Could not load the guide, please try again."
 }

@@ -69,11 +69,9 @@ export function buildCalendarGrid(
   const startOffset = toMondayIndex(firstDayJsDay)
   const numDays = daysInMonth(year, month)
 
-  const todayKey = ymd(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    today.getDate()
-  )
+  // Ngày VN: máy người dùng / CI chạy UTC thì getDate() lệch sang hôm trước tới 7h sáng.
+  const vnToday = vnDateParts(today)
+  const todayKey = ymd(vnToday.year, vnToday.month, vnToday.day)
 
   // Previous month padding
   const prevMonthYear = month === 1 ? year - 1 : year

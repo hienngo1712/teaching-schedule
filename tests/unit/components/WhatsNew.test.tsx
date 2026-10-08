@@ -83,6 +83,23 @@ describe("WhatsNew (spec W §5.2–5.4)", () => {
     act(() => setTourActive(false))
     expect(await screen.findByText(LATEST.title)).toBeTruthy()
   })
+
+  it("mobile: nút Có gì mới là button có aria-haspopup=dialog, không bọc span onClick", () => {
+    window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+      matches: false, media: q, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia
+    status.current = { lastSeenRelease: LATEST.version }
+    renderVi(<WhatsNew />)
+    const btn = screen.getByRole("button", { name: "Có gì mới" })
+    expect(btn.getAttribute("aria-haspopup")).toBe("dialog")
+    expect(btn.parentElement?.tagName).not.toBe("SPAN")
+  })
+
+  it("desktop: ô Có gì mới có aria-label", async () => {
+    status.current = { lastSeenRelease: null }
+    renderVi(<WhatsNew />)
+    expect((await screen.findByRole("dialog")).getAttribute("aria-label")).toBe("Có gì mới")
+  })
 })
 
 describe("WhatsNewPanel (spec W §5.3)", () => {

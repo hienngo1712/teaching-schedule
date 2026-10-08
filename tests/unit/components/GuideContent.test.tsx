@@ -72,4 +72,15 @@ describe("GuideContent (spec W §3.2 & Task 9)", () => {
     render(<LanguageProvider forcedLanguage="vi"><GuideContent /></LanguageProvider>)
     expect(screen.queryByRole("link", { name: "Chỉ cho tôi" })).toBeNull()
   })
+
+  it("đã đăng nhập: link cuối trang về trang chính, không còn Về trang đăng nhập", () => {
+    render(<LanguageProvider forcedLanguage="vi"><GuideContent canTour home="/dashboard" /></LanguageProvider>)
+    expect(screen.getByRole("link", { name: "Về trang chính" }).getAttribute("href")).toBe("/dashboard")
+    expect(screen.queryByRole("link", { name: "Về trang đăng nhập" })).toBeNull()
+  })
+
+  it("chưa đăng nhập: giữ Về trang đăng nhập", () => {
+    render(<LanguageProvider forcedLanguage="vi"><GuideContent /></LanguageProvider>)
+    expect(screen.getByRole("link", { name: "Về trang đăng nhập" }).getAttribute("href")).toBe("/login")
+  })
 })
