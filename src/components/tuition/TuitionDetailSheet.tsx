@@ -161,9 +161,11 @@ function TuitionDetailBody({
     onError: (e) => toast.error(e.message),
   })
 
+  // row.notes chưa kịp refetch sau khi lưu (blur / Miễn) → so với giá trị vừa lưu, tránh gửi lại khi đóng sheet.
+  const lastSaved = useRef<string | null>(null)
   // Đóng sheet bằng Esc/vuốt không bắn blur → lưu ghi chú còn dở khi unmount (client thường, không phụ thuộc component).
   const pendingNotes = useRef({ notes, saved: row.notes ?? "" })
-  pendingNotes.current = { notes, saved: row.notes ?? "" }
+  pendingNotes.current = { notes, saved: lastSaved.current ?? row.notes ?? "" }
   useEffect(() => {
     return () => {
       const { notes: n, saved } = pendingNotes.current
@@ -183,11 +185,13 @@ function TuitionDetailBody({
   const lastDone = keyToYearMonth(monthKey(today.year, today.month) - 1)
 
   const handleBlurNotes = () => {
-    if (notes !== (row.notes ?? "")) {
+    if (notes !== (lastSaved.current ?? row.notes ?? "")) {
+      const sent = notes
       updateSettlementMut.mutate(
-        { studentId, year, month, notes: notes === "" ? null : notes },
+        { studentId, year, month, notes: sent === "" ? null : sent },
         {
           onSuccess: () => {
+            lastSaved.current = sent
             setNotesSaved(true)
             setTimeout(() => setNotesSaved(false), 2000)
           },
@@ -197,14 +201,17 @@ function TuitionDetailBody({
   }
 
   const handleConfirmWaive = (reason: string) => {
-    // Lý do nối vào ghi chú đang có trong ô (kể cả chưa lưu); không nhập thì chỉ gửi isFullPaid như cũ.
-    const nextNotes = reason ? [notes.trim(), t("waive_note").replace("{reason}", reason)].filter(Boolean).join("\n") : null
+    // Lý do nối vào ghi chú đang có trong ô (kể cả chưa lưu), giữ nguyên khoảng trắng người dùng gõ.
+    const nextNotes = reason ? [notes, t("waive_note").replace("{reason}", reason)].filter((s) => s.trim() !== "").join("\n") : null
     updateSettlementMut.mutate(
       { studentId, year, month, isFullPaid: true, ...(nextNotes !== null && { notes: nextNotes }) },
       {
         onSuccess: () => {
           // Đổi ô ghi chú chỉ khi miễn thành công: lỗi mà đổi trước thì lần lưu khi đóng sheet sẽ ghi "Miễn" dù chưa miễn.
-          if (nextNotes !== null) setNotes(nextNotes)
+          if (nextNotes !== null) {
+            lastSaved.current = nextNotes
+            setNotes(nextNotes)
+          }
           setWaiveOpen(false)
           toast.success(t("settlement_saved"))
         },

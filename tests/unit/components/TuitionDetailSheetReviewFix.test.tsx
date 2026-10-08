@@ -34,13 +34,16 @@ const rowData = {
 
 let currentRow: typeof rowData = rowData
 
+// useUtils thật ổn định giữa các lần render; object mới mỗi lần làm effect lưu-khi-đóng chạy cleanup lúc đang gõ.
+const mockUtils = {
+  tuition: { getMonthlyStatus: { invalidate: vi.fn() }, invalidate: vi.fn() },
+  payment: { invalidate: vi.fn() },
+  client: { tuition: { updateSettlement: { mutate: mockClientSettlement } } },
+}
+
 vi.mock("@/lib/trpc", () => ({
   trpc: {
-    useUtils: () => ({
-      tuition: { getMonthlyStatus: { invalidate: vi.fn() }, invalidate: vi.fn() },
-      payment: { invalidate: vi.fn() },
-      client: { tuition: { updateSettlement: { mutate: mockClientSettlement } } },
-    }),
+    useUtils: () => mockUtils,
     tuition: {
       getMonthlyStatus: {
         useQuery: () => ({ data: { items: [currentRow], totalCount: 1, totalPages: 1 }, isPending: false }),
@@ -242,6 +245,49 @@ describe("TuitionDetailSheet — Miễn có lý do", () => {
     fireEvent.change(screen.getByLabelText("Lý do (không bắt buộc)"), { target: { value: "x" } })
     fireEvent.click(screen.getByRole("button", { name: /^Miễn 800\.000/ }))
     expect(mockUpdateSettlementMutate.mock.calls.at(-1)![0].notes).toBe("đang gõ\nMiễn: x")
+  })
+
+  it("Miễn có lý do thành công rồi đóng sheet ngay (chưa refetch): không gửi lại ghi chú", () => {
+    const { unmount } = renderSheet()
+    openMenu()
+    fireEvent.click(screen.getByText("Miễn phần còn thiếu"))
+    fireEvent.change(screen.getByLabelText("Lý do (không bắt buộc)"), { target: { value: "x" } })
+    fireEvent.click(screen.getByRole("button", { name: /^Miễn 800\.000/ }))
+    act(() => mockUpdateSettlementMutate.mock.calls[0][1].onSuccess())
+    unmount()
+    expect(mockClientSettlement).not.toHaveBeenCalled()
+  })
+
+  it("blur lưu ghi chú thành công rồi đóng sheet ngay: không gửi lại", () => {
+    const { unmount } = renderSheet()
+    const box = screen.getByPlaceholderText("Nhập ghi chú thanh toán (nếu có)...")
+    fireEvent.change(box, { target: { value: "hẹn thứ 7" } })
+    fireEvent.blur(box)
+    act(() => mockUpdateSettlementMutate.mock.calls[0][1].onSuccess())
+    unmount()
+    expect(mockClientSettlement).not.toHaveBeenCalled()
+  })
+
+  it("Miễn có lý do giữ nguyên khoảng trắng của ghi chú cũ", () => {
+    const spaced = { ...rowData, notes: "  dòng 1  " }
+    currentRow = spaced
+    renderSheet(spaced)
+    openMenu()
+    fireEvent.click(screen.getByText("Miễn phần còn thiếu"))
+    fireEvent.change(screen.getByLabelText("Lý do (không bắt buộc)"), { target: { value: "x" } })
+    fireEvent.click(screen.getByRole("button", { name: /^Miễn 800\.000/ }))
+    expect(mockUpdateSettlementMutate.mock.calls[0][0].notes).toBe("  dòng 1  \nMiễn: x")
+  })
+
+  it("ghi chú cũ toàn khoảng trắng → notes chỉ là 'Miễn: <lý do>'", () => {
+    const blank = { ...rowData, notes: "   " }
+    currentRow = blank
+    renderSheet(blank)
+    openMenu()
+    fireEvent.click(screen.getByText("Miễn phần còn thiếu"))
+    fireEvent.change(screen.getByLabelText("Lý do (không bắt buộc)"), { target: { value: "x" } })
+    fireEvent.click(screen.getByRole("button", { name: /^Miễn 800\.000/ }))
+    expect(mockUpdateSettlementMutate.mock.calls[0][0].notes).toBe("Miễn: x")
   })
 })
 
