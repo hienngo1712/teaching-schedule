@@ -13,6 +13,7 @@ function fakeDriver() {
   const driver = {
     highlight: vi.fn((arg: HighlightArg) => { active = true; calls.push(arg) }),
     destroy: vi.fn(() => { active = false }),
+    refresh: vi.fn(),
     isActive: vi.fn(() => active),
   }
   return { driver: driver as unknown as TourDriver & typeof driver, calls }
@@ -337,6 +338,31 @@ describe("runTour", () => {
     calls[1].popover.onNextClick()
     await flush()
     expect(calls).toHaveLength(3)
+  })
+
+  // Hiệu ứng chuyển bước của driver.js (~400ms) còn giữ phần tử cũ: vẽ lại thêm lượt sau, khi vị trí đã đứng yên.
+  it("phần tử đang tô sáng dời chỗ (hộp co lại khi đổi ca) thì vẽ lại khung sáng + hộp tour", async () => {
+    const a = addTarget("a")
+    const { driver } = setup([{ target: "a", titleKey: "tour_student_1_title", bodyKey: "tour_student_1_body" }])
+    await flush()
+    await vi.advanceTimersByTimeAsync(600)
+    expect(driver.refresh).not.toHaveBeenCalled()
+    a.getBoundingClientRect = () => ({ width: 10, height: 10, top: 80, left: 0, right: 10, bottom: 90, x: 0, y: 80, toJSON: () => ({}) })
+    await vi.advanceTimersByTimeAsync(500)
+    expect(driver.refresh).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(driver.refresh).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(driver.refresh).toHaveBeenCalledTimes(2)
+  })
+
+  it("bước hiện lúc hộp còn đang trượt vào: dời chỗ trước lượt kiểm đầu vẫn vẽ lại", async () => {
+    const a = addTarget("a")
+    const { driver } = setup([{ target: "a", titleKey: "tour_student_1_title", bodyKey: "tour_student_1_body" }])
+    await flush()
+    a.getBoundingClientRect = () => ({ width: 10, height: 10, top: 80, left: 0, right: 10, bottom: 90, x: 0, y: 80, toJSON: () => ({}) })
+    await vi.advanceTimersByTimeAsync(1100)
+    expect(driver.refresh).toHaveBeenCalledTimes(2)
   })
 
   it("tour tắt thì gỡ listener phím", async () => {

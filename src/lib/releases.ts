@@ -20,6 +20,7 @@ export const RELEASES: Release[] = [
     notify: false,
     items: [
       { kind: "fix", title: "Chỉ cho tôi", body: "Bước Sang ca khác: bấm nút mũi tên hoặc phím ← → đều đổi ca, hướng dẫn vẫn đứng ở bước đó." },
+      { kind: "fix", title: "Chỉ cho tôi", body: "Hộp hướng dẫn tự dời theo khi hộp chi tiết ca trượt vào hoặc đổi kích thước, không còn che nút." },
     ],
   },
   {

@@ -191,9 +191,11 @@ for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 800 }]) te
   await page.keyboard.press(backKey);
   await expect(nav).toContainText(startPos);
   await expect(popover(page)).toContainText('Sang ca khác');
-  await nav.getByRole('button', { name: atFirst ? 'Ca sau' : 'Ca trước' }).click();
+  // Đổi ca lúc ca mới chưa tải: hộp co lại, thanh dời chỗ → tour phải vẽ lại, hộp tour không che nút.
+  await nav.getByRole('button', { name: atFirst ? 'Ca sau' : 'Ca trước' }).click({ timeout: 5000 });
   await expect(nav).toContainText(otherPos);
   await expect(popover(page)).toContainText('Sang ca khác');
+  await page.waitForTimeout(700);
   await page.screenshot({ path: `.superpowers/sdd/2026-10-08-af-mui-ten-chuyen-ca/session-nav-${vp.width}.png` });
   // Nút Tiếp vẫn đi sang bước sau.
   await popover(page).locator('.driver-popover-next-btn').click();
@@ -202,4 +204,6 @@ for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 800 }]) te
   // Trả lại tài khoản không có ca cho các lần chạy sau.
   await db.sessionStudent.deleteMany({ where: { session: { userId: u.id } } });
   await db.teachingSession.deleteMany({ where: { userId: u.id } });
+  await db.student.deleteMany({ where: { userId: u.id } });
+  await db.subject.deleteMany({ where: { userId: u.id } });
 });

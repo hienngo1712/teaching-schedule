@@ -21,7 +21,7 @@ const KEY_OWNERS =
 const NESTED_INTERACTIVE = 'button, a, input, select, textarea, [role="button"], [role="menuitem"], [role="checkbox"]'
 
 // Phần dùng tới của Driver (driver.js); khai báo tại chỗ để test dùng driver giả.
-export type TourDriver = { highlight: (step: HighlightStep) => void; destroy: () => void; isActive: () => boolean }
+export type TourDriver = { highlight: (step: HighlightStep) => void; destroy: () => void; isActive: () => boolean; refresh: () => void }
 
 export type RunTourOptions = {
   driver: TourDriver
@@ -79,15 +79,29 @@ export function runTour(opts: RunTourOptions): TourHandle {
   let current: HTMLElement | null = null
   let removeClick: (() => void) | null = null
   const shown: number[] = []
+  const rectOf = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect()
+    return `${r.top},${r.left},${r.width},${r.height}`
+  }
+  let lastRect = ""
+  let settledRect = ""
   // Hộp chứa bước hiện tại bị đóng thì phần tử rời khỏi DOM → tắt tour.
+  // driver.js không tự theo khi phần tử dời chỗ (hộp đang trượt vào, co lại lúc đổi ca): tự vẽ lại kẻo hộp tour che nút.
+  // Vẽ lại tới khi vị trí đứng yên 2 lượt: lượt đầu có thể rơi vào hiệu ứng chuyển bước (~400ms) lúc driver còn giữ phần tử cũ.
   const watch = setInterval(() => {
-    if (current && !current.isConnected) stop()
+    if (!current) return
+    if (!current.isConnected) return stop()
+    const rect = rectOf(current)
+    if (rect !== settledRect) driver.refresh()
+    if (rect === lastRect) settledRect = rect
+    lastRect = rect
   }, 500)
 
   function clearStep() {
     removeClick?.()
     removeClick = null
     current = null
+    lastRect = settledRect = ""
     keyNav = {}
   }
 
@@ -161,6 +175,7 @@ export function runTour(opts: RunTourOptions): TourHandle {
       ? {}
       : { next: buttons.includes("next") ? onNext : undefined, prev: buttons.includes("previous") ? onPrev : undefined }
     current = el ?? null
+    lastRect = settledRect = el ? rectOf(el) : ""
     if (isClick && el) {
       const target = el
       const onClick = (e: Event) => {
