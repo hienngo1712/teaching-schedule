@@ -52,19 +52,12 @@
 4. **Tham số `?tour=` còn trên URL** → tải lại trang chạy lại tour. Test: Task 3 component `TourRunner` "router.replace bỏ tour, giữ tham số khác".
 5. **Đổi giao diện làm mất `data-tour`** mà không ai biết. Test: Task 4 test canh mọi target trong `TOURS` có trong `src/**/*.tsx`.
 
-## Chia việc song song (người dùng chốt 2026-10-08)
+## Bên thực thi (người dùng chốt 2026-10-08)
 
-| Bên | Thư mục / nhánh | Task |
-|---|---|---|
-| **Gehihi** | `D:\APINODEJS\student-managerment`, nhánh `feat/ad-tour-huong-dan` | Task 1 → Task 2 → Task 3 → ghi `DONE AD-1` rồi **chờ**. Sau khi Claude gộp nhánh của Claude-OTD: Task 6 + Task 5 Step 7. |
-| **Claude-OTD** | worktree `D:\APINODEJS\student-managerment-otd`, nhánh `feat/ad-tour-otd` tạo từ commit Task 1 | Task 4 + Task 5 (trừ Step 7) + bước "student" bên dưới. |
-
-- **Claude-OTD chỉ bắt đầu khi ledger `progress.md` có dòng `Task 1: complete`** (cần `src/lib/tours.ts` + i18n). Tạo worktree từ đúng commit đó: `git -C D:\APINODEJS\student-managerment worktree add D:\APINODEJS\student-managerment-otd -b feat/ad-tour-otd <sha Task 1>`.
-- **File của Claude-OTD** (Gehihi không sửa): mọi file trong bảng Task 4 Step 3, `src/components/common/ResponsiveList.tsx`, `tests/unit/lib/tour-targets.test.ts`, `tests/unit/components/ResponsiveList.test.tsx`, `src/components/tour/TourButton.tsx`, `src/components/dashboard/StartCard.tsx`, `src/components/guide/GuideContent.tsx`, `src/app/guide/page.tsx`, `tests/unit/components/TourButton.test.tsx`, `tests/unit/components/StartCard.test.tsx`, `tests/unit/components/GuideContent.test.tsx`.
-- **Bước "student" của Claude-OTD:** để test canh Task 4 xanh trên nhánh riêng, Claude-OTD cũng gắn 6 `data-tour` của Task 3 Step 10 (`AddStudentSplitButton.tsx`, `StudentFormDialog.tsx`) **giống hệt từng ký tự** như Task 3 Step 10 mô tả: thêm thuộc tính `data-tour="..."` làm thuộc tính **cuối cùng** của thẻ mở, không đổi gì khác trên dòng. Gehihi làm y như vậy ở Task 3. Claude gộp nhánh và xử lý nếu lệch.
-- **Không bên nào sửa** `tests/e2e/ad-tour.spec.ts` ngoài Gehihi.
-- **Khoá test:** mọi lệnh `pnpm test …` / `pnpm exec playwright test …` của cả hai bên phải giữ khoá `D:\APINODEJS\student-managerment\.superpowers\test-lock.txt` (luật trong `.superpowers/gehihi/LENH.md` mục 2026-10-08 và `.superpowers/claude-otd/CLAUDE-OTD.md`).
-- Ledger: Gehihi ghi `progress.md`, Claude-OTD ghi `progress-otd.md` (cùng thư mục `.superpowers/sdd/2026-10-07-ad-tour-huong-dan/`).
+- **Claude-OTD làm toàn bộ Task 1 → 6**, tuần tự, ở thư mục `D:\APINODEJS\student-managerment`, nhánh `feat/ad-tour-huong-dan`. Gehihi **không** làm plan này.
+- Luật của Claude-OTD: `.superpowers/claude-otd/CLAUDE-OTD.md`. Ledger: `.superpowers/sdd/2026-10-07-ad-tour-huong-dan/progress.md`.
+- Khoá test `D:\APINODEJS\student-managerment\.superpowers\test-lock.txt` vẫn bắt buộc trước mọi `pnpm test …` / `pnpm exec playwright test …` (phòng khi có bên khác chạy test cùng lúc).
+- Task 3 và Task 6 có e2e: theo mục chống tràn RAM trong `.superpowers/gehihi/LENH.md` (RAM ≥ 3000 MB, foreground, seed trước, tắt dev server cổng 3000 do mình tạo khi xong).
 
 ---
 
