@@ -94,7 +94,7 @@ export function AppSidebar() {
         ))}
       </div>
 
-      <div className="px-1 font-mono text-[11px] leading-tight text-muted-foreground">
+      <div data-testid="build-info" className="px-1 font-mono text-[11px] leading-tight text-muted-foreground">
         <div>
           v{process.env.NEXT_PUBLIC_APP_VERSION} · {process.env.NEXT_PUBLIC_BUILD_SHA}
         </div>
