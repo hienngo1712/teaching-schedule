@@ -46,4 +46,21 @@ describe("ResponsiveList", () => {
     fireEvent.click(screen.getByRole("cell", { name: "An" }))
     expect(onRowClick).toHaveBeenCalledWith({ id: 1, name: "An" })
   })
+
+  it("firstRowTour gắn data-tour lên dòng đầu (bảng) và thẻ đầu (mobile)", () => {
+    render(
+      <ResponsiveList
+        {...base}
+        items={[{ id: 1, name: "A" }, { id: 2, name: "B" }]}
+        isLoading={false}
+        isError={false}
+        onRowClick={() => {}}
+        firstRowTour="tuition-row"
+      />
+    )
+    const tagged = document.querySelectorAll('[data-tour="tuition-row"]')
+    expect(tagged).toHaveLength(2)
+    expect(tagged[0].textContent).toContain("A")
+    expect(tagged[1].textContent).toContain("A")
+  })
 })

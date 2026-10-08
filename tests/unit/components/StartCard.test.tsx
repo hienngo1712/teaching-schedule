@@ -66,4 +66,17 @@ describe("StartCard (spec W §4)", () => {
     fireEvent.click(screen.getByRole("button", { name: viText.start_dismiss }))
     expect(dismissMutate).toHaveBeenCalledTimes(1)
   })
+
+  it("mỗi bước có nút Chỉ cho tôi đúng tour", () => {
+    statusData.current = { dismissed: false, steps: steps({ student: true }) }
+    renderVi()
+    const hrefs = screen.getAllByRole("link", { name: "Chỉ cho tôi" }).map((a) => a.getAttribute("href"))
+    expect(hrefs).toEqual([
+      "/students?tour=student",
+      "/calendar?tour=session",
+      "/calendar?tour=attendance",
+      "/tuition?tour=tuition",
+      "/settings?tour=bank",
+    ])
+  })
 })

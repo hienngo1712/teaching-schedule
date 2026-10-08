@@ -52,6 +52,13 @@
 4. **Tham số `?tour=` còn trên URL** → tải lại trang chạy lại tour. Test: Task 3 component `TourRunner` "router.replace bỏ tour, giữ tham số khác".
 5. **Đổi giao diện làm mất `data-tour`** mà không ai biết. Test: Task 4 test canh mọi target trong `TOURS` có trong `src/**/*.tsx`.
 
+## Bên thực thi (người dùng chốt 2026-10-08)
+
+- **Claude-OTD làm toàn bộ Task 1 → 6**, tuần tự, ở thư mục `D:\APINODEJS\student-managerment`, nhánh `feat/ad-tour-huong-dan`. Gehihi **không** làm plan này.
+- Luật của Claude-OTD: `.superpowers/claude-otd/CLAUDE-OTD.md`. Ledger: `.superpowers/sdd/2026-10-07-ad-tour-huong-dan/progress.md`.
+- Khoá test `D:\APINODEJS\student-managerment\.superpowers\test-lock.txt` vẫn bắt buộc trước mọi `pnpm test …` / `pnpm exec playwright test …` (phòng khi có bên khác chạy test cùng lúc).
+- Task 3 và Task 6 có e2e: theo mục chống tràn RAM trong `.superpowers/gehihi/LENH.md` (RAM ≥ 3000 MB, foreground, seed trước, tắt dev server cổng 3000 do mình tạo khi xong).
+
 ---
 
 ### Task 1: Dữ liệu tour + i18n

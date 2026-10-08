@@ -66,6 +66,7 @@ export function PayBlock({
               setDateOpen(false)
             }
           }}
+          data-tour="tuition-pay-partial"
         >
           {t("pay_partial")}
         </Button>

@@ -36,6 +36,7 @@ export function SessionCard({ session, onClick }: Props) {
         isCancelled && "opacity-60 border-red-300 bg-red-50"
       )}
       title={`${session.startTime}–${session.endTime} · ${session.subject.name}`}
+      data-tour="session-card"
     >
       <div className={cn("font-medium text-slate-900", isCancelled && "line-through text-red-700")}>
         {session.startTime}–{session.endTime}

@@ -149,7 +149,7 @@ export function CalendarToolbar({
             {copyGate.locked && <LockBadge plan={copyGate.requiredPlan} />}
           </Button>
 
-          <Button onClick={onCreateClick} className="order-4 h-11 min-w-0 flex-1 gap-2 px-4 md:ml-2 md:h-10 md:w-auto md:flex-none md:px-6">
+          <Button onClick={onCreateClick} className="order-4 h-11 min-w-0 flex-1 gap-2 px-4 md:ml-2 md:h-10 md:w-auto md:flex-none md:px-6" data-tour="session-add">
             <Plus className="size-4 md:size-5" />
             <span>{t("create_session")}</span>
           </Button>

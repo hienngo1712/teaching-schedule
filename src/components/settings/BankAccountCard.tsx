@@ -82,12 +82,12 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
         <CardDescription>{t("bank_account_desc")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="space-y-2">
+        <div className="space-y-2" data-tour="bank-select">
           <Label htmlFor="bank-bin">{t("bank")}</Label>
           <BankSelect id="bank-bin" value={bankBin} onChange={setBankBin} placeholder={t("bank")} />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-tour="bank-number">
           <Label htmlFor="bank-account-number">{t("account_number")}</Label>
           <Input
             id="bank-account-number"
@@ -100,7 +100,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-tour="bank-name">
           <Label htmlFor="bank-account-name">{t("account_name")}</Label>
           <Input
             id="bank-account-name"
@@ -113,6 +113,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
           />
         </div>
 
+        <div data-tour="bank-submit" className="space-y-5">
         <ConsentCheckbox
           id="bank-consent"
           label={t("consent_bank")}
@@ -142,6 +143,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
             {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             {t("save")}
           </Button>
+        </div>
         </div>
       </CardContent>
 

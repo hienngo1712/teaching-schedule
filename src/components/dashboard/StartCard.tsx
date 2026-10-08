@@ -7,15 +7,17 @@ import { Button } from "@/components/ui/button"
 import { trpc } from "@/lib/trpc"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import type vi from "@/language/vi.json"
+import { TourButton } from "@/components/tour/TourButton"
+import type { TourId } from "@/lib/tours"
 
 type StepKey = "student" | "session" | "attendance" | "payment" | "bank"
 
-const START_STEPS: { key: StepKey; label: keyof typeof vi; hint?: keyof typeof vi; href: string; guideId: string }[] = [
-  { key: "student", label: "start_step_student", href: "/students", guideId: "hoc-sinh" },
-  { key: "session", label: "start_step_session", hint: "start_step_session_hint", href: "/calendar", guideId: "lich-day" },
-  { key: "attendance", label: "start_step_attendance", href: "/calendar", guideId: "diem-danh" },
-  { key: "payment", label: "start_step_payment", href: "/tuition", guideId: "hoc-phi" },
-  { key: "bank", label: "start_step_bank", hint: "start_step_bank_hint", href: "/settings", guideId: "tai-khoan-ngan-hang" },
+const START_STEPS: { key: StepKey; label: keyof typeof vi; hint?: keyof typeof vi; href: string; guideId: string; tour: TourId }[] = [
+  { key: "student", label: "start_step_student", href: "/students", guideId: "hoc-sinh", tour: "student" },
+  { key: "session", label: "start_step_session", hint: "start_step_session_hint", href: "/calendar", guideId: "lich-day", tour: "session" },
+  { key: "attendance", label: "start_step_attendance", href: "/calendar", guideId: "diem-danh", tour: "attendance" },
+  { key: "payment", label: "start_step_payment", href: "/tuition", guideId: "hoc-phi", tour: "tuition" },
+  { key: "bank", label: "start_step_bank", hint: "start_step_bank_hint", href: "/settings", guideId: "tai-khoan-ngan-hang", tour: "bank" },
 ]
 
 export function StartCard() {
@@ -77,6 +79,7 @@ export function StartCard() {
                   {t("start_guide")}
                   <ExternalLink className="size-3" aria-hidden />
                 </a>
+                <TourButton id={s.tour} />
                 {!ok && (
                   <Button asChild variant="outline" size="sm" className="h-11 md:h-9">
                     <Link href={s.href}>{t("start_open")}</Link>

@@ -2,10 +2,11 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react"
 import viText from "@/language/vi.json"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { latestNotifyRelease, type Release } from "@/lib/releases"
+import { setTourActive } from "@/lib/tour-store"
 
 globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver
 
@@ -72,6 +73,15 @@ describe("WhatsNew (spec W §5.2–5.4)", () => {
     status.current = undefined
     renderVi(<WhatsNew />)
     expect(screen.queryByText(LATEST.title)).toBeNull()
+  })
+
+  it("đang có tour thì không tự mở; tour tắt thì mở", async () => {
+    status.current = { lastSeenRelease: null }
+    setTourActive(true)
+    renderVi(<WhatsNew />)
+    expect(screen.queryByText(LATEST.title)).toBeNull()
+    act(() => setTourActive(false))
+    expect(await screen.findByText(LATEST.title)).toBeTruthy()
   })
 })
 

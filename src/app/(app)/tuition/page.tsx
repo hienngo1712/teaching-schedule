@@ -136,6 +136,7 @@ export default function TuitionPage() {
           if (paymentsGate.locked) paymentsGate.openUpgrade()
           else recordPayment.payFull({ studentId: item.studentId, year, month }, due)
         }}
+        data-tour="tuition-pay-full"
       >
         {t("pay_full").replace("{amount}", formatCurrency(due))}
         {paymentsGate.locked && <LockBadge plan={paymentsGate.requiredPlan} className="ml-1.5" />}
@@ -154,6 +155,7 @@ export default function TuitionPage() {
         if (noticeGate.locked) noticeGate.openUpgrade()
         else setNoticeStudentId(item.studentId)
       }}
+      data-tour="tuition-notice"
     >
       <Receipt className="size-4" />
       {noticeGate.locked && (
@@ -222,7 +224,7 @@ export default function TuitionPage() {
 
       <FilterBar
         actions={
-          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1" data-tour="tuition-month">
             <Button variant="ghost" size="icon" onClick={prevMonth} className="size-9">
               <ChevronLeft className="size-5" />
             </Button>
@@ -309,6 +311,7 @@ export default function TuitionPage() {
         errorText={t("load_error")}
         retryText={t("retry")}
         emptyText={t("no_students_found")}
+        firstRowTour="tuition-row"
         renderCard={(item) => (
           <div
             role="button"

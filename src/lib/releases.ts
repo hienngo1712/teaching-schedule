@@ -13,6 +13,16 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.15.0",
+    date: "2026-10-07",
+    title: "Nút Chỉ cho tôi",
+    summary: "App chỉ từng bước ngay trên màn hình cho 6 việc đầu tiên: thêm học sinh, nhập Excel, tạo ca, điểm danh, thu học phí, tài khoản ngân hàng.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Chỉ cho tôi", body: "Bấm Chỉ cho tôi ở thẻ Bắt đầu hoặc trang Hướng dẫn, app tô sáng đúng nút cần bấm và hướng dẫn từng bước.", guideId: "bat-dau" },
+    ],
+  },
+  {
     version: "0.14.1",
     date: "2026-10-07",
     title: "Tạm gỡ khung nhắn tin hỗ trợ",

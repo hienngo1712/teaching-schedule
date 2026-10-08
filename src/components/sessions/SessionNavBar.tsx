@@ -89,6 +89,7 @@ export function SessionNavBar({ siblings, current, onNavigate, blocked = false }
       className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-3 py-1.5"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      data-tour="session-nav"
     >
       <Button
         type="button"

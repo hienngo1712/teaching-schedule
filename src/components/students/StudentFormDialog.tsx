@@ -146,6 +146,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+          <div data-tour="student-form-name" className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="fullName">
               {t("full_name")} <span className="text-red-500">*</span>
@@ -178,7 +179,9 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
               </SelectContent>
             </Select>
           </div>
+          </div>
 
+          <div data-tour="student-form-billing" className="space-y-3">
           <div className="space-y-2">
             <Label>{t("billing_mode_label")}</Label>
             <div
@@ -274,6 +277,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
               )}
             </div>
           )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="isActive">{t("status")}</Label>
@@ -291,7 +295,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="student-form-parent">
             <Label htmlFor="parentPhone">{t("parent_phone")}</Label>
             <Input
               id="parentPhone"
@@ -315,6 +319,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
             <Textarea id="notes" rows={2} {...form.register("notes")} />
           </div>
 
+          <div data-tour="student-form-submit" className="space-y-3">
           <ConsentCheckbox
             id="student-consent"
             label={t("consent_student")}
@@ -340,6 +345,7 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
                   : t("update")}
             </Button>
           </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
