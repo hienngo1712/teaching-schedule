@@ -30,17 +30,22 @@ function addTarget(name: string, visible = true) {
 const t = (k: string) => k
 const flush = () => vi.advanceTimersByTimeAsync(0)
 
+// Tour test trước chưa tắt vẫn còn listener phím trên document: tắt hết sau mỗi test.
+const handles: { stop: () => void }[] = []
+
 function setup(steps: TourStep[], extra: Partial<Pick<RunTourOptions, "firstWaitMs">> = {}) {
   const { driver, calls } = fakeDriver()
   const onMissingClickTarget = vi.fn()
   const onStartTour = vi.fn()
   const onEnd = vi.fn()
   const handle = runTour({ driver, steps, t: t as never, onMissingClickTarget, onStartTour, onEnd, ...extra })
+  handles.push(handle)
   return { driver, calls, onMissingClickTarget, onStartTour, onEnd, handle }
 }
 
 beforeEach(() => vi.useFakeTimers())
 afterEach(() => {
+  handles.splice(0).forEach((h) => h.stop())
   vi.useRealTimers()
   document.body.innerHTML = ""
 })
@@ -308,6 +313,30 @@ describe("runTour", () => {
     document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", altKey: true, bubbles: true }))
     await flush()
     expect(calls).toHaveLength(1)
+  })
+
+  it("bước pageArrows: mũi tên để cho trang (chuyển ca), tour không nhảy bước, không chặn phím", async () => {
+    addTarget("a"); addTarget("b"); addTarget("c")
+    const { calls } = setup([
+      { target: "a", titleKey: "tour_student_1_title", bodyKey: "tour_student_1_body" },
+      { target: "b", titleKey: "tour_student_2_title", bodyKey: "tour_student_2_body", pageArrows: true },
+      { target: "c", titleKey: "tour_student_3_title", bodyKey: "tour_student_3_body" },
+    ])
+    await flush()
+    calls[0].popover.onNextClick()
+    await flush()
+    expect(calls).toHaveLength(2)
+    for (const key of ["ArrowRight", "ArrowLeft"]) {
+      const e = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
+      document.body.dispatchEvent(e)
+      expect(e.defaultPrevented).toBe(false)
+    }
+    await flush()
+    expect(calls).toHaveLength(2)
+    // Nút Tiếp trên hộp tour vẫn đi tiếp.
+    calls[1].popover.onNextClick()
+    await flush()
+    expect(calls).toHaveLength(3)
   })
 
   it("tour tắt thì gỡ listener phím", async () => {

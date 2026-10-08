@@ -157,7 +157,9 @@ export function runTour(opts: RunTourOptions): TourHandle {
         onCloseClick: () => stop(),
       },
     })
-    keyNav = { next: buttons.includes("next") ? onNext : undefined, prev: buttons.includes("previous") ? onPrev : undefined }
+    keyNav = step.pageArrows
+      ? {}
+      : { next: buttons.includes("next") ? onNext : undefined, prev: buttons.includes("previous") ? onPrev : undefined }
     current = el ?? null
     if (isClick && el) {
       const target = el
