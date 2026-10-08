@@ -80,3 +80,38 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.close();
   });
 }
+
+test('Điểm danh khi chưa có ca: bước báo thiếu → chuyển sang tour Tạo ca dạy', async ({ page }) => {
+  await login(page);
+  await page.getByTestId('tour-button-attendance').first().click();
+  await expect(popover(page)).toContainText('Chưa có ca dạy');
+  await popover(page).getByRole('button', { name: 'Chỉ cách tạo ca' }).click();
+  await expect(popover(page)).toContainText('Tạo ca dạy');
+  await expect(page.locator('[data-tour="session-add"]:visible')).toBeVisible();
+});
+
+test('Esc tắt tour sạch, không còn lớp phủ; tải lại không chạy lại', async ({ page }) => {
+  await login(page);
+  await page.goto('/settings?tour=bank');
+  await expect(popover(page)).toContainText('Ngân hàng');
+  await expect(page).toHaveURL(/\/settings$/);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.driver-overlay')).toHaveCount(0);
+  await expect(popover(page)).toHaveCount(0);
+  await page.reload();
+  await page.waitForTimeout(1000);
+  await expect(popover(page)).toHaveCount(0);
+});
+
+test('/guide: chưa đăng nhập không có nút; giáo viên đăng nhập có 6 nút', async ({ browser }) => {
+  const guest = await browser.newPage();
+  await guest.goto('/guide');
+  await expect(guest.locator('section#hoc-sinh')).toBeVisible();
+  await expect(guest.getByRole('link', { name: 'Chỉ cho tôi' })).toHaveCount(0);
+  await guest.close();
+  const page = await browser.newPage();
+  await login(page);
+  await page.goto('/guide');
+  await expect(page.getByRole('link', { name: 'Chỉ cho tôi' })).toHaveCount(6);
+  await page.close();
+});
