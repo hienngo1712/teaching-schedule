@@ -8,10 +8,12 @@ export async function getReleaseStatus(db: PrismaClient, userId: number) {
 }
 
 // Tab cũ chưa tải lại sau deploy có thể gửi bản cũ hơn → không lùi.
-export async function markReleaseSeen(db: PrismaClient, userId: number, version: string) {
+export async function markReleaseSeen(db: PrismaClient, userId: number, version: string): Promise<{ lastSeenRelease: string | null }> {
   if (!isKnownRelease(version)) throw new TRPCError({ code: "BAD_REQUEST", message: "Phiên bản không hợp lệ" })
   const { lastSeenRelease } = await getReleaseStatus(db, userId)
   if (lastSeenRelease && compareVersions(version, lastSeenRelease) <= 0) return { lastSeenRelease }
-  await db.user.update({ where: { id: userId }, data: { lastSeenRelease: version } })
+  // Ghi có điều kiện: tab khác ghi xen giữa thì đọc lại rồi so tiếp, không đè.
+  const { count } = await db.user.updateMany({ where: { id: userId, lastSeenRelease }, data: { lastSeenRelease: version } })
+  if (count === 0) return markReleaseSeen(db, userId, version)
   return { lastSeenRelease: version }
 }

@@ -67,6 +67,16 @@ describe("feedback (spec AB §3.2)", () => {
     await (await getAuthedCaller("teacher2")).feedback.submit({ rating: 5, page: "/" })
   })
 
+  it("7 lần gửi cùng lúc chỉ lọt đúng 5 (giới hạn 24h không bị vượt khi gửi dồn)", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const results = await Promise.allSettled(
+      Array.from({ length: 7 }, (_, i) => caller.feedback.submit({ rating: 5, message: `m${i}`, page: "/dashboard" }))
+    )
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(5)
+    const u = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    expect(await db.feedback.count({ where: { userId: u.id } })).toBe(5)
+  })
+
   it("promptStatus: cần đủ 7 ngày dùng, chưa hỏi, chưa gửi", async () => {
     const caller = await getAuthedCaller("teacher")
     await addActiveDays("teacher", 6)
