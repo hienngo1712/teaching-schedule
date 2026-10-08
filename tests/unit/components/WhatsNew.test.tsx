@@ -83,6 +83,39 @@ describe("WhatsNew (spec W §5.2–5.4)", () => {
     act(() => setTourActive(false))
     expect(await screen.findByText(LATEST.title)).toBeTruthy()
   })
+
+  it("đang có hộp mở (vd tour vừa tắt trong hộp Thêm học sinh): chờ hộp đóng mới tự mở", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const d = document.createElement("div")
+    d.setAttribute("role", "dialog")
+    d.setAttribute("data-state", "open")
+    document.body.appendChild(d)
+    status.current = { lastSeenRelease: null }
+    renderVi(<WhatsNew />)
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(screen.queryByText(LATEST.title)).toBeNull()
+    d.remove()
+    await vi.advanceTimersByTimeAsync(1100)
+    expect(await screen.findByText(LATEST.title)).toBeDefined()
+    vi.useRealTimers()
+  })
+
+  it("mobile: nút Có gì mới là button có aria-haspopup=dialog, không bọc span onClick", () => {
+    window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+      matches: false, media: q, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia
+    status.current = { lastSeenRelease: LATEST.version }
+    renderVi(<WhatsNew />)
+    const btn = screen.getByRole("button", { name: "Có gì mới" })
+    expect(btn.getAttribute("aria-haspopup")).toBe("dialog")
+    expect(btn.parentElement?.tagName).not.toBe("SPAN")
+  })
+
+  it("desktop: ô Có gì mới có aria-label", async () => {
+    status.current = { lastSeenRelease: null }
+    renderVi(<WhatsNew />)
+    expect((await screen.findByRole("dialog")).getAttribute("aria-label")).toBe("Có gì mới")
+  })
 })
 
 describe("WhatsNewPanel (spec W §5.3)", () => {

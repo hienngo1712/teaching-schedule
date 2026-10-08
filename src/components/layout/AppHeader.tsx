@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { DatabaseBackup, KeyRound, LogOut, Languages, MessageSquare, ShieldCheck } from "lucide-react"
+import { CircleHelp, DatabaseBackup, KeyRound, LogOut, Languages, MessageSquare, ShieldCheck } from "lucide-react"
 import { ChangePasswordDialog } from "./ChangePasswordDialog"
 import { BackupConfirmDialog } from "./BackupConfirmDialog"
 import { FeedbackDialog } from "@/components/feedback/FeedbackDialog"
@@ -86,12 +86,22 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             {admin ? (
-              <DropdownMenuItem asChild>
-                <Link href={ADMIN_HOME}>
-                  <ShieldCheck className="size-4 mr-2" />
-                  {t("admin_page")}
-                </Link>
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem asChild>
+                  <Link href={ADMIN_HOME}>
+                    <ShieldCheck className="size-4 mr-2" />
+                    {t("admin_page")}
+                  </Link>
+                </DropdownMenuItem>
+                {/* Admin không có sidebar giáo viên: đây là lối duy nhất vào Hướng dẫn. */}
+                <DropdownMenuItem asChild>
+                  <a href="/guide" target="_blank" rel="noopener noreferrer">
+                    <CircleHelp className="size-4 mr-2" />
+                    {t("guide_nav")}
+                    <span className="sr-only"> {t("opens_new_tab")}</span>
+                  </a>
+                </DropdownMenuItem>
+              </>
             ) : (
               <>
                 <DropdownMenuItem onSelect={() => setConfirmBackup(true)} disabled={backup.isDownloading}>

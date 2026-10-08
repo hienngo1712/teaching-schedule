@@ -312,10 +312,11 @@ export default function TuitionPage() {
         retryText={t("retry")}
         emptyText={t("no_students_found")}
         firstRowTour="tuition-row"
-        renderCard={(item) => (
+        renderCard={(item, index) => (
           <div
             role="button"
             tabIndex={0}
+            data-tour={index === 0 ? "tuition-row" : undefined}
             onClick={() => handleOpenDetail(item)}
             onKeyDown={(e) => e.target === e.currentTarget && e.key === "Enter" && handleOpenDetail(item)}
             className="rounded-lg border bg-white p-4 transition-transform active:scale-[0.98]"

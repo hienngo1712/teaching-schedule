@@ -113,7 +113,8 @@ export function ResponsiveList<T>({
 
       <div className="space-y-3 md:hidden">
         {items.map((item, index) => (
-          <div key={getKey(item)} data-testid="list-card" data-tour={index === 0 ? firstRowTour : undefined}>
+          // firstRowTour chỉ cho dòng bảng: thẻ mobile tự gắn data-tour lên phần tử bấm được (bước 👆 so đúng phần tử nhận click).
+          <div key={getKey(item)} data-testid="list-card">
             {renderCard(item, index)}
           </div>
         ))}

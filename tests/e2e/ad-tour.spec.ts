@@ -63,9 +63,20 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.getByTestId('tour-button-student').first().click();
     await expect(page).toHaveURL(/\/students$/);
     await expect(popover(page)).toContainText('Thêm học sinh');
+    // driver.css tải động vẫn áp dụng.
+    await expect(popover(page)).toHaveCSS('position', 'fixed');
     await page.locator('[data-tour="student-add"]:visible').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
+    await expect(popover(page)).toContainText('Họ tên và lớp');
+    // Phím mũi tên khi focus không ở ô nhập: phải = Tiếp, trái = Quay lại.
+    // Hộp tự trả focus về ô Họ tên; các ô kế (Lớp, Cách thu, Học phí) đều tự dùng mũi tên → focus nút đóng hộp.
+    const closeBtn = page.getByRole('dialog', { name: 'Thêm học sinh', exact: true }).getByRole('button', { name: 'Close' });
+    await closeBtn.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(popover(page)).toContainText('Cách thu học phí');
+    await closeBtn.focus();
+    await page.keyboard.press('ArrowLeft');
     await expect(popover(page)).toContainText('Họ tên và lớp');
     // Người dùng tự làm đúng lời chỉ trong lúc tour chạy: chọn lớp (menu thả xuống nằm ngoài hộp) không được tắt tour.
     await page.locator('#fullName').fill('Bé Tour');
@@ -95,6 +106,18 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.close();
   });
 }
+
+for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 800 }]) test(`${vp.width}px: thẻ Bắt đầu không bóp tên bước (link + nút xuống dòng riêng khi chật)`, async ({ browser }) => {
+  const page = await browser.newPage({ viewport: vp });
+  await login(page);
+  const labels = page.locator('[data-testid="start-step"] p:first-of-type');
+  await expect(labels.first()).toBeVisible();
+  const widths = await labels.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
+  for (const w of widths) expect(w).toBeGreaterThan(200);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(vp.width);
+  await page.screenshot({ path: `.superpowers/sdd/2026-10-08-ae-don-loi-nho/startcard-${vp.width}.png` });
+  await page.close();
+});
 
 test('Điểm danh khi chưa có ca: bước báo thiếu → chuyển sang tour Tạo ca dạy', async ({ page }) => {
   await login(page);
@@ -129,4 +152,36 @@ test('/guide: chưa đăng nhập không có nút; giáo viên đăng nhập có
   await page.goto('/guide');
   await expect(page.getByRole('link', { name: 'Chỉ cho tôi' })).toHaveCount(6);
   await page.close();
+});
+
+test('390px: tour Điểm danh, bước chuyển ca: hộp chi tiết ca vẫn cuộn được', async ({ browser }) => {
+  // 2 ca cùng tháng (giờ VN) để có thanh chuyển ca; ca hôm nay đứng đầu danh sách mobile.
+  const u = await db.user.findUniqueOrThrow({ where: { username: USER } });
+  const subject = await db.subject.create({ data: { userId: u.id, name: 'Toán', isDefault: true } });
+  const student = await db.student.create({ data: { userId: u.id, fullName: 'Bé Cuộn', grade: 5, tuitionFee: 100000 } });
+  const vn = new Date(Date.now() + 7 * 3600_000);
+  const day = vn.getUTCDate();
+  const ymd = (d: number) => new Date(Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), d));
+  const T = (s: string) => new Date(`1970-01-01T${s}:00.000Z`);
+  for (const d of [day, day > 1 ? day - 1 : day + 1]) {
+    await db.teachingSession.create({
+      data: {
+        userId: u.id, subjectId: subject.id, sessionDate: ymd(d), startTime: T('10:00'), endTime: T('11:00'),
+        sessionStudents: { create: { studentId: student.id, grade: 5, fee: 100000 } },
+      },
+    });
+  }
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await login(page);
+  await page.goto('/calendar?tour=attendance');
+  await expect(popover(page)).toContainText('Mở ca dạy');
+  await page.locator('[data-tour="session-card"]:visible').first().click();
+  await expect(popover(page)).toContainText('Sang ca khác');
+  // Popover tour cũng là role=dialog → chọn hộp Radix theo data-state.
+  const dlg = page.locator('[role="dialog"][data-state="open"]');
+  await expect(dlg).toHaveCSS('overflow-y', 'auto');
+  await page.close();
+  // Trả lại tài khoản không có ca cho các lần chạy sau.
+  await db.sessionStudent.deleteMany({ where: { session: { userId: u.id } } });
+  await db.teachingSession.deleteMany({ where: { userId: u.id } });
 });

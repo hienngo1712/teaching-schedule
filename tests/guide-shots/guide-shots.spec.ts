@@ -32,7 +32,7 @@ test.afterAll(cleanupDemo)
 
 async function clean(page: Page) {
   await page.addStyleTag({
-    content: "nextjs-portal, [data-sonner-toaster] { display: none !important; }",
+    content: "nextjs-portal, [data-sonner-toaster] { display: none !important; } [data-testid=\"build-info\"] { visibility: hidden !important; }",
   })
 }
 

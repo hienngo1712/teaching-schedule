@@ -14,6 +14,12 @@ type HighlightStep = {
     onCloseClick: () => void
   }
 }
+// Ô nhập / vùng tự xử lý mũi tên: không cướp phím làm nhảy bước.
+const KEY_OWNERS =
+  'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="radio"], [role="slider"], [role="spinbutton"], [role="combobox"], [role="listbox"], [role="option"], [role="menu"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="tab"], [role="grid"], [role="treeitem"]'
+// Bước 👆 trên cả dòng: bấm phần tử bấm được bên trong dòng (Đã đóng đủ, Phiếu báo) không tính là bấm dòng.
+const NESTED_INTERACTIVE = 'button, a, input, select, textarea, [role="button"], [role="menuitem"], [role="checkbox"]'
+
 // Phần dùng tới của Driver (driver.js); khai báo tại chỗ để test dùng driver giả.
 export type TourDriver = { highlight: (step: HighlightStep) => void; destroy: () => void; isActive: () => boolean }
 
@@ -22,6 +28,7 @@ export type RunTourOptions = {
   steps: TourStep[]
   t: (key: TourKey) => string
   waitMs?: number
+  firstWaitMs?: number
   onMissingClickTarget: () => void
   onStartTour: (id: TourId) => void
   onEnd: () => void
@@ -54,6 +61,20 @@ function waitForTarget(target: string, timeoutMs: number, isStopped: () => boole
 
 export function runTour(opts: RunTourOptions): TourHandle {
   const { driver, steps, t, waitMs = TOUR_WAIT_MS } = opts
+  let nextWait = opts.firstWaitMs ?? waitMs
+  let keyNav: { next?: () => void; prev?: () => void } = {}
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return
+    // Alt+← là Quay lại của trình duyệt: không cướp tổ hợp phím.
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+    if ((e.target as Element | null)?.closest?.(KEY_OWNERS)) return
+    const fn = e.key === "ArrowRight" ? keyNav.next : keyNav.prev
+    if (!fn) return
+    e.preventDefault()
+    fn()
+  }
+  // driver.js chỉ nghe mũi tên khi chạy kiểu nhiều bước; highlight() từng bước thì phải tự nghe.
+  document.addEventListener("keydown", onKey, true)
   let stopped = false
   let current: HTMLElement | null = null
   let removeClick: (() => void) | null = null
@@ -67,12 +88,14 @@ export function runTour(opts: RunTourOptions): TourHandle {
     removeClick?.()
     removeClick = null
     current = null
+    keyNav = {}
   }
 
   function stop() {
     if (stopped) return
     stopped = true
     clearInterval(watch)
+    document.removeEventListener("keydown", onKey, true)
     clearStep()
     if (driver.isActive()) driver.destroy()
     opts.onEnd()
@@ -89,7 +112,8 @@ export function runTour(opts: RunTourOptions): TourHandle {
     const step = steps[i]
     let el: HTMLElement | undefined
     if (step.target) {
-      const found = await waitForTarget(step.target, waitMs, () => stopped)
+      const found = await waitForTarget(step.target, nextWait, () => stopped)
+      nextWait = waitMs
       if (stopped || my !== seq) return
       if (!found) {
         if (step.advanceOn === "click") {
@@ -106,6 +130,20 @@ export function runTour(opts: RunTourOptions): TourHandle {
     const isClick = step.advanceOn === "click"
     const isLast = i === steps.length - 1
     const buttons: PopoverButton[] = isClick ? ["close"] : shown.length > 1 ? ["previous", "next", "close"] : ["next", "close"]
+    const onNext = () => {
+      if (step.nextTour) {
+        const next = step.nextTour
+        stop()
+        opts.onStartTour(next)
+        return
+      }
+      void show(i + 1)
+    }
+    const onPrev = () => {
+      shown.pop()
+      const prev = shown.pop()
+      if (prev !== undefined) void show(prev)
+    }
     driver.highlight({
       element: el,
       popover: {
@@ -114,32 +152,24 @@ export function runTour(opts: RunTourOptions): TourHandle {
         showButtons: buttons,
         nextBtnText: step.nextLabelKey ? t(step.nextLabelKey) : isLast ? t("tour_done") : t("tour_next"),
         prevBtnText: t("tour_prev"),
-        onNextClick: () => {
-          if (step.nextTour) {
-            const next = step.nextTour
-            stop()
-            opts.onStartTour(next)
-            return
-          }
-          void show(i + 1)
-        },
-        onPrevClick: () => {
-          shown.pop()
-          const prev = shown.pop()
-          if (prev !== undefined) void show(prev)
-        },
+        onNextClick: onNext,
+        onPrevClick: onPrev,
         onCloseClick: () => stop(),
       },
     })
+    keyNav = { next: buttons.includes("next") ? onNext : undefined, prev: buttons.includes("previous") ? onPrev : undefined }
     current = el ?? null
     if (isClick && el) {
       const target = el
-      const onClick = () => {
+      const onClick = (e: Event) => {
+        const hit = (e.target as Element | null)?.closest?.(NESTED_INTERACTIVE)
+        if (hit && hit !== target && target.contains(hit)) return
+        target.removeEventListener("click", onClick)
         // Bước 👆 là mốc: Quay lại không được chỉ vào nút nằm sau hộp vừa mở.
         shown.length = 0
         void show(i + 1, true)
       }
-      target.addEventListener("click", onClick, { once: true })
+      target.addEventListener("click", onClick)
       removeClick = () => target.removeEventListener("click", onClick)
     }
   }

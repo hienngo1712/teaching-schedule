@@ -1,12 +1,11 @@
 "use client"
 
-import "driver.js/dist/driver.css"
 import { useEffect, useRef } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { trpc } from "@/lib/trpc"
-import { MISSING_STEPS, TOURS, TOUR_PARAM, parseTourParam, tourHref, type TourStep } from "@/lib/tours"
+import { MISSING_STEPS, TOURS, TOUR_FIRST_WAIT_MS, TOUR_PARAM, parseTourParam, tourHref, type TourStep } from "@/lib/tours"
 import { runTour, type TourHandle } from "@/lib/tour-controller"
 import { setTourActive } from "@/lib/tour-store"
 
@@ -18,20 +17,17 @@ export function TourRunner() {
   const { t } = useTranslation()
   const utils = trpc.useUtils()
   const handle = useRef<TourHandle | null>(null)
-  const alive = useRef(true)
+  // Mỗi lần chạy 1 số; đổi trang / lần chạy mới / StrictMode unmount làm lần cũ còn đang tải tự bỏ.
+  const runId = useRef(0)
   const raw = params.get(TOUR_PARAM)
 
-  useEffect(() => {
-    alive.current = true
-    return () => {
-      alive.current = false
-    }
-  }, [])
-
-  // Chuyển trang thì tắt tour đang chạy.
+  // Chuyển trang thì tắt tour đang chạy, kể cả lần còn đang tải (chưa có handle).
+  // stop() trước rồi mới tăng runId: end() của tour đang chạy phải còn khớp số để dọn handle.
   useEffect(
     () => () => {
       handle.current?.stop()
+      runId.current++
+      setTourActive(false)
     },
     [pathname]
   )
@@ -49,9 +45,11 @@ export function TourRunner() {
       toast(t("tour_close_dialog_first"))
       return
     }
+    const my = ++runId.current
     handle.current?.stop()
     setTourActive(true)
     const end = () => {
+      if (my !== runId.current) return
       handle.current = null
       setTourActive(false)
     }
@@ -63,10 +61,11 @@ export function TourRunner() {
         if (tour.requires) {
           // Cache 60s có thể còn "chưa có ca" dù vừa tạo ca xong.
           const status = await utils.onboarding.status.fetch(undefined, { staleTime: 0 })
+          if (my !== runId.current) return
           if (!status.steps[tour.requires]) steps = [MISSING_STEPS[tour.requires]]
         }
-        const { driver } = await import("driver.js")
-        if (!alive.current) return end()
+        const [{ driver }] = await Promise.all([import("driver.js"), import("driver.js/dist/driver.css")])
+        if (my !== runId.current) return
         const drv = driver({
           overlayOpacity: 0.5,
           stagePadding: 4,
@@ -85,8 +84,11 @@ export function TourRunner() {
           onMissingClickTarget: () => toast(t("tour_target_missing")),
           onStartTour: (next) => router.push(tourHref(next)),
           onEnd: end,
+          firstWaitMs: TOUR_FIRST_WAIT_MS,
         })
       } catch {
+        if (my !== runId.current) return
+        toast(t("tour_load_error"))
         end()
       }
     })()

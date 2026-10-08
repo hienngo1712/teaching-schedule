@@ -70,4 +70,13 @@ describe("AppSidebar", () => {
     expect(badge.textContent).toBe("Plus")
     expect(badge.previousElementSibling?.textContent).toBe("Lịch dạy")
   })
+
+  it("khối version có data-testid build-info (script chụp ảnh ẩn nó)", () => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <AppSidebar />
+      </LanguageProvider>
+    )
+    expect(document.querySelector('[data-testid="build-info"]')).not.toBeNull()
+  })
 })

@@ -20,7 +20,7 @@ function Rich({ text }: { text: string }) {
   )
 }
 
-export function GuideContent({ canTour = false }: { canTour?: boolean }) {
+export function GuideContent({ canTour = false, home = null }: { canTour?: boolean; home?: string | null }) {
   const { t } = useTranslation()
   return (
     <main className="mx-auto max-w-3xl space-y-8 px-4 py-8 text-slate-700 print:max-w-none print:px-0 print:py-0">
@@ -70,7 +70,11 @@ export function GuideContent({ canTour = false }: { canTour?: boolean }) {
 
       <div className="flex flex-wrap gap-4 border-t pt-4 print:hidden">
         <Link href="/privacy" className="inline-flex min-h-11 items-center text-sm text-primary underline">{t("privacy_title")}</Link>
-        <Link href="/login" className="inline-flex min-h-11 items-center text-sm text-primary underline">{t("guide_back_login")}</Link>
+        {home ? (
+          <Link href={home} className="inline-flex min-h-11 items-center text-sm text-primary underline">{t("guide_back_home")}</Link>
+        ) : (
+          <Link href="/login" className="inline-flex min-h-11 items-center text-sm text-primary underline">{t("guide_back_login")}</Link>
+        )}
       </div>
     </main>
   )

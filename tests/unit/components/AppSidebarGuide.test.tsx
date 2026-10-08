@@ -34,4 +34,9 @@ describe("AppSidebar — mục HD sử dụng", () => {
     expect(link.getAttribute("target")).toBe("_blank")
     expect(link.getAttribute("rel")).toContain("noopener")
   })
+
+  it("link HD sử dụng có chữ ẩn báo mở tab mới", () => {
+    renderSidebar()
+    expect(screen.getByRole("link", { name: /HD sử dụng.*mở tab mới/ })).toBeDefined()
+  })
 })

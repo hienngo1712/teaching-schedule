@@ -37,7 +37,7 @@ export function StartCard() {
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="font-semibold text-slate-900">{t("start_title")}</p>
+            <h2 className="font-semibold text-slate-900">{t("start_title")}</h2>
             <p className="text-sm text-slate-500">
               {t("start_progress").replace("{n}", String(done)).replace("{total}", String(START_STEPS.length))}
             </p>
@@ -53,7 +53,14 @@ export function StartCard() {
             <X className="size-5" />
           </Button>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          role="progressbar"
+          aria-label={t("start_title")}
+          aria-valuemin={0}
+          aria-valuemax={START_STEPS.length}
+          aria-valuenow={done}
+          className="h-2 overflow-hidden rounded-full bg-slate-100"
+        >
           <div className="h-full bg-primary" style={{ width: `${(done / START_STEPS.length) * 100}%` }} />
         </div>
         <ul className="divide-y">
@@ -66,25 +73,28 @@ export function StartCard() {
                 ) : (
                   <Circle className="size-5 shrink-0 text-slate-300" aria-hidden />
                 )}
-                <div className="min-w-0 flex-1">
+                {/* basis-48: chật thì cả cụm nút xuống dòng riêng, tên bước không bị bóp (mobile 375px). */}
+                <div className="min-w-0 flex-1 basis-48">
                   <p className={ok ? "text-sm text-slate-400 line-through" : "text-sm font-medium text-slate-900"}>{t(s.label)}</p>
                   {s.hint && !ok && <p className="text-xs text-slate-500">{t(s.hint)}</p>}
                 </div>
-                <a
-                  href={`/guide#${s.guideId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center gap-1 text-xs text-primary underline underline-offset-2"
-                >
-                  {t("start_guide")}
-                  <ExternalLink className="size-3" aria-hidden />
-                </a>
-                <TourButton id={s.tour} />
-                {!ok && (
-                  <Button asChild variant="outline" size="sm" className="h-11 md:h-9">
-                    <Link href={s.href}>{t("start_open")}</Link>
-                  </Button>
-                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <a
+                    href={`/guide#${s.guideId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-1 text-xs text-primary underline underline-offset-2"
+                  >
+                    {t("start_guide")}
+                    <ExternalLink className="size-3" aria-hidden />
+                  </a>
+                  <TourButton id={s.tour} />
+                  {!ok && (
+                    <Button asChild variant="outline" size="sm" className="h-11 md:h-9">
+                      <Link href={s.href}>{t("start_open")}</Link>
+                    </Button>
+                  )}
+                </div>
               </li>
             )
           })}

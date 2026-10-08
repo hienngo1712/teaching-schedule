@@ -15,6 +15,8 @@ export type Tour = { id: TourId; href: string; steps: TourStep[]; requires?: "st
 
 export const TOUR_PARAM = "tour"
 export const TOUR_WAIT_MS = 3000
+// Bước đầu: trang vừa chuyển có thể tải nguội (dev, mạng chậm) lâu hơn 3 giây.
+export const TOUR_FIRST_WAIT_MS = 8000
 export const TOUR_POLL_MS = 100
 
 export const TOURS: Record<TourId, Tour> = {

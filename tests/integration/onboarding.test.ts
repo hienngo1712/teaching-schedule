@@ -40,16 +40,26 @@ describe("onboarding (spec W §4)", () => {
     expect(s.steps).toMatchObject({ attendance: true, bank: true })
   })
 
-  it("HS và ca đã xoá mềm, điểm danh của ca đã xoá không tính", async () => {
+  it("ca đã xoá mềm: không tính ca, không tính điểm danh của ca đó (HS vẫn tính)", async () => {
     const caller = await getAuthedCaller("teacher")
     const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
-    const st = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS W2", grade: 5, tuitionFee: 100_000 })
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS W2a", grade: 5, tuitionFee: 100_000 })
     const today = new Date().toISOString().slice(0, 10)
     const ses = await caller.session.create({ sessionDate: today, startTime: "10:00", endTime: "11:00", subjectId, studentIds: [st.id] })
     await db.sessionStudent.updateMany({ where: { sessionId: ses.id }, data: { attendance: "present" } })
     await db.teachingSession.update({ where: { id: ses.id }, data: { isDeleted: true, deletedAt: new Date() } })
+    expect((await caller.onboarding.status()).steps).toEqual({ ...NONE, student: true })
+  })
+
+  it("HS đã xoá mềm: không tính HS, không tính điểm danh của HS đó (ca vẫn tính)", async () => {
+    const caller = await getAuthedCaller("teacher")
+    const subjectId = (await caller.subject.list({})).find((s) => s.isDefault)!.id
+    const st = await caller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS W2b", grade: 5, tuitionFee: 100_000 })
+    const today = new Date().toISOString().slice(0, 10)
+    const ses = await caller.session.create({ sessionDate: today, startTime: "10:00", endTime: "11:00", subjectId, studentIds: [st.id] })
+    await db.sessionStudent.updateMany({ where: { sessionId: ses.id }, data: { attendance: "present" } })
     await db.student.update({ where: { id: st.id }, data: { isDeleted: true, deletedAt: new Date() } })
-    expect((await caller.onboarding.status()).steps).toEqual(NONE)
+    expect((await caller.onboarding.status()).steps).toEqual({ ...NONE, session: true })
   })
 
   it("payment tick khi có phiếu thu tiền thật sự", async () => {

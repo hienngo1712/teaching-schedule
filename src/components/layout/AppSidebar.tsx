@@ -13,6 +13,7 @@ import { openUpgrade } from "@/components/plan/upgrade-store"
 import { MANAGE_ITEMS, NAV_ITEMS, isNavActive, type NavItem } from "./nav-items"
 
 function SidebarLink({ item, pathname, label, locked }: { item: NavItem; pathname: string; label: string; locked: boolean }) {
+  const { t } = useTranslation()
   const Icon = item.icon
   const active = isNavActive(pathname, item.href)
   if (item.external) {
@@ -26,6 +27,7 @@ function SidebarLink({ item, pathname, label, locked }: { item: NavItem; pathnam
       >
         <Icon className="size-4" />
         <span>{label}</span>
+        <span className="sr-only"> {t("opens_new_tab")}</span>
       </a>
     )
   }
@@ -92,7 +94,7 @@ export function AppSidebar() {
         ))}
       </div>
 
-      <div className="px-1 font-mono text-[11px] leading-tight text-muted-foreground">
+      <div data-testid="build-info" className="px-1 font-mono text-[11px] leading-tight text-muted-foreground">
         <div>
           v{process.env.NEXT_PUBLIC_APP_VERSION} · {process.env.NEXT_PUBLIC_BUILD_SHA}
         </div>

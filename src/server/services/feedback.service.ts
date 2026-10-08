@@ -7,22 +7,26 @@ export const FEEDBACK_PROMPT_MIN_DAYS = 7
 export const FEEDBACK_PAGE_SIZE = 50
 export const FEEDBACK_MESSAGE_MAX = 1000
 
+// Khoá 2 số theo user (7401, 7402 đã dùng): 2 lần gửi cùng lúc phải chờ nhau, không cùng đọc "còn lượt".
+const FEEDBACK_LOCK_NS = 7403
+
 export async function submitFeedback(
   db: PrismaClient,
   userId: number,
   input: { rating: number; message?: string; page: string }
 ) {
-  const since = new Date(Date.now() - 24 * 3600_000)
-  const recent = await db.feedback.count({ where: { userId, createdAt: { gte: since } } })
-  if (recent >= FEEDBACK_DAILY_LIMIT) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "FEEDBACK_LIMIT" })
-  await db.$transaction([
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${FEEDBACK_LOCK_NS}::int, ${userId}::int)`
+    const since = new Date(Date.now() - 24 * 3600_000)
+    const recent = await tx.feedback.count({ where: { userId, createdAt: { gte: since } } })
+    if (recent >= FEEDBACK_DAILY_LIMIT) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "FEEDBACK_LIMIT" })
     // Bản app lấy ở server, không tin client.
-    db.feedback.create({
+    await tx.feedback.create({
       data: { userId, rating: input.rating, message: input.message?.trim() || null, page: input.page, appVersion: pkg.version },
-    }),
-    db.user.updateMany({ where: { id: userId, feedbackPromptAt: null }, data: { feedbackPromptAt: new Date() } }),
-  ])
-  return { ok: true as const }
+    })
+    await tx.user.updateMany({ where: { id: userId, feedbackPromptAt: null }, data: { feedbackPromptAt: new Date() } })
+    return { ok: true as const }
+  })
 }
 
 export async function getFeedbackPromptStatus(db: PrismaClient, userId: number) {

@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { renderHook } from "@testing-library/react"
-import { useCalendar } from "@/hooks/useCalendar"
+import { useCalendar, buildCalendarGrid } from "@/hooks/useCalendar"
 
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 
@@ -62,6 +62,18 @@ describe("useCalendar - defaultOffset (spec Y §4)", () => {
       expect(prev.result.current.month).toBe(9)
     } finally {
       process.env.TZ = oldTz
+    }
+  })
+
+  it("ô hôm nay theo ngày VN, không theo giờ máy (01:30 sáng 1/11 giờ VN, máy chạy UTC)", () => {
+    const prev = process.env.TZ
+    process.env.TZ = "UTC"
+    try {
+      const { grid } = buildCalendarGrid(2026, 11, [], new Date("2026-10-31T18:30:00Z"))
+      expect(grid.filter((c) => c.isToday).map((c) => c.date)).toEqual(["2026-11-01"])
+    } finally {
+      if (prev === undefined) delete process.env.TZ
+      else process.env.TZ = prev
     }
   })
 })

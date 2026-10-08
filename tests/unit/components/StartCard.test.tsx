@@ -43,6 +43,15 @@ describe("StartCard (spec W §4)", () => {
     expect(screen.getAllByTestId("start-step-done")).toHaveLength(2)
   })
 
+  it("thanh tiến độ có role progressbar + giá trị; tiêu đề là heading", () => {
+    statusData.current = { dismissed: false, steps: steps({ student: true, session: true }) }
+    renderVi()
+    const bar = screen.getByRole("progressbar", { name: "Bắt đầu sử dụng" })
+    expect(bar.getAttribute("aria-valuenow")).toBe("2")
+    expect(bar.getAttribute("aria-valuemax")).toBe("5")
+    expect(screen.getByRole("heading", { name: "Bắt đầu sử dụng" })).toBeDefined()
+  })
+
   it("link hướng dẫn mở tab mới tới đúng mục", () => {
     statusData.current = { dismissed: false, steps: steps() }
     renderVi()
