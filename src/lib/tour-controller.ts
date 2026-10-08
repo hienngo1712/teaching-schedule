@@ -78,20 +78,26 @@ export function runTour(opts: RunTourOptions): TourHandle {
     opts.onEnd()
   }
 
-  async function show(i: number): Promise<void> {
+  // Bấm Tiếp liên tục khi bước sau còn đang chờ: chỉ chuỗi show mới nhất được chạy tiếp.
+  let seq = 0
+
+  async function show(i: number, afterClick = false): Promise<void> {
     clearStep()
     if (stopped) return
     if (i >= steps.length) return stop()
+    const my = ++seq
     const step = steps[i]
     let el: HTMLElement | undefined
     if (step.target) {
       const found = await waitForTarget(step.target, waitMs, () => stopped)
-      if (stopped) return
+      if (stopped || my !== seq) return
       if (!found) {
         if (step.advanceOn === "click") {
           opts.onMissingClickTarget()
           return stop()
         }
+        // Bấm mở hộp mà hộp không hiện (vd gói khoá mở hộp nâng cấp): tắt hẳn, đừng để lớp phủ che hộp kia.
+        if (afterClick) return stop()
         return show(i + 1)
       }
       el = found
@@ -128,7 +134,11 @@ export function runTour(opts: RunTourOptions): TourHandle {
     current = el ?? null
     if (isClick && el) {
       const target = el
-      const onClick = () => void show(i + 1)
+      const onClick = () => {
+        // Bước 👆 là mốc: Quay lại không được chỉ vào nút nằm sau hộp vừa mở.
+        shown.length = 0
+        void show(i + 1, true)
+      }
       target.addEventListener("click", onClick, { once: true })
       removeClick = () => target.removeEventListener("click", onClick)
     }

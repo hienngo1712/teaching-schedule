@@ -20,6 +20,7 @@ vi.mock("@/lib/tour-controller", () => run)
 vi.mock("driver.js", () => ({ driver: vi.fn(() => ({ highlight: vi.fn(), destroy: vi.fn(), isActive: () => false })) }))
 vi.mock("driver.js/dist/driver.css", () => ({}))
 
+import { driver } from "driver.js"
 import { TourRunner } from "@/components/tour/TourRunner"
 import { isTourActive, setTourActive } from "@/lib/tour-store"
 
@@ -81,5 +82,23 @@ describe("TourRunner", () => {
     nav.search = ""
     renderVi()
     expect(nav.replace).not.toHaveBeenCalled()
+  })
+
+  it("đọc trạng thái Bắt đầu mới nhất, không lấy cache (vừa tạo ca xong bấm Điểm danh)", async () => {
+    nav.search = "tour=attendance"
+    nav.pathname = "/calendar"
+    renderVi()
+    await waitFor(() => expect(run.runTour).toHaveBeenCalled())
+    expect(status.fetch).toHaveBeenCalledWith(undefined, { staleTime: 0 })
+  })
+
+  it("Esc / bấm ra lớp phủ (kể cả lúc driver chưa xong hiệu ứng) đều dọn tour qua onDestroyStarted", async () => {
+    renderVi()
+    await waitFor(() => expect(run.runTour).toHaveBeenCalled())
+    const config = (vi.mocked(driver).mock.calls[0] as unknown as [{ onDestroyStarted?: () => void }])[0]
+    const handle = (run.runTour.mock.results[0] as { value: { stop: ReturnType<typeof vi.fn> } }).value
+    expect(config.onDestroyStarted).toBeTypeOf("function")
+    config.onDestroyStarted!()
+    expect(handle.stop).toHaveBeenCalled()
   })
 })

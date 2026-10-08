@@ -163,4 +163,55 @@ describe("runTour", () => {
     handle.stop()
     expect(onEnd).toHaveBeenCalledTimes(1)
   })
+
+  it("bước ngay sau bước 👆 không có nút Quay lại (quay lại sẽ chỉ vào nút sau hộp đang mở)", async () => {
+    const a = addTarget("a")
+    const { calls } = setup([
+      { target: "a", titleKey: "tour_student_1_title", bodyKey: "tour_student_1_body", advanceOn: "click" },
+      { target: "b", titleKey: "tour_student_2_title", bodyKey: "tour_student_2_body" },
+      { target: "c", titleKey: "tour_student_3_title", bodyKey: "tour_student_3_body" },
+    ])
+    await flush()
+    a.click()
+    addTarget("b")
+    addTarget("c")
+    await vi.advanceTimersByTimeAsync(200)
+    expect(calls[1].popover.showButtons).toEqual(["next", "close"])
+    calls[1].popover.onNextClick()
+    await flush()
+    expect(calls[2].popover.showButtons).toEqual(["previous", "next", "close"])
+  })
+
+  it("bấm 👆 mà hộp không mở (vd gói bị khoá mở hộp nâng cấp): tắt tour, không bỏ qua dần từng bước", async () => {
+    const a = addTarget("a")
+    addTarget("c")
+    const { calls, onEnd, onMissingClickTarget } = setup([
+      { target: "a", titleKey: "tour_import_2_title", bodyKey: "tour_import_2_body", advanceOn: "click" },
+      { target: "b", titleKey: "tour_import_3_title", bodyKey: "tour_import_3_body" },
+      { target: "c", titleKey: "tour_import_4_title", bodyKey: "tour_import_4_body" },
+    ])
+    await flush()
+    a.click()
+    await vi.advanceTimersByTimeAsync(3200)
+    expect(onEnd).toHaveBeenCalledTimes(1)
+    expect(calls).toHaveLength(1)
+    expect(onMissingClickTarget).not.toHaveBeenCalled()
+  })
+
+  it("bấm Tiếp 2 lần khi bước sau còn đang chờ: chỉ chạy 1 lần, Quay lại vẫn đúng", async () => {
+    const a = addTarget("a")
+    const { calls } = setup([
+      { target: "a", titleKey: "tour_student_2_title", bodyKey: "tour_student_2_body" },
+      { target: "b", titleKey: "tour_student_3_title", bodyKey: "tour_student_3_body" },
+    ])
+    await flush()
+    calls[0].popover.onNextClick()
+    calls[0].popover.onNextClick()
+    addTarget("b")
+    await vi.advanceTimersByTimeAsync(200)
+    expect(calls).toHaveLength(2)
+    calls[1].popover.onPrevClick()
+    await flush()
+    expect(calls[2].element).toBe(a)
+  })
 })

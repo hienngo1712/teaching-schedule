@@ -113,6 +113,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
           />
         </div>
 
+        <div data-tour="bank-submit" className="space-y-5">
         <ConsentCheckbox
           id="bank-consent"
           label={t("consent_bank")}
@@ -123,7 +124,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between" data-tour="bank-submit">
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
           {initial && (
             <Button
               variant="outline"
@@ -142,6 +143,7 @@ function BankAccountForm({ initial }: { initial: BankAccountInput | null }) {
             {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             {t("save")}
           </Button>
+        </div>
         </div>
       </CardContent>
 

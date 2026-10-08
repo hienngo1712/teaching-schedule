@@ -61,7 +61,8 @@ export function TourRunner() {
         const tour = TOURS[id]
         let steps: TourStep[] = tour.steps
         if (tour.requires) {
-          const status = await utils.onboarding.status.fetch()
+          // Cache 60s có thể còn "chưa có ca" dù vừa tạo ca xong.
+          const status = await utils.onboarding.status.fetch(undefined, { staleTime: 0 })
           if (!status.steps[tour.requires]) steps = [MISSING_STEPS[tour.requires]]
         }
         const { driver } = await import("driver.js")
@@ -73,8 +74,9 @@ export function TourRunner() {
           popoverClass: "app-tour",
           allowClose: true,
           disableActiveInteraction: false,
-          // Esc hoặc bấm ra lớp phủ: driver tự huỷ → dọn controller.
-          onDestroyed: () => handle.current?.stop(),
+          // Esc / bấm ra lớp phủ: onDestroyed bị bỏ qua nếu bấm trong ~400ms hiệu ứng đầu, onDestroyStarted thì luôn gọi.
+          // stop() gọi destroy() kiểu không kích hook nên không lặp.
+          onDestroyStarted: () => (handle.current ? handle.current.stop() : drv.destroy()),
         })
         handle.current = runTour({
           driver: drv,

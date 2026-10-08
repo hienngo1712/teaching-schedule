@@ -67,11 +67,26 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(popover(page)).toContainText('Họ tên và lớp');
-    for (const title of ['Cách thu học phí', 'Thông tin phụ huynh', 'Lưu học sinh']) {
+    // Người dùng tự làm đúng lời chỉ trong lúc tour chạy: chọn lớp (menu thả xuống nằm ngoài hộp) không được tắt tour.
+    await page.locator('#fullName').fill('Bé Tour');
+    await page.locator('#grade').click();
+    await page.getByRole('option', { name: 'Lớp 5' }).click();
+    await expect(page.locator('#grade')).toContainText('5');
+    await expect(popover(page)).toContainText('Họ tên và lớp');
+    await popover(page).locator('.driver-popover-next-btn').click();
+    await expect(popover(page)).toContainText('Cách thu học phí');
+    await page.locator('#tuitionFee').fill('200000');
+    await expect(popover(page)).toContainText('Cách thu học phí');
+    for (const title of ['Thông tin phụ huynh', 'Lưu học sinh']) {
       await popover(page).locator('.driver-popover-next-btn').click();
       await expect(dialog).toBeVisible();
       await expect(popover(page)).toContainText(title);
     }
+    // "Tick ô đồng ý rồi bấm Thêm": ô đồng ý phải nằm trong vùng tô sáng.
+    await page.locator('#student-consent').click();
+    await expect(page.locator('#student-consent')).toHaveAttribute('data-state', 'checked');
+    await expect(popover(page)).toContainText('Lưu học sinh');
+    await expect(popover(page).locator('.driver-popover-close-btn')).toHaveCSS('height', vp.width < 768 ? '44px' : '36px');
     await expect(popover(page).locator('.driver-popover-next-btn')).toHaveText('Xong');
     await popover(page).locator('.driver-popover-next-btn').click();
     await expect(page.locator('.driver-overlay')).toHaveCount(0);
