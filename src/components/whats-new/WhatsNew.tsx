@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { hasUnseenRelease, latestNotifyRelease, shortVersion } from "@/lib/releases"
+import { useTourActive } from "@/lib/tour-store"
 import { WhatsNewPanel } from "./WhatsNewPanel"
 
 export function WhatsNew() {
@@ -23,12 +24,14 @@ export function WhatsNew() {
   const latest = latestNotifyRelease()
   const unseen = data !== undefined && hasUnseenRelease(data.lastSeenRelease)
 
+  const tourActive = useTourActive()
   useEffect(() => {
-    if (unseen && !autoOpened.current) {
+    // Đang chạy tour thì để sau, tour tắt mới tự mở (spec AD §4.2).
+    if (unseen && !autoOpened.current && !tourActive) {
       autoOpened.current = true
       setOpen(true)
     }
-  }, [unseen])
+  }, [unseen, tourActive])
 
   if (!latest) return null
 

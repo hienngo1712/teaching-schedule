@@ -1,7 +1,9 @@
 "use client"
 
+import { Suspense } from "react"
 import { PlanBanner } from "@/components/plan/PlanBanner"
 import { UpgradeDialog } from "@/components/plan/UpgradeDialog"
+import { TourRunner } from "@/components/tour/TourRunner"
 import { AppSidebar } from "./AppSidebar"
 import { AppHeader } from "./AppHeader"
 import { BottomTabBar } from "./BottomTabBar"
@@ -25,6 +27,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       <BottomTabBar />
       <UpgradeDialog />
+      {/* useSearchParams cần Suspense khi trang render tĩnh. */}
+      <Suspense fallback={null}>
+        <TourRunner />
+      </Suspense>
     </div>
   )
 }
