@@ -2,6 +2,8 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { StrictMode } from "react"
+import { readFileSync } from "node:fs"
 import { render, cleanup, waitFor } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 
@@ -100,5 +102,50 @@ describe("TourRunner", () => {
     expect(config.onDestroyStarted).toBeTypeOf("function")
     config.onDestroyStarted!()
     expect(handle.stop).toHaveBeenCalled()
+  })
+
+  it("StrictMode (dev): chỉ 1 driver, 1 lần runTour", async () => {
+    render(<StrictMode><LanguageProvider forcedLanguage="vi"><TourRunner /></LanguageProvider></StrictMode>)
+    await waitFor(() => expect(run.runTour).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 0))
+    // driver() gọi ngay trước runTour sau cùng 1 lần kiểm runId nên đếm runTour là đủ;
+    // không đếm mock driver được vì vitest trả module thật cho lần import() song song thứ 2.
+    expect(run.runTour).toHaveBeenCalledTimes(1)
+  })
+
+  it("đổi trang khi đang tải trạng thái: không chạy tour, cờ tắt", async () => {
+    nav.search = "tour=attendance"
+    nav.pathname = "/calendar"
+    let resolve!: (v: unknown) => void
+    status.fetch.mockReturnValue(new Promise((r) => { resolve = r }))
+    const { rerender } = renderVi()
+    nav.search = ""
+    nav.pathname = "/students"
+    rerender(<LanguageProvider forcedLanguage="vi"><TourRunner /></LanguageProvider>)
+    resolve({ steps: { student: true, session: true } })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(run.runTour).not.toHaveBeenCalled()
+    expect(isTourActive()).toBe(false)
+  })
+
+  it("tải trạng thái Bắt đầu lỗi: báo lỗi, không chạy, cờ tắt", async () => {
+    nav.search = "tour=attendance"
+    nav.pathname = "/calendar"
+    status.fetch.mockRejectedValue(new Error("mạng"))
+    renderVi()
+    await waitFor(() => expect(toast).toHaveBeenCalledWith("Không tải được hướng dẫn, thử lại sau nhé."))
+    expect(run.runTour).not.toHaveBeenCalled()
+    expect(isTourActive()).toBe(false)
+  })
+
+  it("truyền firstWaitMs cho bước đầu", async () => {
+    renderVi()
+    await waitFor(() => expect(run.runTour).toHaveBeenCalled())
+    expect((run.runTour.mock.calls[0] as unknown as [{ firstWaitMs: number }])[0].firstWaitMs).toBe(8000)
+  })
+
+  it("driver.css không import tĩnh (chỉ tải khi chạy tour)", () => {
+    const src = readFileSync("src/components/tour/TourRunner.tsx", "utf8")
+    expect(src).not.toMatch(/^import\s+["']driver\.js\/dist\/driver\.css["']/m)
   })
 })

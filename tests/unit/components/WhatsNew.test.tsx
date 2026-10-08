@@ -84,6 +84,22 @@ describe("WhatsNew (spec W §5.2–5.4)", () => {
     expect(await screen.findByText(LATEST.title)).toBeTruthy()
   })
 
+  it("đang có hộp mở (vd tour vừa tắt trong hộp Thêm học sinh): chờ hộp đóng mới tự mở", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const d = document.createElement("div")
+    d.setAttribute("role", "dialog")
+    d.setAttribute("data-state", "open")
+    document.body.appendChild(d)
+    status.current = { lastSeenRelease: null }
+    renderVi(<WhatsNew />)
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(screen.queryByText(LATEST.title)).toBeNull()
+    d.remove()
+    await vi.advanceTimersByTimeAsync(1100)
+    expect(await screen.findByText(LATEST.title)).toBeDefined()
+    vi.useRealTimers()
+  })
+
   it("mobile: nút Có gì mới là button có aria-haspopup=dialog, không bọc span onClick", () => {
     window.matchMedia = vi.fn().mockImplementation((q: string) => ({
       matches: false, media: q, addEventListener: vi.fn(), removeEventListener: vi.fn(),

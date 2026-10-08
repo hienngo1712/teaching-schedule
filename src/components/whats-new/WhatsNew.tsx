@@ -27,10 +27,19 @@ export function WhatsNew() {
   const tourActive = useTourActive()
   useEffect(() => {
     // Đang chạy tour thì để sau, tour tắt mới tự mở (spec AD §4.2).
-    if (unseen && !autoOpened.current && !tourActive) {
+    if (!unseen || autoOpened.current || tourActive) return
+    // Tour vừa tắt mà hộp (vd Thêm học sinh) còn mở: chờ hộp đóng rồi mới mở, không đè lên.
+    const tryOpen = () => {
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return false
       autoOpened.current = true
       setOpen(true)
+      return true
     }
+    if (tryOpen()) return
+    const id = setInterval(() => {
+      if (tryOpen()) clearInterval(id)
+    }, 1000)
+    return () => clearInterval(id)
   }, [unseen, tourActive])
 
   if (!latest) return null

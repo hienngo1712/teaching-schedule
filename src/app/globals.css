@@ -118,3 +118,8 @@
 .driver-active [data-radix-popper-content-wrapper] * {
   pointer-events: auto;
 }
+
+/* driver.js khoá cuộn cha trực tiếp của phần tử tô sáng; cha là hộp Radix (chi tiết ca trên mobile) thì phải cuộn được. */
+.driver-active [role="dialog"].driver-active-element-parent-no-scroll {
+  overflow-y: auto !important;
+}
