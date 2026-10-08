@@ -292,6 +292,24 @@ describe("runTour", () => {
     expect(calls).toHaveLength(2)
   })
 
+  it("mũi tên trong lưới lịch chọn ngày (role=grid) và Alt+mũi tên (Quay lại của trình duyệt) không chuyển bước", async () => {
+    addTarget("a"); addTarget("b")
+    const grid = document.createElement("div")
+    grid.setAttribute("role", "grid")
+    const day = document.createElement("button")
+    grid.appendChild(day)
+    document.body.appendChild(grid)
+    const { calls } = setup([
+      { target: "a", titleKey: "tour_student_1_title", bodyKey: "tour_student_1_body" },
+      { target: "b", titleKey: "tour_student_2_title", bodyKey: "tour_student_2_body" },
+    ])
+    await flush()
+    day.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }))
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", altKey: true, bubbles: true }))
+    await flush()
+    expect(calls).toHaveLength(1)
+  })
+
   it("tour tắt thì gỡ listener phím", async () => {
     addTarget("a"); addTarget("b")
     const { calls, handle } = setup([

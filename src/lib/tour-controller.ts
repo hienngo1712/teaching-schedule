@@ -15,7 +15,8 @@ type HighlightStep = {
   }
 }
 // Ô nhập / vùng tự xử lý mũi tên: không cướp phím làm nhảy bước.
-const KEY_OWNERS = 'input, textarea, select, [contenteditable="true"], [role="radio"], [role="slider"], [role="combobox"], [role="option"], [role="menuitem"], [role="tab"]'
+const KEY_OWNERS =
+  'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="radio"], [role="slider"], [role="spinbutton"], [role="combobox"], [role="listbox"], [role="option"], [role="menu"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="tab"], [role="grid"], [role="treeitem"]'
 // Bước 👆 trên cả dòng: bấm phần tử bấm được bên trong dòng (Đã đóng đủ, Phiếu báo) không tính là bấm dòng.
 const NESTED_INTERACTIVE = 'button, a, input, select, textarea, [role="button"], [role="menuitem"], [role="checkbox"]'
 
@@ -64,6 +65,8 @@ export function runTour(opts: RunTourOptions): TourHandle {
   let keyNav: { next?: () => void; prev?: () => void } = {}
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return
+    // Alt+← là Quay lại của trình duyệt: không cướp tổ hợp phím.
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
     if ((e.target as Element | null)?.closest?.(KEY_OWNERS)) return
     const fn = e.key === "ArrowRight" ? keyNav.next : keyNav.prev
     if (!fn) return

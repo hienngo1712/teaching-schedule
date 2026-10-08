@@ -107,6 +107,18 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
   });
 }
 
+for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 800 }]) test(`${vp.width}px: thẻ Bắt đầu không bóp tên bước (link + nút xuống dòng riêng khi chật)`, async ({ browser }) => {
+  const page = await browser.newPage({ viewport: vp });
+  await login(page);
+  const labels = page.locator('[data-testid="start-step"] p:first-of-type');
+  await expect(labels.first()).toBeVisible();
+  const widths = await labels.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
+  for (const w of widths) expect(w).toBeGreaterThan(200);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(vp.width);
+  await page.screenshot({ path: `.superpowers/sdd/2026-10-08-ae-don-loi-nho/startcard-${vp.width}.png` });
+  await page.close();
+});
+
 test('Điểm danh khi chưa có ca: bước báo thiếu → chuyển sang tour Tạo ca dạy', async ({ page }) => {
   await login(page);
   await page.getByTestId('tour-button-attendance').first().click();

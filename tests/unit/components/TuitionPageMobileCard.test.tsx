@@ -110,6 +110,13 @@ describe("TuitionPage - thẻ mobile", () => {
     expect(screen.queryByText("Chi tiết học phí")).toBeNull()
   })
 
+  it("tour: data-tour tuition-row nằm trên chính thẻ bấm được (mobile), không trên khung bọc", () => {
+    renderPage()
+    const cards = screen.getAllByRole("button", { name: /Nguyễn Văn A/ }).filter((el) => el.tagName === "DIV")
+    expect(cards[0].getAttribute("data-tour")).toBe("tuition-row")
+    expect(screen.getAllByTestId("list-card")[0].getAttribute("data-tour")).toBeNull()
+  })
+
   it("Enter trực tiếp trên thẻ (currentTarget) vẫn mở sheet chi tiết như cũ", () => {
     renderPage()
     const cards = screen.getAllByRole("button", { name: /Nguyễn Văn A/ })

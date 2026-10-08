@@ -20,6 +20,7 @@ export const RELEASES: Release[] = [
     notify: false,
     items: [
       { kind: "fix", title: "Lịch", body: "Ô hôm nay luôn đúng theo giờ Việt Nam." },
+      { kind: "fix", title: "Thẻ Bắt đầu", body: "Trên điện thoại tên từng bước hiện đủ, nút xuống dòng riêng." },
       { kind: "fix", title: "Học phí", body: "Miễn có lý do giữ nguyên ghi chú cũ và không lưu trùng khi đóng." },
       { kind: "fix", title: "Chỉ cho tôi", body: "Đi bằng phím mũi tên, hộp chi tiết ca cuộn được, không nhảy bước khi bấm nút trong dòng học phí." },
       { kind: "improve", title: "Hướng dẫn", body: "Ảnh hướng dẫn chụp lại theo giao diện mới; tài khoản quản trị mở được Hướng dẫn từ menu." },

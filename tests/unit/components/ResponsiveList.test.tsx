@@ -47,7 +47,7 @@ describe("ResponsiveList", () => {
     expect(onRowClick).toHaveBeenCalledWith({ id: 1, name: "An" })
   })
 
-  it("firstRowTour gắn data-tour lên dòng đầu (bảng) và thẻ đầu (mobile)", () => {
+  it("firstRowTour gắn data-tour lên dòng đầu bảng; thẻ mobile để renderCard tự gắn lên phần tử bấm được", () => {
     render(
       <ResponsiveList
         {...base}
@@ -59,8 +59,8 @@ describe("ResponsiveList", () => {
       />
     )
     const tagged = document.querySelectorAll('[data-tour="tuition-row"]')
-    expect(tagged).toHaveLength(2)
+    expect(tagged).toHaveLength(1)
+    expect(tagged[0].tagName).toBe("TR")
     expect(tagged[0].textContent).toContain("A")
-    expect(tagged[1].textContent).toContain("A")
   })
 })

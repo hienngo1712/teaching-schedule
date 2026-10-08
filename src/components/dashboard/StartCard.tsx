@@ -73,25 +73,28 @@ export function StartCard() {
                 ) : (
                   <Circle className="size-5 shrink-0 text-slate-300" aria-hidden />
                 )}
-                <div className="min-w-0 flex-1">
+                {/* basis-48: chật thì cả cụm nút xuống dòng riêng, tên bước không bị bóp (mobile 375px). */}
+                <div className="min-w-0 flex-1 basis-48">
                   <p className={ok ? "text-sm text-slate-400 line-through" : "text-sm font-medium text-slate-900"}>{t(s.label)}</p>
                   {s.hint && !ok && <p className="text-xs text-slate-500">{t(s.hint)}</p>}
                 </div>
-                <a
-                  href={`/guide#${s.guideId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center gap-1 text-xs text-primary underline underline-offset-2"
-                >
-                  {t("start_guide")}
-                  <ExternalLink className="size-3" aria-hidden />
-                </a>
-                <TourButton id={s.tour} />
-                {!ok && (
-                  <Button asChild variant="outline" size="sm" className="h-11 md:h-9">
-                    <Link href={s.href}>{t("start_open")}</Link>
-                  </Button>
-                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <a
+                    href={`/guide#${s.guideId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-1 text-xs text-primary underline underline-offset-2"
+                  >
+                    {t("start_guide")}
+                    <ExternalLink className="size-3" aria-hidden />
+                  </a>
+                  <TourButton id={s.tour} />
+                  {!ok && (
+                    <Button asChild variant="outline" size="sm" className="h-11 md:h-9">
+                      <Link href={s.href}>{t("start_open")}</Link>
+                    </Button>
+                  )}
+                </div>
               </li>
             )
           })}
