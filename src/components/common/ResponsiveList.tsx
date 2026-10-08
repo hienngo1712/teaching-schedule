@@ -31,6 +31,7 @@ type Props<T> = {
   emptyText: ReactNode
   errorText: string
   retryText: string
+  firstRowTour?: string
 }
 
 export function ResponsiveList<T>({
@@ -45,6 +46,7 @@ export function ResponsiveList<T>({
   emptyText,
   errorText,
   retryText,
+  firstRowTour,
 }: Props<T>) {
   if (isLoading) {
     return (
@@ -96,6 +98,7 @@ export function ResponsiveList<T>({
                 key={getKey(item)}
                 onClick={onRowClick ? () => onRowClick(item) : undefined}
                 className={cn(onRowClick && "cursor-pointer")}
+                data-tour={index === 0 ? firstRowTour : undefined}
               >
                 {columns.map((c, i) => (
                   <TableCell key={i} className={c.className}>
@@ -110,7 +113,7 @@ export function ResponsiveList<T>({
 
       <div className="space-y-3 md:hidden">
         {items.map((item, index) => (
-          <div key={getKey(item)} data-testid="list-card">
+          <div key={getKey(item)} data-testid="list-card" data-tour={index === 0 ? firstRowTour : undefined}>
             {renderCard(item, index)}
           </div>
         ))}

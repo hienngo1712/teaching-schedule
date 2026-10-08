@@ -205,7 +205,7 @@ export function SessionFormDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4" data-tour="session-form-date">
               <FormField
                 control={form.control}
                 name="sessionDate"
@@ -287,7 +287,7 @@ export function SessionFormDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4" data-tour="session-form-time">
               <FormField
                 control={form.control}
                 name="startTime"
@@ -334,7 +334,7 @@ export function SessionFormDialog({
               control={form.control}
               name="studentIds"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-tour="session-form-students">
                   <FormLabel>{t("student")}</FormLabel>
                   <FormControl>
                     <StudentPicker
@@ -395,7 +395,7 @@ export function SessionFormDialog({
               </div>
             )}
 
-            <DialogFooter>
+            <DialogFooter data-tour="session-form-submit">
               <Button
                 type="button"
                 variant="ghost"

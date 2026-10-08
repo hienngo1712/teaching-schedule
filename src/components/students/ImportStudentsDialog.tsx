@@ -136,11 +136,11 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
           <div className="space-y-4">
             <p className="text-sm text-slate-600">{t("import_hint")}</p>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button variant="outline" onClick={downloadTemplate} disabled={downloading} className="h-11 md:h-10">
+              <Button variant="outline" onClick={downloadTemplate} disabled={downloading} className="h-11 md:h-10" data-tour="import-template">
                 {downloading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />}
                 {t("download_template")}
               </Button>
-              <Button onClick={() => inputRef.current?.click()} disabled={reading} className="h-11 md:h-10">
+              <Button onClick={() => inputRef.current?.click()} disabled={reading} className="h-11 md:h-10" data-tour="import-file">
                 {reading ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : (
@@ -165,7 +165,7 @@ export function ImportStudentsDialog({ onClose }: { onClose: () => void }) {
                 {t(`import_err_${readError}`)}
               </p>
             )}
-            <details data-testid="import-google-form" className="group rounded-lg border bg-slate-50 text-sm">
+            <details data-testid="import-google-form" className="group rounded-lg border bg-slate-50 text-sm" data-tour="import-google-form">
               {/* Gập sẵn: đa số thầy cô đã có file, không để khối dài che nút chọn file. */}
               <summary className="flex min-h-11 cursor-pointer items-center gap-1 px-3 font-medium text-slate-900">
                 <ChevronRight className="size-4 shrink-0 text-slate-500 transition-transform group-open:rotate-90" aria-hidden />

@@ -164,7 +164,7 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
                   <div className="text-xs text-slate-500">{t("grade")} {student.grade}</div>
                 </div>
 
-                <div className="order-2 flex gap-2 md:order-4 md:gap-1.5">
+                <div className="order-2 flex gap-2 md:order-4 md:gap-1.5" data-tour="attendance-marks">
                   <button
                     type="button"
                     aria-pressed={state.attendance === "present"}
@@ -241,7 +241,7 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
       {/* Dính đáy vùng cuộn của dialog; -mx-6/px-6 khớp padding p-6 của DialogContent */}
       <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-2 border-t bg-white px-6 py-3">
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleMarkAllPresent} className="h-11 text-xs text-slate-600 md:h-9">
+          <Button variant="outline" onClick={handleMarkAllPresent} className="h-11 text-xs text-slate-600 md:h-9" data-tour="attendance-all-present">
             <Check className="mr-1 size-3" />
             {t("mark_all_present")}
           </Button>
@@ -251,7 +251,7 @@ export function AttendancePanel({ sessionId, onSaveSuccess }: Props) {
           </Button>
         </div>
 
-        <Button onClick={handleSave} disabled={updateMutation.isPending} className="h-11 w-full sm:w-auto md:h-9">
+        <Button onClick={handleSave} disabled={updateMutation.isPending} className="h-11 w-full sm:w-auto md:h-9" data-tour="attendance-save">
           {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {t("save_attendance")}
         </Button>
