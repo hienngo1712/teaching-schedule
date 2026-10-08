@@ -6,6 +6,8 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { DocxDownloadButton } from "@/components/common/DocxDownloadButton"
 import { GUIDE_SECTIONS, stepShot, stepText } from "@/lib/guide-content"
 import { GuideShot } from "@/components/guide/GuideShot"
+import { TourButton } from "@/components/tour/TourButton"
+import { GUIDE_TOURS } from "@/lib/tours"
 
 // "**Nút**" → <strong>; nội dung tĩnh trong code nên không cần thư viện markdown.
 function Rich({ text }: { text: string }) {
@@ -18,7 +20,7 @@ function Rich({ text }: { text: string }) {
   )
 }
 
-export function GuideContent() {
+export function GuideContent({ canTour = false }: { canTour?: boolean }) {
   const { t } = useTranslation()
   return (
     <main className="mx-auto max-w-3xl space-y-8 px-4 py-8 text-slate-700 print:max-w-none print:px-0 print:py-0">
@@ -42,7 +44,10 @@ export function GuideContent() {
 
       {GUIDE_SECTIONS.map((s, i) => (
         <section key={s.id} id={s.id} className="scroll-mt-4 space-y-3 break-inside-avoid">
-          <h2 className="text-lg font-semibold text-slate-900">{i + 1}. {s.title}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-slate-900">{i + 1}. {s.title}</h2>
+            {canTour && GUIDE_TOURS[s.id] && <TourButton id={GUIDE_TOURS[s.id]!} className="print:hidden" />}
+          </div>
           {s.intro && <p className="leading-relaxed"><Rich text={s.intro} /></p>}
           <ol className="list-decimal space-y-2 pl-5 leading-relaxed">
             {s.steps.map((step, j) => {

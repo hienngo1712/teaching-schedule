@@ -56,4 +56,20 @@ describe("GuideContent (spec W §3.2 & Task 9)", () => {
     const shots = container.querySelectorAll('[data-testid="guide-shot"]')
     expect(shots.length).toBe(GUIDE_SHOTS.length)
   })
+
+  it("canTour: 6 mục có nút Chỉ cho tôi; mặc định không có", () => {
+    const { unmount } = render(<LanguageProvider forcedLanguage="vi"><GuideContent canTour /></LanguageProvider>)
+    const hrefs = screen.getAllByRole("link", { name: "Chỉ cho tôi" }).map((a) => a.getAttribute("href"))
+    expect(hrefs).toEqual([
+      "/students?tour=student",
+      "/students?tour=import",
+      "/calendar?tour=session",
+      "/calendar?tour=attendance",
+      "/tuition?tour=tuition",
+      "/settings?tour=bank",
+    ])
+    unmount()
+    render(<LanguageProvider forcedLanguage="vi"><GuideContent /></LanguageProvider>)
+    expect(screen.queryByRole("link", { name: "Chỉ cho tôi" })).toBeNull()
+  })
 })

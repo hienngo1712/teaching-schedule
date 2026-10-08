@@ -60,7 +60,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
   test(`${vp.width}px: tour Thêm học sinh đi vào trong hộp, bấm Tiếp không đóng hộp`, async ({ browser }) => {
     const page = await browser.newPage({ viewport: vp });
     await login(page);
-    await page.goto('/students?tour=student');
+    await page.getByTestId('tour-button-student').first().click();
     await expect(page).toHaveURL(/\/students$/);
     await expect(popover(page)).toContainText('Thêm học sinh');
     await page.locator('[data-tour="student-add"]:visible').click();
