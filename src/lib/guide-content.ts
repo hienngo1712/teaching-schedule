@@ -137,8 +137,9 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     title: "Gói dịch vụ",
     steps: [
       { text: "Mở **Gói của tôi** để xem gói đang dùng, hạn dùng và tính năng của từng gói Standard, Plus, Pro.", shot: "goi-dich-vu" },
-      "Bấm mua hoặc gia hạn, chọn thời hạn. App hiện mã đơn và số tiền cần chuyển khoản.",
-      "Chuyển khoản đúng nội dung mã đơn. Gói được kích hoạt sau khi quản trị viên xác nhận.",
+      "Bấm mua hoặc gia hạn, chọn thời hạn và cách thanh toán rồi bấm **Tạo đơn**. App hiện mã QR, mã đơn và số tiền.",
+      "Chọn **Kích hoạt ngay sau khi chuyển khoản**: quét QR payOS, gói bật trong vài giây khi tiền vào, không phải chờ duyệt.",
+      "Chọn **Chuyển khoản, chờ admin duyệt**: chuyển khoản đúng nội dung mã đơn, rồi báo chủ app (Gọi, Zalo, Facebook ngay trên thẻ đơn). Gói được kích hoạt sau khi quản trị viên xác nhận.",
     ],
     tips: ["Gia hạn sớm trước khi hết hạn được tặng thêm tháng."],
   },

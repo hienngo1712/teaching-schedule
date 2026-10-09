@@ -13,6 +13,17 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.16.0",
+    date: "2026-10-09",
+    title: "Mua gói kích hoạt ngay",
+    summary: "Chọn thanh toán qua payOS để gói bật ngay khi tiền vào, và liên hệ chủ app ngay trong ứng dụng.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Kích hoạt ngay", body: "Khi mua gói, chọn Kích hoạt ngay sau khi chuyển khoản: quét QR payOS, gói bật trong vài giây, không phải chờ duyệt." },
+      { kind: "new", title: "Liên hệ chủ app", body: "Gọi, nhắn Zalo hoặc Facebook cho chủ app ngay ở trang Gói, Quyền riêng tư và Hướng dẫn." },
+    ],
+  },
+  {
     version: "0.15.2",
     date: "2026-10-08",
     title: "Sửa lỗi nhỏ",
