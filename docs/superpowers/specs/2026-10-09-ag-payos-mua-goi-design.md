@@ -62,7 +62,9 @@ Không `payosReady` → không hiện nhóm này, `method = 'vietqr'`.
 - `payos`: QR từ `payosQr` + số tiền + nội dung `SM ABC123` + nút "Mở trang thanh toán" (`payosCheckoutUrl`, tab mới). Dòng nhắc: "Quét QR để thanh toán — gói bật ngay khi tiền vào." Trang tự refetch `plan.me` mỗi 5s khi đang có đơn payOS chờ (dừng khi đơn hết chờ hoặc rời trang) → gói bật là thẻ đổi sang "Đã kích hoạt".
 - `vietqr`: như hiện nay + dòng "Chuyển khoản xong, báo admin để được duyệt:" + khối Liên hệ chủ app.
 - Cả hai: nút Huỷ đơn như cũ. Muốn đổi cách thanh toán → huỷ rồi đặt lại (không thêm nút đổi).
-- Huỷ đơn payOS (người dùng huỷ, hoặc đơn bị chốt `expired`/`rejected`) → gọi `POST /v2/payment-requests/{payosLinkId}/cancel` để QR cũ không thanh toán được nữa. Gọi sau khi DB đã đổi trạng thái; lỗi chỉ log, không chặn huỷ (link vẫn tự hết hạn theo `expiredAt`).
+- Huỷ đơn payOS (người dùng huỷ, đơn mới thay đơn cũ, admin từ chối) → gọi `POST /v2/payment-requests/{payosLinkId}/cancel` để QR cũ không thanh toán được nữa. Gọi sau khi DB đã đổi trạng thái; lỗi chỉ log, không chặn huỷ. Đơn tự hết hạn không gọi API: link đã có `expiredAt` trùng hạn đơn.
+- Webhook chỉ nhận khi `data.paymentLinkId` = `payosLinkId` của đơn (giao dịch thử của payOS có `orderCode` 123 có thể trùng id đơn thật).
+- Cột thêm `paidReviewedAt DateTime?`: admin đã xử lý đơn có tiền (Từ chối) → rời nhóm "cần xử lý".
 
 ## 5. Webhook `POST /api/payos/webhook`
 
