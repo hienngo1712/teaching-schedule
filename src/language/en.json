@@ -553,6 +553,7 @@
   "plan_feat_alerts": "Needs attention on Dashboard",
   "plan_feat_import": "Import students from Excel",
   "plan_feat_multi_report": "Yearly and multi-month reports, grade filter",
+  "plan_feat_payos_tuition": "Auto-mark tuition via payOS",
   "renew_offer_title": "Renew early, get bonus months",
   "renew_offer_days_left": "{plan} has {n} days left, valid through {date}.",
   "renew_offer_current": "Renew 2 years: +{two} months free. 1 year: +{one} months free.",

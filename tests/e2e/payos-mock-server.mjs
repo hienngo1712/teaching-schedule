@@ -7,9 +7,10 @@ createServer((req, res) => {
     res.setHeader("content-type", "application/json")
     if (req.url === "/v2/payment-requests") {
       const b = JSON.parse(raw || "{}")
-      return res.end(JSON.stringify({ code: "00", data: { paymentLinkId: `pl-${b.orderCode}`, qrCode: `00020101021238570010A000000727PAYOS${b.orderCode}`, checkoutUrl: `https://pay.payos.vn/web/pl-${b.orderCode}` } }))
+      return res.end(JSON.stringify({ code: "00", data: { paymentLinkId: `pl-${b.orderCode}`, qrCode: `00020101021238570010A000000727PAYOS${b.orderCode}`, checkoutUrl: `https://pay.payos.vn/web/pl-${b.orderCode}`, bin: "970422", accountNumber: "0001234567", accountName: "GIAO VIEN TEST" } }))
     }
     if (req.url?.endsWith("/cancel")) return res.end(JSON.stringify({ code: "00", data: {} }))
+    if (req.url === "/confirm-webhook") return res.end(JSON.stringify({ code: "00", data: {} }))
     if (req.url === "/health") return res.end("{}")
     res.statusCode = 404
     res.end("{}")

@@ -50,6 +50,7 @@ export const FEATURE_PLAN = {
   dashboardAlerts: "pro",
   studentImport: "pro",
   multiMonthReport: "pro",
+  payosTuition: "pro",
 } as const satisfies Record<string, PaidPlan>
 export type Feature = keyof typeof FEATURE_PLAN
 
@@ -69,6 +70,7 @@ export const PLAN_FEATURES = [
   { id: "dashboardAlerts", plan: FEATURE_PLAN.dashboardAlerts },
   { id: "studentImport", plan: FEATURE_PLAN.studentImport },
   { id: "multiMonthReport", plan: FEATURE_PLAN.multiMonthReport },
+  { id: "payosTuition", plan: FEATURE_PLAN.payosTuition },
   { id: "unlimitedStudents", plan: "pro" },
 ] as const satisfies readonly { id: string; plan: Plan }[]
 export type PlanFeatureId = (typeof PLAN_FEATURES)[number]["id"]

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
 import { createHmac } from "node:crypto"
 import {
-  cancelPaymentLink, createPaymentLink, getPayosConfig, parsePayosDateTime,
+  cancelPaymentLink, confirmWebhook, createPaymentLink, getPayosConfig, parsePayosDateTime,
   signPaymentRequest, signWebhookData, verifyWebhookSignature,
 } from "@/server/payos"
 
@@ -50,7 +50,7 @@ describe("gọi API", () => {
       new Response(JSON.stringify({ code: "00", data: { paymentLinkId: "pl1", qrCode: "000201QR", checkoutUrl: "https://pay.payos.vn/web/pl1" } }), { status: 200 })
     )
     const input = { orderCode: 42, amount: 99000, description: "SM ABC123", returnUrl: "https://x/plan", cancelUrl: "https://x/plan", expiredAt: 1800000000 }
-    await expect(createPaymentLink(cfg, input)).resolves.toEqual({ paymentLinkId: "pl1", qrCode: "000201QR", checkoutUrl: "https://pay.payos.vn/web/pl1" })
+    await expect(createPaymentLink(cfg, input)).resolves.toEqual({ paymentLinkId: "pl1", qrCode: "000201QR", checkoutUrl: "https://pay.payos.vn/web/pl1", bin: null, accountNumber: null, accountName: null })
     const [url, init] = fetchSpy.mock.calls[0]
     expect(url).toBe("https://payos.test/v2/payment-requests")
     expect((init!.headers as Record<string, string>)["x-client-id"]).toBe("test-client")
@@ -68,6 +68,33 @@ describe("gọi API", () => {
     expect(fetchSpy.mock.calls[0][0]).toBe("https://payos.test/v2/payment-requests/pl1/cancel")
     fetchSpy.mockResolvedValueOnce(new Response("err", { status: 500 }))
     await expect(cancelPaymentLink(cfg, "pl1")).rejects.toThrow()
+  })
+})
+
+describe("AH: confirmWebhook + thông tin TK link", () => {
+  it("confirmWebhook gửi webhookUrl kèm khoá giáo viên", async () => {
+    const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ code: "00", data: {} })))
+    const cfg = { clientId: "t-client", apiKey: "t-api", checksumKey: "t-checksum", baseUrl: "http://x" }
+    await confirmWebhook(cfg, "https://app/api/payos/tuition/abc")
+    const [url, init] = f.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe("http://x/confirm-webhook")
+    expect(JSON.parse(String(init.body))).toEqual({ webhookUrl: "https://app/api/payos/tuition/abc" })
+    expect((init.headers as Record<string, string>)["x-client-id"]).toBe("t-client")
+    f.mockRestore()
+  })
+  it("confirmWebhook ném lỗi khi payOS trả code khác 00", async () => {
+    const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ code: "20", desc: "Webhook url invalid" })))
+    await expect(confirmWebhook({ clientId: "a", apiKey: "b", checksumKey: "c", baseUrl: "http://x" }, "u")).rejects.toThrow()
+    f.mockRestore()
+  })
+  it("createPaymentLink trả thêm bin/accountNumber/accountName (thiếu thì null)", async () => {
+    const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      code: "00", data: { paymentLinkId: "pl", qrCode: "qr", checkoutUrl: "https://c", bin: "970422", accountNumber: "0001", accountName: "GV A" },
+    })))
+    const r = await createPaymentLink({ clientId: "a", apiKey: "b", checksumKey: "c", baseUrl: "http://x" },
+      { orderCode: 1, amount: 1000, description: "HP 1", returnUrl: "https://r", cancelUrl: "https://r", expiredAt: 2000000000 })
+    expect(r).toMatchObject({ bin: "970422", accountNumber: "0001", accountName: "GV A" })
+    f.mockRestore()
   })
 })
 

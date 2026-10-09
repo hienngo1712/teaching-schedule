@@ -553,6 +553,7 @@
   "plan_feat_alerts": "Mục Cần chú ý ở Tổng quan",
   "plan_feat_import": "Nhập học sinh từ Excel",
   "plan_feat_multi_report": "Báo cáo năm, nhiều tháng, lọc theo lớp",
+  "plan_feat_payos_tuition": "Tự đánh dấu học phí qua payOS",
   "renew_offer_title": "Gia hạn sớm, nhận thêm tháng",
   "renew_offer_days_left": "Gói {plan} còn {n} ngày, dùng đến hết ngày {date}.",
   "renew_offer_current": "Gia hạn 2 năm tặng {two} tháng, 1 năm tặng {one} tháng.",

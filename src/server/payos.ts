@@ -5,12 +5,16 @@ export type PayosConfig = { clientId: string; apiKey: string; checksumKey: strin
 const DEFAULT_BASE = "https://api-merchant.payos.vn"
 const TIMEOUT_MS = 5000
 
+export function payosBaseUrl(): string {
+  return process.env.PAYOS_API_BASE?.trim() || DEFAULT_BASE
+}
+
 export function getPayosConfig(): PayosConfig | null {
   const clientId = process.env.PAYOS_CLIENT_ID?.trim()
   const apiKey = process.env.PAYOS_API_KEY?.trim()
   const checksumKey = process.env.PAYOS_CHECKSUM_KEY?.trim()
   if (!clientId || !apiKey || !checksumKey) return null
-  return { clientId, apiKey, checksumKey, baseUrl: process.env.PAYOS_API_BASE?.trim() || DEFAULT_BASE }
+  return { clientId, apiKey, checksumKey, baseUrl: payosBaseUrl() }
 }
 
 const hmac = (key: string, s: string) => createHmac("sha256", key).update(s).digest("hex")
@@ -59,11 +63,16 @@ async function call(cfg: PayosConfig, path: string, body: unknown): Promise<{ co
 export async function createPaymentLink(
   cfg: PayosConfig,
   input: { orderCode: number; amount: number; description: string; returnUrl: string; cancelUrl: string; expiredAt: number }
-): Promise<{ paymentLinkId: string; qrCode: string; checkoutUrl: string }> {
+): Promise<{ paymentLinkId: string; qrCode: string; checkoutUrl: string; bin: string | null; accountNumber: string | null; accountName: string | null }> {
   const json = await call(cfg, "/v2/payment-requests", { ...input, signature: signPaymentRequest(cfg.checksumKey, input) })
-  const d = json.data as { paymentLinkId?: string; qrCode?: string; checkoutUrl?: string } | undefined
+  const d = json.data as { paymentLinkId?: string; qrCode?: string; checkoutUrl?: string; bin?: string; accountNumber?: string; accountName?: string } | undefined
   if (!d?.paymentLinkId || !d.qrCode || !d.checkoutUrl) throw new Error("payOS thiếu dữ liệu link")
-  return { paymentLinkId: d.paymentLinkId, qrCode: d.qrCode, checkoutUrl: d.checkoutUrl }
+  return { paymentLinkId: d.paymentLinkId, qrCode: d.qrCode, checkoutUrl: d.checkoutUrl, bin: d.bin ?? null, accountNumber: d.accountNumber ?? null, accountName: d.accountName ?? null }
+}
+
+// payOS POST thử vào URL rồi mới nhận; khoá sai/URL không trả 200 → ném lỗi.
+export async function confirmWebhook(cfg: PayosConfig, webhookUrl: string): Promise<void> {
+  await call(cfg, "/confirm-webhook", { webhookUrl })
 }
 
 export async function cancelPaymentLink(cfg: PayosConfig, paymentLinkId: string): Promise<void> {
