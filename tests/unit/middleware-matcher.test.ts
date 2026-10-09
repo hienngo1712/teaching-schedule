@@ -33,6 +33,11 @@ describe("middleware matcher", () => {
     expect(needsAuth("/api/payos/tuition/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ")).toBe(false)
   })
 
+  it("/da-thanh-toan là route công khai (spec AH: payOS đưa phụ huynh về sau khi trả)", () => {
+    expect(needsAuth("/da-thanh-toan")).toBe(false)
+    expect(needsAuth("/da-thanh-toan?code=00&status=PAID")).toBe(false)
+  })
+
   it("các route khác vẫn phải đăng nhập, kể cả route bắt đầu bằng 'p'", () => {
     for (const path of ["/", "/dashboard", "/students", "/profile", "/pay", "/p", "/tuition", "/api/other"]) {
       expect(needsAuth(path), path).toBe(true)

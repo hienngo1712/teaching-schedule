@@ -45,6 +45,7 @@ function payload(l: { id: number; payosLinkId: string }, amount: number, referen
   const data = { orderCode: l.id, amount, description: `HP ${l.id}`, accountNumber: "0001", reference, transactionDateTime, currency: "VND", paymentLinkId: l.payosLinkId, code: "00", desc: "success", counterAccountBankId: "", counterAccountBankName: "", counterAccountName: null, counterAccountNumber: null, virtualAccountName: null, virtualAccountNumber: "" }
   return { code: "00", desc: "success", success: true, data, signature: signWebhookData(key, data) }
 }
+const payosItem = async () => (await getMonthlyTuitionStatus(db, userId, { year: 2026, month: 8, status: "all", page: 1, limit: 10 })).items.find((i) => i.studentId === studentId)!
 const augMt = () => db.monthlyTuition.findUniqueOrThrow({ where: { studentId_year_month: { studentId, year: 2026, month: 8 } } })
 
 beforeAll(async () => {
@@ -72,8 +73,10 @@ describe("webhook payOS học phí (spec AH §6)", () => {
     const l = await makeLink()
     expect(await handleTuitionWebhook(db, HOOK, payload(l, 200000))).toMatchObject({ status: 200 })
     const mt = await augMt()
-    expect(mt).toMatchObject({ paidAmount: 200000, payosPaidAmount: 200000 })
-    expect(mt.payosPaidAt?.toISOString()).toBe("2026-10-09T07:32:00.000Z")
+    expect(mt).toMatchObject({ paidAmount: 200000 })
+    const it8 = await payosItem()
+    expect(it8.payosPaidAmount).toBe(200000)
+    expect(new Date(it8.payosPaidAt!).toISOString()).toBe("2026-10-09T07:32:00.000Z")
     const p = await db.payment.findFirstOrThrow({ where: { monthlyTuitionId: mt.id } })
     expect(p).toMatchObject({ method: "payos", amount: 200000 })
     expect(p.paidAt.toISOString().slice(0, 10)).toBe("2026-10-09")
@@ -153,7 +156,7 @@ describe("webhook payOS học phí (spec AH §6)", () => {
     const l = await makeLink()
     await handleTuitionWebhook(db, HOOK, payload(l, 100000, "RA1"))
     await handleTuitionWebhook(db, HOOK, payload(l, 100000, "RA2"))
-    expect((await augMt()).payosPaidAmount).toBe(200000)
+    expect((await payosItem()).payosPaidAmount).toBe(200000)
   })
   it("hiển thị: item tháng có payosPaidAmount, đợt thu có method payos (spec AH §7)", async () => {
     const l = await makeLink()
@@ -182,6 +185,17 @@ describe("webhook payOS học phí (spec AH §6)", () => {
     const rows = await db.payment.findMany({ where: { batchId: p.batchId!, isDeleted: false } })
     expect(rows.length).toBeGreaterThan(0)
     expect(rows.every((r) => r.method === "payos")).toBe(true)
+  })
+  it("xoá đợt thu payOS → mất dòng 'PH đã chuyển'; khôi phục từ thùng rác → hiện lại", async () => {
+    const l = await makeLink()
+    await handleTuitionWebhook(db, HOOK, payload(l, 200000))
+    const p = await db.payment.findFirstOrThrow({ where: { method: "payos" } })
+    const item = async () => (await getMonthlyTuitionStatus(db, userId, { year: 2026, month: 8, status: "all", page: 1, limit: 10 })).items.find((i) => i.studentId === studentId)!
+    expect((await item()).payosPaidAmount).toBe(200000)
+    await caller.payment.deleteBatch({ batchId: p.batchId! })
+    expect(await item()).toMatchObject({ payosPaidAt: null, payosPaidAmount: null })
+    await caller.trash.restore({ type: "payment", id: p.id })
+    expect((await item()).payosPaidAmount).toBe(200000)
   })
   it("không còn bất biến lệch paidAmount", async () => {
     await addSession("2026-07-20")

@@ -872,6 +872,8 @@
   "payos_paused": "Paused: your Pro plan has ended, notices use VietQR",
   "payos_disconnect": "Disconnect",
   "payos_disconnect_confirm": "Disconnect payOS? payOS QR codes already sent will be cancelled and notices go back to VietQR.",
+  "paid_return_title": "Payment step finished",
+  "paid_return_body": "If your transfer went through, the teacher receives it automatically, no need to notify them. You can close this page.",
   "payos_scan_hint": "Scan to pay, confirmed automatically when the money arrives",
   "payos_open_checkout": "Open payment page",
   "tuition_in_progress": "In progress",

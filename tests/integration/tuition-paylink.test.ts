@@ -113,6 +113,13 @@ describe("QR payOS trên phiếu (spec AH §5)", () => {
     expect(created).toBe(1)
     expect(n.qr!.payload).not.toBe("q")
   })
+  it("phiếu mở từ phía giáo viên: PH trả xong về trang công khai /da-thanh-toan (không phải trang đăng nhập)", async () => {
+    const f = mockPayos()
+    await caller.tuition.getNotice({ studentId, year: 2026, month: 8 })
+    const body = JSON.parse(String((f.mock.calls.find(([u]) => String(u).endsWith("/v2/payment-requests"))![1] as RequestInit).body))
+    expect(body.returnUrl).toBe("http://localhost:3000/da-thanh-toan")
+    expect(body.cancelUrl).toBe("http://localhost:3000/da-thanh-toan")
+  })
   it("2 lần gọi song song chỉ 1 link", async () => {
     mockPayos(); created = 0
     await Promise.all([1, 2].map(() => getTuitionNotice(db, userId, { studentId, year: 2026, month: 8 }, OPTS)))

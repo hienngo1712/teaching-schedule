@@ -32,10 +32,6 @@ export async function handleTuitionWebhook(db: PrismaClient, hookId: string, bod
       async (tx, batchId) => {
         await tx.tuitionPayLinkPayment.create({ data: { linkId: link.id, reference, amount, paidAt, batchId } })
         if (link.status === "active") await tx.tuitionPayLink.update({ where: { id: link.id }, data: { status: "paid" } })
-        const where = { studentId_year_month: { studentId: link.studentId, year: link.year, month: link.month } }
-        // Cột null thì increment ra NULL (NULL + x) → đọc rồi cộng trong cùng transaction (đang giữ khoá HS).
-        const cur = await tx.monthlyTuition.findUniqueOrThrow({ where, select: { payosPaidAmount: true } })
-        await tx.monthlyTuition.update({ where, data: { payosPaidAt: paidAt, payosPaidAmount: (cur.payosPaidAmount ?? 0) + amount } })
       })
   } catch (e) {
     // 2 lần gửi cùng lúc: lần sau đụng unique (link, reference) → coi như gửi lặp.

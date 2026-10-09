@@ -148,9 +148,6 @@ model MonthlyTuition {
   notes            String?   @db.Text
   noticeSentAt     DateTime? @map("notice_sent_at")
   noticeSentAmount Int?      @map("notice_sent_amount")
-  // Lần PH chuyển qua payOS gần nhất ở tháng neo (spec AH §3): huy hiệu đọc thẳng.
-  payosPaidAt      DateTime? @map("payos_paid_at")
-  payosPaidAmount  Int?      @map("payos_paid_amount")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
