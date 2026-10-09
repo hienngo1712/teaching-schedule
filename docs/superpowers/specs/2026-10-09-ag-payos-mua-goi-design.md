@@ -62,6 +62,7 @@ Không `payosReady` → không hiện nhóm này, `method = 'vietqr'`.
 - `payos`: QR từ `payosQr` + số tiền + nội dung `SM ABC123` + nút "Mở trang thanh toán" (`payosCheckoutUrl`, tab mới). Dòng nhắc: "Quét QR để thanh toán — gói bật ngay khi tiền vào." Trang tự refetch `plan.me` mỗi 5s khi đang có đơn payOS chờ (dừng khi đơn hết chờ hoặc rời trang) → gói bật là thẻ đổi sang "Đã kích hoạt".
 - `vietqr`: như hiện nay + dòng "Chuyển khoản xong, báo admin để được duyệt:" + khối Liên hệ chủ app.
 - Cả hai: nút Huỷ đơn như cũ. Muốn đổi cách thanh toán → huỷ rồi đặt lại (không thêm nút đổi).
+- Huỷ đơn payOS (người dùng huỷ, hoặc đơn bị chốt `expired`/`rejected`) → gọi `POST /v2/payment-requests/{payosLinkId}/cancel` để QR cũ không thanh toán được nữa. Gọi sau khi DB đã đổi trạng thái; lỗi chỉ log, không chặn huỷ (link vẫn tự hết hạn theo `expiredAt`).
 
 ## 5. Webhook `POST /api/payos/webhook`
 
@@ -75,18 +76,23 @@ Route handler Next.js (Node runtime), không cần đăng nhập.
 
 | Trạng thái đơn | `amount` đủ (≥ đơn) | thiếu |
 |---|---|---|
-| `pending` | kích hoạt | giữ `pending`, ghi số đã nhận |
-| `expired` / `cancelled` | **kích hoạt** (tiền đã vào TK chủ app) | giữ nguyên, ghi số đã nhận |
-| `rejected` | không bật, ghi số đã nhận | như bên trái |
-| `approved` | không làm gì thêm | – |
+| `pending` | **kích hoạt** (dư vẫn kích hoạt, admin thấy số đã nhận) | giữ `pending`, ghi số đã nhận → **cần admin xử lý** |
+| `expired` / `cancelled` / `rejected` | **không bật**, ghi số đã nhận → **cần admin xử lý** | như bên trái |
+| `approved` | không làm gì thêm (trả 2 lần → admin thấy số đã nhận trong lịch sử) | – |
+
+Lý do không tự bật đơn đã hết hạn/huỷ/từ chối: người dùng có thể đã trả đơn mới (trả 2 lần → cần hoàn), đổi ý sang gói/kỳ khác, hoặc giá đã đổi. Ca này hiếm vì link bị huỷ/hết hạn cùng đơn, nên để admin quyết.
 
 - "Kích hoạt" = tái dùng lõi của `approveOrder` (tách hàm nhận `tx` + `decidedBy`), `decidedBy = 'payos'`. Không nhân đôi logic tính ngày / quy đổi Plus→Pro.
 6. Lỗi DB → 500 (payOS gửi lại sau); log ngắn `[payos] đơn <id>: <kết quả>` không kèm khoá hay thông tin tài khoản.
 
 ## 6. Admin
 
-- Danh sách đơn chờ / lịch sử: nhãn "payOS" hoặc "VietQR"; đơn payOS đã nhận thiếu hiện "Đã nhận X đ qua payOS lúc HH:mm dd/MM"; người duyệt `payos` hiện "Tự kích hoạt (payOS)".
-- Nút duyệt tay / từ chối giữ nguyên cho mọi đơn.
+- Danh sách đơn chờ / lịch sử: nhãn "payOS" hoặc "VietQR"; người duyệt `payos` hiện "Tự kích hoạt (payOS)".
+- **Đơn cần admin xử lý** = `paidAmount` có và đơn chưa `approved` (đang chờ mà thiếu tiền, hoặc hết hạn/huỷ/từ chối mà vẫn nhận tiền):
+  - hiện **trên cùng** trang đơn chờ (kể cả đơn không còn `pending`), viền/nhãn đỏ, câu dạng: "Đã chuyển 99.000 đ lúc 20:15 09/10 nhưng đơn đã hết hạn. Duyệt?" / "…nhưng còn thiếu 20.000 đ. Duyệt?";
+  - 2 nút: **Duyệt** (bật gói như duyệt tay, cho cả đơn `expired`/`cancelled`/`rejected`) và **Từ chối** (đơn thành `rejected`, ghi chú "đã nhận tiền — chủ app tự hoàn"); xử lý xong thì rời nhóm này;
+  - được tính vào số đếm "cần xử lý" của admin (badge đơn chờ).
+- Nút duyệt tay / từ chối giữ nguyên cho đơn VietQR (app không biết tiền vào, admin tự kiểm sao kê).
 - Trang `/admin/prices` thêm thẻ **Liên hệ hỗ trợ**: ô SĐT (chỉ số, 9–11 chữ số, bắt đầu bằng 0) + ô link Facebook (phải là `https://` và host `facebook.com`/`www.facebook.com`/`m.facebook.com`/`fb.com`, cho để trống) + nút Lưu; dưới là 5 lần sửa gần nhất.
 
 ## 7. Khối "Liên hệ chủ app" (`ContactOwner`)
@@ -102,7 +108,8 @@ Route handler Next.js (Node runtime), không cần đăng nhập.
 ## 9. Kiểm thử
 
 - Unit: ký link (khớp ví dụ trong tài liệu payOS), kiểm chữ ký webhook (đúng / sai / khoá thiếu / giá trị null), validate SĐT & Facebook.
-- Service/integration (DB test): createOrder payos thành công / payOS lỗi → vietqr; webhook: pending đủ tiền → gói bật + `decidedBy='payos'`; gửi lặp → không cộng ngày 2 lần; thiếu tiền; expired đủ tiền → bật; rejected → không bật; orderCode lạ → 200; chữ ký sai → 401.
+- Service/integration (DB test): createOrder payos thành công / payOS lỗi → vietqr; webhook: pending đủ tiền → gói bật + `decidedBy='payos'`; dư tiền → bật; gửi lặp → không cộng ngày 2 lần; thiếu tiền → chờ + vào nhóm cần xử lý; expired/cancelled/rejected đủ tiền → không bật + vào nhóm cần xử lý; admin duyệt đơn expired có tiền → gói bật; orderCode lạ → 200; chữ ký sai → 401; huỷ đơn payOS → gọi API huỷ link (mock), lỗi API không chặn huỷ.
+- e2e admin: đơn hết hạn có tiền nằm trên cùng, bấm Duyệt → gói bật.
 - e2e (375px + 1280px): mua gói chọn payOS → thẻ QR payOS; test tự POST webhook có chữ ký (khoá giả) → thẻ đổi "Đã kích hoạt", badge gói đổi; chọn VietQR → thẻ có khối Liên hệ; admin sửa liên hệ → hiện ở /guide. **Chụp ảnh 375px và tự xem** thẻ chọn cách thanh toán, thẻ QR payOS, khối Liên hệ.
 
 ## 10. Việc chủ app làm sau khi merge
