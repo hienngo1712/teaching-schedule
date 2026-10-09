@@ -11,8 +11,8 @@ import { isInProgressMonth } from "@/lib/tuition-display"
 import type {
   PaymentCreateInput,
   PaymentListInput,
-  PaymentMethod,
   PaymentRecordInput,
+  StoredPaymentMethod,
   PaymentUpdateBatchInput,
   PaymentUpdateData,
 } from "@/lib/schemas/payment"
@@ -31,7 +31,7 @@ async function writeAllocation(
   studentId: number,
   target: { year: number; month: number },
   amount: number,
-  meta: { batchId: string; paidAt: string; note: string | null }
+  meta: { batchId: string; paidAt: string; note: string | null; method?: StoredPaymentMethod }
 ) {
   const ledgers = await loadMonthLedgers(tx, userId, studentId, target.year, target.month)
   const parts = allocatePayment(ledgers, amount)
@@ -46,7 +46,7 @@ async function writeAllocation(
     })
     await lockMonth(tx, mt.id)
     await tx.payment.create({
-      data: { monthlyTuitionId: mt.id, amount: part.amount, paidAt: new Date(meta.paidAt), method: "cash", note: meta.note, batchId: meta.batchId },
+      data: { monthlyTuitionId: mt.id, amount: part.amount, paidAt: new Date(meta.paidAt), method: meta.method ?? "cash", note: meta.note, batchId: meta.batchId },
     })
     await syncPaidAmount(tx, mt.id)
     allocations.push({ ...ym, amount: part.amount })
@@ -79,6 +79,24 @@ export async function recordPayment(db: PrismaClient, userId: number, input: Pay
     })
   }, TX_OPTIONS)
   return { batchId, allocations }
+}
+
+// Lõi FIFO cho tiền payOS (spec AH §6): không chặn tháng đang học vì neo đã là tháng đã học xong.
+export async function recordPaymentFromPayos(
+  db: PrismaClient, userId: number, studentId: number,
+  anchor: { year: number; month: number }, amount: number,
+  meta: { paidAt: string; note: string },
+  inTx: (tx: Prisma.TransactionClient, batchId: string) => Promise<void>
+): Promise<{ batchId: string }> {
+  await ensureMonthlyTuition(db, userId, studentId, anchor.year, anchor.month)
+  await ensureLedgerMonths(db, userId, studentId, anchor.year, anchor.month, amount)
+  const batchId = randomUUID()
+  await db.$transaction(async (tx) => {
+    await lockStudentPayments(tx, studentId)
+    await writeAllocation(tx, userId, studentId, anchor, amount, { batchId, paidAt: meta.paidAt, note: meta.note, method: "payos" })
+    await inTx(tx, batchId)
+  }, TX_OPTIONS)
+  return { batchId }
 }
 
 function batchWhere(batchId: string) {
@@ -175,7 +193,7 @@ function toDTO(p: Payment): PaymentDTO {
     id: p.id,
     amount: p.amount,
     paidAt: p.paidAt.toISOString().slice(0, 10),
-    method: p.method as PaymentMethod,
+    method: p.method as StoredPaymentMethod,
     note: p.note,
   }
 }

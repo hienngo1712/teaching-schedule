@@ -1,5 +1,5 @@
 import type { Student, Subject, TeachingSession, SessionStudent } from "@prisma/client"
-import type { PaymentMethod } from "@/lib/schemas/payment"
+import type { StoredPaymentMethod } from "@/lib/schemas/payment"
 
 export type { Student, Subject, TeachingSession, SessionStudent }
 
@@ -118,7 +118,7 @@ export interface PaymentDTO {
   id: number
   amount: number
   paidAt: string
-  method: PaymentMethod
+  method: StoredPaymentMethod
   note: string | null
 }
 
