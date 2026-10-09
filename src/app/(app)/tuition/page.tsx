@@ -331,13 +331,19 @@ export default function TuitionPage() {
               <div className="flex flex-col items-end gap-1">
                 <div className="flex flex-wrap items-center justify-end gap-1">
                 <TuitionStatusBadge item={item} />
-                <TuitionNoticeBadge item={{ ...item, due: dueNow(item) }} />
+                {!item.payosPaidAt && <TuitionNoticeBadge item={{ ...item, due: dueNow(item) }} />}
                 </div>
                 <span className="text-xs text-slate-500">
                   {item.presentSessions}/{item.totalSessions} {t("sessions")}
                 </span>
               </div>
             </div>
+            {/* Dòng "PH đã chuyển" (spec AH §7) dài: xuống hàng riêng để không bóp tên HS trên mobile. */}
+            {item.payosPaidAt && (
+              <div className="mt-2">
+                <TuitionNoticeBadge item={{ ...item, due: dueNow(item) }} />
+              </div>
+            )}
             <div className="mt-3 border-t border-slate-100 pt-3">
               <div className="flex items-end justify-between gap-2">
                 <div className="min-w-0">

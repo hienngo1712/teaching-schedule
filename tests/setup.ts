@@ -39,6 +39,8 @@ beforeAll(async () => {
   try {
     await db.sessionStudent.deleteMany()
     await db.teachingSession.deleteMany()
+    await db.tuitionPayLinkPayment.deleteMany()
+    await db.tuitionPayLink.deleteMany()
     await db.payment.deleteMany() // cascade từ student đã đủ; ghi rõ cho thứ tự FK
     await db.student.deleteMany()
     await db.classUpgradeLog.deleteMany()
@@ -51,6 +53,7 @@ beforeAll(async () => {
     await db.chatMessage.deleteMany()
     await db.chatConversation.deleteMany()
     await db.feedback.deleteMany()
+    await db.teacherPayos.deleteMany()
     await db.user.deleteMany()
   } catch (error) {
     console.error("\n❌ [DATABASE ERROR]: Không thể reset database test.")

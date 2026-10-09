@@ -9,12 +9,14 @@ import { getMonthlyTuitionStatus } from "./tuition.service"
 import { listPayments } from "./payment.service"
 import { getBankAccount } from "./settings.service"
 import { dueNow, isInProgressMonth } from "@/lib/tuition-display"
+import { ensureTuitionPayLink } from "./tuition-paylink.service"
 
-// Chỉ đọc: persist=false, không ghi MonthlyTuition/Payment.
+// Chỉ đọc MonthlyTuition/Payment; có origin thì có thể ghi bảng tuition_pay_links (spec AH §5).
 export async function getTuitionNotice(
   db: PrismaClient,
   userId: number,
-  { studentId, year, month }: TuitionNoticeInput
+  { studentId, year, month }: TuitionNoticeInput,
+  opts: { origin?: string | null; returnPath?: string } = {}
 ): Promise<TuitionNoticeDTO> {
   const { items } = await getMonthlyTuitionStatus(
     db,
@@ -59,9 +61,24 @@ export async function getTuitionNotice(
 
   const bankInfo = bank ? findBank(bank.bankBin) : undefined
   const content = buildTransferContent(status.fullName, month)
-  const qr =
-    bank && bankInfo && remaining > 0
+  const payLink = opts.origin && remaining > 0
+    ? await ensureTuitionPayLink(db, userId, studentId, { year, month }, remaining, { origin: opts.origin, returnPath: opts.returnPath ?? "/" })
+    : null
+  const qr: TuitionNoticeDTO["qr"] = payLink
+    ? {
+        provider: "payos",
+        payload: payLink.qrCode,
+        bankShortName: (payLink.bankBin && findBank(payLink.bankBin)?.shortName) || "payOS",
+        accountNumber: payLink.accountNumber ?? "",
+        accountName: payLink.accountName ?? "",
+        amount: remaining,
+        content: `HP ${payLink.id}`,
+        checkoutUrl: payLink.checkoutUrl,
+      }
+    : bank && bankInfo && remaining > 0
       ? {
+          provider: "vietqr",
+          checkoutUrl: null,
           payload: buildVietQrPayload({
             bin: bankInfo.bin,
             accountNumber: bank.bankAccountNumber,

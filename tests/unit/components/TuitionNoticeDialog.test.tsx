@@ -390,4 +390,29 @@ describe("TuitionNoticeDialog", () => {
       expect.objectContaining({ studentId: 1, year: 2026, month: 5, sent: false })
     )
   })
+
+  // Spec AH §4.2: payOS không cần tài khoản VietQR; có QR payOS thì không nhắc "chưa cài tài khoản".
+  it("chưa cài TK VietQR nhưng phiếu có QR payOS → không hiện cảnh báo chưa cài tài khoản", async () => {
+    queryReturn = {
+      data: notice({ remaining: 100000, bankConfigured: false, qr: { provider: "payos", checkoutUrl: "https://pay/1", payload: "x", bankShortName: "MB", accountNumber: "1", accountName: "A", amount: 100000, content: "HP 1" } }),
+      isError: false,
+      dataUpdatedAt: 1000,
+      refetch: vi.fn(),
+    }
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+    expect(screen.queryByText(/Chưa cài tài khoản ngân hàng/)).toBeNull()
+  })
+  it("chưa cài TK và không có QR → vẫn hiện cảnh báo như cũ", async () => {
+    queryReturn = { data: notice({ remaining: 100000, bankConfigured: false, qr: null }), isError: false, dataUpdatedAt: 1000, refetch: vi.fn() }
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+    expect(screen.getByText(/Chưa cài tài khoản ngân hàng/)).toBeTruthy()
+  })
 })

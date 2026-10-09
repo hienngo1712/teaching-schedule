@@ -35,6 +35,8 @@ const baseNotice: TuitionNoticeDTO = {
   teacherName: "Giáo viên A",
   bankConfigured: true,
   qr: {
+    provider: "vietqr",
+    checkoutUrl: null,
     payload: "sample-qr",
     bankShortName: "MBBank",
     accountNumber: "123456",

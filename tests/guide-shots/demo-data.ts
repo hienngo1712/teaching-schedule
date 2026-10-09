@@ -4,6 +4,8 @@ import { db } from "@/server/db"
 import { RELEASES } from "@/lib/releases"
 import { CONSENT_ACCEPTED } from "@/lib/consent"
 import { seedSubjectsForUser } from "@/server/services/subject-defaults"
+import { signWebhookData } from "@/server/payos"
+import { handleTuitionWebhook } from "@/server/services/tuition-payos-webhook.service"
 import { getAuthedCaller } from "../helpers/trpc"
 import { EXPECTED_TEST_ENDPOINT } from "../env-setup"
 
@@ -39,6 +41,9 @@ export async function cleanupDemo() {
 
   const user = await db.user.findUnique({ where: { username: "guide_demo" } })
   if (!user) return
+
+  await db.tuitionPayLink.deleteMany({ where: { userId: user.id } })
+  await db.teacherPayos.deleteMany({ where: { userId: user.id } })
 
   const students = await db.student.findMany({ where: { userId: user.id }, select: { id: true } })
   const studentIds = students.map((s) => s.id)
@@ -83,6 +88,41 @@ export async function setDemoBank() {
       bankAccountName: "NGUYEN THI LAN",
     },
   })
+}
+
+// Khoá payOS giả của giáo viên demo (spec AH): phiếu gọi mock 4010, webhook ký bằng DEMO_CHECKSUM.
+const DEMO_HOOK = "g".repeat(43)
+const DEMO_CHECKSUM = "t-checksum"
+
+export async function clearDemoPayos() {
+  expect(process.env.DATABASE_URL ?? "").toContain(`@${EXPECTED_TEST_ENDPOINT}/`)
+  const user = await db.user.findUnique({ where: { username: "guide_demo" } })
+  if (!user) return
+  await db.teacherPayos.deleteMany({ where: { userId: user.id } })
+}
+
+export async function setDemoPayos() {
+  expect(process.env.DATABASE_URL ?? "").toContain(`@${EXPECTED_TEST_ENDPOINT}/`)
+  const user = await db.user.findUniqueOrThrow({ where: { username: "guide_demo" } })
+  const keys = { clientId: "t-client", apiKey: "t-api", checksumKey: DEMO_CHECKSUM }
+  await db.teacherPayos.upsert({ where: { userId: user.id }, update: keys, create: { userId: user.id, ...keys, hookId: DEMO_HOOK } })
+}
+
+// Giả phụ huynh trả đủ link payOS đang mở của HS (gọi thẳng service webhook như payOS gửi).
+export async function payDemoPayos(studentName: string) {
+  expect(process.env.DATABASE_URL ?? "").toContain(`@${EXPECTED_TEST_ENDPOINT}/`)
+  const user = await db.user.findUniqueOrThrow({ where: { username: "guide_demo" } })
+  const links = await db.tuitionPayLink.findMany({ where: { userId: user.id, status: "active" }, include: { student: { select: { fullName: true } } } })
+  const link = links.find((l) => l.student.fullName === studentName)
+  if (!link) throw new Error(`Không có link payOS đang mở cho ${studentName}`)
+  const p = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "medium" }).format(new Date())
+  const data = {
+    orderCode: link.id, amount: link.amount, description: `HP ${link.id}`, accountNumber: "0001234567", reference: `DEMO${link.id}`,
+    transactionDateTime: p, currency: "VND", paymentLinkId: link.payosLinkId, code: "00", desc: "success",
+    counterAccountBankId: "", counterAccountBankName: "", counterAccountName: null, counterAccountNumber: null, virtualAccountName: null, virtualAccountNumber: "",
+  }
+  const r = await handleTuitionWebhook(db, DEMO_HOOK, { code: "00", desc: "success", success: true, data, signature: signWebhookData(DEMO_CHECKSUM, data) })
+  expect(r.status).toBe(200)
 }
 
 export async function seedDemo(): Promise<string> {

@@ -43,6 +43,7 @@ import {
 import { PaymentFormDialog } from "./PaymentFormDialog"
 import { TuitionNoticeDialog } from "./TuitionNoticeDialog"
 import { TuitionStatusBadge } from "./TuitionStatusBadge"
+import { TuitionNoticeBadge } from "./TuitionNoticeBadge"
 import { PayBlock } from "./PayBlock"
 import { WaiveDialog } from "./WaiveDialog"
 import { LockedSection } from "@/components/plan/LockedSection"
@@ -422,6 +423,10 @@ function TuitionDetailBody({
               <History className="size-4" />
               {t("payment_history")}
             </h3>
+            {/* PH đã chuyển qua payOS (spec AH §7): chỉ dòng đã chuyển, nhắc phiếu đã có ở chỗ khác. */}
+            {row.payosPaidAt && row.payosPaidAmount ? (
+              <TuitionNoticeBadge item={{ noticeStatus: "none", due: 0, payosPaidAt: row.payosPaidAt, payosPaidAmount: row.payosPaidAmount }} />
+            ) : null}
 
             {paymentsLocked ? (
               <LockedSection plan="plus" label={lockedLabel} testId="history-locked">
@@ -451,6 +456,9 @@ function TuitionDetailBody({
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-medium text-slate-800">{formatDate(b.paidAt)}</span>
+                            {b.method === "payos" && (
+                              <span className="rounded bg-primary/10 px-1.5 text-xs text-primary">{t("payment_method_payos")}</span>
+                            )}
                           </div>
                           {showParts && (
                             <p className="mt-0.5 text-xs text-slate-500 tabular-nums">

@@ -133,6 +133,22 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
   },
   {
+    id: "payos-hoc-phi",
+    title: "Tự đánh dấu học phí bằng payOS (gói Pro)",
+    intro: "Phụ huynh quét QR payOS trên phiếu, tiền vào là app tự ghi khoản thu và đánh dấu **Đã đóng đủ**, không phải rà sao kê rồi đánh dấu tay. Dùng payOS: 100 giao dịch miễn phí trọn đời + 500 miễn phí trong 6 tháng; muốn nhiều hơn (1.000 giao dịch/năm) phải mua gói Pro của payOS ~2.000đ/giao dịch ≈ 2 triệu/năm. Không cần tự đánh dấu thì cứ dùng VietQR miễn phí trọn đời như bình thường.",
+    steps: [
+      "Đăng ký tài khoản tại **payos.vn** và xác thực danh tính theo hướng dẫn của payOS.",
+      "Liên kết tài khoản ngân hàng nhận học phí (nên chọn ngân hàng payOS hỗ trợ liên kết).",
+      "Tạo một **kênh thanh toán riêng** cho học phí.",
+      "Kênh vừa tạo hiện trong danh sách kênh.",
+      "Mở kênh, vào tab **Thông tin tích hợp**, chép **Client ID**, **API Key**, **Checksum Key**. Không bấm nút ↻ cạnh Checksum Key (đổi khoá làm app mất kết nối). Không cần tự điền webhook, app tự cài.",
+      { text: "Trong app: **Cài đặt**, thẻ **Tự đánh dấu học phí bằng payOS**, dán 3 khoá rồi bấm **Kết nối**.", shot: "cai-payos" },
+      { text: "Gửi phiếu như thường: phiếu có QR payOS đúng số đang nợ, phụ huynh quét để trả.", shot: "phieu-payos" },
+      { text: "Tiền vào: tháng tự thành **Đã đóng đủ**, huy hiệu hiện **PH đã chuyển … lúc … ngày …**.", shot: "da-chuyen-payos" },
+    ],
+    tips: ["Cần hỗ trợ cài payOS? Gọi, nhắn Zalo hoặc Facebook cho admin ở mục **Cần hỗ trợ?** cuối trang."],
+  },
+  {
     id: "goi-dich-vu",
     title: "Gói dịch vụ",
     steps: [

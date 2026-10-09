@@ -31,6 +31,8 @@ const rowBase = {
   noticeSentAt: null as string | null,
   noticeSentAmount: null as number | null,
   noticeStatus: "none" as "none" | "sent" | "changed",
+  payosPaidAt: null,
+  payosPaidAmount: null,
   inProgress: false,
   debtMonths: 0,
 }

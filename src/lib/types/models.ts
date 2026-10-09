@@ -1,5 +1,5 @@
 import type { Student, Subject, TeachingSession, SessionStudent } from "@prisma/client"
-import type { PaymentMethod } from "@/lib/schemas/payment"
+import type { StoredPaymentMethod } from "@/lib/schemas/payment"
 
 export type { Student, Subject, TeachingSession, SessionStudent }
 
@@ -91,6 +91,8 @@ export interface TuitionStatusDTO {
   noticeSentAt: Date | string | null
   noticeSentAmount: number | null
   noticeStatus: NoticeStatus
+  payosPaidAt: Date | string | null
+  payosPaidAmount: number | null
   inProgress: boolean
   debtMonths: number
 }
@@ -118,7 +120,7 @@ export interface PaymentDTO {
   id: number
   amount: number
   paidAt: string
-  method: PaymentMethod
+  method: StoredPaymentMethod
   note: string | null
 }
 
@@ -127,6 +129,7 @@ export type PaymentBatchDTO = {
   amount: number
   paidAt: string
   note: string | null
+  method: StoredPaymentMethod
   allocations: { year: number; month: number; amount: number }[]
   legacy: boolean
 }
@@ -158,6 +161,9 @@ export interface TuitionNoticeDTO {
   teacherName: string
   bankConfigured: boolean
   qr: {
+    // payOS (spec AH §5): QR do payOS cấp, có trang thanh toán; vietqr: QR tự dựng như cũ.
+    provider: "vietqr" | "payos"
+    checkoutUrl: string | null
     payload: string
     bankShortName: string
     accountNumber: string

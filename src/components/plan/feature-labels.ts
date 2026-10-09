@@ -16,5 +16,6 @@ export const FEATURE_LABEL_KEY: Record<PlanFeatureId, keyof typeof vi> = {
   dashboardAlerts: "plan_feat_alerts",
   studentImport: "plan_feat_import",
   multiMonthReport: "plan_feat_multi_report",
+  payosTuition: "plan_feat_payos_tuition",
   unlimitedStudents: "plan_unlimited",
 }

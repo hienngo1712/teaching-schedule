@@ -48,6 +48,7 @@ model User {
   activityDays  UserActivityDay[]
   feedbacks     Feedback[]
   chatConversation ChatConversation?
+  teacherPayos  TeacherPayos?
 
   @@map("users")
 }
@@ -109,6 +110,7 @@ model Student {
   sessionStudents SessionStudent[]
   monthlyTuitions MonthlyTuition[]
   billingChanges  StudentBillingChange[]
+  payLinks        TuitionPayLink[]
   user            User             @relation(fields: [userId], references: [id])
 
   @@index([userId, grade])
@@ -427,3 +429,56 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
+// Khoá payOS của giáo viên (spec AH). clientId/apiKey/checksumKey mã hoá qua ENCRYPTED_FIELDS.
+model TeacherPayos {
+  userId      Int      @id @map("user_id")
+  clientId    String   @map("client_id")
+  apiKey      String   @map("api_key")
+  checksumKey String   @map("checksum_key")
+  // Đường webhook riêng /api/payos/tuition/<hookId>; không bí mật, chữ ký mới là thứ bảo vệ.
+  hookId      String   @unique @map("hook_id") @db.VarChar(43)
+  connectedAt DateTime @default(now()) @map("connected_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("teacher_payos")
+}
+
+// Mỗi QR payOS phát cho 1 HS. orderCode gửi payOS = id.
+model TuitionPayLink {
+  id            Int                     @id @default(autoincrement())
+  userId        Int                     @map("user_id")
+  studentId     Int                     @map("student_id")
+  // Tháng neo để chia FIFO khi tiền vào: tháng đã học xong mới nhất ≤ tháng của phiếu.
+  year          Int
+  month         Int
+  amount        Int
+  status        String                  @default("active") @db.VarChar(10) // active | cancelled | paid
+  payosLinkId   String                  @map("payos_link_id") @db.VarChar(64)
+  qrCode        String                  @map("qr_code") @db.Text
+  checkoutUrl   String                  @map("checkout_url") @db.Text
+  bankBin       String?                 @map("bank_bin") @db.VarChar(8)
+  accountNumber String?                 @map("account_number") // thêm vào ENCRYPTED_FIELDS
+  accountName   String?                 @map("account_name") // thêm vào ENCRYPTED_FIELDS
+  createdAt     DateTime                @default(now()) @map("created_at")
+  payments      TuitionPayLinkPayment[]
+  student       Student                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, status])
+  @@map("tuition_pay_links")
+}
+
+// Mỗi giao dịch payOS 1 dòng: chống ghi 2 lần khi payOS gửi lại (bài học review AG).
+model TuitionPayLinkPayment {
+  id        Int            @id @default(autoincrement())
+  linkId    Int            @map("link_id")
+  reference String         @db.VarChar(64)
+  amount    Int
+  paidAt    DateTime       @map("paid_at")
+  batchId   String         @map("batch_id") @db.VarChar(36) // đợt Payment đã ghi
+  createdAt DateTime       @default(now()) @map("created_at")
+  link      TuitionPayLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  // Mã giao dịch chỉ duy nhất theo ngân hàng/kênh: mỗi GV 1 kênh nên không được unique toàn bảng (review AH).
+  @@unique([linkId, reference])
+  @@map("tuition_pay_link_payments")
+}

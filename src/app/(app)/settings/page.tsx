@@ -2,6 +2,7 @@
 
 import { PageHeader } from "@/components/common/PageHeader"
 import { BankAccountCard } from "@/components/settings/BankAccountCard"
+import { PayosTuitionCard } from "@/components/settings/PayosTuitionCard"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 export default function SettingsPage() {
@@ -10,6 +11,7 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader title={t("settings")} />
       <BankAccountCard />
+      <PayosTuitionCard />
     </div>
   )
 }

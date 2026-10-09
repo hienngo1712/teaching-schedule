@@ -94,7 +94,8 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
         <Skeleton className="mx-auto h-[560px] w-[360px] max-w-full rounded-lg" />
       ) : (
         <div className="space-y-4">
-          {!notice.bankConfigured && notice.remaining > 0 && (
+          {/* Có QR payOS (spec AH) thì phiếu đã trả được, không cần TK VietQR. */}
+          {!notice.bankConfigured && !notice.qr && notice.remaining > 0 && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
               <p>{t("notice_no_bank")}</p>
               <Link href="/settings" className="mt-1 inline-block font-medium underline">

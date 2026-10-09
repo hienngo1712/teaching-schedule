@@ -2,6 +2,8 @@ import { z } from "zod"
 
 export const PAYMENT_METHODS = ["cash", "transfer"] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
+// "payos" chỉ do webhook ghi (spec AH §6); giáo viên không tự chọn nên không nằm trong PAYMENT_METHODS.
+export type StoredPaymentMethod = PaymentMethod | "payos"
 
 // Cùng quy ước "YYYY-MM-DD" với sessionDate; regex không chặn được ngày không có thật (2026-13-01).
 const paidAtSchema = z

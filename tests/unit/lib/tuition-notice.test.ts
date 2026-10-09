@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest"
 import { noticeFeePerSession, noticePaymentState } from "@/lib/tuition-notice"
 
 const qr = {
+  provider: "vietqr" as const,
+  checkoutUrl: null,
   payload: "x",
   bankShortName: "Vietcombank",
   accountNumber: "1",

@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient, type MonthlyTuition, type SessionStudent } from "@prisma/client"
+import { loadPayosPaid } from "./payos-paid.service"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { assertOwnership } from "./_base.service"
 import type { MonthlyTuitionFilterInput, UpdateSettlementInput, SetNoticeSentInput } from "@/lib/schemas/tuition"
@@ -227,7 +228,7 @@ export async function getMonthlyTuitionStatus(
 
   // 2. Fetch song song: billing changes + điểm danh tháng hiện tại + snapshot tháng này + nợ đầu tháng
   const billingMapPromise = loadBillingChanges(db, studentIds)
-  const [billingMap, currentAttendance, existingSnapshots, closingBalances] = await Promise.all([
+  const [billingMap, currentAttendance, existingSnapshots, closingBalances, payosPaid] = await Promise.all([
     billingMapPromise,
     db.sessionStudent.findMany({
       where: {
@@ -240,6 +241,7 @@ export async function getMonthlyTuitionStatus(
       where: { studentId: { in: studentIds }, year, month },
     }),
     billingMapPromise.then((bMap) => computeClosingBalances(db, userId, studentIds, year, month, bMap)),
+    loadPayosPaid(db, studentIds, year, month),
   ])
 
   // 3. Dùng Map để tra cứu O(1) thay vì .find() O(n) trong vòng lặp
@@ -309,6 +311,9 @@ export async function getMonthlyTuitionStatus(
       noticeSentAt,
       noticeSentAmount,
       noticeStatus,
+      // PH chuyển qua payOS ở tháng này (spec AH §7): đọc thẳng snapshot.
+      payosPaidAt: payosPaid.get(student.id)?.at ?? null,
+      payosPaidAmount: payosPaid.get(student.id)?.amount ?? null,
       inProgress,
       debtMonths,
     }
@@ -401,6 +406,8 @@ export async function getMonthlyTuitionStatus(
       noticeSentAt: item.noticeSentAt,
       noticeSentAmount: item.noticeSentAmount,
       noticeStatus: item.noticeStatus,
+      payosPaidAt: item.payosPaidAt,
+      payosPaidAmount: item.payosPaidAmount,
       inProgress: item.inProgress,
       debtMonths: item.debtMonths,
     })),

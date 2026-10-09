@@ -90,11 +90,12 @@ function toSessionDTO(row: SessionRow): ParentSessionDTO {
   }
 }
 
-// Chỉ đọc: trang công khai không được ghi gì vào DB (kể cả snapshot học phí).
+// Chỉ đọc: trang công khai không ghi snapshot học phí; ngoại lệ duy nhất là link payOS của phiếu (spec AH §5).
 export async function getParentView(
   db: PrismaClient,
   token: string,
-  thang?: string
+  thang?: string,
+  origin?: string | null
 ): Promise<ParentViewDTO | null> {
   if (!PARENT_TOKEN_REGEX.test(token)) return null
 
@@ -127,7 +128,7 @@ export async function getParentView(
   const year = Math.floor(idx / 12)
   const month = (idx % 12) + 1
 
-  const notice = await getTuitionNotice(db, student.userId, { studentId: student.id, year, month })
+  const notice = await getTuitionNotice(db, student.userId, { studentId: student.id, year, month }, { origin, returnPath: `/p/${token}` })
 
   // Cùng điều kiện với currentAttendance trong getMonthlyTuitionStatus để số buổi khớp phiếu.
   const where = (sessionDate: Prisma.DateTimeFilter) => ({
