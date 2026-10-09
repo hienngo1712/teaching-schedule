@@ -150,6 +150,19 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
             {view.notice.qr && (
               <p className="mt-2 text-center text-xs text-slate-500">{t("parent_qr_hint")}</p>
             )}
+            {/* payOS: trang thanh toán của payOS (spec AH §5); ảnh phiếu không cần nút này. */}
+            {view.notice.qr?.checkoutUrl && (
+              <div className="text-center">
+                <a
+                  href={view.notice.qr.checkoutUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-white md:w-auto"
+                >
+                  {t("payos_open_checkout")}
+                </a>
+              </div>
+            )}
             <footer className="hidden pt-4 text-center text-xs text-slate-500 lg:block">
               {t("parent_footer")}
             </footer>

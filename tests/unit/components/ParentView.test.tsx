@@ -114,3 +114,32 @@ describe("ParentView - layout 2 cột desktop (spec Y Task 7)", () => {
     expect(summary.className).toContain("lg:hidden")
   })
 })
+
+describe("ParentView: QR payOS (spec AH §5)", () => {
+  it("trang PH: có nút 'Mở trang thanh toán' trỏ checkoutUrl, mở tab mới", () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <ParentView view={{ ...baseView, notice: { ...baseView.notice, qr: { provider: "payos" as const, payload: "QR1", bankShortName: "MB", accountNumber: "0001", accountName: "GV A", amount: 200000, content: "HP 1", checkoutUrl: "https://pay/1" } } }} />
+      </LanguageProvider>
+    )
+    const link = screen.getByRole("link", { name: /Mở trang thanh toán/ })
+    expect(link.getAttribute("href")).toBe("https://pay/1")
+    expect(link.getAttribute("target")).toBe("_blank")
+    expect(link.getAttribute("rel")).toContain("noopener")
+    expect(link.className).toContain("h-11")
+  })
+  it("trang PH: QR VietQR không có nút Mở trang thanh toán", () => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <ParentView view={{ ...baseView, notice: { ...baseView.notice, qr: { ...{ provider: "payos" as const, payload: "QR1", bankShortName: "MB", accountNumber: "0001", accountName: "GV A", amount: 200000, content: "HP 1", checkoutUrl: "https://pay/1" }, provider: "vietqr", checkoutUrl: null } } }} />
+      </LanguageProvider>
+    )
+    expect(screen.queryByRole("link", { name: /Mở trang thanh toán/ })).toBeNull()
+  })
+})

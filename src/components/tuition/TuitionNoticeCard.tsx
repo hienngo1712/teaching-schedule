@@ -157,7 +157,7 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
               // eslint-disable-next-line @next/next/no-img-element -- data URL; html2canvas cần <img> thường
               <img
                 src={qrSrc}
-                alt="VietQR"
+                alt={notice.qr.provider === "payos" ? "payOS" : "VietQR"}
                 width={160}
                 height={160}
                 className="block"
@@ -180,6 +180,7 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
               <p>
                 {t("notice_transfer_content")}: {notice.qr.content}
               </p>
+              {notice.qr.provider === "payos" && <p className="text-xs text-emerald-700">{t("payos_scan_hint")}</p>}
             </div>
           </div>
         ) : (
@@ -188,7 +189,7 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
               // eslint-disable-next-line @next/next/no-img-element -- data URL; html2canvas cần <img> thường
               <img
                 src={qrSrc}
-                alt="VietQR"
+                alt={notice.qr.provider === "payos" ? "payOS" : "VietQR"}
                 width={200}
                 height={200}
                 className="mx-auto block"
@@ -210,6 +211,7 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
             <p>
               {t("notice_transfer_content")}: {notice.qr.content}
             </p>
+            {notice.qr.provider === "payos" && <p className="text-xs text-emerald-700">{t("payos_scan_hint")}</p>}
           </div>
         )
       )}

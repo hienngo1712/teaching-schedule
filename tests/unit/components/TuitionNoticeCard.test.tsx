@@ -149,3 +149,23 @@ describe("TuitionNoticeCard: hiển thị học phí trọn tháng vs theo buổ
     expect(screen.getByText("Cần đóng ngay")).toBeTruthy()
   })
 })
+
+describe("TuitionNoticeCard: QR payOS (spec AH §5)", () => {
+  const payosQr = { provider: "payos" as const, payload: "QR1", bankShortName: "MB", accountNumber: "0001", accountName: "GV A", amount: 200000, content: "HP 1", checkoutUrl: "https://pay/1" }
+  it("QR payOS: hiện dòng 'Quét để trả, tự xác nhận khi tiền vào'", () => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeCard notice={{ ...baseNotice, bankConfigured: true, qr: payosQr }} />
+      </LanguageProvider>
+    )
+    expect(screen.getByText("Quét để trả, tự xác nhận khi tiền vào")).toBeTruthy()
+  })
+  it("QR VietQR: không có dòng gợi ý payOS", () => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeCard notice={{ ...baseNotice, bankConfigured: true, qr: { ...payosQr, provider: "vietqr", checkoutUrl: null } }} />
+      </LanguageProvider>
+    )
+    expect(screen.queryByText("Quét để trả, tự xác nhận khi tiền vào")).toBeNull()
+  })
+})

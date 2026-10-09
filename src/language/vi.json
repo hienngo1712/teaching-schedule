@@ -872,6 +872,8 @@
   "payos_paused": "Tạm dừng: gói Pro đã hết, phiếu dùng VietQR",
   "payos_disconnect": "Ngắt kết nối",
   "payos_disconnect_confirm": "Ngắt kết nối payOS? QR payOS đang gửi sẽ bị huỷ, phiếu quay về VietQR.",
+  "payos_scan_hint": "Quét để trả, tự xác nhận khi tiền vào",
+  "payos_open_checkout": "Mở trang thanh toán",
   "tuition_in_progress": "Đang học",
   "notice_changed": "Đã gửi · số tiền đã đổi",
   "payment_recorded": "Đã ghi {amount} cho {months}",
