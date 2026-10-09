@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { cleanup, render, screen, fireEvent } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { AppHeader } from "@/components/layout/AppHeader"
 import { RELEASES } from "@/lib/releases"
@@ -16,16 +16,26 @@ globalThis.ResizeObserver ??= class {
 } as unknown as typeof ResizeObserver
 
 const download = vi.hoisted(() => vi.fn())
+const payos = vi.hoisted(() => ({ data: { enabled: false, unread: 0, items: [] as unknown[] } }))
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
+  useRouter: () => ({ push: vi.fn() }),
 }))
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
-    useUtils: () => ({ release: { status: { setData: vi.fn() } } }),
+    useUtils: () => ({
+      release: { status: { setData: vi.fn() } },
+      payosNotice: { list: { setData: vi.fn() } },
+      tuition: { invalidate: vi.fn() }, payment: { invalidate: vi.fn() }, report: { invalidate: vi.fn() },
+    }),
     release: {
       status: { useQuery: () => ({ data: { lastSeenRelease: RELEASES[0].version } }) },
+      markSeen: { useMutation: () => ({ mutate: vi.fn() }) },
+    },
+    payosNotice: {
+      list: { useQuery: () => ({ data: payos.data }) },
       markSeen: { useMutation: () => ({ mutate: vi.fn() }) },
     },
     feedback: {
@@ -62,6 +72,7 @@ function renderHeader(variant?: "teacher" | "admin") {
 describe("AppHeader", () => {
   beforeEach(() => {
     download.mockReset()
+    payos.data = { enabled: false, unread: 0, items: [] }
     window.matchMedia = vi.fn().mockImplementation((q: string) => ({
       matches: false,
       media: q,
@@ -131,5 +142,15 @@ describe("AppHeader", () => {
   it("admin: không có nhãn gói", () => {
     renderHeader("admin")
     expect(screen.queryByTestId("current-plan-badge")).toBeNull()
+  })
+
+  it("giáo viên đã nối payOS → có nút 'Thông báo tiền học'; admin thì không", () => {
+    payos.data = { enabled: true, unread: 0, items: [] }
+    currentSession = { user: { username: "teacher", fullName: "Cô Mai" } }
+    renderHeader()
+    expect(screen.getByRole("button", { name: "Thông báo tiền học", hidden: true })).toBeTruthy()
+    cleanup()
+    renderHeader("admin")
+    expect(screen.queryByRole("button", { name: "Thông báo tiền học", hidden: true })).toBeNull()
   })
 })

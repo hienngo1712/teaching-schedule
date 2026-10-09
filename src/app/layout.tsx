@@ -36,7 +36,8 @@ export default function RootLayout({
           <LanguageProvider>
             {children}
             {/* Không có ThemeProvider (D1): ép sáng để máy đặt chế độ tối không ra toast tối. */}
-            <Toaster richColors position="top-right" theme="light" />
+            {/* Hạ toast xuống dưới header (h-14 / md:h-16) để không che chuông tiền payOS (spec AI). */}
+            <Toaster richColors position="top-right" theme="light" offset={{ top: 72 }} mobileOffset={{ top: 64 }} />
             <SpeedInsights />
           </LanguageProvider>
         </TRPCProvider>

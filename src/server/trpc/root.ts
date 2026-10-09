@@ -17,6 +17,7 @@ import { onboardingRouter } from "@/server/trpc/routers/onboarding"
 import { feedbackRouter } from "@/server/trpc/routers/feedback"
 import { contactRouter } from "@/server/trpc/routers/contact"
 import { payosRouter } from "@/server/trpc/routers/payos"
+import { payosNoticeRouter } from "@/server/trpc/routers/payos-notice"
 
 export const appRouter = createTRPCRouter({
   health: healthRouter,
@@ -37,6 +38,7 @@ export const appRouter = createTRPCRouter({
   feedback: feedbackRouter,
   contact: contactRouter,
   payos: payosRouter,
+  payosNotice: payosNoticeRouter,
 })
 
 export type AppRouter = typeof appRouter

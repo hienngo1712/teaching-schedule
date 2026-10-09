@@ -286,6 +286,14 @@ test("capture-25-shots", async ({ page, browser }, testInfo) => {
   await mark(paidBadge)
   await shot(page, "da-chuyen-payos", kind)
 
+  // 20e. chuong-payos: chuông tiền payOS trên cùng mở ra, viền đỏ danh sách (bản 0.18.0)
+  await page.getByRole("button", { name: "Thông báo tiền học" }).click()
+  const bellList = page.getByRole("dialog").filter({ hasText: "Tiền học qua payOS" })
+  await expect(bellList.getByText(/PH của .* đã chuyển/).first()).toBeVisible()
+  await mark(bellList)
+  await shot(page, "chuong-payos", kind)
+  await page.keyboard.press("Escape")
+
   // 21. goi-dich-vu: trang Gói của tôi, viền đỏ khung Gói hiện tại ở đầu trang (bản 0.11.5)
   await page.goto("/plan")
   await mark(page.getByTestId("plan-current"))

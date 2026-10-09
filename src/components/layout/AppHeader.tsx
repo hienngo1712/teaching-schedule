@@ -19,6 +19,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useBackupDownload } from "@/hooks/useBackupDownload"
 import { RenewOffer } from "@/components/plan/RenewOffer"
 import { WhatsNew } from "@/components/whats-new/WhatsNew"
+import { PayosBell } from "@/components/payos/PayosBell"
 import { CurrentPlanBadge } from "@/components/plan/CurrentPlanBadge"
 import { ADMIN_HOME } from "@/lib/admin"
 
@@ -50,6 +51,7 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
       <div className="flex shrink-0 items-center gap-2">
         {/* Admin không dùng gói: không gọi plan.me, không nhắc gia hạn. */}
         {!admin && <RenewOffer />}
+        {!admin && <PayosBell />}
         {!admin && <WhatsNew />}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
