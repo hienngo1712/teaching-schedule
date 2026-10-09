@@ -13,6 +13,17 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.15.2",
+    date: "2026-10-08",
+    title: "Sửa lỗi nhỏ",
+    summary: "Chỉ cho tôi: ở bước Sang ca khác, phím mũi tên đổi ca như bình thường.",
+    notify: false,
+    items: [
+      { kind: "fix", title: "Chỉ cho tôi", body: "Bước Sang ca khác: bấm nút mũi tên hoặc phím ← → đều đổi ca, hướng dẫn vẫn đứng ở bước đó." },
+      { kind: "fix", title: "Chỉ cho tôi", body: "Hộp hướng dẫn tự dời theo khi hộp chi tiết ca trượt vào hoặc đổi kích thước, không còn che nút." },
+    ],
+  },
+  {
     version: "0.15.1",
     date: "2026-10-08",
     title: "Sửa lỗi nhỏ",

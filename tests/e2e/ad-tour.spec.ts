@@ -154,7 +154,7 @@ test('/guide: chưa đăng nhập không có nút; giáo viên đăng nhập có
   await page.close();
 });
 
-test('390px: tour Điểm danh, bước chuyển ca: hộp chi tiết ca vẫn cuộn được', async ({ browser }) => {
+for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 800 }]) test(`${vp.width}px: tour Điểm danh, bước chuyển ca: phím ← → và nút mũi tên đều đổi ca, tour đứng yên; hộp vẫn cuộn được`, async ({ browser }) => {
   // 2 ca cùng tháng (giờ VN) để có thanh chuyển ca; ca hôm nay đứng đầu danh sách mobile.
   const u = await db.user.findUniqueOrThrow({ where: { username: USER } });
   const subject = await db.subject.create({ data: { userId: u.id, name: 'Toán', isDefault: true } });
@@ -171,7 +171,7 @@ test('390px: tour Điểm danh, bước chuyển ca: hộp chi tiết ca vẫn c
       },
     });
   }
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ viewport: vp });
   await login(page);
   await page.goto('/calendar?tour=attendance');
   await expect(popover(page)).toContainText('Mở ca dạy');
@@ -180,8 +180,30 @@ test('390px: tour Điểm danh, bước chuyển ca: hộp chi tiết ca vẫn c
   // Popover tour cũng là role=dialog → chọn hộp Radix theo data-state.
   const dlg = page.locator('[role="dialog"][data-state="open"]');
   await expect(dlg).toHaveCSS('overflow-y', 'auto');
+  const nav = page.locator('[data-tour="session-nav"]');
+  // Ca hôm nay có thể là 1/2 hoặc 2/2 tuỳ ngày chạy: đi theo hướng còn ca.
+  const atFirst = (await nav.textContent())?.includes('Ca 1/2');
+  const [fwdKey, backKey] = atFirst ? ['ArrowRight', 'ArrowLeft'] : ['ArrowLeft', 'ArrowRight'];
+  const [startPos, otherPos] = atFirst ? ['Ca 1/2', 'Ca 2/2'] : ['Ca 2/2', 'Ca 1/2'];
+  await page.keyboard.press(fwdKey);
+  await expect(nav).toContainText(otherPos);
+  await expect(popover(page)).toContainText('Sang ca khác');
+  await page.keyboard.press(backKey);
+  await expect(nav).toContainText(startPos);
+  await expect(popover(page)).toContainText('Sang ca khác');
+  // Đổi ca lúc ca mới chưa tải: hộp co lại, thanh dời chỗ → tour phải vẽ lại, hộp tour không che nút.
+  await nav.getByRole('button', { name: atFirst ? 'Ca sau' : 'Ca trước' }).click({ timeout: 5000 });
+  await expect(nav).toContainText(otherPos);
+  await expect(popover(page)).toContainText('Sang ca khác');
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: `.superpowers/sdd/2026-10-08-af-mui-ten-chuyen-ca/session-nav-${vp.width}.png` });
+  // Nút Tiếp vẫn đi sang bước sau.
+  await popover(page).locator('.driver-popover-next-btn').click();
+  await expect(popover(page)).not.toContainText('Sang ca khác');
   await page.close();
   // Trả lại tài khoản không có ca cho các lần chạy sau.
   await db.sessionStudent.deleteMany({ where: { session: { userId: u.id } } });
   await db.teachingSession.deleteMany({ where: { userId: u.id } });
+  await db.student.deleteMany({ where: { userId: u.id } });
+  await db.subject.deleteMany({ where: { userId: u.id } });
 });

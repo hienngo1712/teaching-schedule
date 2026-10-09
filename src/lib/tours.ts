@@ -10,6 +10,8 @@ export type TourStep = {
   advanceOn?: "next" | "click"
   nextTour?: TourId
   nextLabelKey?: TourKey
+  // Trang tự dùng ← → ở bước này (vd chuyển ca): tour không bắt phím mũi tên.
+  pageArrows?: true
 }
 export type Tour = { id: TourId; href: string; steps: TourStep[]; requires?: "student" | "session" }
 
@@ -59,7 +61,7 @@ export const TOURS: Record<TourId, Tour> = {
     requires: "session",
     steps: [
       { target: "session-card", titleKey: "tour_attendance_1_title", bodyKey: "tour_attendance_1_body", advanceOn: "click" },
-      { target: "session-nav", titleKey: "tour_attendance_2_title", bodyKey: "tour_attendance_2_body" },
+      { target: "session-nav", titleKey: "tour_attendance_2_title", bodyKey: "tour_attendance_2_body", pageArrows: true },
       { target: "attendance-marks", titleKey: "tour_attendance_3_title", bodyKey: "tour_attendance_3_body" },
       { target: "attendance-all-present", titleKey: "tour_attendance_4_title", bodyKey: "tour_attendance_4_body" },
       { target: "attendance-save", titleKey: "tour_attendance_5_title", bodyKey: "tour_attendance_5_body" },
