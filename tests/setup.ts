@@ -45,6 +45,7 @@ beforeAll(async () => {
     await db.subject.deleteMany()
     await db.loginAttempt.deleteMany()
     await db.planOrder.deleteMany()
+    await db.contactChange.deleteMany()
     await db.consentRecord.deleteMany()
     await db.securityEvent.deleteMany()
     await db.chatMessage.deleteMany()
