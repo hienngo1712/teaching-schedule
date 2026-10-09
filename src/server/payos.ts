@@ -46,6 +46,8 @@ async function call(cfg: PayosConfig, path: string, body: unknown): Promise<{ co
     method: "POST",
     headers: { "x-client-id": cfg.clientId, "x-api-key": cfg.apiKey, "content-type": "application/json" },
     body: JSON.stringify(body),
+    // Gọi API thanh toán, không bao giờ dùng cache của Next (hợp đồng Next 15 trong next15-contract.test.ts).
+    cache: "no-store",
     signal: AbortSignal.timeout(TIMEOUT_MS),
   })
   if (!res.ok) throw new Error(`payOS HTTP ${res.status}`)
