@@ -584,6 +584,8 @@
   "admin_cannot_approve": "Cannot approve: the account has an active Pro plan",
   "admin_order_expires": "Expires at {date}",
   "admin_accounts_plans": "Accounts & plans",
+  "admin_history_paid": "Received {amount} at {time}",
+  "admin_history_overpaid": "{extra} over, remember to refund",
   "admin_decided_payos": "Auto-activated (payOS)",
   "admin_order_history": "Order history",
   "admin_tab_orders": "Pending",

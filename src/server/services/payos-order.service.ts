@@ -53,12 +53,23 @@ export async function handlePayosWebhook(db: PrismaClient, body: unknown): Promi
     result = await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(owner.userId)})`
       await expireStaleOrders(tx, now, owner.userId)
-      const order = await tx.planOrder.findUniqueOrThrow({ where: { id: d.orderCode }, select: { status: true, amount: true, payosRef: true, paidAmount: true } })
-      if (order.payosRef === d.reference) return "gửi lặp"
-      const paidAmount = (order.paidAmount ?? 0) + d.amount
+      const order = await tx.planOrder.findUniqueOrThrow({ where: { id: d.orderCode }, select: { status: true, amount: true } })
+      if (await tx.planOrderPayment.findUnique({ where: { reference: d.reference }, select: { id: true } })) return "gửi lặp"
+      const parsedAt = typeof d.transactionDateTime === "string" ? parsePayosDateTime(d.transactionDateTime) : null
+      // Ngày hỏng mà ném lỗi thì payOS gửi lại mãi, tiền không bao giờ được ghi: lấy giờ nhận.
+      const paidAt = parsedAt && !Number.isNaN(parsedAt.getTime()) ? parsedAt : now
+      await tx.planOrderPayment.create({ data: { orderId: d.orderCode, reference: d.reference, amount: d.amount, paidAt } })
+      const sum = await tx.planOrderPayment.aggregate({ where: { orderId: d.orderCode }, _sum: { amount: true } })
+      const paidAmount = sum._sum.amount ?? d.amount
       await tx.planOrder.update({
         where: { id: d.orderCode },
-        data: { paidAmount, paidAt: parsePayosDateTime(d.transactionDateTime), payosRef: d.reference },
+        data: {
+          paidAmount,
+          paidAt,
+          payosRef: d.reference,
+          // Tiền mới vào đơn admin đã xử lý (từ chối) → hiện lại trong nhóm cần xử lý.
+          ...(order.status !== "approved" ? { paidReviewedAt: null } : {}),
+        },
       })
       if (order.status !== "pending" || paidAmount < order.amount) return `cần xử lý (${order.status}, ${paidAmount}/${order.amount})`
       const done = await activateOrderInTx(tx, d.orderCode, "payos", now, "pending")

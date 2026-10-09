@@ -268,10 +268,25 @@ model PlanOrder {
   // Admin đã xử lý đơn có tiền mà không bật gói (Từ chối) → rời nhóm "cần xử lý".
   paidReviewedAt   DateTime? @map("paid_reviewed_at")
   user         User      @relation(fields: [userId], references: [id])
+  payments     PlanOrderPayment[]
 
   @@index([userId, createdAt])
   @@index([status])
   @@map("plan_orders")
+}
+
+// Mỗi giao dịch payOS 1 dòng: payOS gửi lại giao dịch cũ (A, B, A) không bị cộng tiền 2 lần (review AG).
+model PlanOrderPayment {
+  id        Int       @id @default(autoincrement())
+  orderId   Int       @map("order_id")
+  reference String    @unique @db.VarChar(64)
+  amount    Int
+  paidAt    DateTime  @map("paid_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  order     PlanOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("plan_order_payments")
 }
 
 // Giá hiện hành của 1 gói = dòng mới nhất (spec L Q1). Không FK tới users: xóa tài khoản admin không mất lịch sử.

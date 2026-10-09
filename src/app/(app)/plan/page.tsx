@@ -24,7 +24,7 @@ const STATUS_KEY = {
 
 export default function PlanPage() {
   const { t } = useTranslation()
-  const { me, fields } = usePlan()
+  const { me, fields } = usePlan({ poll: true })
   const router = useRouter()
   // Biến tên "query": tests/unit/next15-contract.test.ts cấm định danh tham số route trong page.tsx.
   const query = useSearchParams()

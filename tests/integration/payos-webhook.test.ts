@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest"
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest"
 import { db } from "@/server/db"
 import { signWebhookData } from "@/server/payos"
 import { handlePayosWebhook } from "@/server/services/payos-order.service"
@@ -20,10 +20,10 @@ async function makeOrder(over: Partial<{ status: string; amount: number; created
   })
 }
 
-function payload(o: { id: number; payosLinkId: string | null }, amount: number, reference = `REF${o.id}-${amount}`) {
+function payload(o: { id: number; payosLinkId: string | null }, amount: number, reference = `REF${o.id}-${amount}`, transactionDateTime = "2026-10-09 20:15:00") {
   const data = {
     orderCode: o.id, amount, description: "SM ABC123", accountNumber: "0123456789", reference,
-    transactionDateTime: "2026-10-09 20:15:00", currency: "VND", paymentLinkId: o.payosLinkId,
+    transactionDateTime, currency: "VND", paymentLinkId: o.payosLinkId,
     code: "00", desc: "success", counterAccountBankId: "", counterAccountBankName: "", counterAccountName: null,
     counterAccountNumber: null, virtualAccountName: null, virtualAccountNumber: "",
   }
@@ -69,6 +69,22 @@ describe("handlePayosWebhook", () => {
     expect(res.every((r) => r.status === 200)).toBe(true)
     const u = await db.user.findUniqueOrThrow({ where: { id: userId } })
     expect(u.planExpiresAt!.getTime() - Date.now()).toBeLessThan(40 * 86400_000)
+    expect((await db.planOrder.findUniqueOrThrow({ where: { id: o.id } })).paidAmount).toBe(99000)
+  })
+  it("payOS gửi lại giao dịch cũ (A, B, A lần nữa) không cộng tiền 2 lần", async () => {
+    const o = await makeOrder()
+    await handlePayosWebhook(db, payload(o, 50000, "RA"))
+    await handlePayosWebhook(db, payload(o, 30000, "RB"))
+    await handlePayosWebhook(db, payload(o, 50000, "RA"))
+    expect(await db.planOrder.findUniqueOrThrow({ where: { id: o.id } })).toMatchObject({ status: "pending", paidAmount: 80000 })
+  })
+  it("ngày giờ giao dịch hỏng → vẫn ghi tiền (paidAt = lúc nhận), không lỗi 500", async () => {
+    const o = await makeOrder()
+    const before = Date.now()
+    expect(await handlePayosWebhook(db, payload(o, 99000, "RD", "khong-phai-ngay"))).toMatchObject({ status: 200 })
+    const after = await db.planOrder.findUniqueOrThrow({ where: { id: o.id } })
+    expect(after.status).toBe("approved")
+    expect(after.paidAt!.getTime()).toBeGreaterThanOrEqual(before - 1000)
   })
   it("thiếu tiền → vẫn pending, có paidAmount (cần xử lý)", async () => {
     const o = await makeOrder()
@@ -126,5 +142,16 @@ describe("admin xử lý đơn có tiền payOS", () => {
     expect(rb.paidReviewedAt).not.toBeNull()
     ov = await getAdminOverview(db)
     expect(ov.attentionOrders.map((o) => o.id)).not.toContain(b.id)
+  })
+  it("từ chối đơn có tiền vẫn huỷ link; tiền mới vào sau đó → quay lại nhóm cần xử lý", async () => {
+    const o = await makeOrder({ payosLinkId: "pl-rej" })
+    await handlePayosWebhook(db, payload(o, 50000, "R1"))
+    const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ code: "00" }), { status: 200 }))
+    await rejectOrder(db, "admin_test", o.id)
+    expect(f.mock.calls.some(([u]) => String(u).endsWith("/pl-rej/cancel"))).toBe(true)
+    f.mockRestore()
+    await handlePayosWebhook(db, payload(o, 49000, "R2"))
+    const ov = await getAdminOverview(db)
+    expect(ov.attentionOrders.find((x) => x.id === o.id)?.paidAmount).toBe(99000)
   })
 })

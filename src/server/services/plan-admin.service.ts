@@ -201,7 +201,8 @@ export async function rejectOrder(db: PrismaClient, admin: string, id: number, n
   })
   if (count === 0) throw new TRPCError({ code: "CONFLICT", message: "Đơn không còn ở trạng thái chờ" })
   console.info(`[admin] ${admin} từ chối đơn ${id}`)
-  if (cur?.payosLinkId && !paid) await cancelPayosLinkSafe(cur.payosLinkId)
+  // Huỷ cả khi đơn đã có tiền: đơn thiếu tiền mà link còn mở thì khách vẫn trả tiếp được.
+  if (cur?.payosLinkId) await cancelPayosLinkSafe(cur.payosLinkId)
   return { success: true }
 }
 
@@ -249,6 +250,8 @@ export async function getOrderHistory(db: PrismaClient) {
       status: true,
       source: true,
       method: true,
+      paidAmount: true,
+      paidAt: true,
       grantedUntil: true,
       note: true,
       decidedBy: true,

@@ -6,7 +6,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { formatValidUntil, planLabel } from "@/lib/plans"
 import { formatCurrency } from "@/lib/utils"
-import { dateOrDash, periodKey } from "./admin-format"
+import { dateOrDash, periodKey, timeDayVn } from "./admin-format"
 import { MethodTag } from "./AdminPendingOrders"
 
 type Row = RouterOutputs["admin"]["orderHistory"][number]
@@ -82,6 +82,13 @@ export function AdminOrderHistory() {
             <p className="text-xs text-slate-500">
               {t("admin_col_decided")}: {decided(o)}
             </p>
+            {o.paidAmount !== null && (
+              <p className={o.status === "approved" && o.paidAmount > o.amount ? "text-xs font-medium text-red-700" : "text-xs text-slate-500"}>
+                {t("admin_history_paid").replace("{amount}", formatCurrency(o.paidAmount)).replace("{time}", o.paidAt ? timeDayVn(o.paidAt) : "-")}
+                {o.status === "approved" && o.paidAmount > o.amount &&
+                  ` · ${t("admin_history_overpaid").replace("{extra}", formatCurrency(o.paidAmount - o.amount))}`}
+              </p>
+            )}
             {o.note && (
               <p className="break-words text-xs text-slate-500">
                 {t("admin_note")}: {o.note}
