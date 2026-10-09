@@ -14,6 +14,7 @@ const ORIGINAL = { keys: process.env.DATA_ENCRYPTION_KEYS, active: process.env.D
 const TOKEN = "T".repeat(43)
 
 async function cleanup() {
+  await raw.teacherPayos.deleteMany()
   await raw.sessionStudent.deleteMany()
   await raw.teachingSession.deleteMany()
   await raw.student.deleteMany()
@@ -99,6 +100,26 @@ describe("Backfill mã hoá dữ liệu cũ (spec O 6.11)", () => {
     const back = await runBackfill(raw, "decrypt")
     expect((await rawStudent(s.id)).fn).toBe("Bản Rõ Một")
     for (const r of back) expect(r.checksum).toBe(col(dry, r.table, r.column).checksum)
+  })
+
+  it("teacher_payos (khoá chính user_id, spec AH): apply mã hoá 3 khoá, đọc qua db ra bản rõ; rotate sang khoá mới; decrypt về bản rõ", async () => {
+    const teacher = await raw.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    await raw.teacherPayos.create({ data: { userId: teacher.id, clientId: "t-client", apiKey: "t-api", checksumKey: "t-checksum", hookId: "b".repeat(43) } })
+    const rawKeys = async () =>
+      (await raw.$queryRaw<Array<{ c: string; a: string; k: string }>>`SELECT client_id AS c, api_key AS a, checksum_key AS k FROM teacher_payos WHERE user_id = ${teacher.id}`)[0]
+    const applied = await runBackfill(raw, "apply")
+    expect(col(applied, "teacher_payos", "api_key").changed).toBe(1)
+    const enc = await rawKeys()
+    expect([enc.c, enc.a, enc.k]).not.toContain("t-api")
+    expect(enc.k).not.toBe("t-checksum")
+    expect(await db.teacherPayos.findUniqueOrThrow({ where: { userId: teacher.id } })).toMatchObject({ clientId: "t-client", apiKey: "t-api", checksumKey: "t-checksum" })
+    process.env.DATA_ENCRYPTION_KEYS = `${ORIGINAL.keys},r2:${randomBytes(32).toString("base64")}`
+    process.env.DATA_ENCRYPTION_ACTIVE_KID = "r2"
+    await runBackfill(raw, "rotate")
+    const rot = await rawKeys()
+    for (const v of [rot.c, rot.a, rot.k]) expect(readKid(v)).toBe("r2")
+    await runBackfill(raw, "decrypt")
+    expect(await rawKeys()).toEqual({ c: "t-client", a: "t-api", k: "t-checksum" })
   })
 
   it("hash link phụ huynh lệch (code cũ tắt/tạo lại link lúc đang deploy) → dry-run chỉ đếm, apply sửa, link đúng mở được, link đã tắt chết", async () => {

@@ -3,7 +3,8 @@ import type { PrismaClient } from "@prisma/client"
 import { decryptField, encryptField, isEncrypted, loadKeyring, readKid } from "./field-crypto"
 import { hashParentToken } from "./parent-token"
 
-export type FieldTarget = { model: string; table: string; column: string; field: string }
+// idColumn: khoá chính số nguyên của bảng khi không phải "id" (teacher_payos dùng user_id). Chỉ đặt từ hằng trong code.
+export type FieldTarget = { model: string; table: string; column: string; field: string; idColumn?: string }
 
 // Tên bảng/cột thật (@@map/@map) là hằng, không nhận từ input nên nối vào SQL an toàn.
 export const FIELD_TARGETS: readonly FieldTarget[] = [
@@ -22,6 +23,11 @@ export const FIELD_TARGETS: readonly FieldTarget[] = [
   { model: "Payment", table: "payments", column: "note", field: "note" },
   { model: "PlanOrder", table: "plan_orders", column: "note", field: "note" },
   { model: "ChatMessage", table: "chat_messages", column: "body", field: "body" },
+  { model: "TeacherPayos", table: "teacher_payos", column: "client_id", field: "clientId", idColumn: "user_id" },
+  { model: "TeacherPayos", table: "teacher_payos", column: "api_key", field: "apiKey", idColumn: "user_id" },
+  { model: "TeacherPayos", table: "teacher_payos", column: "checksum_key", field: "checksumKey", idColumn: "user_id" },
+  { model: "TuitionPayLink", table: "tuition_pay_links", column: "account_number", field: "accountNumber" },
+  { model: "TuitionPayLink", table: "tuition_pay_links", column: "account_name", field: "accountName" },
 ]
 
 export type BackfillMode = "dry-run" | "apply" | "verify" | "decrypt" | "rotate"
@@ -60,10 +66,11 @@ export async function runBackfill(
   for (const t of FIELD_TARGETS) {
     const r: FieldReport = { table: t.table, column: t.column, total: 0, empty: 0, plain: 0, encrypted: {}, undecryptable: 0, changed: 0, checksum: "" }
     const hash = createHash("sha256")
+    const idc = t.idColumn ?? "id"
     let lastId = 0
     for (;;) {
       const rows = await raw.$queryRawUnsafe<Array<{ id: number; v: string | null }>>(
-        `SELECT id, "${t.column}" AS v FROM "${t.table}" WHERE id > $1 ORDER BY id LIMIT $2`,
+        `SELECT "${idc}" AS id, "${t.column}" AS v FROM "${t.table}" WHERE "${idc}" > $1 ORDER BY "${idc}" LIMIT $2`,
         lastId,
         batch
       )
@@ -82,7 +89,7 @@ export async function runBackfill(
         } catch {
           // Không in giá trị: có thể là bản rõ tình cờ bắt đầu bằng tiền tố.
           r.undecryptable++
-          log(`${t.table}.${t.column} id=${row.id} không giải mã được`)
+          log(`${t.table}.${t.column} ${idc}=${row.id} không giải mã được`)
           hash.update(`${row.id}\u0002\n`)
           continue
         }
@@ -91,7 +98,7 @@ export async function runBackfill(
         const next = nextValue(mode, row.v, plain, t.field, active)
         if (next !== row.v) {
           const n = await raw.$executeRawUnsafe(
-            `UPDATE "${t.table}" SET "${t.column}" = $1 WHERE id = $2 AND "${t.column}" = $3`,
+            `UPDATE "${t.table}" SET "${t.column}" = $1 WHERE "${idc}" = $2 AND "${t.column}" = $3`,
             next,
             row.id,
             row.v
@@ -100,7 +107,7 @@ export async function runBackfill(
             r.changed++
             final = next
           } else {
-            log(`${t.table}.${t.column} id=${row.id} bị sửa đồng thời, bỏ qua lượt này`)
+            log(`${t.table}.${t.column} ${idc}=${row.id} bị sửa đồng thời, bỏ qua lượt này`)
           }
         }
         if (isEncrypted(final)) {
