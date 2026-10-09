@@ -68,6 +68,17 @@ export async function cancelPaymentLink(cfg: PayosConfig, paymentLinkId: string)
   await call(cfg, `/v2/payment-requests/${encodeURIComponent(paymentLinkId)}/cancel`, { cancellationReason: "Huỷ đơn" })
 }
 
+// Huỷ link để QR cũ không trả được nữa; lỗi chỉ log (link vẫn tự hết hạn).
+export async function cancelPayosLinkSafe(paymentLinkId: string): Promise<void> {
+  const cfg = getPayosConfig()
+  if (!cfg) return
+  try {
+    await cancelPaymentLink(cfg, paymentLinkId)
+  } catch (e) {
+    console.warn(`[payos] huỷ link lỗi: ${e instanceof Error ? e.message : "?"}`)
+  }
+}
+
 export function parsePayosDateTime(s: string): Date {
   return new Date(`${s.trim().replace(" ", "T")}+07:00`)
 }
