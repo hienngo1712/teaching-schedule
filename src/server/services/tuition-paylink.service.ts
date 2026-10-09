@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client"
-import { cancelPaymentLink, createPaymentLink } from "@/server/payos"
+import { createPaymentLink } from "@/server/payos"
 import { activeTeacherPayos } from "./payos-teacher.service"
 import { isInProgressMonth } from "@/lib/tuition-display"
 import { TX_OPTIONS } from "./payment.service"
@@ -25,12 +25,12 @@ export async function ensureTuitionPayLink(
   try {
     return await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${LINK_LOCK_NS}::int, ${studentId}::int)`
-      const active = await tx.tuitionPayLink.findFirst({ where: { studentId, status: "active" }, orderBy: { id: "desc" } })
-      if (active && active.amount === amount) return active
-      if (active) {
-        await cancelPaymentLink(cfg, active.payosLinkId).catch((e) => console.warn(`[payos] huỷ link HP lỗi: ${e instanceof Error ? e.message : "?"}`))
-        await tx.tuitionPayLink.update({ where: { id: active.id }, data: { status: "cancelled" } })
-      }
+      // Không huỷ link khác số tiền: QR trên ảnh phiếu đã gửi phải trả được; mỗi (số tiền, tháng neo) chỉ tạo 1 lần.
+      const same = await tx.tuitionPayLink.findFirst({
+        where: { studentId, status: "active", amount, year: anchor.year, month: anchor.month, payosLinkId: { not: "" } },
+        orderBy: { id: "desc" },
+      })
+      if (same) return same
       const draft = await tx.tuitionPayLink.create({
         data: { userId, studentId, year: anchor.year, month: anchor.month, amount, payosLinkId: "", qrCode: "", checkoutUrl: "" },
       })

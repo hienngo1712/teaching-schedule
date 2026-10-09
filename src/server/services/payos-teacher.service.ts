@@ -32,35 +32,45 @@ export async function connectTeacherPayos(db: PrismaClient, userId: number, inpu
     throw new TRPCError({ code: "BAD_REQUEST", message: "Đây là khoá kênh mua gói của app, hãy tạo kênh payOS riêng" })
   }
   if (!origin) throw new TRPCError({ code: "BAD_REQUEST", message: "Không xác định được địa chỉ app" })
-  const existing = await db.teacherPayos.findUnique({ where: { userId }, select: { hookId: true } })
-  const hookId = existing?.hookId ?? randomBytes(32).toString("base64url")
+  const prev = await db.teacherPayos.findUnique({ where: { userId } })
+  const hookId = prev?.hookId ?? randomBytes(32).toString("base64url")
+  // Lưu khoá mới TRƯỚC khi confirm: payOS POST thử vào webhook, phải kiểm được chữ ký bằng khoá mới thì mới trả 200.
+  const row = await db.teacherPayos.upsert({
+    where: { userId },
+    update: { ...input, hookId, connectedAt: new Date() },
+    create: { userId, ...input, hookId },
+    select: { connectedAt: true },
+  })
   try {
     await confirmWebhook(teacherPayosConfig(input), `${origin}/api/payos/tuition/${hookId}`)
   } catch (e) {
     console.warn(`[payos] GV ${userId} kết nối lỗi: ${e instanceof Error ? e.message : "?"}`)
+    if (prev) await db.teacherPayos.update({ where: { userId }, data: { clientId: prev.clientId, apiKey: prev.apiKey, checksumKey: prev.checksumKey, connectedAt: prev.connectedAt } })
+    else await db.teacherPayos.delete({ where: { userId } })
     throw new TRPCError({ code: "BAD_REQUEST", message: "Không kết nối được payOS, kiểm tra lại 3 khoá" })
   }
-  const row = await db.teacherPayos.upsert({
-    where: { userId },
-    update: { ...input, connectedAt: new Date() },
-    create: { userId, ...input, hookId },
-    select: { connectedAt: true },
-  })
+  // Đổi sang kênh khác: link cũ ký bằng khoá kênh cũ sẽ bị webhook từ chối (401) → huỷ để không phát QR đó nữa.
+  if (prev && prev.clientId !== input.clientId) await cancelActiveLinks(db, userId, teacherPayosConfig(prev))
   return { connectedAt: row.connectedAt }
 }
 
-export async function disconnectTeacherPayos(db: PrismaClient, userId: number) {
-  const row = await db.teacherPayos.findUnique({ where: { userId } })
-  if (!row) return { success: true as const }
+async function cancelActiveLinks(db: PrismaClient, userId: number, cfg: PayosConfig) {
   const links = await db.tuitionPayLink.findMany({ where: { userId, status: "active" }, select: { id: true, payosLinkId: true } })
   for (const l of links) {
+    if (!l.payosLinkId) continue
     try {
-      await cancelPaymentLink(teacherPayosConfig(row), l.payosLinkId)
+      await cancelPaymentLink(cfg, l.payosLinkId)
     } catch (e) {
       console.warn(`[payos] huỷ link HP lỗi: ${e instanceof Error ? e.message : "?"}`)
     }
   }
   await db.tuitionPayLink.updateMany({ where: { userId, status: "active" }, data: { status: "cancelled" } })
+}
+
+export async function disconnectTeacherPayos(db: PrismaClient, userId: number) {
+  const row = await db.teacherPayos.findUnique({ where: { userId } })
+  if (!row) return { success: true as const }
+  await cancelActiveLinks(db, userId, teacherPayosConfig(row))
   await db.teacherPayos.delete({ where: { userId } })
   return { success: true as const }
 }

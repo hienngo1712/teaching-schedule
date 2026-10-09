@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } 
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
 import { addDays } from "@/lib/plans"
+import { signWebhookData } from "@/server/payos"
+import { handleTuitionWebhook } from "@/server/services/tuition-payos-webhook.service"
 
 const KEYS = { clientId: "t-client", apiKey: "t-api", checksumKey: "t-checksum" }
 // Mỗi lần gọi 1 Response mới: body của Response chỉ đọc được 1 lần.
@@ -78,6 +80,60 @@ describe("payos router (spec AH §4.1)", () => {
     expect(f.mock.calls.some(([u]) => String(u).endsWith("/v2/payment-requests/pl-1/cancel"))).toBe(true)
     expect((await db.tuitionPayLink.findUniqueOrThrow({ where: { id: link.id } })).status).toBe("cancelled")
     expect(await db.teacherPayos.findUnique({ where: { userId } })).toBeNull()
+    await db.student.delete({ where: { id: st.id } })
+  })
+  // Giống payOS thật: confirm-webhook POST thử (ký bằng checksum của khoá đang dán) và chỉ nhận khi URL trả 200.
+  function payosLikeConfirm() {
+    return vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith("/confirm-webhook")) {
+        const hookId = String(JSON.parse(String(init?.body)).webhookUrl).split("/").pop()!
+        const key = (init?.headers as Record<string, string>)["x-api-key"] === "t-api-2" ? "t-checksum-2" : "t-checksum"
+        const data = { orderCode: 123, amount: 3000, description: "VQRIO123", accountNumber: "12345678", reference: "TF230204212323", transactionDateTime: "2023-02-04 18:25:00", currency: "VND", paymentLinkId: "124c33293c43417ab7879e14c8d9eb18", code: "00", desc: "Thành công", counterAccountBankId: "", counterAccountBankName: "", counterAccountName: "", counterAccountNumber: "", virtualAccountName: "", virtualAccountNumber: "" }
+        const r = await handleTuitionWebhook(db, hookId, { code: "00", desc: "success", success: true, data, signature: signWebhookData(key, data) })
+        return new Response(JSON.stringify(r.status === 200 ? { code: "00", data: {} } : { code: "20", desc: "Webhook url invalid" }))
+      }
+      return new Response(JSON.stringify({ code: "00", data: {} }))
+    })
+  }
+  it("lần đầu kết nối: webhook thử của payOS nhận 200 (bản ghi đã có trước khi confirm)", async () => {
+    payosLikeConfirm()
+    const caller = await getAuthedCaller("teacher")
+    await caller.payos.connect(KEYS)
+    expect(await db.teacherPayos.findUnique({ where: { userId } })).not.toBeNull()
+  })
+  it("kết nối lại với checksum mới (đã bấm ↻): webhook thử ký bằng khoá mới vẫn nhận 200", async () => {
+    payosLikeConfirm()
+    const caller = await getAuthedCaller("teacher")
+    await caller.payos.connect(KEYS)
+    await caller.payos.connect({ clientId: "t-client", apiKey: "t-api-2", checksumKey: "t-checksum-2" })
+    expect((await db.teacherPayos.findUniqueOrThrow({ where: { userId } })).checksumKey).toBe("t-checksum-2")
+  })
+  it("kết nối lại bị payOS từ chối → giữ nguyên khoá cũ", async () => {
+    ok()
+    const caller = await getAuthedCaller("teacher")
+    await caller.payos.connect(KEYS)
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({ code: "401", desc: "x" })))
+    await expect(caller.payos.connect({ ...KEYS, apiKey: "sai" })).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect((await db.teacherPayos.findUniqueOrThrow({ where: { userId } })).apiKey).toBe("t-api")
+  })
+  it("lần đầu bị payOS từ chối → không để lại bản ghi", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({ code: "401", desc: "x" })))
+    const caller = await getAuthedCaller("teacher")
+    await expect(caller.payos.connect(KEYS)).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect(await db.teacherPayos.findUnique({ where: { userId } })).toBeNull()
+  })
+  it("đổi sang kênh khác (clientId khác): huỷ link active của kênh cũ bằng khoá cũ", async () => {
+    const f = ok()
+    const caller = await getAuthedCaller("teacher")
+    await caller.payos.connect(KEYS)
+    const st = await db.student.create({ data: { userId, fullName: "HS", grade: 5 } })
+    const link = await db.tuitionPayLink.create({ data: { userId, studentId: st.id, year: 2026, month: 9, amount: 100000, payosLinkId: "pl-old", qrCode: "q", checkoutUrl: "c" } })
+    await caller.payos.connect({ clientId: "t-client-B", apiKey: "t-api-B", checksumKey: "t-checksum-B" })
+    const cancel = f.mock.calls.find(([u]) => String(u).endsWith("/v2/payment-requests/pl-old/cancel"))
+    expect((cancel?.[1]?.headers as Record<string, string>)["x-client-id"]).toBe("t-client")
+    expect((await db.tuitionPayLink.findUniqueOrThrow({ where: { id: link.id } })).status).toBe("cancelled")
     await db.student.delete({ where: { id: st.id } })
   })
   it("status không bao giờ chứa khoá", async () => {

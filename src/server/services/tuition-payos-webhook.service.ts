@@ -20,7 +20,7 @@ export async function handleTuitionWebhook(db: PrismaClient, hookId: string, bod
     console.warn(`[payos] tiền HP vào HS đã xoá, link ${link.id}`)
     return { status: 200, note: "HS đã xoá" }
   }
-  if (await db.tuitionPayLinkPayment.findUnique({ where: { reference: d.reference }, select: { id: true } })) return { status: 200, note: "gửi lặp" }
+  if (await db.tuitionPayLinkPayment.findUnique({ where: { linkId_reference: { linkId: link.id, reference: d.reference } }, select: { id: true } })) return { status: 200, note: "gửi lặp" }
   const parsed = typeof d.transactionDateTime === "string" ? parsePayosDateTime(d.transactionDateTime) : null
   // Ngày hỏng mà ném lỗi thì payOS gửi lại mãi, tiền không bao giờ được ghi: lấy giờ nhận.
   const paidAt = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date()
@@ -38,7 +38,7 @@ export async function handleTuitionWebhook(db: PrismaClient, hookId: string, bod
         await tx.monthlyTuition.update({ where, data: { payosPaidAt: paidAt, payosPaidAmount: (cur.payosPaidAmount ?? 0) + amount } })
       })
   } catch (e) {
-    // 2 lần gửi cùng lúc: lần sau đụng unique reference → coi như gửi lặp.
+    // 2 lần gửi cùng lúc: lần sau đụng unique (link, reference) → coi như gửi lặp.
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { status: 200, note: "gửi lặp" }
     throw e
   }

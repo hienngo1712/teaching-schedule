@@ -162,6 +162,27 @@ describe("webhook payOS học phí (spec AH §6)", () => {
     expect(items.find((i) => i.studentId === studentId)).toMatchObject({ payosPaidAmount: 200000 })
     expect((await listBatches(db, userId, { studentId, year: 2026, month: 8 }))[0]).toMatchObject({ method: "payos" })
   })
+  it("2 giáo viên, giao dịch trùng reference (ngân hàng khác nhau) → cả 2 đều được ghi", async () => {
+    const other = await db.user.findUniqueOrThrow({ where: { username: "teacher_std" } })
+    const otherCaller = await getAuthedCaller("teacher_std")
+    const st2 = (await otherCaller.student.create({ consent: CONSENT_ACCEPTED, fullName: "HS khác", grade: 5, tuitionFee: 100000 })).id
+    await db.monthlyTuition.create({ data: { studentId: st2, year: 2026, month: 8 } })
+    await db.teacherPayos.create({ data: { userId: other.id, clientId: "o-client", apiKey: "o-api", checksumKey: "o-checksum", hookId: "K".repeat(43) } })
+    const l1 = await makeLink()
+    const l2 = await makeLink({ userId: other.id, studentId: st2 })
+    expect((await handleTuitionWebhook(db, HOOK, payload(l1, 200000, "SAME"))).status).toBe(200)
+    expect((await handleTuitionWebhook(db, "K".repeat(43), payload(l2, 50000, "SAME", "o-checksum"))).status).toBe(200)
+    expect(await db.payment.count({ where: { method: "payos" } })).toBe(2)
+  })
+  it("sửa đợt thu payOS (ghi chú) vẫn giữ phương thức payOS", async () => {
+    const l = await makeLink()
+    await handleTuitionWebhook(db, HOOK, payload(l, 200000))
+    const p = await db.payment.findFirstOrThrow({ where: { method: "payos" } })
+    await caller.payment.updateBatch({ batchId: p.batchId!, amount: 200000, paidAt: "2026-10-09", note: "sửa" })
+    const rows = await db.payment.findMany({ where: { batchId: p.batchId!, isDeleted: false } })
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows.every((r) => r.method === "payos")).toBe(true)
+  })
   it("không còn bất biến lệch paidAmount", async () => {
     await addSession("2026-07-20")
     const l = await makeLink({ amount: 300000 })

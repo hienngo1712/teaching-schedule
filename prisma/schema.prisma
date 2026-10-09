@@ -474,12 +474,14 @@ model TuitionPayLink {
 model TuitionPayLinkPayment {
   id        Int            @id @default(autoincrement())
   linkId    Int            @map("link_id")
-  reference String         @unique @db.VarChar(64)
+  reference String         @db.VarChar(64)
   amount    Int
   paidAt    DateTime       @map("paid_at")
   batchId   String         @map("batch_id") @db.VarChar(36) // đợt Payment đã ghi
   createdAt DateTime       @default(now()) @map("created_at")
   link      TuitionPayLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
 
+  // Mã giao dịch chỉ duy nhất theo ngân hàng/kênh: mỗi GV 1 kênh nên không được unique toàn bảng (review AH).
+  @@unique([linkId, reference])
   @@map("tuition_pay_link_payments")
 }

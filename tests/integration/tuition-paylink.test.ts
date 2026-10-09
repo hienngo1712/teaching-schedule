@@ -88,14 +88,30 @@ describe("QR payOS trên phiếu (spec AH §5)", () => {
     await getTuitionNotice(db, userId, { studentId, year: 2026, month: 8 }, OPTS)
     expect(created).toBe(1)
   })
-  it("số nợ đổi (đã thu 50.000 tiền mặt): huỷ link cũ, tạo link 150.000", async () => {
+  it("số nợ đổi: tạo link 150.000 nhưng KHÔNG huỷ link cũ (QR trên ảnh đã gửi vẫn trả được)", async () => {
     const f = mockPayos()
-    const a = await getTuitionNotice(db, userId, { studentId, year: 2026, month: 8 }, OPTS)
+    await getTuitionNotice(db, userId, { studentId, year: 2026, month: 8 }, OPTS)
     await caller.payment.create({ studentId, year: 2026, month: 8, amount: 50000, paidAt: "2026-09-01", method: "cash" })
     const b = await getTuitionNotice(db, userId, { studentId, year: 2026, month: 8 }, OPTS)
     expect(b.qr).toMatchObject({ provider: "payos", amount: 150000 })
-    expect(f.mock.calls.some(([u]) => String(u).includes(`/pl-${a.qr!.content.slice(3)}/cancel`))).toBe(true)
-    expect(await db.tuitionPayLink.count({ where: { studentId, status: "active" } })).toBe(1)
+    expect(f.mock.calls.some(([u]) => String(u).endsWith("/cancel"))).toBe(false)
+    expect(await db.tuitionPayLink.count({ where: { studentId, status: "active" } })).toBe(2)
+  })
+  it("xem xen kẽ 2 số tiền (phiếu tháng 8 / tháng 9): mỗi số chỉ tạo 1 link, không tạo lại", async () => {
+    mockPayos(); created = 0
+    await addSession("2026-09-07")
+    for (let i = 0; i < 2; i++) {
+      await getTuitionNotice(db, userId, { studentId, year: 2026, month: 8 }, OPTS)
+      await getTuitionNotice(db, userId, { studentId, year: 2026, month: 9 }, OPTS)
+    }
+    expect(created).toBe(2)
+  })
+  it("link cùng số tiền nhưng khác tháng neo → không dùng lại", async () => {
+    mockPayos(); created = 0
+    await db.tuitionPayLink.create({ data: { userId, studentId, year: 2026, month: 6, amount: 200000, payosLinkId: "pl-cu", qrCode: "q", checkoutUrl: "c" } })
+    const n = await getTuitionNotice(db, userId, { studentId, year: 2026, month: 8 }, OPTS)
+    expect(created).toBe(1)
+    expect(n.qr!.payload).not.toBe("q")
   })
   it("2 lần gọi song song chỉ 1 link", async () => {
     mockPayos(); created = 0

@@ -182,7 +182,7 @@ export async function updateBatch(db: PrismaClient, userId: number, input: Payme
       await syncPaidAmount(tx, r.monthlyTuitionId)
     }
     await writeAllocation(tx, userId, studentId, target, input.amount, {
-      batchId: input.batchId, paidAt: input.paidAt, note: input.note ?? null,
+      batchId: input.batchId, paidAt: input.paidAt, note: input.note ?? null, method: rows[0].method as StoredPaymentMethod,
     })
   }, TX_OPTIONS).catch(rethrowNotFound)
   return { batchId: input.batchId }
