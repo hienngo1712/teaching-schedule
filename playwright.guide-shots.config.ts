@@ -25,26 +25,35 @@ export default defineConfig({
     { name: 'desktop', use: { browserName: 'chromium', viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 } },
     { name: 'mobile', use: { browserName: 'chromium', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } },
   ],
-  webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3000',
-    env: {
-      DATABASE_URL: requireEnv('DATABASE_URL'),
-      DIRECT_URL: requireEnv('DIRECT_URL'),
-      DATA_ENCRYPTION_KEYS: requireEnv('DATA_ENCRYPTION_KEYS'),
-      DATA_ENCRYPTION_ACTIVE_KID: requireEnv('DATA_ENCRYPTION_ACTIVE_KID'),
-      NODE_ENV: 'development',
-      ADMIN_USERNAMES: 'admin_test',
-      PLAN_BANK_BIN: '970436',
-      PLAN_BANK_ACCOUNT_NUMBER: '0123456789',
-      PLAN_BANK_ACCOUNT_NAME: 'CHU APP TEST',
-      // Khoá giả: chỉ để popup mua gói hiện nhóm Cách thanh toán, ảnh không tạo đơn nên không gọi payOS.
-      PAYOS_CLIENT_ID: 'test-client',
-      PAYOS_API_KEY: 'test-api-key',
-      PAYOS_CHECKSUM_KEY: 'test-checksum-key',
-      PAYOS_API_BASE: 'http://127.0.0.1:4010',
+  webServer: [
+    // Giả payOS cổng 4010 (spec AH): ảnh phiếu payOS tạo link qua mock, không gọi payOS thật.
+    {
+      command: 'node tests/e2e/payos-mock-server.mjs',
+      url: 'http://127.0.0.1:4010/health',
+      reuseExistingServer: false,
+      timeout: 10000,
     },
-    reuseExistingServer: false,
-    timeout: 120000,
-  },
+    {
+      command: 'pnpm dev',
+      url: 'http://localhost:3000',
+      env: {
+        DATABASE_URL: requireEnv('DATABASE_URL'),
+        DIRECT_URL: requireEnv('DIRECT_URL'),
+        DATA_ENCRYPTION_KEYS: requireEnv('DATA_ENCRYPTION_KEYS'),
+        DATA_ENCRYPTION_ACTIVE_KID: requireEnv('DATA_ENCRYPTION_ACTIVE_KID'),
+        NODE_ENV: 'development',
+        ADMIN_USERNAMES: 'admin_test',
+        PLAN_BANK_BIN: '970436',
+        PLAN_BANK_ACCOUNT_NUMBER: '0123456789',
+        PLAN_BANK_ACCOUNT_NAME: 'CHU APP TEST',
+        // Khoá giả: popup mua gói hiện nhóm Cách thanh toán; mọi lời gọi payOS đi vào mock 4010.
+        PAYOS_CLIENT_ID: 'test-client',
+        PAYOS_API_KEY: 'test-api-key',
+        PAYOS_CHECKSUM_KEY: 'test-checksum-key',
+        PAYOS_API_BASE: 'http://127.0.0.1:4010',
+      },
+      reuseExistingServer: false,
+      timeout: 120000,
+    },
+  ],
 });

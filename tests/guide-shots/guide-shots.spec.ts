@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs"
 import { dirname } from "node:path"
 import ExcelJS from "exceljs"
 import { buildImportTemplate } from "@/lib/student-import-excel"
-import { seedDemo, cleanupDemo, setDemoBank, setDemoPayments } from "./demo-data"
+import { seedDemo, cleanupDemo, setDemoBank, setDemoPayments, clearDemoPayos, setDemoPayos, payDemoPayos } from "./demo-data"
 
 test.describe.configure({ mode: "serial" })
 
@@ -257,6 +257,34 @@ test("capture-25-shots", async ({ page, browser }, testInfo) => {
   const bankCombobox = page.locator('button[role="combobox"]').locator("visible=true").first()
   await mark(bankCombobox)
   await shot(page, "cai-dat-ngan-hang", kind)
+
+  // 20b. cai-payos: /settings thẻ payOS (Pro, chưa nối), viền đỏ cả thẻ (bản 0.17.0)
+  await clearDemoPayos()
+  await page.goto("/settings")
+  const payosCard = page.getByTestId("payos-card")
+  await expect(payosCard.getByRole("button", { name: "Kết nối" })).toBeVisible()
+  await mark(payosCard)
+  await shot(page, "cai-payos", kind)
+
+  // 20c. phieu-payos: phiếu báo của HS còn nợ có QR payOS (mock 4010), viền đỏ khối QR
+  await setDemoPayos()
+  await page.goto("/tuition")
+  await page.locator("text=Phạm Đức Duy").locator("visible=true").first().click()
+  await page.locator("[role='dialog']").getByRole("button", { name: "Phiếu báo" }).first().click()
+  const payosQr = page.locator('img[alt="payOS"]').locator("visible=true").first()
+  await expect(payosQr).toBeVisible()
+  await mark(payosQr.locator("xpath=.."))
+  await shot(page, "phieu-payos", kind)
+  await page.keyboard.press("Escape")
+  await page.keyboard.press("Escape")
+
+  // 20d. da-chuyen-payos: phụ huynh trả qua payOS, huy hiệu "PH đã chuyển" trên danh sách học phí
+  await payDemoPayos("Phạm Đức Duy")
+  await page.goto("/tuition")
+  const paidBadge = page.locator("text=/PH đã chuyển/").locator("visible=true").first()
+  await expect(paidBadge).toBeVisible()
+  await mark(paidBadge)
+  await shot(page, "da-chuyen-payos", kind)
 
   // 21. goi-dich-vu: trang Gói của tôi, viền đỏ khung Gói hiện tại ở đầu trang (bản 0.11.5)
   await page.goto("/plan")
