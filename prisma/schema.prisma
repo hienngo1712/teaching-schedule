@@ -39,6 +39,8 @@ model User {
   onboardingDismissedAt DateTime? @map("onboarding_dismissed_at")
   // Đã tự hỏi góp ý (gửi hay đóng đều tính); khác null thì không tự hỏi nữa (spec AB §3.1).
   feedbackPromptAt      DateTime? @map("feedback_prompt_at")
+  // Mốc GV mở chuông tiền payOS gần nhất (spec AI).
+  payosSeenAt           DateTime? @map("payos_seen_at")
   loginAttempts LoginAttempt[]
   students      Student[]
   subjects      Subject[]
