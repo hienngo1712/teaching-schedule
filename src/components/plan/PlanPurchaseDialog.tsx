@@ -66,6 +66,8 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
   // P11: kỳ Năm chọn sẵn; trang mount lại dialog mỗi lần mở nên state tự về mặc định.
   const [choice, setChoice] = useState<PlanChoice>({ plan: initialPlan, period: "year" })
   const [created, setCreated] = useState<{ id: number; code: string; amount: number } | null>(null)
+  // Spec AG 4.1: payOS chọn sẵn; chỉ gửi khi server báo payosReady.
+  const [method, setMethod] = useState<"payos" | "vietqr">("payos")
 
   // Cùng key với usePlan của trang: chỉ đọc trạng thái refetch, không thêm request.
   const meQuery = trpc.plan.me.useQuery()
@@ -84,7 +86,8 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
   const utils = trpc.useUtils()
   const create = trpc.plan.createOrder.useMutation({
     onSuccess: (res) => {
-      toast.success(t("plan_order_created"))
+      if (res.payosFailed) toast.error(t("plan_payos_failed"))
+      else toast.success(t("plan_order_created"))
       setCreated({ id: res.id, code: res.code, amount: res.amount })
     },
     onError: (e) => {
@@ -100,6 +103,9 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
 
   // Chỉ hiện đơn vừa tạo: lúc chưa refetch xong, me.pendingOrder có thể còn là đơn cũ (đã bị hủy ở server).
   const createdOrder = created !== null && me.pendingOrder?.id === created.id ? me.pendingOrder : null
+  // Webhook payOS đã bật gói trong lúc popup mở: đơn rời "chờ", thành đơn approved mới nhất.
+  const createdActivated =
+    created !== null && me.pendingOrder === null && me.orders[0]?.id === created.id && me.orders[0]?.status === "approved"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,6 +122,10 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
           <div className="space-y-4">
             {createdOrder ? (
               <PendingOrderCard order={createdOrder} paymentReady={me.paymentReady} onCancelled={() => onOpenChange(false)} />
+            ) : createdActivated ? (
+              <p data-testid="purchase-activated" className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm font-medium text-primary">
+                {t("plan_payos_activated")}
+              </p>
             ) : meQuery.isFetching && meQuery.failureCount === 0 ? (
               // Lần tải đầu đã lỗi thì hiện dự phòng ngay, không chờ hết lượt retry (spec U U28).
               <Skeleton className="h-64 w-full rounded-xl" />
@@ -263,11 +273,36 @@ export function PlanPurchaseDialog({ open, onOpenChange, me, fields, initialPlan
               {/* D14: server tự hủy đơn chờ cũ khi tạo đơn mới. */}
               {me.pendingOrder && <p className="text-xs font-medium text-amber-800">{t("plan_replace_pending")}</p>}
               {!me.paymentReady && <p className="text-sm text-slate-500">{t("plan_payment_not_ready")}</p>}
+              {me.payosReady && (
+                <div role="radiogroup" aria-label={t("plan_pay_method")} onKeyDown={handleRadioGroupKeyDown} className="flex flex-col gap-2">
+                  {(["payos", "vietqr"] as const).map((m) => {
+                    const selected = method === m
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        tabIndex={selected ? 0 : -1}
+                        data-testid={`purchase-method-${m}`}
+                        onClick={() => setMethod(m)}
+                        className={cn(optionClass(selected), "min-h-11 gap-1 p-3")}
+                      >
+                        <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <RadioDot selected={selected} />
+                          {t(m === "payos" ? "plan_pay_payos_title" : "plan_pay_vietqr_title")}
+                        </span>
+                        <span className="text-xs text-slate-600">{t(m === "payos" ? "plan_pay_payos_desc" : "plan_pay_vietqr_desc")}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
               <Button
                 type="button"
                 className="h-12 w-full"
                 disabled={!me.paymentReady || create.isPending}
-                onClick={() => create.mutate({ ...choice, expectedAmount: price })}
+                onClick={() => create.mutate({ ...choice, expectedAmount: price, method: me.payosReady ? method : "vietqr" })}
               >
                 {t("plan_create_order_short")}
               </Button>

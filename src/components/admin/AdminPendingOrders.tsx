@@ -19,16 +19,32 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { formatValidUntil, planLabel } from "@/lib/plans"
 import { formatCurrency } from "@/lib/utils"
-import { dateOrDash, dateTimeVn, periodKey } from "./admin-format"
+import { dateOrDash, dateTimeVn, periodKey, timeDayVn } from "./admin-format"
 import { NewAccounts } from "./NewAccounts"
 
 type PendingRow = RouterOutputs["admin"]["overview"]["pendingOrders"][number]
+type AttentionRow = RouterOutputs["admin"]["overview"]["attentionOrders"][number]
+
+const PAID_KEY = {
+  expired: "admin_paid_expired",
+  cancelled: "admin_paid_cancelled",
+  rejected: "admin_paid_rejected",
+} as const
+
+// Chữ cố định, không dịch (spec AG §6).
+function MethodTag({ method }: { method: string }) {
+  return (
+    <span className="rounded-full bg-slate-100 px-2 text-xs font-medium leading-5 text-slate-700">
+      {method === "payos" ? "payOS" : "VietQR"}
+    </span>
+  )
+}
 
 export function AdminPendingOrders() {
   const { t } = useTranslation()
   const query = trpc.admin.overview.useQuery()
   const [confirm, setConfirm] = useState<PendingRow | null>(null)
-  const [rejectTarget, setRejectTarget] = useState<PendingRow | null>(null)
+  const [rejectTarget, setRejectTarget] = useState<PendingRow | AttentionRow | null>(null)
 
   const approve = trpc.admin.approveOrder.useMutation({
     onSuccess: () => {
@@ -60,12 +76,28 @@ export function AdminPendingOrders() {
     </div>
   )
 
+  const paidText = (o: AttentionRow) => {
+    const key = o.status === "pending" ? "admin_paid_short" : PAID_KEY[o.status as keyof typeof PAID_KEY]
+    return t(key ?? "admin_paid_short")
+      .replace("{amount}", formatCurrency(o.paidAmount))
+      .replace("{time}", o.paidAt ? timeDayVn(o.paidAt) : "-")
+      .replace("{missing}", formatCurrency(o.amount - (o.paidAmount ?? 0)))
+  }
+
   const columns: Column<PendingRow>[] = [
     { header: t("username"), cell: (o) => <span className="font-medium">{o.username}</span> },
     { header: t("admin_col_plan"), cell: (o) => planLabel(o.plan) },
     { header: t("admin_col_period"), cell: (o) => t(periodKey(o.period)) },
     { header: t("payment_amount"), cell: (o) => formatCurrency(o.amount), className: "whitespace-nowrap text-right" },
-    { header: t("admin_col_code"), cell: (o) => <span className="font-mono">{o.code}</span> },
+    {
+      header: t("admin_col_code"),
+      cell: (o) => (
+        <span className="flex items-center gap-2">
+          <span className="font-mono">{o.code}</span>
+          <MethodTag method={o.method} />
+        </span>
+      ),
+    },
     {
       header: t("admin_col_created"),
       cell: (o) => (
@@ -81,6 +113,30 @@ export function AdminPendingOrders() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("admin_pending_orders")} />
+
+      {/* Đơn đã nhận tiền payOS mà chưa bật gói: luôn ở trên cùng, cùng 1 kiểu thẻ cho mobile/desktop (spec AG §6). */}
+      {(query.data?.attentionOrders.length ?? 0) > 0 && (
+        <div className="space-y-3">
+          {query.data!.attentionOrders.map((o) => (
+            <div key={o.id} data-testid="attention-order" className="space-y-2 rounded-lg border border-red-300 bg-red-50 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-foreground">{o.username}</p>
+                  <p className="text-sm text-slate-600">
+                    {planLabel(o.plan)} · {t(periodKey(o.period))} · {formatCurrency(o.amount)}
+                  </p>
+                </div>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="font-mono text-sm">{o.code}</span>
+                  <MethodTag method={o.method} />
+                </span>
+              </div>
+              <p className="text-sm font-medium text-red-700">{paidText(o)}</p>
+              {orderActions(o)}
+            </div>
+          ))}
+        </div>
+      )}
 
       <ResponsiveList
         isLoading={query.isPending}
@@ -101,7 +157,10 @@ export function AdminPendingOrders() {
                   {planLabel(o.plan)} · {t(periodKey(o.period))} · {formatCurrency(o.amount)}
                 </p>
               </div>
-              <span className="shrink-0 font-mono text-sm">{o.code}</span>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="font-mono text-sm">{o.code}</span>
+                <MethodTag method={o.method} />
+              </span>
             </div>
             <p className="text-xs text-slate-500">{dateOrDash(o.createdAt)} · {t("admin_order_expires").replace("{date}", dateTimeVn(o.expiresAt))}</p>
             {orderActions(o)}
@@ -145,7 +204,10 @@ export function AdminPendingOrders() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("admin_reject")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("admin_reject_confirm").replace("{code}", rejectTarget?.code ?? "")}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {t("admin_reject_confirm").replace("{code}", rejectTarget?.code ?? "")}
+              {rejectTarget && "paidAmount" in rejectTarget && ` ${t("admin_paid_refund_note")}`}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={reject.isPending}>{t("cancel")}</AlertDialogCancel>

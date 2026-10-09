@@ -4,7 +4,10 @@ import { trpc } from "@/lib/trpc"
 import { hasFeature, type Feature, type PlanFields } from "@/lib/plans"
 
 export function usePlan() {
-  const me = trpc.plan.me.useQuery().data
+  // Đơn payOS đang chờ: hỏi lại mỗi 5s để thẻ đổi "Đã kích hoạt" khi webhook bật gói; hết đơn chờ thì tự dừng.
+  const me = trpc.plan.me.useQuery(undefined, {
+    refetchInterval: (q) => (q.state.data?.pendingOrder?.method === "payos" ? 5000 : false),
+  }).data
   // tRPC không có transformer: Date về client là chuỗi ISO → đổi lại cho các hàm trong plans.ts.
   const fields: PlanFields | null = me
     ? {
