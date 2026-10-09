@@ -466,6 +466,7 @@ model TuitionPayLink {
   student       Student                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([studentId, status])
+  @@index([userId])
   @@map("tuition_pay_links")
 }
 

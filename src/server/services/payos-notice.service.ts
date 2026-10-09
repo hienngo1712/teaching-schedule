@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client"
+import { Prisma, type PrismaClient } from "@prisma/client"
 
 const LIMIT = 20
 // Đồng hồ client lệch: upTo quá giờ server thì kẹp về now, tránh khoản sắp vào bị coi là đã đọc.
@@ -10,36 +10,35 @@ export type PayosNoticeItem = {
 }
 
 // Chỉ đợt thu còn sống (cùng quy tắc "PH đã chuyển" ở payos-paid.service): GV xoá đợt thì thông báo cũng mất.
-// Đọc mọi dòng của GV để đếm unread chính xác; mỗi GV chỉ vài trăm giao dịch/năm.
-async function liveRows(db: PrismaClient, userId: number) {
+const liveOf = (userId: number) => Prisma.sql`
+  FROM tuition_pay_link_payments p JOIN tuition_pay_links l ON l.id = p.link_id
+  WHERE l.user_id = ${userId}
+    AND EXISTS (SELECT 1 FROM payments x WHERE x.batch_id = p.batch_id AND x.is_deleted = false)`
+
+export async function listPayosNotices(db: PrismaClient, userId: number) {
+  const user = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { payosSeenAt: true } })
+  const seen = user.payosSeenAt
+  // Hỏi 30s/lần mỗi tab: đếm bằng SQL, chỉ đọc + giải mã tên của 20 dòng hiện ra.
+  const [connected, ids, [{ unread }]] = await Promise.all([
+    db.teacherPayos.count({ where: { userId } }),
+    db.$queryRaw<{ id: number }[]>`SELECT p.id ${liveOf(userId)} ORDER BY p.created_at DESC, p.id DESC LIMIT ${LIMIT}`,
+    db.$queryRaw<{ unread: number }[]>`SELECT COUNT(*)::int AS unread ${liveOf(userId)}
+      ${seen ? Prisma.sql`AND p.created_at > ${seen}` : Prisma.empty}`,
+  ])
+  if (!connected && ids.length === 0) return { enabled: false, unread: 0, items: [] as PayosNoticeItem[] }
   const rows = await db.tuitionPayLinkPayment.findMany({
-    where: { link: { userId } },
+    where: { id: { in: ids.map((r) => r.id) } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: {
-      id: true, amount: true, paidAt: true, createdAt: true, batchId: true,
+      id: true, amount: true, paidAt: true, createdAt: true,
       link: { select: { studentId: true, year: true, month: true, student: { select: { fullName: true, isDeleted: true } } } },
     },
   })
-  if (rows.length === 0) return rows
-  const live = new Set((await db.payment.findMany({
-    where: { batchId: { in: rows.map((r) => r.batchId) }, isDeleted: false },
-    select: { batchId: true }, distinct: ["batchId"],
-  })).map((p) => p.batchId))
-  return rows.filter((r) => live.has(r.batchId))
-}
-
-export async function listPayosNotices(db: PrismaClient, userId: number) {
-  const [user, connected, rows] = await Promise.all([
-    db.user.findUniqueOrThrow({ where: { id: userId }, select: { payosSeenAt: true } }),
-    db.teacherPayos.count({ where: { userId } }),
-    liveRows(db, userId),
-  ])
-  if (!connected && rows.length === 0) return { enabled: false, unread: 0, items: [] as PayosNoticeItem[] }
-  const isUnread = (c: Date) => !user.payosSeenAt || c > user.payosSeenAt
+  const isUnread = (c: Date) => !seen || c > seen
   return {
     enabled: true,
-    unread: rows.filter((r) => isUnread(r.createdAt)).length,
-    items: rows.slice(0, LIMIT).map((r): PayosNoticeItem => ({
+    unread,
+    items: rows.map((r): PayosNoticeItem => ({
       id: r.id, studentId: r.link.studentId, studentName: r.link.student.fullName, studentDeleted: r.link.student.isDeleted,
       amount: r.amount, paidAt: r.paidAt, year: r.link.year, month: r.link.month, createdAt: r.createdAt, unread: isUnread(r.createdAt),
     })),

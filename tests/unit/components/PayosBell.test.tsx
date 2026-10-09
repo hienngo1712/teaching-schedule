@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 
 globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver
@@ -17,21 +17,25 @@ const h = vi.hoisted(() => ({
   opts: [] as Array<Record<string, unknown>>,
   markSeen: vi.fn(),
   setData: vi.fn(),
+  cancel: vi.fn(),
+  invalidate: vi.fn(),
+  dismiss: vi.fn(),
+  mutOpts: undefined as undefined | { onSettled?: () => void },
   push: vi.fn(),
   desktop: true,
 }))
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }))
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), dismiss: h.dismiss }) }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push }) }))
 vi.mock("@/hooks/useMediaQuery", () => ({ useMediaQuery: () => h.desktop }))
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({
-      payosNotice: { list: { setData: h.setData } },
+      payosNotice: { list: { setData: h.setData, cancel: h.cancel, invalidate: h.invalidate } },
       tuition: { invalidate: vi.fn() }, payment: { invalidate: vi.fn() }, report: { invalidate: vi.fn() },
     }),
     payosNotice: {
       list: { useQuery: (_: unknown, o: Record<string, unknown>) => { h.opts.push(o); return { data: h.data } } },
-      markSeen: { useMutation: () => ({ mutate: h.markSeen }) },
+      markSeen: { useMutation: (o: { onSettled?: () => void }) => { h.mutOpts = o; return { mutate: h.markSeen } } },
     },
   },
 }))
@@ -48,6 +52,7 @@ const bell = () => screen.getByRole("button", { name: "Thông báo tiền học"
 
 beforeEach(() => {
   vi.clearAllMocks()
+  h.cancel.mockResolvedValue(undefined)
   h.opts = []
   h.desktop = true
 })
@@ -80,7 +85,7 @@ describe("PayosBell (spec AI §5)", () => {
     renderBell()
     fireEvent.click(bell())
     expect(h.markSeen).toHaveBeenCalledWith({ upTo: "2026-10-09T07:32:05.000Z" })
-    expect(h.setData).toHaveBeenCalled()
+    await waitFor(() => expect(h.setData).toHaveBeenCalled())
     const [row] = await screen.findAllByRole("button", { name: /PH của Trần Thị Bé đã chuyển 200\.000 đ/ })
     expect(row.textContent).toContain("14:32 ngày 9/10 · Học phí tháng 8")
   })
@@ -125,5 +130,30 @@ describe("PayosBell (spec AI §5)", () => {
     fireEvent.click(bell())
     const dialog = await screen.findByRole("dialog")
     expect(dialog.textContent).toContain("Tiền học qua payOS")
+  })
+  it("mở chuông → huỷ lần hỏi đang chạy rồi mới tắt huy hiệu; markSeen xong thì hỏi lại (review AI #1)", async () => {
+    const order: string[] = []
+    h.cancel.mockImplementation(async () => { order.push("cancel") })
+    h.setData.mockImplementation(() => { order.push("setData") })
+    h.data = { enabled: true, unread: 1, items: [ITEM] }
+    renderBell()
+    fireEvent.click(bell())
+    await waitFor(() => expect(order).toEqual(["cancel", "setData"]))
+    h.mutOpts?.onSettled?.()
+    expect(h.invalidate).toHaveBeenCalled()
+  })
+  it("mở chuông → cache bỏ cờ chưa đọc của từng dòng, mở lại không còn chấm (review AI #2)", async () => {
+    h.data = { enabled: true, unread: 1, items: [ITEM] }
+    renderBell()
+    fireEvent.click(bell())
+    await waitFor(() => expect(h.setData).toHaveBeenCalled())
+    const update = h.setData.mock.calls[0][1] as (d: Data) => Data
+    expect(update(h.data)).toEqual({ enabled: true, unread: 0, items: [{ ...ITEM, unread: false }] })
+  })
+  it("mở chuông → tắt toast đang hiện để không đè danh sách", () => {
+    h.data = { enabled: true, unread: 0, items: [{ ...ITEM, unread: false }] }
+    renderBell()
+    fireEvent.click(bell())
+    expect(h.dismiss).toHaveBeenCalled()
   })
 })

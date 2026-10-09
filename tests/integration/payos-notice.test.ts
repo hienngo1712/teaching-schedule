@@ -1,5 +1,5 @@
 import { CONSENT_ACCEPTED } from "@/lib/consent"
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest"
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest"
 import { db } from "@/server/db"
 import { getAuthedCaller } from "../helpers/trpc"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
@@ -99,6 +99,20 @@ describe("thông báo tiền payOS (spec AI §3-4)", () => {
     expect(r.items).toHaveLength(20)
     expect(r.unread).toBe(22)
     expect(r.items[0].createdAt >= r.items[19].createdAt).toBe(true)
+  })
+  it("mỗi lần hỏi chỉ đọc (và giải mã tên) tối đa 20 dòng; đợt đã xoá không chiếm chỗ (review AI #4)", async () => {
+    const l = await makeLink({ amount: 1000 })
+    for (let i = 0; i < 24; i++) await handleTuitionWebhook(db, HOOK, payload(l, 1000, `R-${i}`))
+    const newest = await db.tuitionPayLinkPayment.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 2 })
+    for (const n of newest) await caller.payment.deleteBatch({ batchId: n.batchId })
+    const spy = vi.spyOn(db.tuitionPayLinkPayment, "findMany")
+    const r = await listPayosNotices(db, userId)
+    const sizes = await Promise.all(spy.mock.results.map((x) => x.value as Promise<unknown[]>))
+    spy.mockRestore()
+    expect(sizes.every((rows) => rows.length <= 20)).toBe(true)
+    expect(r.items).toHaveLength(20)
+    expect(r.items.map((i) => i.id)).not.toContain(newest[0].id)
+    expect(r.unread).toBe(22)
   })
   it("chỉ thông báo của mình", async () => {
     const l = await makeLink()

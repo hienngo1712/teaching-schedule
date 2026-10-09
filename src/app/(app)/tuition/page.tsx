@@ -374,6 +374,8 @@ export default function TuitionPage() {
           setIsSheetOpen(open)
           // Đóng sheet mà URL còn studentId (vào từ deep link) → bỏ đi, tránh Back mở lại.
           if (!open && selectedStudentId) setStudentId(null, { replace: true })
+          // Chuông/toast payOS có thể mở lại đúng HS này khi vẫn ở /tuition (review AI).
+          if (!open) autoOpenedId.current = null
         }}
         data={selectedStudent}
         // TRPCProvider tự invalidate sau mutation

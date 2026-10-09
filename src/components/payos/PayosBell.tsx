@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
@@ -31,7 +32,7 @@ export function PayosBell() {
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   })
-  const markSeen = trpc.payosNotice.markSeen.useMutation()
+  const markSeen = trpc.payosNotice.markSeen.useMutation({ onSettled: () => utils.payosNotice.list.invalidate() })
   const [open, setOpen] = useState(false)
   // Giữ danh sách lúc mở để chấm "chưa đọc" còn tới khi đóng.
   const [shown, setShown] = useState<Item[]>([])
@@ -45,10 +46,14 @@ export function PayosBell() {
   function change(next: boolean) {
     setOpen(next)
     if (!next || !data) return
+    toast.dismiss()
     setShown(data.items)
     const newest = data.items[0]
     if (data.unread > 0 && newest) {
-      utils.payosNotice.list.setData(undefined, (d) => d && { ...d, unread: 0 })
+      // Huỷ lần hỏi đang chạy trước: nó đọc DB trước markSeen, về sau sẽ bật lại huy hiệu.
+      void utils.payosNotice.list.cancel().then(() =>
+        utils.payosNotice.list.setData(undefined, (d) => d && { ...d, unread: 0, items: d.items.map((i) => ({ ...i, unread: false })) })
+      )
       // upTo thay vì now: khoản vào đúng lúc đang mở chuông không bị đánh dấu đã đọc oan.
       markSeen.mutate({ upTo: new Date(newest.createdAt).toISOString() })
     }
