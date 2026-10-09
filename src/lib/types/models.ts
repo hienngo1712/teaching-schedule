@@ -91,6 +91,8 @@ export interface TuitionStatusDTO {
   noticeSentAt: Date | string | null
   noticeSentAmount: number | null
   noticeStatus: NoticeStatus
+  payosPaidAt: Date | string | null
+  payosPaidAmount: number | null
   inProgress: boolean
   debtMonths: number
 }
@@ -127,6 +129,7 @@ export type PaymentBatchDTO = {
   amount: number
   paidAt: string
   note: string | null
+  method: StoredPaymentMethod
   allocations: { year: number; month: number; amount: number }[]
   legacy: boolean
 }

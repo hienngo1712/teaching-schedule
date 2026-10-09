@@ -309,6 +309,9 @@ export async function getMonthlyTuitionStatus(
       noticeSentAt,
       noticeSentAmount,
       noticeStatus,
+      // PH chuyển qua payOS ở tháng này (spec AH §7): đọc thẳng snapshot.
+      payosPaidAt: snapshot?.payosPaidAt ?? null,
+      payosPaidAmount: snapshot?.payosPaidAmount ?? null,
       inProgress,
       debtMonths,
     }
@@ -401,6 +404,8 @@ export async function getMonthlyTuitionStatus(
       noticeSentAt: item.noticeSentAt,
       noticeSentAmount: item.noticeSentAmount,
       noticeStatus: item.noticeStatus,
+      payosPaidAt: item.payosPaidAt,
+      payosPaidAmount: item.payosPaidAmount,
       inProgress: item.inProgress,
       debtMonths: item.debtMonths,
     })),

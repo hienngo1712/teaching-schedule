@@ -8,6 +8,8 @@ import { addDays } from "@/lib/plans"
 import { signWebhookData } from "@/server/payos"
 import { getTuitionNotice } from "@/server/services/tuition-notice.service"
 import { handleTuitionWebhook } from "@/server/services/tuition-payos-webhook.service"
+import { getMonthlyTuitionStatus } from "@/server/services/tuition.service"
+import { listBatches } from "@/server/services/payment.service"
 
 type Caller = Awaited<ReturnType<typeof getAuthedCaller>>
 
@@ -152,6 +154,13 @@ describe("webhook payOS học phí (spec AH §6)", () => {
     await handleTuitionWebhook(db, HOOK, payload(l, 100000, "RA1"))
     await handleTuitionWebhook(db, HOOK, payload(l, 100000, "RA2"))
     expect((await augMt()).payosPaidAmount).toBe(200000)
+  })
+  it("hiển thị: item tháng có payosPaidAmount, đợt thu có method payos (spec AH §7)", async () => {
+    const l = await makeLink()
+    await handleTuitionWebhook(db, HOOK, payload(l, 200000))
+    const { items } = await getMonthlyTuitionStatus(db, userId, { year: 2026, month: 8, status: "all", page: 1, limit: 10 })
+    expect(items.find((i) => i.studentId === studentId)).toMatchObject({ payosPaidAmount: 200000 })
+    expect((await listBatches(db, userId, { studentId, year: 2026, month: 8 }))[0]).toMatchObject({ method: "payos" })
   })
   it("không còn bất biến lệch paidAmount", async () => {
     await addSession("2026-07-20")

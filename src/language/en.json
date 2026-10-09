@@ -855,6 +855,8 @@
   "all_notice": "All",
   "notice_sent_on": "Sent {d}",
   "notice_sent_age": "Sent {d} · {n} days",
+  "payos_parent_paid": "Parent paid {amount} at {time} on {d}",
+  "payment_method_payos": "payOS",
   "tuition_in_progress": "In progress",
   "notice_changed": "Sent · amount changed",
   "payment_recorded": "Recorded {amount} for {months}",

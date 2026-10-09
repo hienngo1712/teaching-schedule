@@ -133,14 +133,14 @@ export async function listBatches(db: PrismaClient, userId: number, { studentId,
     : []
   const groups = new Map<string, PaymentBatchDTO>()
   for (const p of batched) {
-    const g = groups.get(p.batchId!) ?? { batchId: p.batchId!, amount: 0, paidAt: p.paidAt.toISOString().slice(0, 10), note: p.note, allocations: [], legacy: false }
+    const g = groups.get(p.batchId!) ?? { batchId: p.batchId!, amount: 0, paidAt: p.paidAt.toISOString().slice(0, 10), note: p.note, method: p.method as StoredPaymentMethod, allocations: [], legacy: false }
     g.amount += p.amount
     g.allocations.push({ year: p.monthlyTuition.year, month: p.monthlyTuition.month, amount: p.amount })
     groups.set(p.batchId!, g)
   }
   for (const p of own.filter((x) => x.batchId === null)) {
     groups.set(`${LEGACY}${p.id}`, {
-      batchId: `${LEGACY}${p.id}`, amount: p.amount, paidAt: p.paidAt.toISOString().slice(0, 10), note: p.note,
+      batchId: `${LEGACY}${p.id}`, amount: p.amount, paidAt: p.paidAt.toISOString().slice(0, 10), note: p.note, method: p.method as StoredPaymentMethod,
       allocations: [{ year, month, amount: p.amount }], legacy: true,
     })
   }

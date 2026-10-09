@@ -56,4 +56,22 @@ describe("TuitionNoticeBadge", () => {
     expect(b3).toBeDefined()
     expect(b3.className).toContain("text-slate-700")
   })
+
+  // Spec AH §7: PH chuyển qua payOS.
+  it("có payosPaidAt → dòng xanh 'PH đã chuyển 200.000 đ lúc 14:32 ngày 9/10' thay nhắc đã gửi phiếu", () => {
+    render(<LanguageProvider forcedLanguage="vi"><TuitionNoticeBadge item={{ noticeStatus: "sent", noticeSentAt: "2026-10-01T03:00:00Z", due: 0, payosPaidAt: "2026-10-09T07:32:00.000Z", payosPaidAmount: 200000 }} /></LanguageProvider>)
+    expect(screen.getByText(/PH đã chuyển 200\.000/)).toBeTruthy()
+    expect(screen.getByText(/14:32 ngày 9\/10/)).toBeTruthy()
+    expect(screen.queryByText(/đã gửi/i)).toBeNull()
+  })
+  it("noticeStatus none nhưng có payosPaidAt vẫn hiện dòng đã chuyển", () => {
+    render(<LanguageProvider forcedLanguage="vi"><TuitionNoticeBadge item={{ noticeStatus: "none", noticeSentAt: null, due: 0, payosPaidAt: "2026-10-09T07:32:00.000Z", payosPaidAmount: 200000 }} /></LanguageProvider>)
+    expect(screen.getByText(/PH đã chuyển 200\.000/)).toBeTruthy()
+  })
+  it("còn nợ sau khi PH chuyển (chuyển thiếu/ nợ mới) → hiện cả dòng đã chuyển, nhắc nợ giữ như cũ", () => {
+    const threeDaysAgo = new Date(Date.now() - 3 * 86_400_000).toISOString()
+    render(<LanguageProvider forcedLanguage="vi"><TuitionNoticeBadge item={{ noticeStatus: "sent", noticeSentAt: threeDaysAgo, due: 50000, payosPaidAt: "2026-10-09T07:32:00.000Z", payosPaidAmount: 150000 }} /></LanguageProvider>)
+    expect(screen.getByText(/PH đã chuyển 150\.000/)).toBeTruthy()
+    expect(screen.getByText(/3 ngày/)).toBeTruthy()
+  })
 })

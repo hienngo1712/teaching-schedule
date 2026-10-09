@@ -22,6 +22,7 @@ const sampleBatches: PaymentBatchDTO[] = [
     amount: 500_000,
     paidAt: "2026-09-15",
     note: "Đợt thu 1",
+    method: "cash",
     allocations: [
       { year: 2026, month: 8, amount: 200_000 },
       { year: 2026, month: 9, amount: 300_000 },
@@ -47,6 +48,8 @@ const rowData = {
   noticeSentAt: null,
   noticeSentAmount: null,
   noticeStatus: "none" as const,
+  payosPaidAt: null,
+  payosPaidAmount: null,
   inProgress: false,
   debtMonths: 1,
   year: 2026,

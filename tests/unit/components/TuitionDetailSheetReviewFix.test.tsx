@@ -26,6 +26,8 @@ const rowData = {
   noticeSentAt: null,
   noticeSentAmount: null,
   noticeStatus: "none" as const,
+  payosPaidAt: null,
+  payosPaidAmount: null,
   inProgress: false,
   debtMonths: 1,
   year: 2026,

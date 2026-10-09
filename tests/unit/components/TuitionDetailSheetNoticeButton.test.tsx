@@ -26,6 +26,8 @@ const row = {
   noticeSentAt: null,
   noticeSentAmount: null,
   noticeStatus: "none" as const,
+  payosPaidAt: null,
+  payosPaidAmount: null,
   inProgress: false,
   debtMonths: 0,
 }
