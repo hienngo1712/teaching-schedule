@@ -13,6 +13,16 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.18.0",
+    date: "2026-10-09",
+    title: "Chuông báo tiền payOS",
+    summary: "Chuông báo khi phụ huynh chuyển tiền qua payOS, không cần tải lại trang.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Chuông tiền học", body: "Chuông trên cùng báo ngay khoản phụ huynh vừa chuyển qua payOS và của học sinh nào; bấm một dòng để mở học sinh đó.", guideId: "payos-hoc-phi" },
+    ],
+  },
+  {
     version: "0.17.0",
     date: "2026-10-09",
     title: "Tự đánh dấu học phí bằng payOS",
