@@ -13,6 +13,17 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.17.0",
+    date: "2026-10-09",
+    title: "Tự đánh dấu học phí bằng payOS",
+    summary: "Giáo viên gói Pro nối payOS: phụ huynh quét QR trên phiếu, tiền vào app tự đánh dấu đã đóng.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Tự đánh dấu học phí", body: "Nối payOS trong Cài đặt: phiếu báo có QR payOS đúng số đang nợ, phụ huynh chuyển xong là app tự ghi khoản thu và đánh dấu Đã đóng đủ.", guideId: "payos-hoc-phi" },
+      { kind: "new", title: "PH đã chuyển", body: "Danh sách học phí hiện ngay số tiền và giờ phụ huynh đã chuyển qua payOS." },
+    ],
+  },
+  {
     version: "0.16.0",
     date: "2026-10-09",
     title: "Mua gói kích hoạt ngay",
