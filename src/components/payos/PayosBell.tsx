@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PayosNoticeList } from "./PayosNoticeList"
+import { usePayosNoticeToasts } from "./usePayosNoticeToasts"
 
 export const PAYOS_POLL_MS = 30_000
 
@@ -34,6 +35,10 @@ export function PayosBell() {
   const [open, setOpen] = useState(false)
   // Giữ danh sách lúc mở để chấm "chưa đọc" còn tới khi đóng.
   const [shown, setShown] = useState<Item[]>([])
+  // Nút "Xem" của toast gọi bản change mới nhất mà không làm hook toast chạy lại.
+  const openRef = useRef(() => {})
+  const openBell = useCallback(() => openRef.current(), [])
+  usePayosNoticeToasts(data, openBell)
 
   if (!data?.enabled) return null
 
@@ -48,6 +53,8 @@ export function PayosBell() {
       markSeen.mutate({ upTo: new Date(newest.createdAt).toISOString() })
     }
   }
+
+  openRef.current = () => change(true)
 
   function pick(i: Item) {
     const href = noticeHref(i)
