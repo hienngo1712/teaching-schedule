@@ -29,6 +29,10 @@ describe("middleware matcher", () => {
     expect(needsAuth("/api/payos/webhook")).toBe(false)
   })
 
+  it("/api/payos/tuition/<hookId> là route công khai (spec AH §4.1: webhook học phí)", () => {
+    expect(needsAuth("/api/payos/tuition/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ")).toBe(false)
+  })
+
   it("các route khác vẫn phải đăng nhập, kể cả route bắt đầu bằng 'p'", () => {
     for (const path of ["/", "/dashboard", "/students", "/profile", "/pay", "/p", "/tuition", "/api/other"]) {
       expect(needsAuth(path), path).toBe(true)

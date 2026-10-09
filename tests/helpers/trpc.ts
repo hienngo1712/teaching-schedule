@@ -31,5 +31,7 @@ export async function getAuthedCaller(username = "teacher") {
     },
     userId: user.id,
     ip: null,
+    // Router payOS dựng URL webhook từ origin (spec AH §4.1).
+    origin: "http://localhost:3000",
   })
 }
