@@ -21,7 +21,7 @@ export const tuitionRouter = createTRPCRouter({
   // Phiếu báo: chỉ đọc, không ghi snapshot.
   getNotice: planProcedure("tuitionNotice")
     .input(tuitionNoticeSchema)
-    .query(({ ctx, input }) => getTuitionNotice(ctx.db, ctx.userId, input)),
+    .query(({ ctx, input }) => getTuitionNotice(ctx.db, ctx.userId, input, { origin: ctx.origin, returnPath: "/tuition" })),
 
   setNoticeSent: protectedProcedure
     .input(setNoticeSentSchema)

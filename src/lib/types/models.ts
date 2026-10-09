@@ -158,6 +158,9 @@ export interface TuitionNoticeDTO {
   teacherName: string
   bankConfigured: boolean
   qr: {
+    // payOS (spec AH §5): QR do payOS cấp, có trang thanh toán; vietqr: QR tự dựng như cũ.
+    provider: "vietqr" | "payos"
+    checkoutUrl: string | null
     payload: string
     bankShortName: string
     accountNumber: string
