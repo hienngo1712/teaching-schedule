@@ -38,6 +38,11 @@ export default defineConfig({
       PLAN_BANK_BIN: '970436',
       PLAN_BANK_ACCOUNT_NUMBER: '0123456789',
       PLAN_BANK_ACCOUNT_NAME: 'CHU APP TEST',
+      // Khoá giả: chỉ để popup mua gói hiện nhóm Cách thanh toán, ảnh không tạo đơn nên không gọi payOS.
+      PAYOS_CLIENT_ID: 'test-client',
+      PAYOS_API_KEY: 'test-api-key',
+      PAYOS_CHECKSUM_KEY: 'test-checksum-key',
+      PAYOS_API_BASE: 'http://127.0.0.1:4010',
     },
     reuseExistingServer: false,
     timeout: 120000,
