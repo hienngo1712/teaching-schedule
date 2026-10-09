@@ -10,6 +10,7 @@ import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { isPeriod, planLabel } from "@/lib/plans"
 import { formatCurrency } from "@/lib/utils"
 import { dateTimeVn } from "@/components/admin/admin-format"
+import { ContactOwner } from "@/components/common/ContactOwner"
 
 type Order = NonNullable<RouterOutputs["plan"]["me"]["pendingOrder"]>
 
@@ -24,7 +25,9 @@ export function PendingOrderCard({
 }) {
   const { t } = useTranslation()
   const [qrSrc, setQrSrc] = useState<string | null>(null)
-  const payload = order.qr?.payload ?? null
+  // Đơn payOS: QR do payOS cấp (tiền vào là webhook bật gói); còn lại VietQR như cũ.
+  const payos = order.method === "payos" ? order.payos : null
+  const payload = payos ? payos.qr : (order.qr?.payload ?? null)
 
   useEffect(() => {
     if (!payload) return
@@ -61,7 +64,12 @@ export function PendingOrderCard({
     : order.period === "2year"
       ? t("plan_period_2year")
       : t(order.period)
-  const rows = order.qr
+  const rows = payos
+    ? [
+        { label: t("payment_amount"), value: formatCurrency(order.amount), copyValue: String(order.amount) },
+        { label: t("notice_transfer_content"), value: order.transferContent, copyValue: order.transferContent },
+      ]
+    : order.qr
     ? [
         { label: t("bank"), value: order.qr.bankShortName, copyValue: order.qr.bankShortName },
         { label: t("account_number"), value: order.qr.accountNumber, copyValue: order.qr.accountNumber },
@@ -81,11 +89,11 @@ export function PendingOrderCard({
         <span className="rounded-full bg-amber-50 px-2 text-xs font-medium leading-5 text-amber-800">{t("plan_pending")}</span>
       </div>
 
-      {order.qr && paymentReady ? (
+      {(payos || order.qr) && paymentReady ? (
         <>
           {qrSrc && (
             // eslint-disable-next-line @next/next/no-img-element -- data URL sinh tại chỗ, không qua next/image
-            <img src={qrSrc} alt="VietQR" className="mx-auto size-60" />
+            <img src={qrSrc} alt={payos ? "payOS" : "VietQR"} className="mx-auto size-60" />
           )}
           <dl className="divide-y divide-slate-100 text-sm">
             {rows.map((r) => (
@@ -98,12 +106,30 @@ export function PendingOrderCard({
               </div>
             ))}
           </dl>
+          {payos && (
+            <a
+              href={payos.checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 md:h-10 md:w-auto"
+            >
+              {t("plan_payos_open")}
+            </a>
+          )}
         </>
       ) : (
         <p className="text-sm text-slate-500">{t("plan_payment_not_ready")}</p>
       )}
 
-      <p className="text-xs text-slate-500">{t("plan_pending_hint")}</p>
+      {payos ? (
+        <p className="text-xs text-slate-500">{t("plan_payos_hint")}</p>
+      ) : (
+        <>
+          <p className="text-xs text-slate-500">{t("plan_pending_hint")}</p>
+          <p className="text-sm text-slate-600">{t("plan_vietqr_report")}</p>
+          <ContactOwner />
+        </>
+      )}
       <p className="text-xs text-slate-500">{t("plan_order_expires").replace("{date}", dateTimeVn(order.expiresAt))}</p>
       <Button type="button" variant="outline" className="h-11 md:h-10" disabled={cancel.isPending} onClick={() => cancel.mutate({ id: order.id })}>
         {t("plan_cancel_order")}

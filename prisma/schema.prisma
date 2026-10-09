@@ -257,11 +257,36 @@ model PlanOrder {
   decidedBy    String?   @map("decided_by") @db.VarChar(50)
   decidedAt    DateTime? @map("decided_at")
   createdAt    DateTime  @default(now()) @map("created_at")
+  // payOS (spec AG): 'payos' | 'vietqr'. Đơn cũ = vietqr.
+  method           String    @default("vietqr") @db.VarChar(8)
+  payosLinkId      String?   @map("payos_link_id") @db.VarChar(64)
+  payosQr          String?   @map("payos_qr") @db.Text
+  payosCheckoutUrl String?   @map("payos_checkout_url") @db.Text
+  paidAmount       Int?      @map("paid_amount")
+  paidAt           DateTime? @map("paid_at")
+  payosRef         String?   @unique @map("payos_ref") @db.VarChar(64)
+  // Admin đã xử lý đơn có tiền mà không bật gói (Từ chối) → rời nhóm "cần xử lý".
+  paidReviewedAt   DateTime? @map("paid_reviewed_at")
   user         User      @relation(fields: [userId], references: [id])
+  payments     PlanOrderPayment[]
 
   @@index([userId, createdAt])
   @@index([status])
   @@map("plan_orders")
+}
+
+// Mỗi giao dịch payOS 1 dòng: payOS gửi lại giao dịch cũ (A, B, A) không bị cộng tiền 2 lần (review AG).
+model PlanOrderPayment {
+  id        Int       @id @default(autoincrement())
+  orderId   Int       @map("order_id")
+  reference String    @unique @db.VarChar(64)
+  amount    Int
+  paidAt    DateTime  @map("paid_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  order     PlanOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("plan_order_payments")
 }
 
 // Giá hiện hành của 1 gói = dòng mới nhất (spec L Q1). Không FK tới users: xóa tài khoản admin không mất lịch sử.
@@ -275,6 +300,18 @@ model PlanPriceChange {
 
   @@index([plan, createdAt])
   @@map("plan_price_changes")
+}
+
+// Liên hệ chủ app hiện trong app (spec AG §7): dòng mới nhất là hiện hành. Không FK như PlanPriceChange.
+model ContactChange {
+  id          Int      @id @default(autoincrement())
+  phone       String   @db.VarChar(15)
+  facebookUrl String?  @map("facebook_url") @db.Text
+  changedBy   String   @map("changed_by") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("contact_changes")
 }
 
 // userId null = số ngày mặc định cho tài khoản đăng ký sau; có userId = lần admin đặt riêng (spec L mục 15).

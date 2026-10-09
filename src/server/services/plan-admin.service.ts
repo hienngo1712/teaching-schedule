@@ -1,6 +1,7 @@
-import type { PrismaClient } from "@prisma/client"
+import type { Prisma, PrismaClient } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { isAdminUsername } from "@/lib/admin"
+import { cancelPayosLinkSafe } from "@/server/payos"
 import {
   ORDER_TTL_DAYS,
   addDays,
@@ -36,10 +37,45 @@ export async function computeApproval(
   return { grantedUntil, creditDays }
 }
 
+// Đơn có tiền payOS mà chưa bật gói, admin chưa xử lý → nhảy lên đầu trang đơn chờ (spec AG §6).
+export function isAttention(o: { status: string; paidAmount: number | null; paidReviewedAt: Date | null }): boolean {
+  return o.paidAmount !== null && o.status !== "approved" && o.paidReviewedAt === null
+}
+
+// Lõi chung duyệt tay + webhook. "pending": đơn chờ còn hạn. "paid": đơn đã nhận tiền payOS, kể cả hết hạn/huỷ/từ chối.
+// Caller giữ khoá advisory theo userId. null = không chốt được, chưa ghi gì.
+export async function activateOrderInTx(
+  tx: Prisma.TransactionClient,
+  id: number,
+  decidedBy: string,
+  now: Date,
+  mode: "pending" | "paid"
+): Promise<{ grantedUntil: Date; creditDays: number; userId: number } | null> {
+  const order = await tx.planOrder.findUnique({
+    where: { id },
+    select: { userId: true, plan: true, period: true, bonusMonths: true, amount: true, status: true, createdAt: true, paidAmount: true },
+  })
+  if (!order) return null
+  const ok =
+    mode === "pending"
+      ? order.status === "pending" && order.createdAt > addDays(now, -ORDER_TTL_DAYS)
+      : order.paidAmount !== null && order.status !== "approved"
+  if (!ok) return null
+  const approval = await computeApproval(tx, order, now)
+  if (!approval) return null
+  const claimed = await tx.planOrder.updateMany({
+    where: { id, status: order.status },
+    data: { status: "approved", decidedBy, decidedAt: now, grantedUntil: approval.grantedUntil, creditDays: approval.creditDays },
+  })
+  if (claimed.count === 0) return null
+  await tx.user.update({ where: { id: order.userId }, data: { plan: order.plan, planExpiresAt: approval.grantedUntil } })
+  return { ...approval, userId: order.userId }
+}
+
 export async function getAdminOverview(db: PrismaClient) {
   const now = new Date()
   await expireStaleOrders(db, now)
-  const [users, counts, pending] = await Promise.all([
+  const [users, counts, pending, attention] = await Promise.all([
     db.user.findMany({
       where: { isDeleted: false },
       orderBy: { id: "asc" },
@@ -58,11 +94,18 @@ export async function getAdminOverview(db: PrismaClient) {
         bonusMonths: true,
         createdAt: true,
         userId: true,
+        method: true,
         user: { select: { username: true, fullName: true } },
       },
     }),
+    db.planOrder.findMany({
+      where: { paidAmount: { not: null }, status: { not: "approved" }, paidReviewedAt: null, user: { isDeleted: false } },
+      orderBy: [{ paidAt: "desc" }, { id: "desc" }],
+      select: { id: true, code: true, plan: true, period: true, amount: true, bonusMonths: true, createdAt: true, userId: true, status: true, method: true, paidAmount: true, paidAt: true, user: { select: { username: true, fullName: true } } },
+    }),
   ])
   const activeBy = new Map(counts.map((c) => [c.userId, c._count._all]))
+  const attentionIds = new Set(attention.map((o) => o.id))
   return {
     users: users.map((u) => {
       const eff = effectivePlan(u, now)
@@ -82,7 +125,18 @@ export async function getAdminOverview(db: PrismaClient) {
       }
     }),
     pendingOrders: await Promise.all(
-      pending.map(async ({ user, ...o }) => ({
+      pending
+        .filter((o) => !attentionIds.has(o.id))
+        .map(async ({ user, ...o }) => ({
+          ...o,
+          expiresAt: orderExpiresAt(o.createdAt),
+          username: user.username,
+          fullName: user.fullName,
+          preview: await computeApproval(db, o, now),
+        }))
+    ),
+    attentionOrders: await Promise.all(
+      attention.map(async ({ user, ...o }) => ({
         ...o,
         expiresAt: orderExpiresAt(o.createdAt),
         username: user.username,
@@ -101,33 +155,20 @@ export async function approveOrder(db: PrismaClient, admin: string, id: number):
     if (owner) await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(owner.userId)})`
     const alive = owner && (await tx.user.findUnique({ where: { id: owner.userId }, select: { isDeleted: true } }))
     if (!alive || alive.isDeleted) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
-    // Chốt trạng thái trước: bấm 2 lần / 2 tab thì lần sau count = 0.
-    // Đơn quá hạn chưa kịp expire vẫn không duyệt được: điều kiện nằm ngay trong câu chốt (spec P7).
-    const claimed = await tx.planOrder.updateMany({
-      where: { id, status: "pending", createdAt: { gt: addDays(now, -ORDER_TTL_DAYS) } },
-      data: { status: "approved", decidedBy: admin, decidedAt: now },
-    })
-    if (claimed.count === 0) {
-      const cur = await tx.planOrder.findUnique({ where: { id }, select: { status: true } })
-      if (cur?.status === "pending") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Đơn đã quá 7 ngày chưa xác nhận nên đã hết hạn. Nếu khách đã chuyển khoản, hãy dùng Đặt gói",
-        })
+    const cur = await tx.planOrder.findUniqueOrThrow({ where: { id }, select: { status: true, paidAmount: true, paidReviewedAt: true } })
+    // Đơn có tiền payOS chưa xử lý: admin được duyệt cả khi đã hết hạn/huỷ/từ chối.
+    const mode = isAttention(cur) ? "paid" : "pending"
+    const done = await activateOrderInTx(tx, id, admin, now, mode)
+    if (done) return done
+    if (cur.status === "pending") {
+      const fresh = await tx.planOrder.findUniqueOrThrow({ where: { id }, select: { createdAt: true } })
+      if (fresh.createdAt <= addDays(now, -ORDER_TTL_DAYS)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Đơn đã quá 7 ngày chưa xác nhận nên đã hết hạn. Nếu khách đã chuyển khoản, hãy dùng Đặt gói" })
       }
-      throw new TRPCError({ code: "CONFLICT", message: "Đơn không còn ở trạng thái chờ" })
-    }
-    const order = await tx.planOrder.findUniqueOrThrow({
-      where: { id },
-      select: { userId: true, plan: true, period: true, bonusMonths: true, amount: true },
-    })
-    const approval = await computeApproval(tx, order, now)
-    if (!approval) {
       throw new TRPCError({ code: "BAD_REQUEST", message: "Tài khoản đang có gói Pro còn hạn, không duyệt được đơn Plus" })
     }
-    await tx.user.update({ where: { id: order.userId }, data: { plan: order.plan, planExpiresAt: approval.grantedUntil } })
-    await tx.planOrder.update({ where: { id }, data: { grantedUntil: approval.grantedUntil, creditDays: approval.creditDays } })
-    return { ...approval, userId: order.userId }
+    if (mode === "paid") throw new TRPCError({ code: "BAD_REQUEST", message: "Tài khoản đang có gói Pro còn hạn, không duyệt được đơn Plus" })
+    throw new TRPCError({ code: "CONFLICT", message: "Đơn không còn ở trạng thái chờ" })
   })
   console.info(`[admin] ${admin} duyệt đơn ${id} (user ${result.userId}) tới ${result.grantedUntil.toISOString()}`)
   return { grantedUntil: result.grantedUntil, creditDays: result.creditDays }
@@ -136,20 +177,32 @@ export async function approveOrder(db: PrismaClient, admin: string, id: number):
 // Nhẹ hơn overview (không tải user, không tính computeApproval): sidebar + tab bar gọi ở mọi trang admin (spec P J5).
 export async function getPendingCount(db: PrismaClient): Promise<{ count: number; newAccounts: number }> {
   await expireStaleOrders(db, new Date())
-  const [count, newAccounts] = await Promise.all([
-    db.planOrder.count({ where: { status: "pending", user: { isDeleted: false } } }),
+  const [pending, attention, newAccounts] = await Promise.all([
+    db.planOrder.count({ where: { status: "pending", paidAmount: null, user: { isDeleted: false } } }),
+    db.planOrder.count({ where: { paidAmount: { not: null }, status: { not: "approved" }, paidReviewedAt: null, user: { isDeleted: false } } }),
     countNewAccounts(db),
   ])
-  return { count, newAccounts }
+  return { count: pending + attention, newAccounts }
 }
 
 export async function rejectOrder(db: PrismaClient, admin: string, id: number, note?: string): Promise<{ success: true }> {
+  const now = new Date()
+  const cur = await db.planOrder.findUnique({ where: { id }, select: { status: true, paidAmount: true, paidReviewedAt: true, payosLinkId: true } })
+  const paid = cur !== null && isAttention(cur)
   const { count } = await db.planOrder.updateMany({
-    where: { id, status: "pending" },
-    data: { status: "rejected", note: note || null, decidedBy: admin, decidedAt: new Date() },
+    where: paid ? { id, status: cur.status } : { id, status: "pending" },
+    data: {
+      status: "rejected",
+      note: note || (paid ? "Đã nhận tiền qua payOS, chủ app tự hoàn" : null),
+      decidedBy: admin,
+      decidedAt: now,
+      ...(paid ? { paidReviewedAt: now } : {}),
+    },
   })
   if (count === 0) throw new TRPCError({ code: "CONFLICT", message: "Đơn không còn ở trạng thái chờ" })
   console.info(`[admin] ${admin} từ chối đơn ${id}`)
+  // Huỷ cả khi đơn đã có tiền: đơn thiếu tiền mà link còn mở thì khách vẫn trả tiếp được.
+  if (cur?.payosLinkId) await cancelPayosLinkSafe(cur.payosLinkId)
   return { success: true }
 }
 
@@ -196,6 +249,9 @@ export async function getOrderHistory(db: PrismaClient) {
       creditDays: true,
       status: true,
       source: true,
+      method: true,
+      paidAmount: true,
+      paidAt: true,
       grantedUntil: true,
       note: true,
       decidedBy: true,

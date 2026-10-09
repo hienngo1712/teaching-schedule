@@ -62,7 +62,7 @@ async function shot(page: Page, name: string, kind: "desktop" | "mobile") {
   })
 }
 
-test("capture-24-shots", async ({ page, browser }, testInfo) => {
+test("capture-25-shots", async ({ page, browser }, testInfo) => {
   test.setTimeout(600000)
   page.setDefaultTimeout(20000)
   const kind = testInfo.project.name as "desktop" | "mobile"
@@ -262,6 +262,13 @@ test("capture-24-shots", async ({ page, browser }, testInfo) => {
   await page.goto("/plan")
   await mark(page.getByTestId("plan-current"))
   await shot(page, "goi-dich-vu", kind)
+
+  // 21b. goi-thanh-toan: popup mua gói Pro, viền đỏ nhóm Cách thanh toán (bản 0.16.0, cần env payOS giả)
+  await page.goto("/plan?buy=1")
+  const payMethod = page.getByRole("radiogroup", { name: "Cách thanh toán" })
+  await payMethod.scrollIntoViewIfNeeded()
+  await mark(payMethod)
+  await shot(page, "goi-thanh-toan", kind)
 
   // 22. thung-rac: /trash có 1 HS mẫu đã xoá, viền đỏ nút Khôi phục
   await page.goto("/trash")

@@ -1,11 +1,14 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import viText from "@/language/vi.json"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { PrivacyContent } from "@/components/privacy/PrivacyContent"
+
+// ContactOwner gọi tRPC (spec AG §7); chưa cài liên hệ → không render.
+vi.mock("@/lib/trpc", () => ({ trpc: { contact: { get: { useQuery: () => ({ data: undefined }) } } } }))
 
 describe("PrivacyContent (spec X §3.2)", () => {
   it("có khung tóm tắt, vẫn đúng 5 mục h2, không có link Đọc đầy đủ", () => {

@@ -26,6 +26,8 @@ import { buildVietQrPayload } from "@/lib/vietqr"
 import { findBank } from "@/lib/vn-banks"
 import { isAdminUsername } from "@/lib/admin"
 import type { CreateOrderInput } from "@/lib/schemas/plan"
+import { cancelPayosLinkSafe, getPayosConfig } from "@/server/payos"
+import { attachPayosLink } from "./payos-order.service"
 
 export type Db = PrismaClient | Prisma.TransactionClient
 // Giữ export cũ để trpc/index.ts và getMyPlan không phải đổi chỗ import.
@@ -121,6 +123,7 @@ const ORDER_SELECT = {
   creditDays: true,
   grantedUntil: true,
   createdAt: true,
+  method: true,
 } satisfies Prisma.PlanOrderSelect
 
 export async function getMyPlan(db: PrismaClient, userId: number, username: string) {
@@ -130,7 +133,11 @@ export async function getMyPlan(db: PrismaClient, userId: number, username: stri
     db.user.findUniqueOrThrow({ where: { id: userId }, select: PLAN_SELECT }),
     db.student.count({ where: { userId, isActive: true } }),
     db.planOrder.findMany({ where: { userId }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 10, select: ORDER_SELECT }),
-    db.planOrder.findFirst({ where: { userId, status: "pending" }, orderBy: { id: "desc" }, select: ORDER_SELECT }),
+    db.planOrder.findFirst({
+      where: { userId, status: "pending" },
+      orderBy: { id: "desc" },
+      select: { ...ORDER_SELECT, payosQr: true, payosCheckoutUrl: true },
+    }),
     findLastPlusOrder(db, userId),
     getPlanPrices(db),
   ])
@@ -162,6 +169,11 @@ export async function getMyPlan(db: PrismaClient, userId: number, username: stri
             createdAt: pending.createdAt,
             expiresAt: orderExpiresAt(pending.createdAt),
             transferContent: content,
+            method: pending.method,
+            payos:
+              pending.method === "payos" && pending.payosQr && pending.payosCheckoutUrl
+                ? { qr: pending.payosQr, checkoutUrl: pending.payosCheckoutUrl }
+                : null,
             qr: bank
               ? {
                   payload: buildVietQrPayload({ bin: bank.bin, accountNumber: bank.accountNumber, amount: pending.amount, content }),
@@ -174,6 +186,7 @@ export async function getMyPlan(db: PrismaClient, userId: number, username: stri
         : null,
     orders,
     paymentReady: bank !== null,
+    payosReady: bank !== null && getPayosConfig() !== null,
     isAdmin: isAdminUsername(username),
   }
 }
@@ -181,9 +194,11 @@ export async function getMyPlan(db: PrismaClient, userId: number, username: stri
 export async function createOrder(
   db: PrismaClient,
   userId: number,
-  input: CreateOrderInput
-): Promise<{ id: number; code: string; bonusMonths: number; amount: number }> {
+  input: CreateOrderInput,
+  origin?: string | null
+): Promise<{ id: number; code: string; bonusMonths: number; amount: number; method: "payos" | "vietqr"; payosFailed: boolean }> {
   if (!getPlanBankAccount()) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Chưa mở thanh toán" })
+  const wantPayos = input.method === "payos" && getPayosConfig() !== null && !!origin
   const now = new Date()
   const fields = await db.user.findUniqueOrThrow({ where: { id: userId }, select: PLAN_SELECT })
   const blocked = orderBlockedUntil(fields, input.plan, now)
@@ -193,9 +208,10 @@ export async function createOrder(
   // Spec 6.6: ưu đãi chốt lúc tạo đơn, admin duyệt muộn vẫn giữ.
   const bonusMonths = computeBonusMonths(fields, input.plan, input.period, now)
   // Mã trùng unique gần như không thể nên chỉ thử lại 1 lần (như generateParentLink).
+  let res
   for (let attempt = 0; ; attempt++) {
     try {
-      return await db.$transaction(async (tx) => {
+      res = await db.$transaction(async (tx) => {
         // Khóa theo userId: 2 request cùng lúc không thì cùng thấy "chưa có đơn chờ" rồi ra 2 đơn pending.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(userId)})`
         await expireStaleOrders(tx, now, userId)
@@ -204,25 +220,45 @@ export async function createOrder(
         if (input.expectedAmount !== undefined && input.expectedAmount !== amount) {
           throw new TRPCError({ code: "CONFLICT", message: "Giá gói vừa thay đổi, vui lòng xem lại giá mới" })
         }
+        // Link payOS của đơn bị thay phải huỷ sau khi commit, để QR cũ không trả được nữa.
+        const replaced = await tx.planOrder.findMany({
+          where: { userId, status: "pending", payosLinkId: { not: null } },
+          select: { payosLinkId: true },
+        })
         // D14: tối đa 1 đơn chờ, đơn mới thay đơn cũ.
         await tx.planOrder.updateMany({ where: { userId, status: "pending" }, data: { status: "cancelled" } })
         const code = generateOrderCode()
         const order = await tx.planOrder.create({
-          data: { userId, plan: input.plan, period: input.period, amount, bonusMonths, code, status: "pending" },
-          select: { id: true },
+          data: { userId, plan: input.plan, period: input.period, amount, bonusMonths, code, status: "pending", method: wantPayos ? "payos" : "vietqr" },
+          select: { id: true, createdAt: true },
         })
-        return { id: order.id, code, bonusMonths, amount }
+        return { id: order.id, code, bonusMonths, amount, createdAt: order.createdAt, replaced }
       })
+      break
     } catch (e) {
       const isDuplicate = e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002"
       if (!isDuplicate || attempt > 0) throw e
     }
   }
+  // Gọi payOS ngoài transaction: không giữ khoá khi chờ mạng (spec AG 4.2).
+  for (const r of res.replaced) await cancelPayosLinkSafe(r.payosLinkId!)
+  let method: "payos" | "vietqr" = "vietqr"
+  let payosFailed = false
+  if (wantPayos) {
+    if (await attachPayosLink(db, { id: res.id, code: res.code, amount: res.amount, createdAt: res.createdAt }, origin!)) method = "payos"
+    else {
+      payosFailed = true
+      await db.planOrder.update({ where: { id: res.id }, data: { method: "vietqr" } })
+    }
+  }
+  return { id: res.id, code: res.code, bonusMonths: res.bonusMonths, amount: res.amount, method, payosFailed }
 }
 
 export async function cancelOrder(db: PrismaClient, userId: number, id: number): Promise<{ success: true }> {
   await expireStaleOrders(db, new Date(), userId)
+  const link = (await db.planOrder.findFirst({ where: { id, userId, status: "pending" }, select: { payosLinkId: true } }))?.payosLinkId
   const { count } = await db.planOrder.updateMany({ where: { id, userId, status: "pending" }, data: { status: "cancelled" } })
   if (count === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy yêu cầu đang chờ" })
+  if (link) await cancelPayosLinkSafe(link)
   return { success: true }
 }

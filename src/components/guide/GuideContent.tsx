@@ -8,6 +8,7 @@ import { GUIDE_SECTIONS, stepShot, stepText } from "@/lib/guide-content"
 import { GuideShot } from "@/components/guide/GuideShot"
 import { TourButton } from "@/components/tour/TourButton"
 import { GUIDE_TOURS } from "@/lib/tours"
+import { ContactOwner } from "@/components/common/ContactOwner"
 
 // "**Nút**" → <strong>; nội dung tĩnh trong code nên không cần thư viện markdown.
 function Rich({ text }: { text: string }) {
@@ -67,6 +68,11 @@ export function GuideContent({ canTour = false, home = null }: { canTour?: boole
           )}
         </section>
       ))}
+
+      <section className="space-y-2 print:hidden">
+        <h2 className="text-lg font-semibold text-slate-900">{t("contact_need_help")}</h2>
+        <ContactOwner />
+      </section>
 
       <div className="flex flex-wrap gap-4 border-t pt-4 print:hidden">
         <Link href="/privacy" className="inline-flex min-h-11 items-center text-sm text-primary underline">{t("privacy_title")}</Link>

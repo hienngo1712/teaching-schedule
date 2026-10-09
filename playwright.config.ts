@@ -41,28 +41,42 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3000',
-    // Truyền env TƯỜNG MINH thay vì dựa vào kế thừa ngầm — đọc config là thấy
-    // ngay server chạy DB nào.
-    env: {
-      DATABASE_URL: requireEnv('DATABASE_URL'),
-      DIRECT_URL: requireEnv('DIRECT_URL'),
-      // Truyền tường minh để Next không đọc nhầm khoá từ .env (spec O 6.2).
-      DATA_ENCRYPTION_KEYS: requireEnv('DATA_ENCRYPTION_KEYS'),
-      DATA_ENCRYPTION_ACTIVE_KID: requireEnv('DATA_ENCRYPTION_ACTIVE_KID'),
-      NODE_ENV: 'development',
-      // Env phân gói cho DB test: admin_test là admin, TK ngân hàng giả để trang Gói có QR.
-      ADMIN_USERNAMES: 'admin_test',
-      PLAN_BANK_BIN: '970436',
-      PLAN_BANK_ACCOUNT_NUMBER: '0123456789',
-      PLAN_BANK_ACCOUNT_NAME: 'CHU APP TEST',
+  webServer: [
+    // Giả payOS (spec AG): e2e không gọi payOS thật.
+    {
+      command: 'node tests/e2e/payos-mock-server.mjs',
+      url: 'http://127.0.0.1:4010/health',
+      reuseExistingServer: false,
+      timeout: 10000,
     },
-    // PHẢI là false. `true` sẽ tái dùng server đang chạy sẵn ở cổng 3000 —
-    // mà server đó nhiều khả năng do `pnpm dev` thường ngày khởi, đang trỏ
-    // vào .env (production). Bản vá env sẽ vô nghĩa nếu vẫn reuse.
-    reuseExistingServer: false,
-    timeout: 120000,
-  },
+    {
+      command: 'pnpm dev',
+      url: 'http://localhost:3000',
+      // Truyền env TƯỜNG MINH thay vì dựa vào kế thừa ngầm — đọc config là thấy
+      // ngay server chạy DB nào.
+      env: {
+        DATABASE_URL: requireEnv('DATABASE_URL'),
+        DIRECT_URL: requireEnv('DIRECT_URL'),
+        // Truyền tường minh để Next không đọc nhầm khoá từ .env (spec O 6.2).
+        DATA_ENCRYPTION_KEYS: requireEnv('DATA_ENCRYPTION_KEYS'),
+        DATA_ENCRYPTION_ACTIVE_KID: requireEnv('DATA_ENCRYPTION_ACTIVE_KID'),
+        NODE_ENV: 'development',
+        // Env phân gói cho DB test: admin_test là admin, TK ngân hàng giả để trang Gói có QR.
+        ADMIN_USERNAMES: 'admin_test',
+        PLAN_BANK_BIN: '970436',
+        PLAN_BANK_ACCOUNT_NUMBER: '0123456789',
+        PLAN_BANK_ACCOUNT_NAME: 'CHU APP TEST',
+        // Khoá payOS giả (spec AG): ký/kiểm chữ ký thật, API trỏ vào mock cổng 4010.
+        PAYOS_CLIENT_ID: 'test-client',
+        PAYOS_API_KEY: 'test-api-key',
+        PAYOS_CHECKSUM_KEY: 'test-checksum-key',
+        PAYOS_API_BASE: 'http://127.0.0.1:4010',
+      },
+      // PHẢI là false. `true` sẽ tái dùng server đang chạy sẵn ở cổng 3000 —
+      // mà server đó nhiều khả năng do `pnpm dev` thường ngày khởi, đang trỏ
+      // vào .env (production). Bản vá env sẽ vô nghĩa nếu vẫn reuse.
+      reuseExistingServer: false,
+      timeout: 120000,
+    },
+  ],
 });

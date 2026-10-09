@@ -101,6 +101,8 @@ test.describe('Gói của tôi (390px)', () => {
     await allButtonsTall();
     await noOverflow();
 
+    // Spec AG: payOS sẵn sàng thì chọn sẵn payOS; test này kiểm thẻ VietQR nên chọn VietQR.
+    await popup.getByTestId('purchase-method-vietqr').click();
     await popup.getByRole('button', { name: 'Tạo đơn', exact: true }).click();
     const pending = popup.getByTestId('pending-order');
     await expect(pending).toBeVisible();

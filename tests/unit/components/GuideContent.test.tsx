@@ -8,6 +8,9 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { GuideContent } from "@/components/guide/GuideContent"
 import { GUIDE_SECTIONS, GUIDE_SHOTS, GUIDE_DOCX_FILENAME, GUIDE_DOCX_PATH } from "@/lib/guide-content"
 
+// ContactOwner gọi tRPC (spec AG §7); chưa cài liên hệ → không render.
+vi.mock("@/lib/trpc", () => ({ trpc: { contact: { get: { useQuery: () => ({ data: undefined }) } } } }))
+
 describe("GuideContent (spec W §3.2 & Task 9)", () => {
   beforeEach(() => {
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({

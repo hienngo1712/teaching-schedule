@@ -7,7 +7,7 @@ export const planRouter = createTRPCRouter({
 
   createOrder: protectedProcedure
     .input(createOrderSchema)
-    .mutation(({ ctx, input }) => createOrder(ctx.db, ctx.userId, input)),
+    .mutation(({ ctx, input }) => createOrder(ctx.db, ctx.userId, input, ctx.origin)),
 
   cancelOrder: protectedProcedure
     .input(orderIdSchema)

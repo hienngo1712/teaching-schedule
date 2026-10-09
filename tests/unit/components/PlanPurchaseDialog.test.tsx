@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { ComponentProps } from "react"
-import { act, render, screen, fireEvent } from "@testing-library/react"
+import { act, render, screen, fireEvent, within } from "@testing-library/react"
 import type { RouterOutputs } from "@/lib/trpc"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { PlanPurchaseDialog } from "@/components/plan/PlanPurchaseDialog"
@@ -12,7 +12,7 @@ import { toast } from "sonner"
 
 type Me = RouterOutputs["plan"]["me"]
 type CreateOpts = {
-  onSuccess?: (res: { id: number; code: string; bonusMonths: number; amount?: number }) => void
+  onSuccess?: (res: { id: number; code: string; bonusMonths: number; amount?: number; payosFailed?: boolean }) => void
   onError?: (e: { message: string; data?: { code?: string } | null }) => void
 }
 
@@ -35,6 +35,8 @@ vi.mock("@/lib/trpc", () => ({
         useMutation: (opts: { onSuccess?: () => void }) => ({ mutate: () => opts.onSuccess?.(), isPending: false }),
       },
     },
+    // Thẻ đơn VietQR có khối Liên hệ chủ app (spec AG §7); chưa cài → ẩn.
+    contact: { get: { useQuery: () => ({ data: undefined }) } },
   },
 }))
 
@@ -133,7 +135,7 @@ describe("PlanPurchaseDialog", () => {
     expect(text("purchase-summary")).toContain("980.000")
     expect(text("purchase-summary")).toContain("Tặng 2 tháng")
     fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
-    expect(mut.create).toHaveBeenCalledWith({ plan: "plus", period: "2year", expectedAmount: 980000 })
+    expect(mut.create).toHaveBeenCalledWith({ plan: "plus", period: "2year", expectedAmount: 980000, method: "vietqr" })
   })
 
   it("gia hạn sớm Plus còn 45 ngày: 12 tháng Tặng 2 / Tối đa 14, 24 tháng Tặng 4 / Tối đa 28; lên Pro năm có +22 ngày quy đổi", () => {
@@ -194,7 +196,7 @@ describe("PlanPurchaseDialog", () => {
     expect(text("purchase-period-2year")).toContain("1.180.000")
     expect(text("purchase-summary")).toContain("590.000")
     fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
-    expect(mut.create).toHaveBeenCalledWith({ plan: "plus", period: "year", expectedAmount: 590000 })
+    expect(mut.create).toHaveBeenCalledWith({ plan: "plus", period: "year", expectedAmount: 590000, method: "vietqr" })
   })
 
   it("server báo CONFLICT (giá vừa đổi) → toast giá đổi + nạp lại plan.me, popup giữ bước chọn", () => {
@@ -258,5 +260,46 @@ describe("PlanPurchaseDialog", () => {
     year.focus()
     fireEvent.keyDown(year, { key: "ArrowRight" })
     expect(screen.getByTestId("purchase-period-2year").getAttribute("aria-checked")).toBe("true")
+  })
+  it("payOS sẵn sàng: nhóm Cách thanh toán 2 lựa chọn xếp dọc, chọn sẵn Kích hoạt ngay, Tạo đơn gửi method payos; chọn VietQR gửi vietqr", () => {
+    renderDialog({ me: makeMe({ payosReady: true }) })
+    const group = screen.getByRole("radiogroup", { name: "Cách thanh toán" })
+    expect(group.className).toContain("flex-col")
+    const radios = within(group).getAllByRole("radio")
+    expect(radios).toHaveLength(2)
+    expect(radios[0].textContent).toContain("Kích hoạt ngay sau khi chuyển khoản")
+    expect(radios[0].getAttribute("aria-checked")).toBe("true")
+    expect(radios[1].textContent).toContain("Chuyển khoản, chờ admin duyệt")
+    fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
+    expect(mut.create).toHaveBeenLastCalledWith({ plan: "pro", period: "year", expectedAmount: 990000, method: "payos" })
+    fireEvent.click(radios[1])
+    expect(radios[1].getAttribute("aria-checked")).toBe("true")
+    fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
+    expect(mut.create).toHaveBeenLastCalledWith({ plan: "pro", period: "year", expectedAmount: 990000, method: "vietqr" })
+  })
+
+  it("payOS chưa sẵn sàng: không có nhóm Cách thanh toán, gửi method vietqr", () => {
+    renderDialog({ me: makeMe({ payosReady: false }) })
+    expect(screen.queryByRole("radiogroup", { name: "Cách thanh toán" })).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
+    expect(mut.create).toHaveBeenCalledWith({ plan: "pro", period: "year", expectedAmount: 990000, method: "vietqr" })
+  })
+
+  it("payOS lỗi khi tạo đơn (payosFailed) → toast lỗi chuyển khoản thường, không toast thành công", () => {
+    renderDialog({ me: makeMe({ payosReady: true }) })
+    fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
+    act(() => mut.createOpts!.onSuccess!({ id: 9, code: "FAILED", bonusMonths: 0, amount: 990000, payosFailed: true }))
+    expect(toast.error).toHaveBeenCalledWith("Chưa tạo được QR tự kích hoạt, dùng chuyển khoản thường.")
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("đơn payOS vừa tạo đã được kích hoạt (không còn đơn chờ, đơn mới nhất approved) → khung đã kích hoạt", () => {
+    const { rerender } = renderDialog({ me: makeMe({ payosReady: true }) })
+    fireEvent.click(screen.getByRole("button", { name: "Tạo đơn" }))
+    act(() => mut.createOpts!.onSuccess!({ id: 11, code: "PAIDOK", bonusMonths: 0, amount: 990000, payosFailed: false }))
+    meQ.isFetching = false
+    rerender({ me: makeMe({ payosReady: true, pendingOrder: null, orders: [{ id: 11, status: "approved" }] as unknown as Me["orders"] }) })
+    expect(screen.getByText("Đã nhận tiền, gói đã được kích hoạt.")).toBeTruthy()
+    expect(screen.queryByTestId("purchase-load-error")).toBeNull()
   })
 })
