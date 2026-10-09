@@ -584,6 +584,7 @@
   "admin_cannot_approve": "Không duyệt được: tài khoản đang có gói Pro còn hạn",
   "admin_order_expires": "Hết hạn lúc {date}",
   "admin_accounts_plans": "Tài khoản & gói",
+  "admin_decided_payos": "Tự kích hoạt (payOS)",
   "admin_order_history": "Lịch sử đơn",
   "admin_tab_orders": "Đơn chờ",
   "admin_tab_accounts": "Tài khoản",

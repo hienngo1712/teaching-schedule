@@ -32,7 +32,7 @@ const PAID_KEY = {
 } as const
 
 // Chữ cố định, không dịch (spec AG §6).
-function MethodTag({ method }: { method: string }) {
+export function MethodTag({ method }: { method: string }) {
   return (
     <span className="rounded-full bg-slate-100 px-2 text-xs font-medium leading-5 text-slate-700">
       {method === "payos" ? "payOS" : "VietQR"}

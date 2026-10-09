@@ -248,6 +248,7 @@ export async function getOrderHistory(db: PrismaClient) {
       creditDays: true,
       status: true,
       source: true,
+      method: true,
       grantedUntil: true,
       note: true,
       decidedBy: true,

@@ -7,6 +7,7 @@ import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { formatValidUntil, planLabel } from "@/lib/plans"
 import { formatCurrency } from "@/lib/utils"
 import { dateOrDash, periodKey } from "./admin-format"
+import { MethodTag } from "./AdminPendingOrders"
 
 type Row = RouterOutputs["admin"]["orderHistory"][number]
 
@@ -23,7 +24,7 @@ export function AdminOrderHistory() {
 
   const status = (s: string) => (s in STATUS_KEY ? t(STATUS_KEY[s as keyof typeof STATUS_KEY]) : s)
   const granted = (o: Row) => (o.grantedUntil ? formatValidUntil(new Date(o.grantedUntil)) : "-")
-  const decided = (o: Row) => `${o.decidedBy ?? "-"} · ${dateOrDash(o.decidedAt)}`
+  const decided = (o: Row) => `${o.decidedBy === "payos" ? t("admin_decided_payos") : o.decidedBy ?? "-"} · ${dateOrDash(o.decidedAt)}`
 
   const columns: Column<Row>[] = [
     { header: t("admin_col_created"), cell: (o) => dateOrDash(o.createdAt) },
@@ -31,7 +32,15 @@ export function AdminOrderHistory() {
     { header: t("admin_col_plan"), cell: (o) => planLabel(o.plan) },
     { header: t("admin_col_period"), cell: (o) => t(periodKey(o.period)) },
     { header: t("payment_amount"), cell: (o) => formatCurrency(o.amount), className: "whitespace-nowrap text-right" },
-    { header: t("admin_col_code"), cell: (o) => <span className="font-mono">{o.code ?? "-"}</span> },
+    {
+      header: t("admin_col_code"),
+      cell: (o) => (
+        <span className="inline-flex items-center gap-2">
+          <span className="font-mono">{o.code ?? "-"}</span>
+          {o.source === "user" && <MethodTag method={o.method} />}
+        </span>
+      ),
+    },
     { header: t("admin_col_status"), cell: (o) => status(o.status) },
     { header: t("admin_col_granted"), cell: granted },
     { header: t("admin_col_decided"), cell: decided },
@@ -61,7 +70,10 @@ export function AdminOrderHistory() {
                   {planLabel(o.plan)} · {t(periodKey(o.period))} · {formatCurrency(o.amount)}
                 </p>
               </div>
-              <span className="shrink-0 font-mono">{o.code ?? "-"}</span>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="font-mono">{o.code ?? "-"}</span>
+                {o.source === "user" && <MethodTag method={o.method} />}
+              </span>
             </div>
             <p className="font-medium text-foreground">{status(o.status)}</p>
             <p className="text-xs text-slate-500">
