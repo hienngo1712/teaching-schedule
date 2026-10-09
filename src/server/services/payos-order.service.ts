@@ -1,7 +1,29 @@
 import { Prisma, type PrismaClient } from "@prisma/client"
-import { getPayosConfig, parsePayosDateTime, verifyWebhookSignature } from "@/server/payos"
+import { ORDER_TTL_DAYS, addDays } from "@/lib/plans"
+import { createPaymentLink, getPayosConfig, parsePayosDateTime, verifyWebhookSignature } from "@/server/payos"
 import { expireStaleOrders } from "./plan.service"
 import { activateOrderInTx } from "./plan-admin.service"
+
+// false = payOS lỗi → caller đổi đơn sang vietqr (không chặn người mua).
+export async function attachPayosLink(db: PrismaClient, order: { id: number; code: string; amount: number; createdAt: Date }, origin: string): Promise<boolean> {
+  const cfg = getPayosConfig()
+  if (!cfg) return false
+  try {
+    const link = await createPaymentLink(cfg, {
+      orderCode: order.id,
+      amount: order.amount,
+      description: `SM ${order.code}`,
+      returnUrl: `${origin}/plan`,
+      cancelUrl: `${origin}/plan`,
+      expiredAt: Math.floor(addDays(order.createdAt, ORDER_TTL_DAYS).getTime() / 1000),
+    })
+    await db.planOrder.update({ where: { id: order.id }, data: { payosLinkId: link.paymentLinkId, payosQr: link.qrCode, payosCheckoutUrl: link.checkoutUrl } })
+    return true
+  } catch (e) {
+    console.warn(`[payos] tạo link đơn ${order.id} lỗi: ${e instanceof Error ? e.message : "?"}`)
+    return false
+  }
+}
 
 type WebhookData = { orderCode: number; amount: number; reference: string; transactionDateTime: string; paymentLinkId: string }
 

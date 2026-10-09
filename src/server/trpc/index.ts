@@ -11,6 +11,7 @@ export type Context = {
   session: Session | null
   userId: number | null
   ip: string | null
+  origin?: string | null
 }
 
 export async function createTRPCContext(
@@ -33,7 +34,7 @@ export async function createTRPCContext(
   const fwd = opts.req.headers.get("x-forwarded-for")
   const ip = fwd?.split(",")[0]?.trim() ?? opts.req.headers.get("x-real-ip")
 
-  return { db, session, userId, ip }
+  return { db, session, userId, ip, origin: new URL(opts.req.url).origin }
 }
 
 const t = initTRPC.context<Context>().create({

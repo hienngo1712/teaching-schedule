@@ -10,6 +10,7 @@ export const createOrderSchema = z.object({
   plan: z.enum(["plus", "pro"]),
   period: z.enum(PERIODS),
   expectedAmount: z.number().int().positive().optional(),
+  method: z.enum(["payos", "vietqr"]).optional(),
 })
 
 // Giá lẻ được phép (người dùng chốt Q12); khoảng chỉ để chặn gõ thừa/thiếu số 0. ×20 tối đa 20 triệu vẫn vừa Int.
