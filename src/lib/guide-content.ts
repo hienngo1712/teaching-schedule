@@ -145,6 +145,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       { text: "Trong app: **Cài đặt**, thẻ **Tự đánh dấu học phí bằng payOS**, dán 3 khoá rồi bấm **Kết nối**.", shot: "cai-payos" },
       { text: "Gửi phiếu như thường: phiếu có QR payOS đúng số đang nợ, phụ huynh quét để trả.", shot: "phieu-payos" },
       { text: "Tiền vào: tháng tự thành **Đã đóng đủ**, huy hiệu hiện **PH đã chuyển … lúc … ngày …**.", shot: "da-chuyen-payos" },
+      { text: "Chuông 🔔 trên cùng báo ngay khoản vừa vào và của học sinh nào, không cần tải lại trang; bấm một dòng để mở học sinh đó.", shot: "chuong-payos" },
     ],
     tips: ["Cần hỗ trợ cài payOS? Gọi, nhắn Zalo hoặc Facebook cho admin ở mục **Cần hỗ trợ?** cuối trang."],
   },
