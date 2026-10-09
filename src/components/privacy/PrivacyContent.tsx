@@ -5,6 +5,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { CONSENT_TEXT_VERSION } from "@/lib/consent"
 import { PRIVACY_CONTACT } from "@/lib/privacy"
 import { PrivacySummary } from "@/components/privacy/PrivacySummary"
+import { ContactOwner } from "@/components/common/ContactOwner"
 
 const SECTIONS = [
   ["privacy_collect_title", "privacy_collect_body"],
@@ -24,6 +25,7 @@ export function PrivacyContent() {
         <section key={title} className="space-y-2">
           <h2 className="text-lg font-semibold text-slate-900">{t(title)}</h2>
           <p className="leading-relaxed">{t(body).replace("{contact}", PRIVACY_CONTACT)}</p>
+          {title === "privacy_delete_title" && <ContactOwner />}
         </section>
       ))}
       <p className="text-sm text-slate-500">{t("privacy_version").replace("{v}", CONSENT_TEXT_VERSION)}</p>
