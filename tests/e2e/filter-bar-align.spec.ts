@@ -1,28 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 
-// Hàng bộ lọc desktop: ô tìm và các bộ lọc liền nhau dồn từ trái sang, cùng chiều cao, không bị đẩy sát phải.
+// Thanh lọc (FilterBar): vị trí ô tìm, nút Bộ lọc, nút phụ ở các màn danh sách.
 async function login(page: Page) {
   await page.goto('/login');
   await page.fill('input[name="username"]', 'teacher');
   await page.fill('input[name="password"]', 'teacher123');
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/.*dashboard/);
-}
-
-async function leftLayout(page: Page) {
-  await expect(page.locator('main [role="combobox"]:visible').first()).toBeVisible();
-  return page.evaluate(() => {
-    const search = document.querySelector<HTMLElement>('main input[placeholder]')!.getBoundingClientRect();
-    const first = [...document.querySelectorAll<HTMLElement>('main [role="combobox"]')]
-      .filter((el) => el.offsetParent)
-      .map((el) => el.getBoundingClientRect())
-      .sort((a, b) => a.left - b.left)[0];
-    return {
-      gap: Math.round(first.left - search.right),
-      sameRow: Math.abs(first.top - search.top) < 8,
-      h: [Math.round(search.height), Math.round(first.height)],
-    };
-  });
 }
 
 // AK: ô lọc vào nút "Bộ lọc" (popover). Thanh 1 hàng ở 1280px: ô tìm → (Trạng thái) → Bộ lọc, không cuộn ngang.
