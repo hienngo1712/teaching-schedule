@@ -1,9 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { RotateCcw, Trash2 } from "lucide-react"
+import { MoreHorizontal, RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
@@ -112,24 +118,10 @@ export function TrashList() {
 
   return (
     <div className="space-y-4 pb-14">
-      <PageHeader
-        title={t("trash")}
-        description={t("trash_hint")}
-        actions={
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 md:h-10"
-            disabled={total === 0}
-            onClick={() => setPurgeTarget("all")}
-          >
-            <Trash2 className="mr-2 size-4" />
-            {t("purge_all")}
-          </Button>
-        }
-      />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div role="tablist" aria-label={t("trash")} className="flex flex-wrap gap-2">
+      <PageHeader title={t("trash")} description={t("trash_hint")} />
+      {/* AK: điện thoại 4 tab 1 hàng cuộn ngang; 2 nút dọn gom vào ⋯ cạnh tab. */}
+      <div className="flex items-center gap-2">
+        <div role="tablist" aria-label={t("trash")} className="flex min-w-0 flex-1 gap-2 overflow-x-auto md:flex-wrap">
           {TRASH_TYPES.map((k) => (
             <button
               key={k}
@@ -138,7 +130,7 @@ export function TrashList() {
               aria-selected={type === k}
               onClick={() => { setType(k); setPage(1) }}
               className={cn(
-                "min-h-11 rounded-full border px-4 text-sm font-medium md:min-h-9",
+                "min-h-11 shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-medium md:min-h-9",
                 type === k ? "border-primary bg-primary text-primary-foreground" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
               )}
             >
@@ -146,15 +138,30 @@ export function TrashList() {
             </button>
           ))}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700 md:h-9"
-          disabled={tabCount === 0}
-          onClick={() => setPurgeTarget(type)}
-        >
-          {t("purge_tab").replace("{n}", String(tabCount))}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" size="icon" className="size-11 shrink-0 md:size-9" aria-label={t("more_actions")}>
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              className="min-h-11 text-red-600 focus:text-red-700 md:min-h-9"
+              disabled={tabCount === 0}
+              onSelect={() => setPurgeTarget(type)}
+            >
+              {t("purge_tab").replace("{n}", String(tabCount))}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="min-h-11 gap-2 text-red-600 focus:text-red-700 md:min-h-9"
+              disabled={total === 0}
+              onSelect={() => setPurgeTarget("all")}
+            >
+              <Trash2 className="size-4" />
+              {t("purge_all")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <ResponsiveList
         isLoading={list.isPending}
