@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
+import { cn } from "@/lib/utils"
 
 export type FilterChip = { key: string; label: string; onRemove: () => void }
 export type MoreAction = {
@@ -162,7 +163,8 @@ function CompactFilterBar({
       ))}
 
       {(period || actions || (moreActions && moreActions.length > 0)) && (
-        <div className="order-2 flex min-w-0 items-center gap-2 md:order-none md:ml-auto">
+        // Có kỳ thì cụm này giãn hết hàng 2 trên điện thoại để nút kỳ co/cắt chữ thay vì tràn.
+        <div className={cn("order-2 flex items-center gap-2 md:order-none md:ml-auto", period && "flex-1 justify-end md:flex-none")}>
           {period}
           {actions}
           {moreActions && moreActions.length > 0 && (

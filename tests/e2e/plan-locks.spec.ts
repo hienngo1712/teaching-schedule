@@ -153,8 +153,8 @@ test('Plus mở /reports?type=year&grade=5: báo cáo 1 tháng, Năm/Khoảng v�
   await page.goto('/reports?type=year&grade=5');
   await expect(page.getByTestId('reports-locked')).toHaveCount(0);
   await expect(page.getByRole('alert')).toHaveCount(0);
-  // 390px: ô lọc lớp nằm trong sheet "Lọc" của FilterBar.
-  await page.getByRole('button', { name: /^Lọc/ }).click();
+  // 390px: ô lọc lớp nằm trong sheet "Bộ lọc" của FilterBar.
+  await page.getByRole('button', { name: /^Bộ lọc/ }).click();
   const gradeBtn = page.getByRole('dialog').getByRole('button', { name: /Tất cả lớp/ });
   await gradeBtn.click();
   await expect(upgrade(page)).toContainText(PRO_TEXT);

@@ -136,6 +136,7 @@
   "already_have_account": "Already have an account?",
   "login_now": "Login now",
   "month": "Month",
+  "month_abbr": "M",
   "month_year_label": "Month {month} / {year}",
   "tuition_detail": "Tuition Detail",
   "fee_breakdown": "Fee Breakdown",

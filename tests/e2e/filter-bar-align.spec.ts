@@ -43,21 +43,33 @@ for (const path of ['/students', '/tuition']) {
   });
 }
 
-test('bộ lọc /reports (không ô tìm) dồn sát mép trái khung lọc ở 1280px', async ({ page }) => {
+// AK: Báo cáo = Bộ lọc · kỳ · Xuất Excel trên 1 hàng; chọn lớp trong Bộ lọc ra chip.
+test('/reports 1280px: Bộ lọc, kỳ báo cáo, Xuất Excel cùng 1 hàng; chọn lớp có chip', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await login(page);
   await page.goto('/reports');
-  await expect(page.locator('main [role="combobox"]:visible').first()).toBeVisible();
-  const diff = await page.evaluate(() => {
-    const h1 = document.querySelector<HTMLElement>('main h1')!.getBoundingClientRect();
-    const first = [...document.querySelectorAll<HTMLElement>('main [role="combobox"]')]
-      .filter((el) => el.offsetParent)
-      .map((el) => el.getBoundingClientRect())
-      .sort((a, b) => a.left - b.left)[0];
-    return Math.abs(Math.round(first.left - h1.left));
-  });
-  // Bộ lọc nằm trong khung trắng (viền 1px + padding 16px) như thanh Lịch dạy.
-  expect(diff).toBeLessThanOrEqual(20);
+  const filter = page.getByRole('button', { name: /^Bộ lọc/ });
+  const excel = page.getByRole('button', { name: /Xuất Excel/ });
+  await expect(filter).toBeVisible();
+  await expect(excel).toBeVisible();
+  const [fb, eb] = [(await filter.boundingBox())!, (await excel.boundingBox())!];
+  expect(Math.abs(fb.y - eb.y)).toBeLessThanOrEqual(4);
+  await filter.click();
+  await page.getByRole('dialog').getByRole('combobox', { name: 'Lớp' }).click();
+  await page.getByRole('option', { name: 'Lớp 5' }).click();
+  await expect(page).toHaveURL(/grade=5/);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Bỏ lọc Lớp 5' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Bộ lọc (1)' })).toBeVisible();
+});
+
+// [RF 2] chế độ Khoảng ở 360px: nhãn rút gọn, không cuộn ngang.
+test('/reports 360px chế độ Khoảng: nhãn T1–T3/2026, không tràn ngang', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await login(page);
+  await page.goto('/reports?type=range&year=2026&month=1&toYear=2026&toMonth=3');
+  await expect(page.getByText('T1–T3/2026')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test('mobile 390px vẫn dùng nút Lọc, không hiện ô chọn ngoài trang', async ({ page }) => {

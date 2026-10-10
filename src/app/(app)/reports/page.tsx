@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { 
   Select, 
   SelectContent, 
@@ -12,7 +13,7 @@ import {
   SelectValue 
 } from "@/components/ui/select"
 import { PageHeader } from "@/components/common/PageHeader"
-import { FilterBar } from "@/components/common/FilterBar"
+import { FilterBar, type FilterChip } from "@/components/common/FilterBar"
 import { StatCard } from "@/components/common/StatCard"
 import { StudentReport } from "./StudentReport"
 import { GRADES } from "@/lib/constants"
@@ -39,6 +40,7 @@ export default function ReportsPage() {
     toYear: filterToYear,
     toMonth: filterToMonth,
     filterType,
+    clearFilters,
   } = useFilters()
   const reportGate = useFeatureGate("monthlyReport")
   const multiGate = useFeatureGate("multiMonthReport")
@@ -95,7 +97,13 @@ export default function ReportsPage() {
   })) as SessionItem[]
 
   const money = (v?: number) => (v === undefined ? undefined : formatCurrency(v))
-  const activeFilterCount = (grade ? 1 : 0) + (selectedStudentId ? 1 : 0)
+  const isDesktop = useMediaQuery("(min-width: 768px)")
+  const activeChips: FilterChip[] = []
+  if (grade) activeChips.push({ key: "grade", label: `${t("grade")} ${grade}`, onRemove: () => setGradeFilter(null) })
+  if (selectedStudentId) {
+    const name = students.find((s) => s.id === selectedStudentId)?.fullName ?? t("student")
+    activeChips.push({ key: "student", label: name, onRemove: () => setSelectedStudentId(null) })
+  }
 
   const reportLocked = reportGate.locked
   const reportPlan = reportGate.requiredPlan
@@ -137,17 +145,22 @@ export default function ReportsPage() {
       />
 
       <FilterBar
+        period={<ReportPeriodPicker multiMonthLocked={multiGate.locked} onLockedClick={multiGate.openUpgrade} />}
+        // Ngoại lệ AK: Xuất Excel giữ ngoài thanh; điện thoại chỉ còn icon.
         actions={
-          <>
-            <ExportExcelButton sessions={sessions} students={students} />
-            <ReportPeriodPicker multiMonthLocked={multiGate.locked} onLockedClick={multiGate.openUpgrade} />
-          </>
+          <ExportExcelButton
+            sessions={sessions}
+            students={students}
+            iconOnly={!isDesktop}
+            className={isDesktop ? "h-10" : "size-11 shrink-0"}
+          />
         }
-        activeCount={activeFilterCount}
+        activeChips={activeChips}
+        onClearAll={() => clearFilters(["grade"])}
         filters={
           <>
             {multiGate.locked ? (
-              <Button type="button" variant="outline" className="h-10 gap-2" onClick={multiGate.openUpgrade}>
+              <Button type="button" variant="outline" className="h-11 w-full justify-between gap-2" onClick={multiGate.openUpgrade}>
                 {t("all_grades")}
                 <LockBadge plan={multiGate.requiredPlan} />
               </Button>
@@ -156,7 +169,7 @@ export default function ReportsPage() {
                 value={gradeFilter?.toString() || "all"}
                 onValueChange={(v) => setGradeFilter(v === "all" ? null : parseInt(v))}
               >
-                <SelectTrigger className="w-[130px]">
+                <SelectTrigger aria-label={t("grade")}>
                   <SelectValue placeholder={t("grade")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -171,7 +184,7 @@ export default function ReportsPage() {
               value={selectedStudentId?.toString() || "none"}
               onValueChange={(v) => setSelectedStudentId(v === "none" ? null : parseInt(v))}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger aria-label={t("student")}>
                 <SelectValue placeholder={t("student")} />
               </SelectTrigger>
               <SelectContent>
