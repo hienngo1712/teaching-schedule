@@ -13,6 +13,17 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.19.0",
+    date: "2026-10-11",
+    title: "Bộ lọc gọn, thẻ Còn nợ rõ hơn",
+    summary: "Thanh lọc gọn trên mọi màn và thẻ Còn nợ tách nợ tháng này với nợ cũ.",
+    notify: true,
+    items: [
+      { kind: "improve", title: "Thanh lọc gọn hơn", body: "Lọc ít dùng nằm trong nút Bộ lọc; đang lọc gì hiện thành chip ngay dưới thanh, bấm ✕ để bỏ." },
+      { kind: "improve", title: "Thẻ Còn nợ", body: "Thẻ Còn nợ ghi riêng nợ tháng này và các tháng trước." },
+    ],
+  },
+  {
     version: "0.18.0",
     date: "2026-10-09",
     title: "Chuông báo tiền payOS",
