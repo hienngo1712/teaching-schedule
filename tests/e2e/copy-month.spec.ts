@@ -110,7 +110,7 @@ test('mobile 390px: Tạo ca dạy ▾ và mục menu ≥44px, thanh lọc khôn
   await page.goto('/calendar?year=2030&month=1');
 
   const createBtn = (await page.getByRole('button', { name: 'Tạo ca dạy' }).filter({ visible: true }).first().boundingBox())!;
-  const exportBtn = (await page.getByRole('button', { name: 'Xuất Excel' }).boundingBox())!;
+  const exportBtn = (await page.getByRole('button', { name: 'Thêm thao tác' }).boundingBox())!;
   expect(createBtn.height).toBeGreaterThanOrEqual(44);
   expect(exportBtn.height).toBeGreaterThanOrEqual(44);
   expect(exportBtn.width).toBeGreaterThanOrEqual(44);

@@ -13,7 +13,8 @@ vi.mock("@/hooks/useFeatureGate", () => ({
   useFeatureGate: () => ({ locked: false, allowed: true, requiredPlan: "plus", openUpgrade: vi.fn(), guard: (fn: () => void) => fn }),
 }))
 vi.mock("@/components/reports/ExportExcelButton", () => ({
-  ExportExcelButton: () => <button type="button">Xuất Excel</button>,
+  ExportExcelButton: ({ asSubmenu }: { asSubmenu?: boolean }) =>
+    asSubmenu ? <div role="menuitem">Xuất Excel</div> : <button type="button">Xuất Excel</button>,
 }))
 
 import { CalendarToolbar } from "@/components/calendar/CalendarToolbar"
@@ -50,10 +51,17 @@ describe("CalendarToolbar — thanh lọc AK", () => {
     expect(String(push.mock.calls.at(-1)?.[0])).not.toContain("grade=")
   })
 
-  it("không còn nút Lịch lặp / Chép lịch tháng / Tạo ca dạy trong thanh (đã lên đầu trang)", () => {
+  it("không còn nút Lịch lặp / Chép lịch tháng trong thanh (đã vào Tạo ca dạy ▾)", () => {
     renderAt("")
     expect(screen.queryByRole("button", { name: "Lịch lặp" })).toBeNull()
     expect(screen.queryByTestId("copy-month-button")).toBeNull()
-    expect(screen.getByRole("button", { name: "Xuất Excel" })).toBeTruthy()
+  })
+
+  // Người dùng chốt: Xuất Excel vào ⋯ (riêng Báo cáo giữ ngoài).
+  it("Xuất Excel nằm trong menu ⋯, không còn nút riêng trên thanh", async () => {
+    renderAt("")
+    expect(screen.queryByRole("button", { name: "Xuất Excel" })).toBeNull()
+    fireEvent.keyDown(screen.getByRole("button", { name: "Thêm thao tác" }), { key: "Enter" })
+    expect(await screen.findByRole("menuitem", { name: "Xuất Excel" })).toBeTruthy()
   })
 })

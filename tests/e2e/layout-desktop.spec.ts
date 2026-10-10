@@ -91,15 +91,17 @@ test.describe('Sidebar desktop 1280px', () => {
     await expect(page.getByRole('dialog').getByRole('checkbox')).toHaveCSS('border-radius', '4px');
   });
 
-  // AK: Lịch lặp vào menu ▾ của Tạo ca dạy → so chiều cao với ô tìm của thanh lọc.
-  test('màn Lịch: nút Xuất Excel chỉ icon, cao bằng ô tìm thanh lọc (spec P10)', async ({ page }) => {
+  // AK: Xuất Excel ở Lịch là menu con trong ⋯; nút ⋯ cao bằng ô tìm của thanh lọc.
+  test('màn Lịch: ⋯ cao bằng ô tìm, trong có Xuất Excel mở các kiểu xuất', async ({ page }) => {
     await page.goto('/calendar');
-    const exp = page.getByRole('button', { name: 'Xuất Excel' });
-    await expect(exp).toHaveAttribute('title', 'Xuất Excel');
-    await expect(exp).toHaveText('');
-    const h = (await exp.boundingBox())!.height;
+    await expect(page.getByRole('button', { name: 'Xuất Excel' })).toHaveCount(0);
+    const more = page.getByRole('button', { name: 'Thêm thao tác' });
+    const h = (await more.boundingBox())!.height;
     const search = (await page.getByPlaceholder(/Tìm tên học sinh/).boundingBox())!.height;
     expect(Math.abs(h - search)).toBeLessThanOrEqual(1);
+    await more.click();
+    await page.getByRole('menuitem', { name: 'Xuất Excel' }).click();
+    await expect(page.getByRole('menuitem', { name: /Xuất lịch tháng/ })).toBeVisible();
   });
 });
 

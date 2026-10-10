@@ -41,14 +41,16 @@ type Props = {
   period?: ReactNode
   actions?: ReactNode
   moreActions?: MoreAction[]
+  // Nội dung tự dựng thêm vào cuối menu ⋯ (vd. menu con Xuất Excel ở Lịch).
+  moreContent?: ReactNode
   activeCount?: number
 }
 
 export function FilterBar(props: Props) {
-  const { primaryFilter, activeChips, onClearAll, period, moreActions } = props
+  const { primaryFilter, activeChips, onClearAll, period, moreActions, moreContent } = props
   // Chỗ chưa chuyển (không truyền prop AK nào) giữ nguyên bố cục cũ.
   const compact = primaryFilter !== undefined || activeChips !== undefined || onClearAll !== undefined
-    || period !== undefined || moreActions !== undefined
+    || period !== undefined || moreActions !== undefined || moreContent !== undefined
   return compact ? <CompactFilterBar {...props} /> : <LegacyFilterBar {...props} />
 }
 
@@ -117,13 +119,14 @@ function LegacyFilterBar({ search, filters, activeCount = 0, actions }: Props) {
 }
 
 function CompactFilterBar({
-  search, primaryFilter, filters, activeChips, onClearAll, period, actions, moreActions, activeCount = 0,
+  search, primaryFilter, filters, activeChips, onClearAll, period, actions, moreActions, moreContent, activeCount = 0,
 }: Props) {
   const { t } = useTranslation()
   // Chỉ mount popover HOẶC sheet theo khổ màn → `filters` không bao giờ render 2 lần.
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const [sheetOpen, setSheetOpen] = useState(false)
   const n = activeChips ? activeChips.length : activeCount
+  const hasMore = (moreActions && moreActions.length > 0) || !!moreContent
   const clearAll = n > 0 && onClearAll && (
     <Button variant="ghost" className="h-11 px-3 text-primary md:h-9" onClick={onClearAll}>
       {t("filter_clear_all")}
@@ -173,12 +176,12 @@ function CompactFilterBar({
         </Sheet>
       ))}
 
-      {(period || actions || (moreActions && moreActions.length > 0)) && (
+      {(period || actions || hasMore) && (
         // Có kỳ thì cụm này giãn hết hàng 2 trên điện thoại để nút kỳ co/cắt chữ thay vì tràn.
         <div className={cn("order-2 flex items-center gap-2 md:order-none md:ml-auto", period && "flex-1 justify-end md:flex-none")}>
           {period}
           {actions}
-          {moreActions && moreActions.length > 0 && (
+          {hasMore && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="size-11 shrink-0 md:size-10" aria-label={t("more_actions")}>
@@ -186,13 +189,14 @@ function CompactFilterBar({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {moreActions.map((a) => (
+                {moreActions?.map((a) => (
                   <DropdownMenuItem key={a.key} className="min-h-11 md:min-h-9" disabled={a.disabled} onSelect={a.onSelect}>
                     {a.icon}
                     {a.label}
                     {a.locked}
                   </DropdownMenuItem>
                 ))}
+                {moreContent}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

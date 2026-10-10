@@ -61,7 +61,7 @@ export function CalendarToolbar({
     })
   }
 
-  // AK: tiêu đề + Tạo ca dạy ▾ ở đầu trang; thanh lọc dùng FilterBar chung (Xuất Excel giữ icon có menu riêng).
+  // AK: tiêu đề + Tạo ca dạy ▾ ở đầu trang; thanh lọc dùng FilterBar chung, Xuất Excel là menu con trong ⋯.
   return (
     <div className="space-y-4">
       <PageHeader
@@ -106,9 +106,7 @@ export function CalendarToolbar({
             </Button>
           </div>
         }
-        actions={
-          <ExportExcelButton sessions={sessions} students={students} iconOnly className="size-11 shrink-0 md:size-10" />
-        }
+        moreContent={<ExportExcelButton sessions={sessions} students={students} asSubmenu />}
       />
     </div>
   )
