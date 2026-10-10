@@ -1,8 +1,10 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect } from "vitest"
-import { render, screen } from "@testing-library/react"
+import type { ComponentProps } from "react"
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, screen, within, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { FilterBar } from "@/components/common/FilterBar"
 
@@ -49,5 +51,81 @@ describe("FilterBar — dồn trái trên desktop (spec S1)", () => {
     expect(card.contains(action)).toBe(true)
     expect(card.contains(screen.getByPlaceholderText("Tìm kiếm..."))).toBe(true)
     expect((action.parentElement as HTMLElement).className).toContain("md:ml-auto")
+  })
+})
+
+// AK: Bộ lọc popover (laptop) / sheet (điện thoại), hàng chip, menu ⋯.
+const desktop = vi.hoisted(() => ({ value: true }))
+vi.mock("@/hooks/useMediaQuery", () => ({ useMediaQuery: () => desktop.value }))
+
+function bar(props: Partial<ComponentProps<typeof FilterBar>>) {
+  return (
+    <LanguageProvider forcedLanguage="vi">
+      <FilterBar filters={<span>Ô lọc lớp</span>} {...props} />
+    </LanguageProvider>
+  )
+}
+
+const twoChips = (onRemove = vi.fn()) => [
+  { key: "grade", label: "Lớp 5", onRemove },
+  { key: "notice", label: "Chưa gửi", onRemove: vi.fn() },
+]
+
+describe("FilterBar AK — Bộ lọc, chip, ⋯", () => {
+  beforeEach(() => {
+    desktop.value = true
+  })
+
+  it("laptop: nút Bộ lọc (2) mở popover có ô lọc, Xoá lọc gọi onClearAll", async () => {
+    const onClearAll = vi.fn()
+    render(bar({ activeChips: twoChips(), onClearAll }))
+    await userEvent.click(screen.getByRole("button", { name: "Bộ lọc (2)" }))
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByText("Ô lọc lớp")).toBeTruthy()
+    await userEvent.click(within(dialog).getByRole("button", { name: "Xoá lọc" }))
+    expect(onClearAll).toHaveBeenCalledTimes(1)
+  })
+
+  it("điện thoại: nút Bộ lọc mở sheet, bấm Xong thì đóng", async () => {
+    desktop.value = false
+    render(bar({ activeChips: [], onClearAll: vi.fn() }))
+    await userEvent.click(screen.getByRole("button", { name: "Bộ lọc" }))
+    expect(await screen.findByText("Ô lọc lớp")).toBeTruthy()
+    await userEvent.click(screen.getByRole("button", { name: "Xong" }))
+    await waitFor(() => expect(screen.queryByText("Ô lọc lớp")).toBeNull())
+  })
+
+  it("chip: bấm ✕ gọi onRemove đúng chip; không có chip thì không có hàng chip", async () => {
+    const onRemove = vi.fn()
+    const { rerender } = render(bar({ activeChips: twoChips(onRemove), onClearAll: vi.fn() }))
+    await userEvent.click(screen.getByRole("button", { name: "Bỏ lọc Lớp 5" }))
+    expect(onRemove).toHaveBeenCalledTimes(1)
+    rerender(bar({ activeChips: [], onClearAll: vi.fn() }))
+    expect(screen.queryByRole("button", { name: /^Bỏ lọc/ })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Xoá lọc" })).toBeNull()
+  })
+
+  it("⋯: mở Thêm thao tác rồi chọn Xuất Excel gọi onSelect", async () => {
+    const onSelect = vi.fn()
+    render(bar({ moreActions: [{ key: "excel", label: "Xuất Excel", onSelect }] }))
+    await userEvent.click(screen.getByRole("button", { name: "Thêm thao tác" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Xuất Excel" }))
+    expect(onSelect).toHaveBeenCalledTimes(1)
+  })
+
+  it("tương thích: chỉ search + filters + activeCount như cũ → nút ghi Bộ lọc (1)", () => {
+    render(bar({ search: { value: "", onChange: () => {}, placeholder: "Tìm" }, activeCount: 1 }))
+    expect(screen.getByRole("button", { name: "Bộ lọc (1)" })).toBeTruthy()
+  })
+
+  // [RF 1] đổi khổ khi popover đang mở: ô lọc không render 2 lần
+  it("popover đang mở rồi thu xuống điện thoại: ô lọc chỉ có tối đa 1 bản", async () => {
+    const props = { activeChips: twoChips(), onClearAll: vi.fn() }
+    const { rerender } = render(bar(props))
+    await userEvent.click(screen.getByRole("button", { name: "Bộ lọc (2)" }))
+    await screen.findByRole("dialog")
+    desktop.value = false
+    rerender(bar(props))
+    expect(screen.queryAllByText("Ô lọc lớp").length).toBeLessThanOrEqual(1)
   })
 })
