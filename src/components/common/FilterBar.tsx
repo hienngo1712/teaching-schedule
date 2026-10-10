@@ -53,6 +53,7 @@ export function FilterBar(props: Props) {
 }
 
 function SearchBox({ search, className }: { search: NonNullable<Props["search"]>; className: string }) {
+  const { t } = useTranslation()
   return (
     <div className={className}>
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -60,8 +61,18 @@ function SearchBox({ search, className }: { search: NonNullable<Props["search"]>
         value={search.value}
         onChange={(e) => search.onChange(e.target.value)}
         placeholder={search.placeholder}
-        className="h-11 bg-white pl-9 md:h-10"
+        className="h-11 bg-white pl-9 pr-9 md:h-10"
       />
+      {search.value && (
+        <button
+          type="button"
+          aria-label={t("clear_search")}
+          onClick={() => search.onChange("")}
+          className="absolute right-1 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:text-slate-600"
+        >
+          <X className="size-4" />
+        </button>
+      )}
     </div>
   )
 }

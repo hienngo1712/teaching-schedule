@@ -91,14 +91,15 @@ test.describe('Sidebar desktop 1280px', () => {
     await expect(page.getByRole('dialog').getByRole('checkbox')).toHaveCSS('border-radius', '4px');
   });
 
-  test('màn Lịch: nút Xuất Excel chỉ icon, cao bằng nút Lịch lặp (spec P10)', async ({ page }) => {
+  // AK: Lịch lặp vào menu ▾ của Tạo ca dạy → so chiều cao với ô tìm của thanh lọc.
+  test('màn Lịch: nút Xuất Excel chỉ icon, cao bằng ô tìm thanh lọc (spec P10)', async ({ page }) => {
     await page.goto('/calendar');
     const exp = page.getByRole('button', { name: 'Xuất Excel' });
     await expect(exp).toHaveAttribute('title', 'Xuất Excel');
     await expect(exp).toHaveText('');
     const h = (await exp.boundingBox())!.height;
-    const bulk = (await page.getByRole('button', { name: 'Lịch lặp' }).boundingBox())!.height;
-    expect(Math.abs(h - bulk)).toBeLessThanOrEqual(1);
+    const search = (await page.getByPlaceholder(/Tìm tên học sinh/).boundingBox())!.height;
+    expect(Math.abs(h - search)).toBeLessThanOrEqual(1);
   });
 });
 
