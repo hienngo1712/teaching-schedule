@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Phone } from "lucide-react"
+import { ArrowUpCircle, Phone } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
@@ -33,13 +33,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { StudentFormDialog } from "./StudentFormDialog"
 import { ParentLinkDialog } from "./ParentLinkDialog"
-import { UpgradeAllClassesButton } from "./UpgradeAllClassesButton"
+import { UpgradeAllClassesDialog } from "./UpgradeAllClassesButton"
 import { ImportStudentsDialog } from "./ImportStudentsDialog"
 import { AddStudentSplitButton } from "./AddStudentSplitButton"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PageHeader } from "@/components/common/PageHeader"
-import { FilterBar } from "@/components/common/FilterBar"
+import { FilterBar, type FilterChip } from "@/components/common/FilterBar"
 import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
 import { usePlan } from "@/hooks/usePlan"
 import { useFeatureGate } from "@/hooks/useFeatureGate"
@@ -75,6 +75,7 @@ export function StudentList() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active")
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
@@ -195,12 +196,29 @@ export function StudentList() {
     { header: <span className="sr-only">{t("actions")}</span>, cell: actionsMenu, className: "w-12" },
   ]
 
-  const activeFilterCount = (selectedGrade !== null ? 1 : 0) + (statusFilter !== "active" ? 1 : 0)
+  const statusLabel = { active: t("studying"), inactive: t("dropped"), all: t("all_status") }
+  const activeChips: FilterChip[] = []
+  if (selectedGrade !== null) {
+    activeChips.push({ key: "grade", label: `${t("grade")} ${selectedGrade}`, onRemove: () => setGrade(null) })
+  }
+  if (statusFilter !== "active") {
+    activeChips.push({ key: "status", label: statusLabel[statusFilter], onRemove: () => setStatusFilter("active") })
+  }
+  // Nâng lớp hàng loạt: mục trong ⋯, mỗi năm 1 lần (đã nâng thì khoá mục).
+  const upgradeLog = trpc.student.getUpgradeLogThisYear.useQuery()
+  const upgradeDone = !!upgradeLog.data
 
   return (
     <div className="space-y-4">
       <PageHeader
         title={t("students")}
+        actions={
+          <AddStudentSplitButton
+            onAdd={() => (atLimit ? openLimit() : setFormState({ open: true, mode: "create" }))}
+            onImport={() => setImportOpen(true)}
+            addLockPlan={atLimit && me ? minPlanForStudents(me.activeStudents + 1) : null}
+          />
+        }
       />
 
       {atLimit && me && limit !== null && (
@@ -221,25 +239,30 @@ export function StudentList() {
       )}
 
       <FilterBar
-        actions={
-          <>
-            <UpgradeAllClassesButton />
-            <AddStudentSplitButton
-              onAdd={() => (atLimit ? openLimit() : setFormState({ open: true, mode: "create" }))}
-              onImport={() => setImportOpen(true)}
-              addLockPlan={atLimit && me ? minPlanForStudents(me.activeStudents + 1) : null}
-            />
-          </>
-        }
         search={{ value: localSearch, onChange: setLocalSearch, placeholder: t("search_student") }}
-        activeCount={activeFilterCount}
+        activeChips={activeChips}
+        onClearAll={() => {
+          setGrade(null)
+          setStatusFilter("active")
+        }}
+        moreActions={[
+          {
+            key: "upgrade-all",
+            label: upgradeDone
+              ? t("upgrade_all_already_done").replace("{year}", String(new Date().getFullYear()))
+              : t("upgrade_all_button"),
+            icon: <ArrowUpCircle className="size-4" />,
+            disabled: upgradeDone || upgradeLog.isPending,
+            onSelect: () => setUpgradeOpen(true),
+          },
+        ]}
         filters={
           <>
             <Select
               value={selectedGrade === null ? ALL_GRADES_VALUE : String(selectedGrade)}
               onValueChange={(v) => setGrade(v === ALL_GRADES_VALUE ? null : Number(v))}
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger aria-label={t("grade")}>
                 <SelectValue placeholder={t("all_grades")} />
               </SelectTrigger>
               <SelectContent>
@@ -255,7 +278,7 @@ export function StudentList() {
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as "active" | "inactive" | "all")}
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger aria-label={t("status")}>
                 <SelectValue placeholder={t("status")} />
               </SelectTrigger>
               <SelectContent>
@@ -386,6 +409,7 @@ export function StudentList() {
       </AlertDialog>
 
       {importOpen && <ImportStudentsDialog onClose={() => setImportOpen(false)} />}
+      <UpgradeAllClassesDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
     </div>
   )
 }

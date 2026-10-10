@@ -22,7 +22,14 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 
 export type FilterChip = { key: string; label: string; onRemove: () => void }
-export type MoreAction = { key: string; label: string; icon?: ReactNode; onSelect: () => void; locked?: ReactNode }
+export type MoreAction = {
+  key: string
+  label: string
+  icon?: ReactNode
+  onSelect: () => void
+  locked?: ReactNode
+  disabled?: boolean
+}
 
 type Props = {
   search?: { value: string; onChange: (value: string) => void; placeholder: string }
@@ -125,7 +132,8 @@ function CompactFilterBar({
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-3 md:p-4">
       {search && <SearchBox search={search} className="relative min-w-0 flex-1 md:max-w-72" />}
-      {primaryFilter && <div className="shrink-0">{primaryFilter}</div>}
+      {/* Điện thoại: hàng 1 = tìm + Bộ lọc, hàng 2 = ô ngoài (co giãn) + kỳ/⋯. Laptop: đúng thứ tự DOM. */}
+      {primaryFilter && <div className="order-1 min-w-0 flex-1 md:order-none md:flex-none">{primaryFilter}</div>}
 
       {filters && (isDesktop ? (
         <Popover>
@@ -154,7 +162,7 @@ function CompactFilterBar({
       ))}
 
       {(period || actions || (moreActions && moreActions.length > 0)) && (
-        <div className="flex min-w-0 items-center gap-2 md:ml-auto">
+        <div className="order-2 flex min-w-0 items-center gap-2 md:order-none md:ml-auto">
           {period}
           {actions}
           {moreActions && moreActions.length > 0 && (
@@ -166,7 +174,7 @@ function CompactFilterBar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {moreActions.map((a) => (
-                  <DropdownMenuItem key={a.key} className="min-h-11 md:min-h-9" onSelect={a.onSelect}>
+                  <DropdownMenuItem key={a.key} className="min-h-11 md:min-h-9" disabled={a.disabled} onSelect={a.onSelect}>
                     {a.icon}
                     {a.label}
                     {a.locked}
@@ -179,7 +187,7 @@ function CompactFilterBar({
       )}
 
       {activeChips && activeChips.length > 0 && (
-        <div className="flex w-full flex-wrap items-center gap-2 border-t border-slate-100 pt-2">
+        <div className="order-3 flex w-full flex-wrap items-center gap-2 border-t border-slate-100 pt-2 md:order-none">
           {activeChips.map((c) => (
             <button
               key={c.key}

@@ -86,6 +86,15 @@ async function moveSessionToPrevMonth(title: string) {
   expect(res.count).toBe(1);
 }
 
+// AK: ô Phiếu báo nằm trong nút "Bộ lọc" (popover trên laptop, sheet trên điện thoại).
+async function pickNotice(page: Page, name: 'Chưa gửi' | 'Đã gửi') {
+  await page.getByRole('button', { name: /^Bộ lọc/ }).click();
+  await page.getByRole('dialog').getByRole('combobox').filter({ hasText: /^Tất cả$|^Phiếu báo$|^Chưa gửi$|^Đã gửi$/ }).click();
+  await page.getByRole('option', { name }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
+}
+
 test.describe('E2E Đã gửi phiếu học phí (spec V)', () => {
   test('Desktop (1280px): Tải ảnh tự đánh dấu đã gửi, lọc phiếu báo, đổi số tiền hiện nhãn cam', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -132,14 +141,11 @@ test.describe('E2E Đã gửi phiếu học phí (spec V)', () => {
     await expect(row.getByText(/Đã gửi \d+\/\d+/)).toBeVisible();
 
     // Lọc "Chưa gửi" -> không còn em đó
-    const noticeCombobox = page.getByRole('combobox').filter({ hasText: /^Tất cả$|^Phiếu báo$|^Chưa gửi$|^Đã gửi$/ });
-    await noticeCombobox.click();
-    await page.getByRole('option', { name: 'Chưa gửi' }).click();
+    await pickNotice(page, 'Chưa gửi');
     await expect(row).toBeHidden();
 
     // Lọc "Đã gửi" -> em đó xuất hiện
-    await noticeCombobox.click();
-    await page.getByRole('option', { name: 'Đã gửi' }).click();
+    await pickNotice(page, 'Đã gửi');
     await expect(row).toBeVisible();
 
     // Điểm danh thêm 1 buổi có mặt (cũng ở tháng trước) → số tiền đổi
@@ -154,9 +160,7 @@ test.describe('E2E Đã gửi phiếu học phí (spec V)', () => {
     await expect(rowUpdated.getByText('Đã gửi · số tiền đã đổi')).toBeVisible();
 
     // Lọc "Chưa gửi" -> em đó QUAY LẠI trong danh sách chưa gửi
-    const noticeCombobox2 = page.getByRole('combobox').filter({ hasText: /^Tất cả$|^Phiếu báo$|^Chưa gửi$|^Đã gửi$/ });
-    await noticeCombobox2.click();
-    await page.getByRole('option', { name: 'Chưa gửi' }).click();
+    await pickNotice(page, 'Chưa gửi');
     await expect(rowUpdated).toBeVisible();
   });
 
@@ -202,18 +206,7 @@ test.describe('E2E Đã gửi phiếu học phí (spec V)', () => {
     // Danh sách hiện nhãn "Đã gửi"
     await expect(card.getByText(/Đã gửi \d+\/\d+/)).toBeVisible();
 
-    // Mở sheet lọc trên mobile (FilterBar mobile có nút sheet Lọc)
-    const filterBtn = page.getByRole('button', { name: /Lọc|Filter/i });
-    if (await filterBtn.isVisible()) {
-      await filterBtn.click();
-      const filterSheet = page.getByRole('dialog');
-      await filterSheet.getByRole('combobox').filter({ hasText: /^Tất cả$|^Phiếu báo$|^Chưa gửi$|^Đã gửi$/ }).click();
-      await page.getByRole('option', { name: 'Chưa gửi' }).click();
-      await page.keyboard.press('Escape');
-    } else {
-      await page.getByRole('combobox').filter({ hasText: /^Tất cả$|^Phiếu báo$|^Chưa gửi$|^Đã gửi$/ }).click();
-      await page.getByRole('option', { name: 'Chưa gửi' }).click();
-    }
+    await pickNotice(page, 'Chưa gửi');
     await expect(page.getByTestId('list-card').filter({ hasText: studentName })).toBeHidden();
   });
 });

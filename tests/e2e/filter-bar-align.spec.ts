@@ -25,16 +25,21 @@ async function leftLayout(page: Page) {
   });
 }
 
+// AK: ô lọc vào nút "Bộ lọc" (popover). Thanh 1 hàng ở 1280px: ô tìm → (Trạng thái) → Bộ lọc, không cuộn ngang.
 for (const path of ['/students', '/tuition']) {
-  test(`bộ lọc ${path} dồn trái ngay sau ô tìm ở 1280px`, async ({ page }) => {
+  test(`thanh lọc ${path} 1 hàng ở 1280px, Bộ lọc nằm ngay sau ô tìm`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await login(page);
     await page.goto(path);
-    const layout = await leftLayout(page);
-    expect(layout.sameRow).toBe(true);
-    expect(layout.gap).toBeGreaterThanOrEqual(0);
-    expect(layout.gap).toBeLessThanOrEqual(16);
-    expect(Math.abs(layout.h[0] - layout.h[1])).toBeLessThanOrEqual(1);
+    const search = page.getByPlaceholder(/Tìm tên học sinh/);
+    const filter = page.getByRole('button', { name: /^Bộ lọc/ });
+    await expect(search).toBeVisible();
+    await expect(filter).toBeVisible();
+    const [sb, fb] = [(await search.boundingBox())!, (await filter.boundingBox())!];
+    expect(Math.abs(sb.y + sb.height / 2 - (fb.y + fb.height / 2))).toBeLessThanOrEqual(4);
+    expect(fb.x).toBeGreaterThan(sb.x + sb.width);
+    expect(Math.abs(sb.height - fb.height)).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
 
@@ -63,8 +68,8 @@ test('mobile 390px vẫn dùng nút Lọc, không hiện ô chọn ngoài trang'
   await expect(page.locator('main [role="combobox"]:visible')).toHaveCount(0);
 });
 
-// Hotfix 0.8.2: như thanh Lịch dạy — ô tìm, bộ lọc và nút hành động cùng 1 hàng trong 1 khung.
-test('/students 1280px: nút Thêm học sinh cùng hàng với ô tìm, sát mép phải khung', async ({ page }) => {
+// AK: Thêm học sinh lên đầu trang (PageHeader), Nâng lớp hàng loạt vào menu ⋯ của thanh lọc.
+test('/students 1280px: Thêm học sinh ở đầu trang trên thanh lọc, Nâng lớp hàng loạt trong ⋯', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await login(page);
   await page.goto('/students');
@@ -72,7 +77,9 @@ test('/students 1280px: nút Thêm học sinh cùng hàng với ô tìm, sát m�
   const add = page.getByRole('button', { name: /Thêm học sinh/ }).first();
   await expect(search).toBeVisible();
   await expect(add).toBeVisible();
-  const [sb, ab] = [await search.boundingBox(), await add.boundingBox()];
-  expect(Math.abs(sb!.y + sb!.height / 2 - (ab!.y + ab!.height / 2))).toBeLessThanOrEqual(4);
-  expect(ab!.x).toBeGreaterThan(sb!.x + sb!.width);
+  const [sb, ab] = [(await search.boundingBox())!, (await add.boundingBox())!];
+  expect(ab.y + ab.height).toBeLessThan(sb.y);
+  await expect(page.getByRole('button', { name: /Nâng lớp hàng loạt/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Thêm thao tác' }).click();
+  await expect(page.getByRole('menuitem', { name: /Nâng lớp hàng loạt|Đã nâng lớp năm/ })).toBeVisible();
 });
