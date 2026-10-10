@@ -56,11 +56,11 @@ test('/reports 360px chế độ Khoảng: nhãn T1–T3/2026, không tràn ngan
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('mobile 390px vẫn dùng nút Lọc, không hiện ô chọn ngoài trang', async ({ page }) => {
+test('mobile 390px vẫn dùng nút Bộ lọc, không hiện ô chọn ngoài trang', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
   await page.goto('/students');
-  await expect(page.getByRole('button', { name: /Lọc|Filter/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Bộ lọc/ })).toBeVisible();
   await expect(page.locator('main [role="combobox"]:visible')).toHaveCount(0);
 });
 

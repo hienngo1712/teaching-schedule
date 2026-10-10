@@ -118,6 +118,8 @@ test('mobile 390px: Tạo ca dạy ▾ và mục menu ≥44px, thanh lọc khôn
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 
   await openCreateMenu(page);
+  // Đo khi menu còn hiệu ứng mở (zoom-in-95) thì chiều cao bị thu nhỏ → chờ animation xong.
+  await page.getByRole('menu').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const copyBtn = await boxOf(page, 'copy-month-button');
   const bulkBtn = (await page.getByRole('menuitem', { name: 'Lịch lặp' }).boundingBox())!;
   for (const b of [copyBtn, bulkBtn]) expect(b.height).toBeGreaterThanOrEqual(44);
