@@ -308,6 +308,8 @@
   "hint_taught_fees": "Present and late sessions, not money received",
   "hint_collected": "Payments recorded this month",
   "hint_outstanding": "Includes previous months",
+  "unpaid_this_month_part": "This month",
+  "unpaid_prev_months_part": "Earlier months",
   "hint_not_yet_counted": "Absent sessions plus sessions not held or not marked yet",
   "subjects_desc": "Subject colors appear in the session list",
   "add_subject": "Add subject",

@@ -55,7 +55,15 @@ export default function DashboardPage() {
           valueClassName="text-debt"
           loading={isLoading}
           icon={<AlertCircle className="size-4 text-muted-foreground" />}
-          hint={t("hint_outstanding")}
+          hint={
+            stats && (
+              <>
+                {/* Thẻ 2 cột ở 375px hẹp: xuống dòng giữa nhãn và số, không gãy số tiền. */}
+                <p>{t("unpaid_this_month_part")} <span className="whitespace-nowrap">{money(stats.totalUnpaidMonth - stats.unpaidPrevMonths)}</span></p>
+                <p>{t("unpaid_prev_months_part")} <span className="whitespace-nowrap">{money(stats.unpaidPrevMonths)}</span></p>
+              </>
+            )
+          }
         />
       </div>
 

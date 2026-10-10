@@ -11,6 +11,7 @@ const stats = {
   totalRevenueMonth: 1000000,
   totalPaidMonth: 600000,
   totalUnpaidMonth: 400000,
+  unpaidPrevMonths: 150000,
   totalStudents: 5,
   totalSessionsMonth: 12,
   attendanceRate: 90,
@@ -56,5 +57,12 @@ describe("Dashboard — thẻ số liệu", () => {
     const icons = screen.getAllByTestId("stat-card").flatMap((c) => [...c.querySelectorAll("svg")])
     expect(icons).toHaveLength(8)
     for (const svg of icons) expect(svg.getAttribute("class")).toContain("text-muted-foreground")
+  })
+
+  it("Còn nợ ghi riêng nợ tháng này và nợ các tháng trước", () => {
+    renderPage()
+    const card = valueOf("Còn nợ").closest('[data-testid="stat-card"]') as HTMLElement
+    expect(card.textContent).toMatch(/Tháng này\s*250\.000\s*đ/)
+    expect(card.textContent).toMatch(/Các tháng trước\s*150\.000\s*đ/)
   })
 })

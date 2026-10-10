@@ -340,6 +340,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
     totalRevenueMonth,
     expectedRevenueMonth,
     totalUnpaidMonth,
+    unpaidPrevMonths: outstanding.previousOutstanding,
     totalPaidMonth: paidAgg._sum.paidAmount ?? 0,
   }
 }
