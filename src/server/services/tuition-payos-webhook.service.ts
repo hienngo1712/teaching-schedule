@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client"
 import { parsePayosDateTime, verifyWebhookSignature } from "@/server/payos"
 import { recordPaymentFromPayos } from "./payment.service"
+import { handlePlacePayment, PLACE_ORDER_OFFSET } from "./place-paylink.service"
 import { vnTodayIso } from "@/lib/payment-summary"
 
 type Data = { orderCode?: unknown; amount?: unknown; reference?: unknown; transactionDateTime?: unknown; paymentLinkId?: unknown; code?: unknown }
@@ -13,6 +14,13 @@ export async function handleTuitionWebhook(db: PrismaClient, hookId: string, bod
   if (!verifyWebhookSignature(teacher.checksumKey, b.data, b.signature)) return { status: 401 }
   const d = b.data
   if (d.code !== "00" || typeof d.orderCode !== "number" || typeof d.amount !== "number" || typeof d.reference !== "string") return { status: 200, note: "bỏ qua" }
+  const parsed = typeof d.transactionDateTime === "string" ? parsePayosDateTime(d.transactionDateTime) : null
+  // Ngày hỏng mà ném lỗi thì payOS gửi lại mãi, tiền không bao giờ được ghi: lấy giờ nhận.
+  const paidAt = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date()
+  // Phiếu nơi dạy (spec AO): orderCode = PLACE_ORDER_OFFSET + id. Giao dịch thử (orderCode 123) vẫn đi luồng HS bên dưới.
+  if (d.orderCode >= PLACE_ORDER_OFFSET) {
+    return handlePlacePayment(db, teacher.userId, { orderCode: d.orderCode, amount: d.amount, reference: d.reference, paidAt, paymentLinkId: d.paymentLinkId })
+  }
   // Giao dịch thử lúc confirm-webhook (orderCode 123) hay link của GV khác: không khớp thì bỏ qua.
   const link = await db.tuitionPayLink.findUnique({ where: { id: d.orderCode }, include: { student: { select: { isDeleted: true } } } })
   if (!link || link.userId !== teacher.userId || link.payosLinkId !== d.paymentLinkId) return { status: 200, note: "không khớp" }
@@ -21,9 +29,6 @@ export async function handleTuitionWebhook(db: PrismaClient, hookId: string, bod
     return { status: 200, note: "HS đã xoá" }
   }
   if (await db.tuitionPayLinkPayment.findUnique({ where: { linkId_reference: { linkId: link.id, reference: d.reference } }, select: { id: true } })) return { status: 200, note: "gửi lặp" }
-  const parsed = typeof d.transactionDateTime === "string" ? parsePayosDateTime(d.transactionDateTime) : null
-  // Ngày hỏng mà ném lỗi thì payOS gửi lại mãi, tiền không bao giờ được ghi: lấy giờ nhận.
-  const paidAt = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date()
   const reference = d.reference
   const amount = d.amount
   try {

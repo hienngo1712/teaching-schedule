@@ -1,5 +1,6 @@
-import type { PlacePayLink, PrismaClient } from "@prisma/client"
+import { Prisma, type PlacePayLink, type PrismaClient } from "@prisma/client"
 import { cancelPaymentLink, createPaymentLink } from "@/server/payos"
+import { vnTodayIso } from "@/lib/payment-summary"
 import { activeTeacherPayos } from "./payos-teacher.service"
 import { TX_OPTIONS } from "./payment.service"
 
@@ -61,4 +62,41 @@ export async function ensurePlacePayLink(
     console.warn(`[payos] tạo link nơi dạy lỗi: ${e instanceof Error ? e.message : "?"}`)
     return { link: null, failed: true }
   }
+}
+
+// Webhook payOS đã kiểm chữ ký, orderCode ≥ PLACE_ORDER_OFFSET (spec AO §3.2). Ghi "Đã nhận" cho nơi dạy, tháng của link.
+// Không kiểm gói: QR đã phát thì tiền vào vẫn phải ghi (Review Focus 3).
+export async function handlePlacePayment(
+  db: PrismaClient, teacherUserId: number,
+  d: { orderCode: number; amount: number; reference: string; paidAt: Date; paymentLinkId: unknown }
+): Promise<{ status: 200; note: string }> {
+  const link = await db.placePayLink.findUnique({
+    where: { id: d.orderCode - PLACE_ORDER_OFFSET },
+    include: { place: { select: { isDeleted: true } } },
+  })
+  if (!link || link.userId !== teacherUserId || link.payosLinkId !== d.paymentLinkId) return { status: 200, note: "không khớp" }
+  if (link.place.isDeleted) {
+    console.warn(`[payos] tiền nơi dạy vào nơi đã xoá, link ${link.id}`)
+    return { status: 200, note: "nơi đã xoá" }
+  }
+  const existed = await db.placePayLinkPayment.findUnique({ where: { linkId_reference: { linkId: link.id, reference: d.reference } }, select: { id: true } })
+  if (existed) return { status: 200, note: "gửi lặp" }
+  try {
+    await db.$transaction(async (tx) => {
+      const p = await tx.placePayment.create({
+        data: {
+          placeId: link.placeId, year: link.year, month: link.month, amount: d.amount,
+          receivedAt: new Date(`${vnTodayIso(d.paidAt)}T00:00:00.000Z`), note: `payOS · ${d.reference}`, source: "payos",
+        },
+      })
+      // Unique (link, reference): lần gửi song song thứ 2 đụng P2002 → rollback cả dòng PlacePayment vừa tạo.
+      await tx.placePayLinkPayment.create({ data: { linkId: link.id, reference: d.reference, amount: d.amount, paidAt: d.paidAt, placePaymentId: p.id } })
+      const sum = await tx.placePayLinkPayment.aggregate({ where: { linkId: link.id }, _sum: { amount: true } })
+      if ((sum._sum.amount ?? 0) >= link.amount) await tx.placePayLink.update({ where: { id: link.id }, data: { status: "paid" } })
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { status: 200, note: "gửi lặp" }
+    throw e
+  }
+  return { status: 200, note: "đã ghi" }
 }
