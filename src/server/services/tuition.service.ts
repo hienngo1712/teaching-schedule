@@ -171,7 +171,7 @@ export async function getMonthlyTuitionStatus(
   // Dashboard (spec P1): chỉ tính cho các HS này, bỏ lọc isActive/grade của danh sách màn Học phí.
   onlyStudentIds?: number[]
 ): Promise<PaginatedResponse<TuitionStatusDTO>> {
-  const { year, month, grade, search, studentId, status, noticeFilter, page, limit } = filter
+  const { year, month, grade, search, studentId, status, noticeFilter, placeId, page, limit } = filter
   if (onlyStudentIds && onlyStudentIds.length === 0) return { items: [], totalCount: 0, totalPages: 0 }
 
   // 1. Lấy toàn bộ học sinh active theo filter
@@ -180,6 +180,7 @@ export async function getMonthlyTuitionStatus(
       ? { userId, id: { in: onlyStudentIds } }
       : {
           userId,
+          ...(placeId ? { placeId } : {}),
           ...(studentId
             ? { id: studentId }
             : grade
@@ -316,6 +317,8 @@ export async function getMonthlyTuitionStatus(
       payosPaidAmount: payosPaid.get(student.id)?.amount ?? null,
       inProgress,
       debtMonths,
+      placeFree: !!billing.free,
+      placeId: student.placeId,
     }
   })
 
@@ -350,10 +353,13 @@ export async function getMonthlyTuitionStatus(
     )
   }
 
+  // Spec AL §3: HS ở nơi tính theo ca/giờ trong tháng này không vào Học phí, trừ khi còn nợ cũ để thu nốt.
+  const billable = results.filter((item) => !item.placeFree || item.previousBalance > 0)
+
   // 7. Lọc theo status và noticeFilter — dùng chung helper với badge client.
   let filteredResults =
     status && status !== "all"
-      ? results.filter(item => {
+      ? billable.filter(item => {
           const rowStatus = getRowStatus(item)
           if (status === "fully_paid") {
             return (
@@ -368,7 +374,7 @@ export async function getMonthlyTuitionStatus(
           if (status === "unpaid") return rowStatus === "unpaid"
           return true
         })
-      : results
+      : billable
 
   if (noticeFilter && noticeFilter !== "all") {
     filteredResults = filteredResults.filter(item => {
@@ -410,6 +416,7 @@ export async function getMonthlyTuitionStatus(
       payosPaidAmount: item.payosPaidAmount,
       inProgress: item.inProgress,
       debtMonths: item.debtMonths,
+      placeId: item.placeId,
     })),
     totalCount,
     totalPages: Math.ceil(totalCount / limit),

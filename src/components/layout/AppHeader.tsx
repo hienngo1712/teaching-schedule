@@ -22,6 +22,7 @@ import { WhatsNew } from "@/components/whats-new/WhatsNew"
 import { PayosBell } from "@/components/payos/PayosBell"
 import { CurrentPlanBadge } from "@/components/plan/CurrentPlanBadge"
 import { ADMIN_HOME } from "@/lib/admin"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 
 function getInitials(name?: string | null) {
   if (!name) return "GV"
@@ -39,6 +40,7 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
   const [confirmBackup, setConfirmBackup] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const fullName = session?.user?.fullName ?? session?.user?.username ?? t("teacher_fallback")
+  const noPerStudent = usePlaceSummary().summary?.hasPerStudent === false
 
   return (
     <header className="flex h-14 items-center justify-between gap-3 border-b bg-white px-4 md:h-16 md:px-8">
@@ -51,7 +53,8 @@ export function AppHeader({ variant = "teacher" }: { variant?: "teacher" | "admi
       <div className="flex shrink-0 items-center gap-2">
         {/* Admin không dùng gói: không gọi plan.me, không nhắc gia hạn. */}
         {!admin && <RenewOffer />}
-        {!admin && <PayosBell />}
+        {/* Chuông tiền payOS chỉ có nghĩa khi có nơi thu học phí theo học sinh (spec AL §4.4). */}
+        {!admin && !noPerStudent && <PayosBell />}
         {!admin && <WhatsNew />}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

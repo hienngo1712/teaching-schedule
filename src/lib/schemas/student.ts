@@ -21,6 +21,8 @@ export const studentCreateSchema = z.object({
   tuitionFee: z.number().int().min(0).default(0),
   billingMode: z.enum(["per_session", "monthly"]).default("per_session"),
   monthlyFee: z.number().int().min(0).default(0),
+  // Nơi học (spec AL §4.2); bỏ trống → nơi theo học sinh mặc định của user.
+  placeId: z.number().int().positive().optional(),
 })
 
 // Form dùng studentCreateSchema (không có cờ); input tRPC bắt buộc cờ đồng ý (spec O Q10).
@@ -44,6 +46,8 @@ export const studentFilterSchema = z.object({
   // When true, return both active and inactive students (overrides the
   // default active-only behavior). Used by the "all students" view.
   includeInactive: z.boolean().optional(),
+  // Bộ lọc Nơi học (spec AL §4.2).
+  placeId: z.number().int().positive().optional(),
 }).merge(paginationSchema)
 
 // Giới hạn 500 dòng (spec E D2); không import MAX_IMPORT_ROWS vì student-import.ts import file này.

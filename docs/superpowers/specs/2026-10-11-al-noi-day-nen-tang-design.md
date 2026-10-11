@@ -75,7 +75,7 @@ Thêm vào model có sẵn:
   - phiếu báo, payOS HS, sao lưu Excel, xuất Excel
 - **Đổi cách tính tiền của một nơi:** tạo/ghi đè `PlaceBillingChange{fromKey = tháng hiện tại VN}`. Tháng cũ giữ nguyên. Giống hệt cách đổi theo buổi/theo tháng của HS.
 - **Danh sách Học phí tháng M:** chỉ gồm HS mà nơi học tính theo học sinh trong tháng M. **Ngoại lệ:** HS ở nơi `per_session` nhưng còn nợ cũ (`previousBalance > 0`) vẫn hiện, kèm nhãn tên nơi học, để thu nốt.
-- **Đổi nơi học của HS** chỉ đổi `Student.placeId`, không có lịch sử. Áp cho mọi tháng chưa chốt snapshot. Snapshot đã ghi không bị viết lại. Đây là chủ đích, giống quy tắc hiện nay. Ghi chú trong code.
+- **Đổi nơi học của HS** đổi `Student.placeId` (nơi hiện tại, dùng cho UI/lọc) và ghi lịch sử ẩn `student_place_changes(student_id, from_key, place_id)`: tạo HS → `from_key 0`; đổi nơi → `from_key` = tháng hiện tại VN (upsert, đổi 2 lần trong tháng ghi đè dòng tháng đó). UI không hiện lịch sử. Học phí tháng M = 0 khi nơi của HS tại M (theo lịch sử) là `per_session` tại M → tháng cũ giữ nguyên số, snapshot cũ không bị viết lại (RULING AL Task 2, 2026-10-11).
 
 ## 4. Màn hình
 

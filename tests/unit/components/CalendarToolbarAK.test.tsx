@@ -19,6 +19,16 @@ vi.mock("@/components/reports/ExportExcelButton", () => ({
 
 import { CalendarToolbar } from "@/components/calendar/CalendarToolbar"
 
+// AL: mặc định TK 1 nơi (giao diện như cũ); test nhiều nơi đổi placeState.places.
+const placeState = vi.hoisted(() => ({ places: [] as { id: number; name: string; color: string; billing: string }[] }))
+vi.mock("@/hooks/usePlaceSummary", () => ({
+  usePlaceSummary: () => ({
+    places: placeState.places,
+    multi: placeState.places.length >= 2,
+    placeById: (id: number | null | undefined) => placeState.places.find((p) => p.id === id),
+  }),
+}))
+
 const push = vi.fn()
 
 function renderAt(qs: string) {
@@ -74,5 +84,26 @@ describe("CalendarToolbar — thanh lọc AK", () => {
     expect(screen.queryByRole("button", { name: "Xuất Excel" })).toBeNull()
     fireEvent.keyDown(screen.getByRole("button", { name: "Thêm thao tác" }), { key: "Enter" })
     expect(await screen.findByRole("menuitem", { name: "Xuất Excel" })).toBeTruthy()
+  })
+})
+
+describe("CalendarToolbar — Bộ lọc Nơi dạy (spec AL §4.3)", () => {
+  it("≥ 2 nơi: đang lọc nơi có chip tên nơi; bấm chip bỏ lọc nơi", () => {
+    placeState.places = [
+      { id: 1, name: "Lớp tại nhà", color: "#4F46E5", billing: "per_student" },
+      { id: 2, name: "TT Ánh Dương", color: "#0891B2", billing: "per_session" },
+    ]
+    renderAt("place=2")
+    expect(screen.getByRole("button", { name: "Bộ lọc (1)" })).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Bỏ lọc TT Ánh Dương" }))
+    expect(String(push.mock.calls.at(-1)?.[0])).not.toContain("place=")
+    placeState.places = []
+  })
+
+  it("TK 1 nơi: tham số place trên URL bị bỏ qua, không có chip", () => {
+    placeState.places = [{ id: 1, name: "Lớp tại nhà", color: "#4F46E5", billing: "per_student" }]
+    renderAt("place=1")
+    expect(screen.getByRole("button", { name: "Bộ lọc" })).toBeTruthy()
+    placeState.places = []
   })
 })

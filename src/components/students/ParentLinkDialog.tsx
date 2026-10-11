@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { LockBadge } from "@/components/plan/LockBadge"
 import { openUpgrade } from "@/components/plan/upgrade-store"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 type Props = {
-  student: { id: number; fullName: string; parentLinkToken: string | null }
+  student: { id: number; fullName: string; parentLinkToken: string | null; placeId?: number | null }
   onOpenChange: (open: boolean) => void
   canGenerate?: boolean
 }
@@ -36,6 +37,9 @@ type Props = {
 export function ParentLinkDialog({ student, onOpenChange, canGenerate = true }: Props) {
   const { t } = useTranslation()
   const lockPro = () => openUpgrade({ plan: "pro" })
+  // HS ở nơi tính theo ca/giờ: trang PH chỉ có lịch + điểm danh (spec AL §4.6).
+  const { placeById } = usePlaceSummary()
+  const scheduleOnly = placeById(student.placeId)?.billing === "per_session"
   // Prop `student` là bản chụp lúc mở menu, không tự đổi sau mutation → giữ token cục bộ.
   const [token, setToken] = useState(student.parentLinkToken)
   const [confirm, setConfirm] = useState<"regenerate" | "disable" | null>(null)
@@ -75,7 +79,7 @@ export function ParentLinkDialog({ student, onOpenChange, canGenerate = true }: 
     try {
       await navigator.share({
         title: t("parent_page_title"),
-        text: `${t("parent_share_text")} ${student.fullName}`,
+        text: `${t(scheduleOnly ? "parent_share_text_schedule" : "parent_share_text")} ${student.fullName}`,
         url,
       })
     } catch (e) {

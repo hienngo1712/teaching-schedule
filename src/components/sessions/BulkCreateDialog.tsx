@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CalendarIcon, Loader2 } from "lucide-react"
@@ -56,6 +56,9 @@ import {
 } from "@/lib/schemas/session"
 import { trpc } from "@/lib/trpc"
 import { StudentPicker } from "./StudentPicker"
+import { Label } from "@/components/ui/label"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
+import { PlaceSelect } from "@/components/places/PlaceSelect"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
@@ -70,6 +73,14 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
   const [conflicts, setConflicts] = useState<{ date: string; conflict: string }[]>([])
   const [pendingValues, setPendingValues] = useState<SessionBulkCreateInput | null>(null)
   const { data: subjects = [] } = trpc.subject.list.useQuery({ isActive: true })
+  const { places, multi } = usePlaceSummary()
+  const [placeTouched, setPlaceTouched] = useState(false)
+  // Cùng query với StudentPicker (dùng chung cache) để biết nơi học của từng HS.
+  const { data: studentListData } = trpc.student.list.useQuery({ isActive: true, limit: 1000 }, { enabled: multi })
+  const studentPlace = useMemo(
+    () => new Map((studentListData?.items ?? []).map((s) => [s.id, s.placeId])),
+    [studentListData]
+  )
 
   const form = useForm<SessionBulkCreateInput>({
     resolver: zodResolver(sessionBulkCreateSchema),
@@ -92,6 +103,18 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
       form.setValue("subjectId", defaultSubject.id)
     }
   }, [subjects, form])
+
+  // Như form ca (spec AL §4.3): GV chưa tự chọn nơi → theo nơi học của HS đầu tiên, rồi nơi theo học sinh đầu tiên.
+  const studentIds = form.watch("studentIds")
+  const firstStudentPlace = studentIds?.length ? studentPlace.get(studentIds[0]) ?? undefined : undefined
+  const autoPlace = firstStudentPlace ?? (places.find((p) => p.billing === "per_student") ?? places[0])?.id
+  useEffect(() => {
+    if (!open || placeTouched || !multi || !autoPlace) return
+    if (form.getValues("placeId") !== autoPlace) form.setValue("placeId", autoPlace)
+  }, [open, placeTouched, multi, autoPlace, form])
+  useEffect(() => {
+    if (open) setPlaceTouched(false)
+  }, [open])
 
   const bulkCreateMutation = trpc.session.bulkCreate.useMutation({
     onSuccess: (res) => {
@@ -136,7 +159,10 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
     },
   })
 
-  function onSubmit(values: SessionBulkCreateInput) {
+  function onSubmit(raw: SessionBulkCreateInput) {
+    // TK 1 nơi: không gửi nơi, server tự gán (như trước AL).
+    const { placeId, ...rest } = raw
+    const values: SessionBulkCreateInput = multi && placeId ? { ...rest, placeId } : rest
     if (mode === "create") {
       checkConflictsMutation.mutate(values)
     } else {
@@ -379,6 +405,20 @@ export function BulkCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                       </FormItem>
                     )}
                   />
+
+                  {multi && (
+                    <div className="space-y-2">
+                      <Label htmlFor="bulk-place">{t("session_place")}</Label>
+                      <PlaceSelect
+                        id="bulk-place"
+                        value={form.watch("placeId")}
+                        onChange={(id) => {
+                          setPlaceTouched(true)
+                          form.setValue("placeId", id)
+                        }}
+                      />
+                    </div>
+                  )}
 
                   <FormField
                     control={form.control}

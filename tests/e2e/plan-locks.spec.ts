@@ -164,14 +164,14 @@ test('Plus mở /reports?type=year&grade=5: báo cáo 1 tháng, Năm/Khoảng v�
   await setStd('standard');
 });
 
-test('Standard đủ 10 HS đang học: dải giới hạn + nút Thêm học sinh mở popup giới hạn', async ({ page }) => {
+test('Standard đủ 20 HS đang học: dải giới hạn + nút Thêm học sinh mở popup giới hạn', async ({ page }) => {
   await db.student.createMany({
-    data: Array.from({ length: 9 }, (_, i) => ({ userId: stdId, fullName: `${NAME} thêm ${i + 1}`, grade: 4 })),
+    data: Array.from({ length: 19 }, (_, i) => ({ userId: stdId, fullName: `${NAME} thêm ${i + 1}`, grade: 4 })),
   });
   await login(page);
   await page.goto('/students');
-  await expect(page.getByTestId('plan-limit-strip')).toContainText('10/10 học sinh đang học');
+  await expect(page.getByTestId('plan-limit-strip')).toContainText('20/20 học sinh đang học');
   await page.getByRole('button', { name: /Thêm học sinh/ }).click();
-  await expect(upgrade(page)).toContainText('Gói Standard tối đa 10 học sinh đang học. Nâng lên Plus (40) hoặc Pro (không giới hạn).');
+  await expect(upgrade(page)).toContainText('Gói Standard tối đa 20 học sinh đang học. Nâng lên Plus (50) hoặc Pro (không giới hạn).');
   await db.student.deleteMany({ where: { userId: stdId, fullName: { startsWith: `${NAME} thêm` } } });
 });

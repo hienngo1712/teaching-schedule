@@ -16,7 +16,8 @@ import type {
 import type { PaginatedResponse } from "@/lib/schemas/common"
 import type { StudentDTO } from "@/lib/types/models"
 import { nameKey, type ExistingMatch } from "@/lib/student-import"
-import { recordBillingChange } from "./billing.service"
+import { recordBillingChange, recordPlaceChange } from "./billing.service"
+import { assertPlaceOwned, defaultPlaceId } from "./place.service"
 import { vnDateParts } from "@/lib/utils"
 import { monthKey, type BillingMode } from "@/lib/billing"
 
@@ -32,7 +33,7 @@ export async function listStudents(
   userId: number,
   filter: StudentFilterInput
 ): Promise<PaginatedResponse<StudentDTO>> {
-  const { page, limit, grade, search, isActive, includeInactive } = filter
+  const { page, limit, grade, search, isActive, includeInactive, placeId } = filter
   const rows = await db.student.findMany({
     where: {
       userId,
@@ -42,6 +43,7 @@ export async function listStudents(
         ? {}
         : { isActive: true }),
       ...(grade ? { grade } : {}),
+      ...(placeId ? { placeId } : {}),
     },
   })
   // Tên mã hoá trong DB (spec O Q7): lọc/sắp/cắt trang sau khi giải mã; mỗi GV ít HS nên tải hết vẫn nhẹ.
@@ -73,6 +75,8 @@ export async function createStudent(
 
   const student = await db.$transaction(async (tx) => {
     if (input.isActive) await lockAndAssertCanActivate(tx, userId, 1)
+    if (input.placeId) await assertPlaceOwned(tx, userId, input.placeId)
+    const placeId = input.placeId ?? (await defaultPlaceId(tx, userId))
 
     const created = await tx.student.create({
       data: {
@@ -86,12 +90,15 @@ export async function createStudent(
         tuitionFee: input.tuitionFee,
         billingMode: mode,
         monthlyFee,
+        placeId,
       },
     })
 
     if (mode === "monthly") {
       await recordBillingChange(tx, created.id, 0, { mode: "monthly", monthlyFee })
     }
+    // Lịch sử ẩn nơi học (RULING AL Task 2): HS mới ở nơi này từ mọi tháng.
+    if (placeId) await recordPlaceChange(tx, created.id, placeId, 0)
 
     return created
   })
@@ -159,6 +166,7 @@ export async function importStudents(
       }
       seen.add(key)
     }
+    const placeId = await defaultPlaceId(tx, userId)
     const createdStudents = await tx.student.createManyAndReturn({
       data: rows.map((r) => {
         const isMonthly = r.billingMode === "monthly"
@@ -175,10 +183,14 @@ export async function importStudents(
           billingMode: r.billingMode ?? "per_session",
           monthlyFee,
           isActive: true,
+          placeId,
         }
       }),
       select: { id: true, billingMode: true, monthlyFee: true },
     })
+    if (placeId) {
+      await tx.studentPlaceChange.createMany({ data: createdStudents.map((st) => ({ studentId: st.id, fromKey: 0, placeId })) })
+    }
 
     const monthlyChanges = createdStudents
       .filter((s) => s.billingMode === "monthly")
@@ -230,6 +242,8 @@ export async function updateStudent(
   const isBillingChanged =
     (data.billingMode !== undefined || data.monthlyFee !== undefined) &&
     (nextMode !== existing.billingMode || nextMonthlyFee !== existing.monthlyFee)
+  const isPlaceChanged = data.placeId !== undefined && data.placeId !== existing.placeId
+  if (isPlaceChanged) await assertPlaceOwned(db, userId, data.placeId!)
 
   const student = await db.$transaction(async (tx) => {
     if (data.isActive === true && !existing.isActive) {
@@ -253,8 +267,18 @@ export async function updateStudent(
           billingMode: nextMode,
           monthlyFee: nextMonthlyFee,
         }),
+        ...(isPlaceChanged && { placeId: data.placeId }),
       },
     })
+
+    // Đổi nơi học → ghi lịch sử từ tháng VN hiện tại; tháng cũ giữ nơi cũ (RULING AL Task 2).
+    if (isPlaceChanged) {
+      const { year, month } = vnDateParts()
+      if (existing.placeId && (await tx.studentPlaceChange.count({ where: { studentId: id } })) === 0) {
+        await recordPlaceChange(tx, id, existing.placeId, 0)
+      }
+      await recordPlaceChange(tx, id, data.placeId!, monthKey(year, month))
+    }
 
     // Đổi cách thu -> ghi lịch sử từ tháng VN hiện tại (spec T 3)
     if (isBillingChanged) {

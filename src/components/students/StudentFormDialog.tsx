@@ -36,6 +36,8 @@ import { studentLimitMessage } from "@/components/plan/limit-message"
 import { minPlanForStudents, planRequiredOf } from "@/lib/plans"
 import { handleRadioGroupKeyDown } from "@/lib/radio-group-keys"
 import { cn, vnDateParts } from "@/lib/utils"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
+import { PlaceSelect } from "@/components/places/PlaceSelect"
 
 type StudentRecord = RouterOutputs["student"]["list"]["items"][number]
 
@@ -50,6 +52,9 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
   const { t } = useTranslation()
   const { me } = usePlan()
   const [consent, setConsent] = useState(false)
+  const { places, multi, placeById } = usePlaceSummary()
+  // Nơi mặc định khi thêm HS: nơi theo học sinh đầu tiên (như server).
+  const defaultPlace = (places.find((p) => p.billing === "per_student") ?? places[0])?.id
 
   const form = useForm<z.input<typeof studentCreateSchema>>({
     resolver: zodResolver(studentFormSchema),
@@ -80,9 +85,16 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
         tuitionFee: student?.tuitionFee ?? undefined,
         billingMode: student?.billingMode ?? "per_session",
         monthlyFee: student?.monthlyFee ?? undefined,
+        placeId: student?.placeId ?? defaultPlace,
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- defaultPlace có thể tải sau khi mở form: không reset lại form (mất chữ đã gõ).
   }, [open, student, form])
+
+  // Danh sách nơi tải xong sau khi mở form: chỉ điền nơi mặc định nếu ô Nơi học còn trống.
+  useEffect(() => {
+    if (open && defaultPlace !== undefined && form.getValues("placeId") === undefined) form.setValue("placeId", defaultPlace)
+  }, [open, defaultPlace, form])
 
   const createMut = trpc.student.create.useMutation({
     onSuccess: () => {
@@ -112,6 +124,8 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   const curBillingMode = form.watch("billingMode")
   const curMonthlyFee = form.watch("monthlyFee")
+  // Nơi học tính theo ca/giờ (tháng hiện tại) → không có học phí: ẩn khối học phí (spec AL §4.2).
+  const placeFree = multi && placeById(form.watch("placeId"))?.billing === "per_session"
   const { month: curMonth, year: curYear } = vnDateParts()
   const isBillingModeChanged =
     mode === "edit" &&
@@ -122,7 +136,13 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
 
   function onSubmit(values: z.input<typeof studentCreateSchema>) {
     if (!consent) return
-    const data = values as StudentCreateInput;
+    const { placeId, ...rest } = values as StudentCreateInput
+    // TK 1 nơi: không gửi nơi (server tự gán); HS mới ở nơi theo ca/giờ thì học phí 0, sửa HS cũ giữ số trong DB.
+    const data: StudentCreateInput = {
+      ...rest,
+      ...(multi && placeId ? { placeId } : {}),
+      ...(placeFree && mode === "create" ? { billingMode: "per_session" as const, tuitionFee: 0, monthlyFee: 0 } : {}),
+    }
     // Bật HS thành đang học khi đã đủ giới hạn: mở popup nâng cấp thay vì gửi rồi nhận lỗi.
     const activating = data.isActive && (mode === "create" || student?.isActive === false)
     if (activating && me && me.studentLimit !== null && me.activeStudents >= me.studentLimit) {
@@ -181,7 +201,15 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
           </div>
           </div>
 
-          <div data-tour="student-form-billing" className="space-y-3">
+          {multi && (
+            <div className="space-y-2">
+              <Label htmlFor="placeId">{t("student_place")}</Label>
+              <PlaceSelect id="placeId" value={form.watch("placeId")} onChange={(id) => form.setValue("placeId", id)} />
+              {placeFree && <p className="text-xs text-slate-500">{t("student_place_session_note")}</p>}
+            </div>
+          )}
+
+          <div data-tour="student-form-billing" className={cn("space-y-3", placeFree && "hidden")}>
           <div className="space-y-2">
             <Label>{t("billing_mode_label")}</Label>
             <div

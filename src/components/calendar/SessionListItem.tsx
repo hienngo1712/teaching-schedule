@@ -6,6 +6,7 @@ import { getSessionLabel } from "@/lib/session-label"
 import { formatGrades } from "@/lib/format-grades"
 import type { SessionListDTO } from "@/lib/types/models"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { PlaceTag } from "@/components/places/PlaceTag"
 
 type Props = {
   session: SessionListDTO
@@ -39,6 +40,7 @@ export function SessionListItem({ session, onClick }: Props) {
             </>
           )}
           <span className="font-medium">{session.studentCount} {t("students")}</span>
+          <PlaceTag placeId={session.placeId} className="font-medium" />
         </div>
       </div>
       <Badge variant="secondary" className="shrink-0 text-[10px] font-bold">

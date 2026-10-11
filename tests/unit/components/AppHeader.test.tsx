@@ -8,6 +8,20 @@ import { AppHeader } from "@/components/layout/AppHeader"
 import { RELEASES } from "@/lib/releases"
 import viText from "@/language/vi.json"
 
+// AL: mặc định TK 1 nơi theo học sinh (giao diện như cũ); test "chỉ trung tâm" đổi placeState.summary.
+const placeState = vi.hoisted(() => ({
+  places: [] as { id: number; name: string; color: string; billing: string }[],
+  summary: undefined as { count: number; hasPerStudent: boolean; hasPerSession: boolean } | undefined,
+}))
+vi.mock("@/hooks/usePlaceSummary", () => ({
+  usePlaceSummary: () => ({
+    places: placeState.places,
+    summary: placeState.summary,
+    multi: placeState.places.length >= 2,
+    placeById: (id: number | null | undefined) => placeState.places.find((p) => p.id === id),
+  }),
+}))
+
 // jsdom không có ResizeObserver mà Radix dialog cần.
 globalThis.ResizeObserver ??= class {
   observe() {}

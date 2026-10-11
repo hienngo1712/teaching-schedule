@@ -29,6 +29,15 @@ vi.mock("@/lib/trpc", () => ({
   },
 }))
 vi.mock("@/hooks/usePlan", () => ({ usePlan: () => ({ me: null, openUpgrade: vi.fn() }) }))
+// AL: mặc định TK 1 nơi (form như cũ); test Nơi học đổi danh sách nơi.
+const placeState = vi.hoisted(() => ({ places: [] as { id: number; name: string; color: string; billing: string }[] }))
+vi.mock("@/hooks/usePlaceSummary", () => ({
+  usePlaceSummary: () => ({
+    places: placeState.places,
+    multi: placeState.places.length >= 2,
+    placeById: (id: number | undefined) => placeState.places.find((p) => p.id === id),
+  }),
+}))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 import { StudentFormDialog } from "@/components/students/StudentFormDialog"
@@ -50,6 +59,7 @@ function renderDialog(props: Partial<Parameters<typeof StudentFormDialog>[0]> = 
 beforeEach(() => {
   createMutate.mockReset()
   updateMutate.mockReset()
+  placeState.places = [{ id: 1, name: "Lớp tại nhà", color: "#4F46E5", billing: "per_student" }]
 })
 
 describe("StudentFormDialog: ô đồng ý (spec O 6.6)", () => {
@@ -177,5 +187,72 @@ describe("StudentFormDialog: cách thu học phí (Plan T)", () => {
       expect(screen.getByText("Học phí tháng phải lớn hơn 0")).toBeTruthy()
     })
     expect(createMutate).not.toHaveBeenCalled()
+  })
+})
+
+describe("StudentFormDialog: Nơi học (spec AL §4.2)", () => {
+  const HOME = { id: 1, name: "Lớp tại nhà", color: "#4F46E5", billing: "per_student" }
+  const CENTER = { id: 2, name: "TT Ánh Dương", color: "#0891B2", billing: "per_session" }
+  const CENTER2 = { id: 3, name: "TT Sao Mai", color: "#D97706", billing: "per_session" }
+
+  it("TK 1 nơi: không có ô Nơi học, không gửi placeId", async () => {
+    renderDialog()
+    expect(screen.queryByText(viText.student_place)).toBeNull()
+    fireEvent.change(screen.getByLabelText(new RegExp(viText.full_name)), { target: { value: "Lê Văn Minh" } })
+    fireEvent.click(screen.getByRole("checkbox", { name: viText.consent_student }))
+    fireEvent.click(screen.getByRole("button", { name: viText.add }))
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1))
+    expect(createMutate.mock.calls[0][0]).not.toHaveProperty("placeId")
+  })
+
+  it("≥ 2 nơi: có ô Nơi học, mặc định nơi theo học sinh, gửi placeId, khối học phí vẫn hiện", async () => {
+    placeState.places = [CENTER, HOME]
+    renderDialog()
+    expect(screen.getByText(viText.student_place)).toBeTruthy()
+    expect(screen.getByLabelText(viText.fee_per_session_label)).toBeTruthy()
+    fireEvent.change(screen.getByLabelText(new RegExp(viText.full_name)), { target: { value: "Lê Văn Minh" } })
+    fireEvent.click(screen.getByRole("checkbox", { name: viText.consent_student }))
+    fireEvent.click(screen.getByRole("button", { name: viText.add }))
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1))
+    expect(createMutate.mock.calls[0][0]).toMatchObject({ placeId: HOME.id })
+  })
+
+  it("danh sách nơi tải xong sau khi mở form: không xoá tên đã gõ, vẫn chọn sẵn nơi mặc định", async () => {
+    placeState.places = []
+    const { rerender } = renderDialog()
+    fireEvent.change(screen.getByLabelText(new RegExp(viText.full_name)), { target: { value: "Lê Văn Minh" } })
+    placeState.places = [CENTER, HOME]
+    rerender(
+      <LanguageProvider>
+        <StudentFormDialog open onOpenChange={() => {}} mode="create" />
+      </LanguageProvider>
+    )
+    expect((screen.getByLabelText(new RegExp(viText.full_name)) as HTMLInputElement).value).toBe("Lê Văn Minh")
+    fireEvent.click(screen.getByRole("checkbox", { name: viText.consent_student }))
+    fireEvent.click(screen.getByRole("button", { name: viText.add }))
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1))
+    expect(createMutate.mock.calls[0][0]).toMatchObject({ fullName: "Lê Văn Minh", placeId: HOME.id })
+  })
+
+  it("nơi theo ca/giờ: ẩn khối học phí, HS mới gửi học phí 0", async () => {
+    placeState.places = [CENTER, CENTER2]
+    renderDialog()
+    expect(screen.getByText(viText.student_place_session_note)).toBeTruthy()
+    expect(screen.getByRole("radiogroup", { name: viText.billing_mode_label, hidden: true }).closest("[data-tour='student-form-billing']")!.className).toContain("hidden")
+    fireEvent.change(screen.getByLabelText(new RegExp(viText.full_name)), { target: { value: "Lê Văn Minh" } })
+    fireEvent.click(screen.getByRole("checkbox", { name: viText.consent_student }))
+    fireEvent.click(screen.getByRole("button", { name: viText.add }))
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1))
+    expect(createMutate.mock.calls[0][0]).toMatchObject({ placeId: CENTER.id, billingMode: "per_session", tuitionFee: 0, monthlyFee: 0 })
+  })
+
+  it("sửa HS ở nơi theo ca/giờ: ẩn khối học phí nhưng giữ số cũ khi gửi", async () => {
+    placeState.places = [HOME, CENTER]
+    renderDialog({ mode: "edit", student: { ...STUDENT, tuitionFee: 150000, placeId: CENTER.id } as never })
+    expect(screen.getByText(viText.student_place_session_note)).toBeTruthy()
+    fireEvent.click(screen.getByRole("checkbox", { name: viText.consent_student }))
+    fireEvent.click(screen.getByRole("button", { name: viText.update }))
+    await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1))
+    expect(updateMutate.mock.calls[0][0].data).toMatchObject({ tuitionFee: 150000, placeId: CENTER.id })
   })
 })

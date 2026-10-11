@@ -9,6 +9,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import type vi from "@/language/vi.json"
 import { TourButton } from "@/components/tour/TourButton"
 import type { TourId } from "@/lib/tours"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 
 type StepKey = "student" | "session" | "attendance" | "payment" | "bank"
 
@@ -24,13 +25,16 @@ export function StartCard() {
   const { t } = useTranslation()
   const utils = trpc.useUtils()
   const { data } = trpc.onboarding.status.useQuery()
+  // Chỉ dạy nơi tính theo ca/giờ: bỏ bước thu tiền + ngân hàng (spec AL §4.4).
+  const noPerStudent = usePlaceSummary().summary?.hasPerStudent === false
+  const steps = noPerStudent ? START_STEPS.filter((s) => s.key !== "payment" && s.key !== "bank") : START_STEPS
   const dismiss = trpc.onboarding.dismiss.useMutation({
     onSuccess: () => utils.onboarding.status.setData(undefined, (old) => (old ? { ...old, dismissed: true } : old)),
   })
 
   if (!data || data.dismissed) return null
-  const done = START_STEPS.filter((s) => data.steps[s.key]).length
-  if (done === START_STEPS.length) return null
+  const done = steps.filter((s) => data.steps[s.key]).length
+  if (done === steps.length) return null
 
   return (
     <Card className="border-primary/30">
@@ -39,7 +43,7 @@ export function StartCard() {
           <div>
             <h2 className="font-semibold text-slate-900">{t("start_title")}</h2>
             <p className="text-sm text-slate-500">
-              {t("start_progress").replace("{n}", String(done)).replace("{total}", String(START_STEPS.length))}
+              {t("start_progress").replace("{n}", String(done)).replace("{total}", String(steps.length))}
             </p>
           </div>
           <Button
@@ -57,14 +61,14 @@ export function StartCard() {
           role="progressbar"
           aria-label={t("start_title")}
           aria-valuemin={0}
-          aria-valuemax={START_STEPS.length}
+          aria-valuemax={steps.length}
           aria-valuenow={done}
           className="h-2 overflow-hidden rounded-full bg-slate-100"
         >
-          <div className="h-full bg-primary" style={{ width: `${(done / START_STEPS.length) * 100}%` }} />
+          <div className="h-full bg-primary" style={{ width: `${(done / steps.length) * 100}%` }} />
         </div>
         <ul className="divide-y">
-          {START_STEPS.map((s) => {
+          {steps.map((s) => {
             const ok = data.steps[s.key]
             return (
               <li key={s.key} data-testid="start-step" className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">

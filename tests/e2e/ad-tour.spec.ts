@@ -37,6 +37,8 @@ test.beforeAll(async () => {
       feedbackPromptAt: new Date(),
       onboardingDismissedAt: null,
       mustChangePassword: false,
+      // TK cũ sau migration AL đã có 1 nơi: không hiện popup chọn nơi che tour.
+      places: { create: { name: 'Lớp tại nhà', kind: 'home', color: '#4F46E5', billingChanges: { create: { fromKey: 0, billing: 'per_student' } } } },
     },
   });
 });

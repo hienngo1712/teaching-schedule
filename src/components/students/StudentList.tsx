@@ -40,6 +40,7 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FilterBar, type FilterChip } from "@/components/common/FilterBar"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
 import { usePlan } from "@/hooks/usePlan"
 import { useFeatureGate } from "@/hooks/useFeatureGate"
@@ -76,6 +77,10 @@ export function StudentList() {
   const [pageSize, setPageSize] = useState(20)
   const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active")
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [placeFilter, setPlaceFilter] = useState<number | null>(null)
+  const { places, multi, placeById } = usePlaceSummary()
+  // HS ở nơi tính theo ca/giờ (tháng hiện tại) không có học phí → hiện "—" (spec AL §4.2).
+  const isPlaceFree = (s: { placeId: number | null }) => multi && placeById(s.placeId)?.billing === "per_session"
 
   const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
@@ -100,6 +105,7 @@ export function StudentList() {
     grade: selectedGrade ?? undefined,
     search: searchStudentName.trim() || undefined,
     ...statusQuery,
+    placeId: placeFilter ?? undefined,
     page: currentPage,
     limit: pageSize,
   })
@@ -180,14 +186,17 @@ export function StudentList() {
     {
       // Đơn vị /buổi hay /tháng đã ghi trong ô → tiêu đề chỉ "Học phí".
       header: t("tuition_col"),
-      cell: (s) => (
-        <span className="whitespace-nowrap">
-          {formatCurrency(s.billingMode === "monthly" ? s.monthlyFee : s.tuitionFee)}
-          <span className="ml-1 text-xs font-normal text-slate-500">
-            {s.billingMode === "monthly" ? t("per_month") : t("per_session")}
+      cell: (s) =>
+        isPlaceFree(s) ? (
+          <span className="text-slate-400">—</span>
+        ) : (
+          <span className="whitespace-nowrap">
+            {formatCurrency(s.billingMode === "monthly" ? s.monthlyFee : s.tuitionFee)}
+            <span className="ml-1 text-xs font-normal text-slate-500">
+              {s.billingMode === "monthly" ? t("per_month") : t("per_session")}
+            </span>
           </span>
-        </span>
-      ),
+        ),
       className: "w-36 text-right font-medium text-slate-700",
     },
     { header: t("status"), cell: statusBadge, className: "w-28" },
@@ -204,6 +213,8 @@ export function StudentList() {
   if (statusFilter !== "active") {
     activeChips.push({ key: "status", label: statusLabel[statusFilter], onRemove: () => setStatusFilter("active") })
   }
+  const filterPlace = placeById(placeFilter)
+  if (filterPlace) activeChips.push({ key: "place", label: filterPlace.name, onRemove: () => setPlaceFilter(null) })
   // Nâng lớp hàng loạt: mục trong ⋯, mỗi năm 1 lần (đã nâng thì khoá mục).
   const upgradeLog = trpc.student.getUpgradeLogThisYear.useQuery()
   const upgradeDone = !!upgradeLog.data
@@ -244,6 +255,7 @@ export function StudentList() {
         onClearAll={() => {
           setGrade(null)
           setStatusFilter("active")
+          setPlaceFilter(null)
         }}
         moreActions={[
           {
@@ -287,6 +299,24 @@ export function StudentList() {
                 <SelectItem value="all">{t("all_status")}</SelectItem>
               </SelectContent>
             </Select>
+            {multi && (
+              <Select value={placeFilter ? String(placeFilter) : "all"} onValueChange={(v) => { setPlaceFilter(v === "all" ? null : Number(v)); setCurrentPage(1) }}>
+                <SelectTrigger aria-label={t("student_place")}>
+                  <SelectValue placeholder={t("all_places")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all_places")}</SelectItem>
+                  {places.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      <span className="flex items-center gap-2">
+                        <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.color }} />
+                        {p.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </>
         }
       />
@@ -320,12 +350,16 @@ export function StudentList() {
               {actionsMenu(s)}
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-              <span className="whitespace-nowrap font-medium text-slate-900">
-                {formatCurrency(s.billingMode === "monthly" ? s.monthlyFee : s.tuitionFee)}
-                <span className="font-normal text-slate-500">
-                  {s.billingMode === "monthly" ? t("per_month") : t("per_session")}
+              {isPlaceFree(s) ? (
+                <span className="font-medium text-slate-400">—</span>
+              ) : (
+                <span className="whitespace-nowrap font-medium text-slate-900">
+                  {formatCurrency(s.billingMode === "monthly" ? s.monthlyFee : s.tuitionFee)}
+                  <span className="font-normal text-slate-500">
+                    {s.billingMode === "monthly" ? t("per_month") : t("per_session")}
+                  </span>
                 </span>
-              </span>
+              )}
               {s.parentPhone && (
                 <a href={`tel:${s.parentPhone}`} className="inline-flex min-h-11 items-center gap-1.5 text-primary">
                   <Phone className="size-4" />

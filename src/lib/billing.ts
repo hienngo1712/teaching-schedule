@@ -1,8 +1,9 @@
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 
 export type BillingMode = "per_session" | "monthly"
-export type BillingChange = { fromKey: number; mode: BillingMode; monthlyFee: number }
-export type Billing = { mode: BillingMode; monthlyFee: number }
+// free = tháng đó HS ở nơi tính theo ca/giờ (spec AL §3) → học phí tháng = 0; chỉ có mặt khi true.
+export type BillingChange = { fromKey: number; mode: BillingMode; monthlyFee: number; free?: boolean }
+export type Billing = { mode: BillingMode; monthlyFee: number; free?: boolean }
 
 export const PER_SESSION: Billing = { mode: "per_session", monthlyFee: 0 }
 
@@ -22,7 +23,22 @@ export function resolveBilling(changes: BillingChange[], key: number): Billing {
     }
   }
   if (!matched) return PER_SESSION
-  return { mode: matched.mode, monthlyFee: matched.monthlyFee }
+  return matched.free
+    ? { mode: matched.mode, monthlyFee: matched.monthlyFee, free: true }
+    : { mode: matched.mode, monthlyFee: matched.monthlyFee }
+}
+
+// Cách tính tiền của nơi dạy (spec AL §3): theo học sinh (trang Học phí) hoặc theo ca/giờ (nơi đó trả).
+export type PlaceBilling = "per_student" | "per_session"
+export type PlaceBillingChange = { fromKey: number; billing: string }
+
+// Như resolveBilling: dòng fromKey lớn nhất <= key; không có dòng nào -> per_student
+export function resolvePlaceBilling(changes: PlaceBillingChange[], key: number): PlaceBilling {
+  let matched: PlaceBillingChange | null = null
+  for (const c of changes) {
+    if (c.fromKey <= key && (!matched || c.fromKey > matched.fromKey)) matched = c
+  }
+  return matched?.billing === "per_session" ? "per_session" : "per_student"
 }
 
 // Link của 1 học sinh trong 1 tháng (đã lọc ca sống, không huỷ)
@@ -30,6 +46,7 @@ export type MonthLink = { attendance: string; fee: number }
 
 // Học phí 1 tháng: trọn tháng thu 1 lần khi có >= 1 ca (spec T2); theo buổi tính tổng có mặt/muộn
 export function monthFee(billing: Billing, links: MonthLink[]): number {
+  if (billing.free) return 0
   if (billing.mode === "monthly") {
     return links.length >= 1 ? billing.monthlyFee : 0
   }
@@ -43,6 +60,7 @@ export function monthFee(billing: Billing, links: MonthLink[]): number {
 
 // Doanh thu dự kiến và thực tế 1 tháng: trọn gói tính doanh thu khi có ít nhất 1 ca đã điểm danh
 export function revenueForMonth(billing: Billing, links: MonthLink[]): { expected: number; earned: number } {
+  if (billing.free) return { expected: 0, earned: 0 }
   if (billing.mode === "monthly") {
     if (links.length === 0) return { expected: 0, earned: 0 }
     const expected = billing.monthlyFee

@@ -112,7 +112,7 @@ describe("PlanPurchaseDialog", () => {
     expect(screen.queryByTestId("purchase-plan-standard")).toBeNull()
     expect(text("purchase-plan-pro")).toContain("Khuyên dùng")
     expect(text("purchase-plan-pro")).toContain("Mọi thứ của gói Plus, thêm:")
-    expect(text("purchase-plan-plus")).toContain("Tối đa 40 học sinh đang học")
+    expect(text("purchase-plan-plus")).toContain("Tối đa 50 học sinh đang học")
     expect(text("purchase-period-month")).toContain("Tối đa 1 tháng sử dụng")
     expect(text("purchase-period-month")).not.toMatch(/Tặng|Tiết kiệm/)
     expect(text("purchase-period-year")).toContain("Tiết kiệm 17%")

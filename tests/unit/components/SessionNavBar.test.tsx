@@ -15,6 +15,7 @@ const makeSession = (id: number, date: string, start: string): SessionListDTO =>
   endTime: "10:00",
   durationMins: 60,
   subjectId: 1,
+  placeId: null,
   subject: { id: 1, name: "Toán", color: "#000" },
   title: null,
   notes: null,

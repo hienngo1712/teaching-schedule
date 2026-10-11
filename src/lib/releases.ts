@@ -13,6 +13,18 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.20.0",
+    date: "2026-10-11",
+    title: "Dạy nhiều nơi",
+    summary: "Thêm Nơi dạy: lớp tại nhà, gia sư, trung tâm. Gói Standard 20 học sinh, Plus 50 học sinh.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Nơi dạy", body: "Quản lý riêng lớp tại nhà, gia sư và từng trung tâm; học sinh và ca dạy gắn nơi, lịch có bộ lọc theo nơi." },
+      { kind: "new", title: "Học sinh ở trung tâm", body: "Nơi tính tiền theo ca/giờ (trung tâm trả) thì học sinh ở đó không tính học phí, không vào trang Học phí." },
+      { kind: "improve", title: "Gói rộng hơn", body: "Gói Standard nâng lên 20 học sinh đang học, Plus lên 50 học sinh đang học." },
+    ],
+  },
+  {
     version: "0.19.0",
     date: "2026-10-11",
     title: "Bộ lọc gọn, thẻ Còn nợ rõ hơn",

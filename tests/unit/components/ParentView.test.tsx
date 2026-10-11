@@ -16,6 +16,7 @@ vi.mock("next/navigation", () => ({
 
 const baseView: ParentViewDTO = {
   student: { fullName: "Nguyễn Văn Test", grade: 5 },
+  teacherName: "Giáo viên A",
   year: 2026,
   month: 5,
   prevMonth: "2026-04",
@@ -125,7 +126,7 @@ describe("ParentView: QR payOS (spec AH §5)", () => {
     })) as unknown as typeof window.matchMedia
     render(
       <LanguageProvider forcedLanguage="vi">
-        <ParentView view={{ ...baseView, notice: { ...baseView.notice, qr: { provider: "payos" as const, payload: "QR1", bankShortName: "MB", accountNumber: "0001", accountName: "GV A", amount: 200000, content: "HP 1", checkoutUrl: "https://pay/1" } } }} />
+        <ParentView view={{ ...baseView, notice: { ...baseView.notice!, qr: { provider: "payos" as const, payload: "QR1", bankShortName: "MB", accountNumber: "0001", accountName: "GV A", amount: 200000, content: "HP 1", checkoutUrl: "https://pay/1" } } }} />
       </LanguageProvider>
     )
     const link = screen.getByRole("link", { name: /Mở trang thanh toán/ })
@@ -137,7 +138,7 @@ describe("ParentView: QR payOS (spec AH §5)", () => {
   it("trang PH: QR VietQR không có nút Mở trang thanh toán", () => {
     render(
       <LanguageProvider forcedLanguage="vi">
-        <ParentView view={{ ...baseView, notice: { ...baseView.notice, qr: { ...{ provider: "payos" as const, payload: "QR1", bankShortName: "MB", accountNumber: "0001", accountName: "GV A", amount: 200000, content: "HP 1", checkoutUrl: "https://pay/1" }, provider: "vietqr", checkoutUrl: null } } }} />
+        <ParentView view={{ ...baseView, notice: { ...baseView.notice!, qr: { ...{ provider: "payos" as const, payload: "QR1", bankShortName: "MB", accountNumber: "0001", accountName: "GV A", amount: 200000, content: "HP 1", checkoutUrl: "https://pay/1" }, provider: "vietqr", checkoutUrl: null } } }} />
       </LanguageProvider>
     )
     expect(screen.queryByRole("link", { name: /Mở trang thanh toán/ })).toBeNull()

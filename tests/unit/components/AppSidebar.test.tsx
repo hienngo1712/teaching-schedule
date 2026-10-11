@@ -7,6 +7,20 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { AppSidebar } from "@/components/layout/AppSidebar"
 import { UpgradeDialog } from "@/components/plan/UpgradeDialog"
 
+// AL: mặc định TK 1 nơi theo học sinh (giao diện như cũ); test "chỉ trung tâm" đổi placeState.summary.
+const placeState = vi.hoisted(() => ({
+  places: [] as { id: number; name: string; color: string; billing: string }[],
+  summary: undefined as { count: number; hasPerStudent: boolean; hasPerSession: boolean } | undefined,
+}))
+vi.mock("@/hooks/usePlaceSummary", () => ({
+  usePlaceSummary: () => ({
+    places: placeState.places,
+    summary: placeState.summary,
+    multi: placeState.places.length >= 2,
+    placeById: (id: number | null | undefined) => placeState.places.find((p) => p.id === id),
+  }),
+}))
+
 vi.mock("next/navigation", () => ({ usePathname: () => "/subjects" }))
 const mockPlan = vi.hoisted(() => ({ allow: true, me: undefined as undefined | { plan: string; source: string } }))
 vi.mock("@/hooks/usePlan", () => ({
@@ -32,6 +46,7 @@ describe("AppSidebar", () => {
       "/tuition",
       "/reports",
       "/subjects",
+      "/places",
       "/settings",
       "/plan",
       "/trash",
@@ -78,5 +93,21 @@ describe("AppSidebar", () => {
       </LanguageProvider>
     )
     expect(document.querySelector('[data-testid="build-info"]')).not.toBeNull()
+  })
+})
+
+describe("AppSidebar — chỉ dạy trung tâm (spec AL §4.4) [RF 2]", () => {
+  it("không có Học phí/Báo cáo; Nơi dạy vẫn có", () => {
+    placeState.summary = { count: 1, hasPerStudent: false, hasPerSession: true }
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <AppSidebar />
+      </LanguageProvider>
+    )
+    const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"))
+    expect(hrefs).not.toContain("/tuition")
+    expect(hrefs).not.toContain("/reports")
+    expect(hrefs).toContain("/places")
+    placeState.summary = undefined
   })
 })

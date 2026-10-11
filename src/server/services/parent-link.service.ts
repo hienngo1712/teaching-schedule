@@ -6,6 +6,8 @@ import { formatTime, vnDateParts } from "@/lib/utils"
 import { effectivePlan, hasFeature } from "@/lib/plans"
 import type { ParentSessionDTO, ParentViewDTO } from "@/lib/types/models"
 import { hashParentToken } from "@/server/crypto/parent-token"
+import { loadBillingChanges } from "./billing.service"
+import { monthKey, resolveBilling } from "@/lib/billing"
 
 // 32 byte base64url = 43 ký tự. Kiểm dạng trước khi truy vấn để token rác không chạm DB.
 export const PARENT_TOKEN_REGEX = /^[A-Za-z0-9_-]{43}$/
@@ -69,6 +71,7 @@ const SESSION_SELECT = {
       startTime: true,
       endTime: true,
       subject: { select: { name: true } },
+      place: { select: { name: true } },
     },
   },
 } satisfies Prisma.SessionStudentSelect
@@ -80,13 +83,14 @@ const SESSION_ORDER = [
 
 type SessionRow = Prisma.SessionStudentGetPayload<{ select: typeof SESSION_SELECT }>
 
-function toSessionDTO(row: SessionRow): ParentSessionDTO {
+function toSessionDTO(row: SessionRow, showPlace: boolean): ParentSessionDTO {
   return {
     date: row.session.sessionDate.toISOString().slice(0, 10),
     startTime: formatTime(row.session.startTime),
     endTime: formatTime(row.session.endTime),
     subjectName: row.session.subject.name,
     attendance: row.attendance as ParentSessionDTO["attendance"],
+    ...(showPlace && row.session.place ? { placeName: row.session.place.name } : {}),
   }
 }
 
@@ -128,7 +132,16 @@ export async function getParentView(
   const year = Math.floor(idx / 12)
   const month = (idx % 12) + 1
 
-  const notice = await getTuitionNotice(db, student.userId, { studentId: student.id, year, month }, { origin, returnPath: `/p/${token}` })
+  // HS ở nơi tính theo ca/giờ tháng này: không dựng phiếu (cũng không tạo link payOS) (spec AL §4.6).
+  const [billingMap, placeCount] = await Promise.all([
+    loadBillingChanges(db, [student.id]),
+    db.teachingPlace.count({ where: { userId: student.userId, isDeleted: false } }),
+  ])
+  const placeFree = !!resolveBilling(billingMap.get(student.id) ?? [], monthKey(year, month)).free
+  const notice = placeFree
+    ? null
+    : await getTuitionNotice(db, student.userId, { studentId: student.id, year, month }, { origin, returnPath: `/p/${token}` })
+  const showPlace = placeCount >= 2
 
   // Cùng điều kiện với currentAttendance trong getMonthlyTuitionStatus để số buổi khớp phiếu.
   const where = (sessionDate: Prisma.DateTimeFilter) => ({
@@ -158,7 +171,9 @@ export async function getParentView(
     month,
     prevMonth: idx > minIdx ? toYm(idx - 1) : null,
     nextMonth: idx < maxIdx ? toYm(idx + 1) : null,
-    notice: {
+    // C lấy username khi thiếu họ tên: không được lộ tên đăng nhập ra trang công khai.
+    teacherName: student.user.fullName || "Giáo viên",
+    notice: notice && {
       ...notice,
       // studentId là id tự tăng nội bộ, không được lộ ra trang công khai.
       studentId: 0,
@@ -167,7 +182,7 @@ export async function getParentView(
       // Ghi chú lần thu là của giáo viên; payment.id là id nội bộ → thay bằng chỉ số (card chỉ dùng làm React key).
       payments: notice.payments.map((p, i) => ({ ...p, id: i, note: null })),
     },
-    attendance: monthRows.map(toSessionDTO),
-    upcoming: upcomingRows.map(toSessionDTO),
+    attendance: monthRows.map((r) => toSessionDTO(r, showPlace)),
+    upcoming: upcomingRows.map((r) => toSessionDTO(r, showPlace)),
   }
 }

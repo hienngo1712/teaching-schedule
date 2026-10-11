@@ -7,6 +7,16 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { SessionListItem } from "@/components/calendar/SessionListItem"
 import type { SessionListDTO } from "@/lib/types/models"
 
+// AL: mặc định TK 1 nơi (giao diện như cũ); test nhiều nơi đổi placeState.places.
+const placeState = vi.hoisted(() => ({ places: [] as { id: number; name: string; color: string; billing: string }[] }))
+vi.mock("@/hooks/usePlaceSummary", () => ({
+  usePlaceSummary: () => ({
+    places: placeState.places,
+    multi: placeState.places.length >= 2,
+    placeById: (id: number | null | undefined) => placeState.places.find((p) => p.id === id),
+  }),
+}))
+
 const sampleSession: SessionListDTO = {
   id: 1,
   userId: 1,
@@ -15,6 +25,7 @@ const sampleSession: SessionListDTO = {
   endTime: "09:30",
   durationMins: 90,
   subjectId: 1,
+  placeId: null,
   subject: { id: 1, name: "Toán", color: "#0891B2" },
   title: null,
   notes: null,

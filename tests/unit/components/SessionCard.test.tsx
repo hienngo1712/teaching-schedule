@@ -9,6 +9,16 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { SessionCard } from "@/components/calendar/SessionCard"
 import type { SessionListDTO } from "@/lib/types/models"
 
+// AL: mặc định TK 1 nơi (giao diện như cũ); test nhiều nơi đổi placeState.places.
+const placeState = vi.hoisted(() => ({ places: [] as { id: number; name: string; color: string; billing: string }[] }))
+vi.mock("@/hooks/usePlaceSummary", () => ({
+  usePlaceSummary: () => ({
+    places: placeState.places,
+    multi: placeState.places.length >= 2,
+    placeById: (id: number | null | undefined) => placeState.places.find((p) => p.id === id),
+  }),
+}))
+
 vi.mock("@/hooks/useMediaQuery", () => ({
   useMediaQuery: vi.fn(() => {
     throw new Error("useMediaQuery must not be called in SessionCard")
@@ -32,6 +42,7 @@ const base: SessionListDTO = {
   endTime: "09:30",
   durationMins: 90,
   subjectId: 1,
+  placeId: null,
   subject: { id: 1, name: "Toán", color: "#0891B2" },
   title: null,
   notes: null,
@@ -128,3 +139,15 @@ describe("SessionCard — U19 không dùng useMediaQuery và render 2 chuỗi me
   })
 })
 
+describe("SessionCard — nơi dạy (spec AL §4.3)", () => {
+  it("TK 1 nơi: không có tên nơi; ≥ 2 nơi: chấm màu + tên nơi của ca", () => {
+    placeState.places = [{ id: 1, name: "Lớp tại nhà", color: "#4F46E5", billing: "per_student" }]
+    const { unmount } = render(<LanguageProvider forcedLanguage="vi"><SessionCard session={{ ...base, placeId: 1 }} /></LanguageProvider>)
+    expect(screen.queryByTestId("place-tag")).toBeNull()
+    unmount()
+    placeState.places = [...placeState.places, { id: 2, name: "TT Ánh Dương", color: "#0891B2", billing: "per_session" }]
+    render(<LanguageProvider forcedLanguage="vi"><SessionCard session={{ ...base, placeId: 2 }} /></LanguageProvider>)
+    expect(screen.getByTestId("place-tag").textContent).toBe("TT Ánh Dương")
+    placeState.places = []
+  })
+})

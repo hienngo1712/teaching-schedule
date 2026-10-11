@@ -159,7 +159,7 @@ describe("getParentView", () => {
     const view = await getParentView(db, token)
     expect(view).not.toBeNull()
     expect(Object.keys(view!).sort()).toEqual(
-      ["attendance", "month", "nextMonth", "notice", "prevMonth", "student", "upcoming", "year"]
+      ["attendance", "month", "nextMonth", "notice", "prevMonth", "student", "teacherName", "upcoming", "year"]
     )
     expect(Object.keys(view!.student).sort()).toEqual(["fullName", "grade"])
     expect(view!.attendance).toHaveLength(1)
@@ -167,12 +167,12 @@ describe("getParentView", () => {
       ["attendance", "date", "endTime", "startTime", "subjectName"]
     )
     expect(view!.attendance[0].attendance).toBe("present")
-    expect(view!.notice.payments.length).toBeGreaterThan(0)
-    for (const p of view!.notice.payments) expect(p.note).toBeNull()
+    expect(view!.notice!.payments.length).toBeGreaterThan(0)
+    for (const p of view!.notice!.payments) expect(p.note).toBeNull()
     // Không lộ id nội bộ: studentId đặt về 0, payment.id thay bằng chỉ số (0..n-1).
-    expect(view!.notice.studentId).toBe(0)
-    expect(view!.notice.payments.map((p) => p.id)).toEqual(
-      view!.notice.payments.map((_, i) => i)
+    expect(view!.notice!.studentId).toBe(0)
+    expect(view!.notice!.payments.map((p) => p.id)).toEqual(
+      view!.notice!.payments.map((_, i) => i)
     )
 
     const json = JSON.stringify(view)
@@ -193,7 +193,7 @@ describe("getParentView", () => {
     const { token } = await setup(caller)
     await db.user.update({ where: { username: "teacher2" }, data: { fullName: null } })
     const view = await getParentView(db, token)
-    expect(view!.notice.teacherName).toBe("Giáo viên")
+    expect(view!.notice!.teacherName).toBe("Giáo viên")
     expect(JSON.stringify(view)).not.toContain('"teacher2"')
   })
 
@@ -215,7 +215,7 @@ describe("getParentView", () => {
     expect(view.attendance[0].endTime).toBe("07:30")
     const attended = view.attendance.filter((r) => r.attendance === "present" || r.attendance === "late").length
     expect(attended).toBe(2)
-    expect(view.notice.presentSessions).toBe(attended)
+    expect(view.notice!.presentSessions).toBe(attended)
   })
 
   it("lịch sắp tới: bỏ ca quá khứ và ca huỷ, tối đa 10, sắp theo ngày rồi giờ", async () => {
@@ -396,9 +396,9 @@ describe("Link phụ huynh: tra theo hash, token mã hoá (spec O 6.5)", () => {
 
     const view = await getParentView(db, token)
     expect(view).not.toBeNull()
-    expect(view?.notice.billingMode).toBe("monthly")
-    expect(view?.notice.monthlyFee).toBe(400000)
-    expect(view?.notice.currentMonthFee).toBe(400000)
+    expect(view?.notice!.billingMode).toBe("monthly")
+    expect(view?.notice!.monthlyFee).toBe(400000)
+    expect(view?.notice!.currentMonthFee).toBe(400000)
   })
 })
 

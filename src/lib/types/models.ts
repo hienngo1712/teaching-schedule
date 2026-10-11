@@ -95,6 +95,8 @@ export interface TuitionStatusDTO {
   payosPaidAmount: number | null
   inProgress: boolean
   debtMonths: number
+  // Nơi học hiện tại (spec AL §4.5): nhãn tên nơi + Bộ lọc Nơi học.
+  placeId?: number | null
 }
 
 export type NoticeStatus = "none" | "sent" | "changed"
@@ -111,6 +113,8 @@ export interface AttendanceDTO {
   note: string | null
   fee: number
   billingMode?: BillingMode
+  // HS ở nơi tính theo ca/giờ trong tháng của ca (spec AL §3): không có học phí buổi.
+  placeFree?: boolean
 }
 
 /**
@@ -180,6 +184,8 @@ export type ParentSessionDTO = {
   endTime: string
   subjectName: string
   attendance: "pending" | "present" | "absent" | "late"
+  // Tên nơi dạy của buổi, chỉ có khi GV có ≥ 2 nơi (spec AL §4.6).
+  placeName?: string
 }
 
 export type ParentViewDTO = {
@@ -188,7 +194,9 @@ export type ParentViewDTO = {
   month: number
   prevMonth: string | null // "YYYY-MM", null ở biên
   nextMonth: string | null
-  notice: TuitionNoticeDTO // payments[].note luôn null
+  teacherName: string
+  // null khi HS ở nơi tính theo ca/giờ trong tháng đang xem: không có học phí/phiếu/QR (spec AL §4.6).
+  notice: TuitionNoticeDTO | null // payments[].note luôn null
   attendance: ParentSessionDTO[]
   upcoming: ParentSessionDTO[]
 }

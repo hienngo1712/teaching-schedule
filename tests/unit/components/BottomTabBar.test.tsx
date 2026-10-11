@@ -8,6 +8,20 @@ import { usePathname } from "next/navigation"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import { BottomTabBar } from "@/components/layout/BottomTabBar"
 
+// AL: mặc định TK 1 nơi theo học sinh (giao diện như cũ); test "chỉ trung tâm" đổi placeState.summary.
+const placeState = vi.hoisted(() => ({
+  places: [] as { id: number; name: string; color: string; billing: string }[],
+  summary: undefined as { count: number; hasPerStudent: boolean; hasPerSession: boolean } | undefined,
+}))
+vi.mock("@/hooks/usePlaceSummary", () => ({
+  usePlaceSummary: () => ({
+    places: placeState.places,
+    summary: placeState.summary,
+    multi: placeState.places.length >= 2,
+    placeById: (id: number | null | undefined) => placeState.places.find((p) => p.id === id),
+  }),
+}))
+
 vi.mock("next/navigation", () => ({ usePathname: vi.fn() }))
 // jsdom không điều hướng thật được: giữ onClick của Link rồi chặn mặc định.
 vi.mock("next/link", () => ({
@@ -71,7 +85,7 @@ describe("BottomTabBar", () => {
     fireEvent.click(moreButton())
     const dialog = await screen.findByRole("dialog", { name: "Thêm" })
     const links = within(dialog).getAllByRole("link")
-    expect(links.map((l) => l.getAttribute("href"))).toEqual(["/reports", "/subjects", "/settings", "/plan", "/trash", "/guide"])
+    expect(links.map((l) => l.getAttribute("href"))).toEqual(["/reports", "/subjects", "/places", "/settings", "/plan", "/trash", "/guide"])
     expect(within(dialog).getByText("Doanh thu, công nợ theo tháng và năm")).toBeTruthy()
     expect(within(dialog).getByText("Thêm, đổi màu, ẩn môn")).toBeTruthy()
     expect(within(dialog).getByText("Tài khoản ngân hàng nhận học phí")).toBeTruthy()
@@ -140,5 +154,23 @@ describe("BottomTabBar", () => {
     fireEvent.click(moreButton())
     const dialog = await screen.findByRole("dialog", { name: "Thêm" })
     expect(within(dialog).queryByRole("button", { name: "Close" })).toBeNull()
+  })
+})
+
+describe("BottomTabBar — chỉ dạy trung tâm (spec AL §4.4) [RF 2]", () => {
+  it("tab không có Học phí; sheet Thêm không có Báo cáo", async () => {
+    placeState.summary = { count: 1, hasPerStudent: false, hasPerSession: true }
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <BottomTabBar />
+      </LanguageProvider>
+    )
+    const nav = screen.getByRole("navigation")
+    const hrefs = within(nav).getAllByRole("link").map((l) => l.getAttribute("href"))
+    expect(hrefs).toEqual(["/dashboard", "/calendar", "/students"])
+    fireEvent.click(screen.getByRole("button", { name: /Thêm/ }))
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getAllByRole("link").map((l) => l.getAttribute("href"))).not.toContain("/reports")
+    placeState.summary = undefined
   })
 })

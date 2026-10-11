@@ -34,6 +34,9 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FilterBar, type FilterChip } from "@/components/common/FilterBar"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
+import { NoPerStudentPlace } from "@/components/places/NoPerStudentPlace"
+import { PlaceTag } from "@/components/places/PlaceTag"
 import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
 import type { MonthlyTuitionFilterInput } from "@/lib/schemas/tuition"
 
@@ -53,6 +56,8 @@ export default function TuitionPage() {
     selectedStudentId,
     setStudentId,
     clearFilters,
+    selectedPlaceId,
+    setPlace,
   } = useFilters()
   const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
@@ -80,6 +85,7 @@ export default function TuitionPage() {
     studentId: pendingDeepLinkId,
     status: selectedStatus as MonthlyTuitionFilterInput["status"],
     noticeFilter: (selectedNoticeFilter && selectedNoticeFilter !== "all" ? selectedNoticeFilter : undefined) as MonthlyTuitionFilterInput["noticeFilter"],
+    placeId: selectedPlaceId ?? undefined,
     page: currentPage,
     limit: pageSize,
   })
@@ -87,7 +93,7 @@ export default function TuitionPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [selectedGrade, searchStudentName, selectedStatus, selectedNoticeFilter, year, month])
+  }, [selectedGrade, searchStudentName, selectedStatus, selectedNoticeFilter, selectedPlaceId, year, month])
 
   const items = query.data?.items ?? []
   const totalItems = query.data?.totalCount ?? 0
@@ -168,7 +174,15 @@ export default function TuitionPage() {
 
   const columns: Column<TuitionStatusItem>[] = [
     { header: t("stt"), cell: (_, i) => offset + i + 1, className: "w-[60px] text-center text-slate-400" },
-    { header: t("full_name"), cell: (item) => <span className="font-medium text-slate-900">{item.fullName}</span> },
+    {
+      header: t("full_name"),
+      cell: (item) => (
+        <div className="min-w-0">
+          <span className="font-medium text-slate-900">{item.fullName}</span>
+          <PlaceTag placeId={item.placeId} className="text-xs text-slate-500" />
+        </div>
+      ),
+    },
     {
       header: t("grade"),
       cell: (item) => (
@@ -220,11 +234,17 @@ export default function TuitionPage() {
   }
 
   const isDesktop = useMediaQuery("(min-width: 768px)")
+  const { summary, places, multi, placeById } = usePlaceSummary()
+  const filterPlace = multi ? placeById(selectedPlaceId) : undefined
+  if (filterPlace) activeChips.push({ key: "place", label: filterPlace.name, onRemove: () => setPlace(null) })
   const nowVn = vnDateParts()
   const prevMonthKey = monthKey(nowVn.year, nowVn.month) - 1
   const viewingMonthKey = monthKey(year, month)
   const isViewingPrev = viewingMonthKey === prevMonthKey
   const isCurrentOrFuture = isInProgressMonth(year, month)
+
+  // Chỉ dạy nơi tính theo ca/giờ: không có Học phí (spec AL §4.4).
+  if (summary?.hasPerStudent === false) return <NoPerStudentPlace title={t("manage_tuition")} />
 
   return (
     <div className="flex flex-col gap-4">
@@ -277,10 +297,28 @@ export default function TuitionPage() {
                 ))}
               </SelectContent>
             </Select>
+            {multi && (
+              <Select value={selectedPlaceId ? String(selectedPlaceId) : "all"} onValueChange={(v) => setPlace(v === "all" ? null : Number(v))}>
+                <SelectTrigger aria-label={t("student_place")}>
+                  <SelectValue placeholder={t("all_places")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all_places")}</SelectItem>
+                  {places.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      <span className="flex items-center gap-2">
+                        <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.color }} />
+                        {p.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </>
         }
         activeChips={activeChips}
-        onClearAll={() => clearFilters(["noticeFilter", "grade"])}
+        onClearAll={() => clearFilters(["noticeFilter", "grade", "place"])}
         period={
           <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1" data-tour="tuition-month">
             <Button variant="ghost" size="icon" onClick={prevMonth} className="size-9">
@@ -344,6 +382,7 @@ export default function TuitionPage() {
                 <Badge variant="secondary" className="mt-1 border-none bg-slate-100 font-medium text-slate-500">
                   {t("grade")} {item.grade}
                 </Badge>
+                <PlaceTag placeId={item.placeId} className="mt-1 text-xs text-slate-500" />
               </div>
               <div className="flex flex-col items-end gap-1">
                 <div className="flex flex-wrap items-center justify-end gap-1">

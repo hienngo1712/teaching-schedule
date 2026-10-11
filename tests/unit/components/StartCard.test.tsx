@@ -20,6 +20,20 @@ vi.mock("@/lib/trpc", () => ({
 
 import { StartCard } from "@/components/dashboard/StartCard"
 
+// AL: mặc định TK 1 nơi theo học sinh (giao diện như cũ); test "chỉ trung tâm" đổi placeState.summary.
+const placeState = vi.hoisted(() => ({
+  places: [] as { id: number; name: string; color: string; billing: string }[],
+  summary: undefined as { count: number; hasPerStudent: boolean; hasPerSession: boolean } | undefined,
+}))
+vi.mock("@/hooks/usePlaceSummary", () => ({
+  usePlaceSummary: () => ({
+    places: placeState.places,
+    summary: placeState.summary,
+    multi: placeState.places.length >= 2,
+    placeById: (id: number | null | undefined) => placeState.places.find((p) => p.id === id),
+  }),
+}))
+
 const steps = (o: Partial<Record<"student" | "session" | "attendance" | "payment" | "bank", boolean>> = {}) => ({
   student: false, session: false, attendance: false, payment: false, bank: false, ...o,
 })
@@ -87,5 +101,20 @@ describe("StartCard (spec W §4)", () => {
       "/tuition?tour=tuition",
       "/settings?tour=bank",
     ])
+  })
+})
+
+describe("StartCard — chỉ dạy trung tâm (spec AL §4.4) [RF 2]", () => {
+  it("bỏ bước thu tiền + ngân hàng: 3 bước, xong 3 bước thì ẩn thẻ", () => {
+    placeState.summary = { count: 1, hasPerStudent: false, hasPerSession: true }
+    statusData.current = { dismissed: false, steps: steps({ student: true }) }
+    const { unmount } = renderVi()
+    expect(screen.getAllByTestId("start-step")).toHaveLength(3)
+    expect(screen.getByText(viText.start_progress.replace("{n}", "1").replace("{total}", "3"))).toBeTruthy()
+    unmount()
+    statusData.current = { dismissed: false, steps: steps({ student: true, session: true, attendance: true }) }
+    const { container } = renderVi()
+    expect(container.textContent).toBe("")
+    placeState.summary = undefined
   })
 })
