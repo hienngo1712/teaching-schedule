@@ -41,7 +41,7 @@ export function CalendarToolbar({
     setGrade,
     searchStudentName,
     setSearch,
-    resetFilters,
+    clearFilters,
   } = useFilters()
 
   const { monthLabel, prevMonth, nextMonth } = useCalendar()
@@ -91,9 +91,10 @@ export function CalendarToolbar({
           </Select>
         }
         activeChips={activeChips}
+        // Chỉ bỏ lớp + chữ tìm, giữ tháng đang xem (tháng không phải chip lọc).
         onClearAll={() => {
           setLocalSearch("")
-          resetFilters()
+          clearFilters(["grade", "studentName"])
         }}
         period={
           <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">

@@ -33,6 +33,7 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PageHeader } from "@/components/common/PageHeader"
 import { FilterBar, type FilterChip } from "@/components/common/FilterBar"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
 import type { MonthlyTuitionFilterInput } from "@/lib/schemas/tuition"
 
@@ -218,6 +219,7 @@ export default function TuitionPage() {
     activeChips.push({ key: "grade", label: `${t("grade")} ${selectedGrade}`, onRemove: () => setGrade(null) })
   }
 
+  const isDesktop = useMediaQuery("(min-width: 768px)")
   const nowVn = vnDateParts()
   const prevMonthKey = monthKey(nowVn.year, nowVn.month) - 1
   const viewingMonthKey = monthKey(year, month)
@@ -235,7 +237,7 @@ export default function TuitionPage() {
         search={{ value: localSearch, onChange: setLocalSearch, placeholder: t("search_student") }}
         primaryFilter={
           <Select value={selectedStatus || "all"} onValueChange={(v) => setStatus(v)}>
-            <SelectTrigger className="h-11 w-full md:h-10 md:w-[170px]">
+            <SelectTrigger className="h-11 w-auto gap-2 md:h-10 md:w-[170px]">
               <SelectValue placeholder={t("status")} />
             </SelectTrigger>
             <SelectContent>
@@ -284,7 +286,10 @@ export default function TuitionPage() {
             <Button variant="ghost" size="icon" onClick={prevMonth} className="size-9">
               <ChevronLeft className="size-5" />
             </Button>
-            <span className="min-w-[110px] whitespace-nowrap px-2 text-center text-sm font-semibold">{monthLabel}</span>
+            {/* Điện thoại: "T9/2026" để nhường chỗ cho thanh lọc. */}
+            <span className="whitespace-nowrap px-2 text-center text-sm font-semibold md:min-w-[110px]">
+              {isDesktop ? monthLabel : `${t("month_abbr")}${month}/${year}`}
+            </span>
             <Button variant="ghost" size="icon" onClick={nextMonth} className="size-9">
               <ChevronRight className="size-5" />
             </Button>

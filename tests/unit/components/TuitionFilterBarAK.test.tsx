@@ -83,6 +83,16 @@ describe("Học phí — thanh lọc AK", () => {
     expect(screen.queryByRole("button", { name: /^Bỏ lọc/ })).toBeNull()
   })
 
+  // FIX AK F1: điện thoại nhãn tháng ngắn "T9/2026" để ô Trạng thái hiện đủ chữ.
+  it("điện thoại: bước tháng ghi T9/2026, ô Trạng thái rộng theo chữ (không bị ép co)", () => {
+    renderAt("year=2026&month=9&status=paid_this_month")
+    expect(screen.getByText("T9/2026")).toBeTruthy()
+    expect(screen.queryByText(/Tháng 9/)).toBeNull()
+    const status = screen.getAllByRole("combobox").find((c) => c.textContent?.includes("Đóng đủ tháng này"))!
+    expect(status.className).toContain("w-auto")
+    expect((status.parentElement as HTMLElement).className).toContain("shrink-0")
+  })
+
   it("Xoá lọc bỏ Phiếu báo + Lớp, giữ Trạng thái", () => {
     renderAt("grade=5&noticeFilter=unsent&status=unpaid")
     expect(screen.getByRole("button", { name: "Bỏ lọc Phiếu báo: Chưa gửi" })).toBeTruthy()

@@ -136,7 +136,7 @@ function CompactFilterBar({
   const trigger = (
     <Button
       variant="outline"
-      className={n > 0 ? "h-11 shrink-0 border-primary bg-primary/5 text-primary md:h-10" : "h-11 shrink-0 md:h-10"}
+      className={cn("h-11 shrink-0 px-3 md:h-10 md:px-4", n > 0 && "border-primary bg-primary/5 text-primary")}
     >
       <SlidersHorizontal className="mr-2 size-4" />
       {t("filter")}
@@ -146,10 +146,10 @@ function CompactFilterBar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-3 md:p-4">
-      {/* Điện thoại: ô tìm ≥40%, ô ngoài ≥30% để ô ngoài xuống hàng 2 thay vì bóp ô tìm. */}
-      {search && <SearchBox search={search} className="relative min-w-[40%] flex-1 md:min-w-44 md:max-w-72" />}
-      {/* Điện thoại: hàng 1 = tìm + Bộ lọc, hàng 2 = ô ngoài (co giãn) + kỳ/⋯. Laptop: đúng thứ tự DOM. */}
-      {primaryFilter && <div className="order-1 min-w-[30%] flex-1 md:order-none md:min-w-0 md:flex-none">{primaryFilter}</div>}
+      {/* Điện thoại: ô tìm ≥35% để không bị ô bên cạnh bóp còn vài chữ. */}
+      {search && <SearchBox search={search} className="relative min-w-[35%] flex-1 md:min-w-44 md:max-w-72" />}
+      {/* Ô ngoài rộng theo chữ (không co) để nhãn dài nhất hiện đủ; điện thoại: hàng 1 = tìm + ô ngoài. */}
+      {primaryFilter && <div className="shrink-0">{primaryFilter}</div>}
 
       {filters && (isDesktop ? (
         <Popover>

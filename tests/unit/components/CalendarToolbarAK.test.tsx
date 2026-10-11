@@ -42,7 +42,18 @@ describe("CalendarToolbar — thanh lọc AK", () => {
     expect(screen.getByRole("button", { name: "Bộ lọc (2)" })).toBeTruthy()
     expect(screen.queryByRole("button", { name: /Xóa bộ lọc/ })).toBeNull()
     fireEvent.click(screen.getByRole("button", { name: "Xoá lọc" }))
-    expect(push).toHaveBeenLastCalledWith("/calendar")
+    expect(String(push.mock.calls.at(-1)?.[0])).not.toMatch(/grade=|studentName=/)
+  })
+
+  // FIX AK F2: Xoá lọc chỉ bỏ lớp + chữ tìm, giữ tháng đang xem (tháng không phải chip lọc).
+  it("Xoá lọc giữ tháng đang xem, bỏ lớp và chữ tìm trong 1 lần", () => {
+    renderAt("year=2026&month=3&grade=5&studentName=An")
+    fireEvent.click(screen.getByRole("button", { name: "Xoá lọc" }))
+    const url = String(push.mock.calls.at(-1)?.[0])
+    expect(url).toContain("year=2026")
+    expect(url).toContain("month=3")
+    expect(url).not.toContain("grade=")
+    expect(url).not.toContain("studentName=")
   })
 
   it("bấm chip Lớp 5 thì bỏ lọc lớp", () => {
