@@ -5,6 +5,9 @@ import { formatDayOfWeek, formatTime } from "@/lib/utils"
 import { findBank } from "@/lib/vn-banks"
 import { LIVE_LINK } from "@/server/soft-delete"
 import { byGradeThenName } from "@/lib/name-search"
+import { monthKey, resolvePlaceBilling } from "@/lib/billing"
+import { vnDateParts } from "@/lib/utils"
+import { resolveRate } from "./timesheet.service"
 
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const HEADER_BG = "FFCCFBF1"
@@ -32,6 +35,14 @@ const NOTE_SENSITIVE = "File chứa dữ liệu cá nhân chưa mã hoá. Không
 
 const SESSION_STATUS_LABEL: Record<string, string> = { scheduled: "Đã lên lịch", cancelled: "Đã hủy" }
 const UPGRADE_TRIGGER_LABEL: Record<string, string> = { auto: "Tự động", manual: "Thủ công" }
+const PLACE_KIND_LABEL: Record<string, string> = { home: "Lớp tại nhà", tutor: "Gia sư", center: "Trung tâm" }
+const PLACE_BILLING_LABEL: Record<string, string> = { per_student: "Theo học sinh", per_session: "Theo ca/giờ" }
+const RATE_UNIT_LABEL: Record<string, string> = { session: "Theo ca", hour: "Theo giờ" }
+
+// fromKey = năm*12 + tháng-1; 0 = mọi tháng.
+function fromMonthLabel(fromKey: number): string {
+  return fromKey === 0 ? "Từ đầu" : `${String((fromKey % 12) + 1).padStart(2, "0")}/${Math.floor(fromKey / 12)}`
+}
 
 function label(map: Readonly<Record<string, string>>, value: string): string {
   return map[value] ?? value
@@ -82,7 +93,7 @@ export async function buildBackupWorkbook(
   now: Date
 ): Promise<ExcelJS.Workbook> {
   // Mọi truy vấn đều liệt kê cột: thêm cột nhạy cảm vào schema sau này không tự lọt ra file.
-  const [user, students, billingChanges, subjects, sessions, attendances, tuitions, payments, upgradeLogs] = await Promise.all([
+  const [user, students, billingChanges, subjects, sessions, attendances, tuitions, payments, upgradeLogs, places, placeRates, placePayments] = await Promise.all([
     db.user.findUniqueOrThrow({
       where: { id: userId },
       select: { username: true, fullName: true, bankBin: true, bankAccountNumber: true, bankAccountName: true },
@@ -156,6 +167,29 @@ export async function buildBackupWorkbook(
       orderBy: { year: "asc" },
       select: {
         id: true, year: true, executedAt: true, trigger: true, upgradedCount: true, deactivatedCount: true,
+      },
+    }),
+    // Nơi dạy (FIX AM F3): kể cả nơi đã xoá, để giữ đủ dữ liệu cũ.
+    db.teachingPlace.findMany({
+      where: { userId },
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      select: {
+        id: true, name: true, kind: true, isDeleted: true, createdAt: true,
+        billingChanges: { select: { fromKey: true, billing: true } },
+        rateChanges: { select: { fromKey: true, unit: true, amount: true } },
+      },
+    }),
+    db.placeRateChange.findMany({
+      where: { place: { userId } },
+      orderBy: [{ placeId: "asc" }, { fromKey: "asc" }],
+      select: { id: true, placeId: true, fromKey: true, unit: true, amount: true, createdAt: true, place: { select: { name: true } } },
+    }),
+    db.placePayment.findMany({
+      where: { place: { userId }, isDeleted: false },
+      orderBy: [{ receivedAt: "asc" }, { id: "asc" }],
+      select: {
+        id: true, placeId: true, year: true, month: true, amount: true, receivedAt: true, note: true, createdAt: true,
+        place: { select: { name: true } },
       },
     }),
   ])
@@ -279,6 +313,41 @@ export async function buildBackupWorkbook(
     { header: "Cách chạy", width: 11, value: (l) => label(UPGRADE_TRIGGER_LABEL, l.trigger) },
     { header: "Số HS lên lớp", width: 13, value: (l) => l.upgradedCount },
     { header: "Số HS cho nghỉ", width: 14, value: (l) => l.deactivatedCount },
+  ])])
+
+  const { year, month } = vnDateParts(now)
+  const curKey = monthKey(year, month)
+  counts.push(["Nơi dạy", addDataSheet(wb, "Nơi dạy", places, [
+    { header: "ID", width: 8, value: (p) => p.id },
+    { header: "Tên nơi dạy", width: 24, value: (p) => p.name },
+    { header: "Loại", width: 13, value: (p) => label(PLACE_KIND_LABEL, p.kind) },
+    { header: "Cách tính hiện tại", width: 17, value: (p) => label(PLACE_BILLING_LABEL, resolvePlaceBilling(p.billingChanges, curKey)) },
+    { header: "Đơn giá hiện tại", width: 15, kind: "money", value: (p) => resolveRate(p.rateChanges, curKey)?.amount },
+    { header: "Tính theo", width: 11, value: (p) => { const r = resolveRate(p.rateChanges, curKey); return r && label(RATE_UNIT_LABEL, r.unit) } },
+    { header: "Đã xoá", width: 9, value: (p) => yesNo(p.isDeleted) },
+    { header: "Ngày tạo", width: 17, kind: "datetime", value: (p) => vnTime(p.createdAt) },
+  ])])
+
+  counts.push(["Đơn giá", addDataSheet(wb, "Đơn giá", placeRates, [
+    { header: "ID", width: 8, value: (r) => r.id },
+    { header: "ID nơi dạy", width: 10, value: (r) => r.placeId },
+    { header: "Nơi dạy", width: 24, value: (r) => r.place.name },
+    { header: "Từ tháng", width: 12, value: (r) => fromMonthLabel(r.fromKey) },
+    { header: "Tính theo", width: 11, value: (r) => label(RATE_UNIT_LABEL, r.unit) },
+    { header: "Đơn giá", width: 13, kind: "money", value: (r) => r.amount },
+    { header: "Ngày tạo", width: 17, kind: "datetime", value: (r) => vnTime(r.createdAt) },
+  ])])
+
+  counts.push(["Tiền nơi dạy trả", addDataSheet(wb, "Tiền nơi dạy trả", placePayments, [
+    { header: "ID", width: 8, value: (p) => p.id },
+    { header: "ID nơi dạy", width: 10, value: (p) => p.placeId },
+    { header: "Nơi dạy", width: 24, value: (p) => p.place.name },
+    { header: "Năm", width: 7, value: (p) => p.year },
+    { header: "Tháng", width: 7, value: (p) => p.month },
+    { header: "Ngày nhận", width: 12, kind: "date", value: (p) => p.receivedAt },
+    { header: "Số tiền", width: 13, kind: "money", value: (p) => p.amount },
+    { header: "Ghi chú", width: 30, value: (p) => p.note },
+    { header: "Ngày tạo", width: 17, kind: "datetime", value: (p) => vnTime(p.createdAt) },
   ])])
 
   info.columns = [{ header: "Mục", width: 32 }, { header: "Giá trị", width: 80 }]

@@ -39,6 +39,13 @@ function renderForm(place?: Place) {
   )
 }
 
+// Radix Select cần các API con trỏ/cuộn mà jsdom không có.
+Object.assign(window.HTMLElement.prototype, {
+  hasPointerCapture: () => false,
+  releasePointerCapture: () => {},
+  scrollIntoView: () => {},
+})
+
 beforeEach(() => {
   mutate.create.mockReset()
   mutate.update.mockReset()
@@ -107,10 +114,16 @@ describe("PlaceFormDialog: đơn giá (spec AM §4.2)", () => {
 
   it("nơi đã có ca: hiện Áp dụng từ tháng (mặc định tháng hiện tại, lùi tối đa 12 tháng); lưu gửi đúng tháng", () => {
     renderForm({ ...center, rate: { unit: "session", amount: 150000 } })
-    const from = screen.getByLabelText("Áp dụng từ tháng") as HTMLSelectElement
-    expect(from.value).toBe("2026-10")
-    expect(from.options).toHaveLength(13)
-    fireEvent.change(from, { target: { value: "2026-08" } })
+    // FIX AM F2: Select của app (Radix), không phải select gốc.
+    const from = screen.getByRole("combobox", { name: "Áp dụng từ tháng" })
+    expect(from.tagName).toBe("BUTTON")
+    expect(from.textContent).toBe("T10/2026")
+    fireEvent.pointerDown(from, { button: 0, ctrlKey: false, pointerType: "mouse" })
+    const options = screen.getAllByRole("option")
+    expect(options).toHaveLength(13)
+    expect(options[12].textContent).toBe("T10/2025")
+    fireEvent.click(screen.getByRole("option", { name: "T8/2026" }))
+    expect(screen.getByRole("combobox", { name: "Áp dụng từ tháng" }).textContent).toBe("T8/2026")
     fireEvent.change(screen.getByLabelText("Số tiền mỗi ca"), { target: { value: "160000" } })
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
     mutate.onSaved!({ id: 9 })

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { SUBJECT_COLORS, pickNextColor } from "@/lib/subject-colors"
 import { cn, vnDateParts } from "@/lib/utils"
@@ -200,18 +201,19 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
                   <Label htmlFor="place-rate-from" className="text-xs font-medium text-slate-600">
                     {t("place_rate_from")}
                   </Label>
-                  <select
-                    id="place-rate-from"
-                    value={rateFrom}
-                    onChange={(e) => setRateFrom(e.target.value)}
-                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm md:h-10"
-                  >
-                    {rateMonths(year, month).map((m) => (
-                      <option key={m} value={m}>
-                        {`${t("month_abbr")}${Number(m.slice(5))}/${m.slice(0, 4)}`}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Radix có lúc gọi onValueChange("") → bỏ qua (như PlaceSelect). */}
+                  <Select value={rateFrom} onValueChange={(v) => v && setRateFrom(v)}>
+                    <SelectTrigger id="place-rate-from" className="h-11 md:h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rateMonths(year, month).map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {`${t("month_abbr")}${Number(m.slice(5))}/${m.slice(0, 4)}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>
