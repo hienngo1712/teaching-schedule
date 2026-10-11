@@ -128,9 +128,12 @@ export async function getMonthlySummary(
     toYear?: number;
     toMonth?: number;
     grade?: number;
+    // Nơi học hiện tại của HS (spec AN §5).
+    placeId?: number;
   }
 ) {
-  const { year, month, toYear, toMonth, grade } = params
+  const { year, month, toYear, toMonth, grade, placeId } = params
+  const inPlace = (st: { placeId: number | null }) => placeId === undefined || st.placeId === placeId
 
   // Mốc cuối kỳ hiệu dụng: cho phép truyền toMonth mà không kèm toYear (và ngược
   // lại). Tính nhất quán cho startDate/endDate, bộ lọc năm và totalPaid bên dưới
@@ -162,7 +165,7 @@ export async function getMonthlySummary(
         year: { gte: year, lte: effToYear },
       }
 
-  const [sessions, monthlyTuitions] = await Promise.all([
+  const [allSessions, monthlyTuitions] = await Promise.all([
     db.teachingSession.findMany({
       where: {
         userId,
@@ -175,8 +178,17 @@ export async function getMonthlySummary(
         sessionStudents: { where: HISTORY_LINK, include: { student: true } }
       }
     }),
-    db.monthlyTuition.findMany({ where: monthlyTuitionsWhere })
+    db.monthlyTuition.findMany({
+      where: placeId === undefined ? monthlyTuitionsWhere : { ...monthlyTuitionsWhere, student: { ...monthlyTuitionsWhere.student, placeId } },
+    })
   ])
+  // Lọc nơi học: chỉ ca có HS của nơi đó, và trong ca chỉ tính HS của nơi đó.
+  const sessions =
+    placeId === undefined
+      ? allSessions
+      : allSessions
+          .map((s) => ({ ...s, sessionStudents: s.sessionStudents.filter((ss) => inPlace(ss.student)) }))
+          .filter((s) => s.sessionStudents.length > 0)
 
   const totalSessions = sessions.length
 
@@ -251,6 +263,7 @@ export async function getMonthlySummary(
     year: effToYear,
     month: effToMonth,
     grade,
+    placeId,
   })
 
   return {

@@ -334,6 +334,32 @@ export async function getPlaceRateHistory(db: PrismaClient, userId: number, plac
     }))
 }
 
+// Thu nhập 12 tháng gần nhất (spec AN §4): học phí đã thu (MonthlyTuition.paidAmount) + nơi dạy đã nhận, cũ → mới.
+export async function getIncomeLast12(db: PrismaClient, userId: number) {
+  const { year, month } = vnDateParts()
+  const cur = monthKey(year, month)
+  const first = cur - 11
+  const fromYear = Math.floor(first / 12)
+  const [tuitions, payments] = await Promise.all([
+    db.monthlyTuition.groupBy({
+      by: ["year", "month"],
+      where: { student: { userId }, year: { gte: fromYear, lte: year } },
+      _sum: { paidAmount: true },
+    }),
+    db.placePayment.groupBy({
+      by: ["year", "month"],
+      where: { place: { userId }, isDeleted: false, year: { gte: fromYear, lte: year } },
+      _sum: { amount: true },
+    }),
+  ])
+  const tuition = new Map(tuitions.map((r) => [monthKey(r.year, r.month), r._sum.paidAmount ?? 0]))
+  const places = new Map(payments.map((r) => [monthKey(r.year, r.month), r._sum.amount ?? 0]))
+  return Array.from({ length: 12 }, (_, i) => {
+    const k = first + i
+    return { year: Math.floor(k / 12), month: (k % 12) + 1, tuition: tuition.get(k) ?? 0, places: places.get(k) ?? 0 }
+  })
+}
+
 export async function createPlacePayment(
   db: PrismaClient,
   userId: number,

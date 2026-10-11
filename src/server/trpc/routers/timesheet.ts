@@ -13,6 +13,7 @@ import {
   createPlacePayment,
   deletePlacePayment,
   getIncomeDetail,
+  getIncomeLast12,
   getIncomeMonth,
   getPlaceRateHistory,
   getTimesheetMonth,
@@ -29,6 +30,9 @@ export const timesheetRouter = createTRPCRouter({
 // Xem thu nhập dự kiến: mọi gói; lịch sử nhận chỉ trả khi có gói Plus.
 export const incomeRouter = createTRPCRouter({
   month: protectedProcedure.input(monthInputSchema).query(({ ctx, input }) => getIncomeMonth(ctx.db, ctx.userId, input)),
+
+  // Biểu đồ 12 tháng (spec AN §4): gói Pro.
+  last12: planProcedure("income12m").query(({ ctx }) => getIncomeLast12(ctx.db, ctx.userId)),
 
   detail: protectedProcedure.input(incomeDetailSchema).query(async ({ ctx, input }) => {
     const { plan } = await getUserPlan(ctx.db, ctx.userId)

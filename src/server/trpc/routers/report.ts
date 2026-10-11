@@ -31,6 +31,7 @@ export const reportRouter = createTRPCRouter({
       toYear: z.number().int().optional(),
       toMonth: z.number().int().min(1).max(12).optional(),
       grade: z.number().int().min(1).max(12).optional(),
+      placeId: z.number().int().positive().optional(),
     }))
     .query(async ({ ctx, input }) => {
       await assertFeature(ctx.db, ctx.userId, isMultiMonthReport(input) ? "multiMonthReport" : "monthlyReport")

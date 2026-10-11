@@ -43,7 +43,13 @@ export default function ReportsPage() {
     toMonth: filterToMonth,
     filterType,
     clearFilters,
+    selectedPlaceId,
+    setPlace,
   } = useFilters()
+  // Lọc nơi học (spec AN §5): chỉ khi có ≥ 2 nơi tính theo học sinh.
+  const { places: allPlaces, placeById } = usePlaceSummary()
+  const studentPlaces = allPlaces.filter((p) => p.billing === "per_student")
+  const placeId = studentPlaces.length >= 2 ? (selectedPlaceId ?? undefined) : undefined
   const reportGate = useFeatureGate("monthlyReport")
   const multiGate = useFeatureGate("multiMonthReport")
   // Chưa Pro: ép 1 tháng + bỏ lọc lớp dù URL còn type=year/grade (link cũ) để không gọi query bị chặn.
@@ -66,6 +72,7 @@ export default function ReportsPage() {
   const { data: studentListData } = trpc.student.list.useQuery(
     {
       grade: grade || undefined,
+      placeId,
       limit: 1000, // For reports we want more students
       // Gồm cả HS đã nghỉ để khớp với monthlySummary.totalStudents.
       includeInactive: true,
@@ -87,6 +94,7 @@ export default function ReportsPage() {
     {
       ...queryParams,
       grade: grade || undefined,
+      placeId,
     },
     { enabled: reportGate.allowed }
   )
@@ -102,6 +110,8 @@ export default function ReportsPage() {
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const activeChips: FilterChip[] = []
   if (grade) activeChips.push({ key: "grade", label: `${t("grade")} ${grade}`, onRemove: () => setGradeFilter(null) })
+  const filterPlace = placeById(placeId)
+  if (filterPlace) activeChips.push({ key: "place", label: filterPlace.name, onRemove: () => setPlace(null) })
   if (selectedStudentId) {
     const name = students.find((s) => s.id === selectedStudentId)?.fullName ?? t("student")
     activeChips.push({ key: "student", label: name, onRemove: () => setSelectedStudentId(null) })
@@ -162,9 +172,24 @@ export default function ReportsPage() {
           />
         }
         activeChips={activeChips}
-        onClearAll={() => clearFilters(["grade"])}
+        onClearAll={() => clearFilters(["grade", "place"])}
         filters={
           <>
+            {studentPlaces.length >= 2 && (
+              <Select value={placeId ? String(placeId) : "all"} onValueChange={(v) => v && setPlace(v === "all" ? null : Number(v))}>
+                <SelectTrigger aria-label={t("report_place")}>
+                  <SelectValue placeholder={t("all_places")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all_places")}</SelectItem>
+                  {studentPlaces.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {multiGate.locked ? (
               <Button type="button" variant="outline" className="h-11 w-full justify-between gap-2" onClick={multiGate.openUpgrade}>
                 {t("all_grades")}

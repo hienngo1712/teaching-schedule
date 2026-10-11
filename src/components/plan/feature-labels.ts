@@ -23,5 +23,6 @@ export const FEATURE_LABEL_KEY: Record<PlanFeatureId, keyof typeof vi> = {
   placeNotice: "plan_feat_place_notice",
   attendanceMonth: "plan_feat_attendance_month",
   attendanceYear: "plan_feat_attendance_year",
+  income12m: "plan_feat_income_12m",
   unlimitedStudents: "plan_unlimited",
 }

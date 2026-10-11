@@ -15,6 +15,7 @@ globalThis.ResizeObserver ??= class {
 const state = vi.hoisted(() => ({
   timesheet: undefined as unknown,
   income: [] as unknown[],
+  last12: [] as { year: number; month: number; tuition: number; places: number }[],
   locked: false,
   openUpgrade: vi.fn(),
   createMutate: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock("@/lib/trpc", () => ({
     income: {
       month: { useQuery: () => ({ data: state.income, isPending: false, isError: false, isSuccess: true, refetch: vi.fn() }) },
       detail: { useQuery: () => ({ data: undefined, isPending: true }) },
+      last12: { useQuery: () => ({ data: state.last12, isPending: false }) },
     },
     placePayment: {
       create: { useMutation: () => ({ mutate: state.createMutate, isPending: false }) },
@@ -167,5 +169,20 @@ describe("PlacePaymentDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ghi nhận đã nhận" }))
     await waitFor(() => expect(state.createMutate).toHaveBeenCalledTimes(1))
     expect(state.createMutate.mock.calls[0][0]).toMatchObject({ placeId: 2, year: 2026, month: 9, amount: 55000 })
+  })
+})
+
+describe("Income12Card (spec AN §4)", () => {
+  it("chưa Pro: thẻ khoá; Pro: 12 cột, tổng = học phí + nơi dạy", async () => {
+    const { Income12Card } = await import("@/components/timesheet/Income12Card")
+    state.locked = true
+    const { unmount } = wrap(<Income12Card />)
+    expect(screen.getByTestId("income-12m-locked")).toBeTruthy()
+    unmount()
+    state.locked = false
+    state.last12 = Array.from({ length: 12 }, (_, i) => ({ year: 2026, month: i + 1, tuition: i === 8 ? 400000 : 0, places: i === 8 ? 500000 : 100000 }))
+    wrap(<Income12Card />)
+    expect(screen.getAllByTestId("chart-bar")).toHaveLength(12)
+    expect(screen.getByTestId("income-12m").textContent).toContain("Tổng 2.000.000 đ")
   })
 })

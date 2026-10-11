@@ -14,6 +14,7 @@ import { formatCurrency } from "@/lib/utils"
 import { formatHours } from "@/lib/timesheet-export"
 import { IncomeStatusBadge } from "./IncomeStatusBadge"
 import { IncomeDetailSheet } from "./IncomeDetailSheet"
+import { Income12Card } from "./Income12Card"
 import { PlaceNoticeDialog } from "@/components/place-notice/PlaceNoticeDialog"
 import { LockBadge } from "@/components/plan/LockBadge"
 import { useFeatureGate } from "@/hooks/useFeatureGate"
@@ -201,6 +202,8 @@ export function IncomeTab({ year, month, period }: { year: number; month: number
           />
         </>
       )}
+
+      <Income12Card />
 
       <IncomeDetailSheet
         target={selected && { placeId: selected.placeId, name: selected.name, color: selected.color, year, month }}

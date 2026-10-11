@@ -524,7 +524,7 @@ export async function setNoticeSent(
 export async function getMonthlyOutstanding(
   db: PrismaClient,
   userId: number,
-  params: { year: number; month: number; grade?: number }
+  params: { year: number; month: number; grade?: number; placeId?: number }
 ): Promise<{ totalOutstanding: number; previousOutstanding: number }> {
   // R4 (CHỦ ĐÍCH, đừng "sửa" thành grade-aware từng tháng): "Còn nợ" là TỔNG nợ
   // lũy kế của HS đang thuộc khối lọc tại tháng cuối kỳ. Nợ là số dư chạy xuyên
@@ -538,6 +538,7 @@ export async function getMonthlyOutstanding(
       year: params.year,
       month: params.month,
       grade: params.grade,
+      placeId: params.placeId,
       status: "all",
       page: 1,
       limit: 1_000_000,
