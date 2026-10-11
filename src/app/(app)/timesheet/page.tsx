@@ -37,7 +37,7 @@ export default function TimesheetPage() {
   }
 
   const period = (
-    <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+    <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1" data-tour="income-month">
       <Button variant="ghost" size="icon" onClick={prevMonth} className="size-9" aria-label={t("prev_month")}>
         <ChevronLeft className="size-5" />
       </Button>

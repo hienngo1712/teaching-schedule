@@ -37,7 +37,15 @@ export async function cleanupDemo() {
   expect(process.env.DATABASE_URL ?? "").toContain(`@${EXPECTED_TEST_ENDPOINT}/`)
 
   // Rate limit chỉ đếm lần đăng nhập sai; chỉ dọn log của guide_demo, không đụng tài khoản khác.
-  await db.loginAttempt.deleteMany({ where: { username: "guide_demo" } })
+  await db.loginAttempt.deleteMany({ where: { username: { in: ["guide_demo", NEW_USER] } } })
+  // TK mới tinh chụp popup chọn nơi dạy (spec AP §5): chưa có dữ liệu gì ngoài môn mặc định.
+  const fresh = await db.user.findUnique({ where: { username: NEW_USER } })
+  if (fresh) {
+    await db.subject.deleteMany({ where: { userId: fresh.id } })
+    await db.consentRecord.deleteMany({ where: { userId: fresh.id } })
+    await db.userActivityDay.deleteMany({ where: { userId: fresh.id } })
+    await db.user.delete({ where: { id: fresh.id } })
+  }
 
   const user = await db.user.findUnique({ where: { username: "guide_demo" } })
   if (!user) return
@@ -71,8 +79,29 @@ export async function cleanupDemo() {
   await db.planOrder.deleteMany({ where: { userId: user.id } })
   await db.userActivityDay.deleteMany({ where: { userId: user.id } })
   await db.classUpgradeLog.deleteMany({ where: { userId: user.id } })
+  // Nơi dạy, đơn giá, tiền nơi dạy trả, link phiếu xoá theo user (onDelete Cascade).
   await db.user.delete({ where: { id: user.id } })
 }
+
+const NEW_USER = "guide_new"
+
+// TK chưa có nơi dạy: đăng nhập là hiện popup "Bạn đang dạy ở đâu?".
+export async function seedNewUser(): Promise<string> {
+  expect(process.env.DATABASE_URL ?? "").toContain(`@${EXPECTED_TEST_ENDPOINT}/`)
+  const user = await db.user.create({
+    data: {
+      username: NEW_USER,
+      passwordHash: await bcrypt.hash("teacher123", 4),
+      fullName: "Cô Hoa",
+      lastSeenRelease: RELEASES[0].version,
+      mustChangePassword: false,
+    },
+  })
+  await seedSubjectsForUser(db, user.id)
+  return NEW_USER
+}
+
+export const DEMO_CENTER = "TT Ánh Dương"
 
 export async function setDemoBank() {
   expect(process.env.DATABASE_URL ?? "").toContain(`@${EXPECTED_TEST_ENDPOINT}/`)
@@ -153,8 +182,14 @@ export async function seedDemo(): Promise<string> {
   const engSubject = await db.subject.findFirstOrThrow({ where: { userId: user.id, name: "Tiếng Anh" } })
 
   const caller = await getAuthedCaller("guide_demo")
+  const months = getDemoMonths()
 
-  // 6 học sinh
+  // 2 nơi dạy (spec AP §5): lớp tại nhà theo học sinh + trung tâm theo ca 150.000đ/ca (chưa có ca → áp mọi tháng).
+  const places = await caller.place.setupInitial({ home: true, tutor: false, centers: [DEMO_CENTER] })
+  const center = places.find((p) => p.name === DEMO_CENTER)!
+  await caller.placeRate.set({ placeId: center.id, unit: "session", amount: 150000, fromYear: months.current.year, fromMonth: months.current.month })
+
+  // 6 học sinh (không chọn nơi → Lớp tại nhà)
   const s1 = await caller.student.create({
     fullName: "Nguyễn Minh Anh",
     grade: 6,
@@ -232,8 +267,6 @@ export async function seedDemo(): Promise<string> {
   // Tạo token link phụ huynh cho s1
   const parentLinkRes = await caller.student.generateParentLink({ id: s1.id })
 
-  const months = getDemoMonths()
-
   // 1. Ca của 2 tháng trước cho s4 (tạo nợ cũ)
   const prev2_1 = await caller.session.create({
     sessionDate: `${months.prev2.year}-${String(months.prev2.month).padStart(2, "0")}-10`,
@@ -302,6 +335,19 @@ export async function seedDemo(): Promise<string> {
     studentIds: [s5.id, s6.id],
   })
 
+  // Ca ở trung tâm (sáng Chủ nhật, không có học sinh trong app): tháng trước + tháng này.
+  for (const m of [months.prev, months.current]) {
+    await caller.session.bulkCreate({
+      startDate: m.start,
+      endDate: m.end,
+      weekdays: [6],
+      startTime: "08:00",
+      endTime: "09:30",
+      subjectId: mathSubject.id,
+      placeId: center.id,
+    })
+  }
+
   // Điểm danh các ca trong quá khứ (đến hôm nay)
   const pastSessions = await db.teachingSession.findMany({
     where: {
@@ -315,7 +361,7 @@ export async function seedDemo(): Promise<string> {
 
   for (let i = 0; i < pastSessions.length; i++) {
     const s = pastSessions[i]
-    if (s.id === prev2_1.id || s.id === prev2_2.id) continue
+    if (s.id === prev2_1.id || s.id === prev2_2.id || s.sessionStudents.length === 0) continue
     const attendances = s.sessionStudents.map((ss, idx) => {
       let attendance: "present" | "absent" | "late" = "present"
       if (idx === 0 && i % 4 === 1) attendance = "absent"
@@ -365,4 +411,16 @@ export async function setDemoPayments() {
     amount: 300000,
     paidAt: prevPaidAt,
   })
+
+  // Trung tâm trả 1 phần tháng trước → Thu nhập "Nhận một phần", Tổng quan có nhóm nơi dạy còn thiếu tiền.
+  const center = await db.teachingPlace.findFirstOrThrow({ where: { userId: user.id, name: DEMO_CENTER } })
+  await caller.placePayment.create({ placeId: center.id, year: months.prev.year, month: months.prev.month, amount: 300000, receivedAt: prevPaidAt })
+}
+
+// Link người trả của phiếu nơi dạy (spec AN): /n/<token>.
+export async function demoPlaceNoticePath(): Promise<string> {
+  const user = await db.user.findUniqueOrThrow({ where: { username: "guide_demo" } })
+  const center = await db.teachingPlace.findFirstOrThrow({ where: { userId: user.id, name: DEMO_CENTER } })
+  const caller = await getAuthedCaller("guide_demo")
+  return (await caller.placeNotice.link({ placeId: center.id })).path
 }

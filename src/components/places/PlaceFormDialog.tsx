@@ -101,7 +101,7 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
         </DialogHeader>
 
         <div className="space-y-5">
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="place-form-name">
             <Label htmlFor="place-name">{t("place_name")}</Label>
             <Input
               id="place-name"
@@ -113,7 +113,7 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
             {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="place-form-kind">
             <p className="text-sm font-medium">{t("place_kind")}</p>
             <div role="radiogroup" aria-label={t("place_kind")} className="grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1">
               {PLACE_KINDS.map((k) => (
@@ -138,7 +138,7 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="place-form-billing">
             <p className="text-sm font-medium">{t("place_billing")}</p>
             <div role="radiogroup" aria-label={t("place_billing")} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {BILLINGS.map((b) => (
@@ -168,7 +168,7 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
           </div>
 
           {billing === "per_session" && (
-            <div className="space-y-2" data-testid="place-rate">
+            <div className="space-y-2" data-testid="place-rate" data-tour="place-form-rate">
               <p className="text-sm font-medium">{t("place_rate")}</p>
               <div role="radiogroup" aria-label={t("place_rate")} className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
                 {RATE_UNITS.map((u) => (
@@ -246,7 +246,7 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
           <Button variant="outline" onClick={onClose} className="h-11 md:h-10">
             {t("cancel")}
           </Button>
-          <Button onClick={save} disabled={!trimmed || isPending} className="h-11 md:h-10">
+          <Button onClick={save} disabled={!trimmed || isPending} className="h-11 md:h-10" data-tour="place-form-submit">
             {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             {t("save")}
           </Button>

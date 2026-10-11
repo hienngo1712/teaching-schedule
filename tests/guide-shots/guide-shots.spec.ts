@@ -3,17 +3,22 @@ import { mkdirSync } from "node:fs"
 import { dirname } from "node:path"
 import ExcelJS from "exceljs"
 import { buildImportTemplate } from "@/lib/student-import-excel"
-import { seedDemo, cleanupDemo, setDemoBank, setDemoPayments, clearDemoPayos, setDemoPayos, payDemoPayos } from "./demo-data"
+import {
+  seedDemo, cleanupDemo, setDemoBank, setDemoPayments, clearDemoPayos, setDemoPayos, payDemoPayos,
+  seedNewUser, demoPlaceNoticePath, getDemoMonths, DEMO_CENTER,
+} from "./demo-data"
 
 test.describe.configure({ mode: "serial" })
 
 const OUT = "public/guide"
 let parentToken = ""
 let sampleExcelPath = ""
+let newUser = ""
 
 test.beforeAll(async () => {
   mkdirSync(OUT, { recursive: true })
   parentToken = await seedDemo()
+  newUser = await seedNewUser()
 
   // Tạo sẵn file excel đúng chuẩn template có 1 dòng đúng, 1 dòng lỗi cho shot 6
   const templateBuf = await buildImportTemplate()
@@ -66,6 +71,14 @@ test("capture-25-shots", async ({ page, browser }, testInfo) => {
   test.setTimeout(600000)
   page.setDefaultTimeout(20000)
   const kind = testInfo.project.name as "desktop" | "mobile"
+  const contextOptions = {
+    viewport: kind === "desktop" ? { width: 1280, height: 800 } : { width: 390, height: 844 },
+    deviceScaleFactor: kind === "desktop" ? 1 : 2,
+    isMobile: kind === "mobile",
+    hasTouch: kind === "mobile",
+  }
+  const months = getDemoMonths()
+  const prevQuery = `year=${months.prev.year}&month=${months.prev.month}`
 
   // 1. dang-ky: /register khi chưa đăng nhập, viền đỏ nút Đăng ký
   await page.goto("/register")
@@ -73,6 +86,23 @@ test("capture-25-shots", async ({ page, browser }, testInfo) => {
   const regBtn = page.getByRole("button", { name: "Đăng ký", exact: true })
   await mark(regBtn)
   await shot(page, "dang-ky", kind)
+
+  // 1b. noi-day-popup (AP): TK mới chưa có nơi dạy, popup bước 1 đã tick Lớp tại nhà + Trung tâm, viền đỏ danh sách nơi
+  const newContext = await browser.newContext(contextOptions)
+  const newPage = await newContext.newPage()
+  await newPage.goto("/login")
+  await newPage.fill('input[name="username"]', newUser)
+  await newPage.fill('input[name="password"]', "teacher123")
+  await newPage.click('button[type="submit"]')
+  await newPage.waitForURL("**/dashboard")
+  const setup = newPage.getByTestId("place-setup-dialog")
+  await expect(setup).toBeVisible()
+  await setup.getByRole("checkbox", { name: /Lớp tại nhà/ }).click()
+  await setup.getByRole("checkbox", { name: /Trung tâm/ }).click()
+  await setup.getByRole("textbox").first().fill(DEMO_CENTER)
+  await mark(setup.getByRole("checkbox", { name: /Lớp tại nhà/ }).locator("xpath=ancestor::div[contains(@class, 'space-y-3')][1]"))
+  await shot(newPage, "noi-day-popup", kind)
+  await newContext.close()
 
   // 2. tong-quan-bat-dau: /dashboard, thẻ Bắt đầu sử dụng 3/5 bước
   await page.goto("/login")
@@ -147,6 +177,11 @@ test("capture-25-shots", async ({ page, browser }, testInfo) => {
   const studentSection = createSessionDialog.locator("input[placeholder*='học sinh']").locator("xpath=ancestor::div[contains(@class, 'space-y-3')]").first()
   await mark(studentSection)
   await shot(page, "lich-day-tao-ca", kind)
+
+  // 8b. lich-day-noi-day (AP): có 2 nơi dạy → form ca có ô Nơi dạy, viền đỏ ô đó
+  const sessionPlace = createSessionDialog.locator("#session-place").locator("xpath=..")
+  await mark(sessionPlace)
+  await shot(page, "lich-day-noi-day", kind)
   await page.keyboard.press("Escape")
 
   // 9. lich-day-chi-tiet-ca: chi tiết 1 ca trong quá khứ, viền đỏ các nút thao tác
@@ -250,9 +285,101 @@ test("capture-25-shots", async ({ page, browser }, testInfo) => {
 
   // 19. bao-cao: /reports tháng trước, viền đỏ ô chọn tháng
   await page.goto("/reports")
+  // Chờ số liệu tải xong, không chụp ô xám đang tải.
+  await expect(page.getByTestId("stat-value").first()).toBeVisible()
   const monthSelector = page.locator("button[role='combobox'], select, button:has-text('Tháng')").locator("visible=true").first()
   await mark(monthSelector)
   await shot(page, "bao-cao", kind)
+
+  // 19b. noi-day-danh-sach (AP): /places 2 nhóm, viền đỏ nút Thêm nơi dạy
+  await page.goto("/places")
+  await expect(page.getByTestId("place-card").filter({ hasText: DEMO_CENTER })).toBeVisible()
+  await mark(page.locator('[data-tour="place-add"]'))
+  await shot(page, "noi-day-danh-sach", kind)
+
+  // 19c. noi-day-form (AP): hộp Thêm nơi dạy, loại Trung tâm, viền đỏ Cách tính tiền
+  await page.locator('[data-tour="place-add"]').click()
+  const placeDialog = page.getByRole("dialog")
+  await expect(placeDialog).toBeVisible()
+  await placeDialog.locator("#place-name").fill("TT Bình Minh")
+  await placeDialog.getByRole("radio", { name: "Trung tâm" }).click()
+  await mark(placeDialog.locator('[data-tour="place-form-billing"]'))
+  await shot(page, "noi-day-form", kind)
+  await page.keyboard.press("Escape")
+
+  // 19d. bang-cong-don-gia (AP): sửa trung tâm (⋯ → Sửa), viền đỏ khối Đơn giá
+  await page.getByTestId("place-card").filter({ hasText: DEMO_CENTER }).getByRole("button", { name: "Menu hành động" }).click()
+  await page.getByRole("menuitem", { name: "Sửa" }).click()
+  const editPlace = page.getByRole("dialog")
+  await expect(editPlace.getByTestId("place-rate")).toBeVisible()
+  // Hộp tự focus + bôi đen ô tên: bỏ chọn cho ảnh gọn.
+  await editPlace.locator("#place-name").blur()
+  await mark(editPlace.getByTestId("place-rate"))
+  await shot(page, "bang-cong-don-gia", kind)
+  await page.keyboard.press("Escape")
+
+  // 19e. bang-cong (AP): Bảng công tháng trước, viền đỏ 4 ô số ca
+  await page.goto(`/timesheet?${prevQuery}`)
+  const tsStats = page.getByTestId("stat-card").filter({ hasText: "Đã dạy" }).first().locator("xpath=..")
+  await expect(page.getByText(`Bảng công tháng ${months.prev.month}/${months.prev.year}`)).toBeVisible()
+  await mark(tsStats)
+  await shot(page, "bang-cong", kind)
+
+  // 19f. thu-nhap (AP): tab Thu nhập tháng trước (Nhận một phần), viền đỏ dòng trung tâm
+  await page.goto(`/timesheet?tab=income&${prevQuery}`)
+  const incomeRow = page.locator(`tr:has-text('${DEMO_CENTER}'), [data-testid='list-card']:has-text('${DEMO_CENTER}')`).locator("visible=true").first()
+  await expect(incomeRow).toContainText("Nhận một phần")
+  // Viền trên <tr> bị khung cuộn của bảng cắt: máy tính viền khung bo góc ngoài bảng.
+  await mark(kind === "desktop" ? incomeRow.locator("xpath=ancestor::div[contains(@class, 'rounded-lg')][1]") : incomeRow)
+  await shot(page, "thu-nhap", kind)
+
+  // 19g. thu-nhap-chi-tiet (AP): sheet chi tiết, viền đỏ nút Ghi nhận đã nhận
+  await incomeRow.getByText(DEMO_CENTER).click()
+  const incomeDetail = page.getByTestId("income-detail")
+  await expect(incomeDetail).toBeVisible()
+  await mark(incomeDetail.getByRole("button", { name: "Ghi nhận đã nhận" }))
+  await shot(page, "thu-nhap-chi-tiet", kind)
+  await page.keyboard.press("Escape")
+
+  // 19h. phieu-noi-day (AP): hộp Phiếu báo có QR, viền đỏ khối QR
+  await expect(incomeDetail).toHaveCount(0)
+  await incomeRow.getByTestId("place-notice-button").click()
+  const placeNotice = page.getByTestId("place-notice")
+  await expect(placeNotice.getByTestId("place-notice-qr").getByRole("img", { name: "VietQR" })).toBeVisible()
+  await mark(placeNotice.getByTestId("place-notice-qr"))
+  await shot(page, "phieu-noi-day", kind)
+  await page.keyboard.press("Escape")
+
+  // 19i. phieu-noi-day-nguoi-tra (AP): trang /n/<token> tháng trước (chưa đăng nhập), không viền
+  const payerContext = await browser.newContext(contextOptions)
+  const payerPage = await payerContext.newPage()
+  await payerPage.goto(`${await demoPlaceNoticePath()}?thang=${months.prev.year}-${String(months.prev.month).padStart(2, "0")}`)
+  await expect(payerPage.getByTestId("place-notice-card")).toBeVisible()
+  await expect(payerPage.getByTestId("place-notice-qr").getByRole("img", { name: "VietQR" })).toBeVisible()
+  await shot(payerPage, "phieu-noi-day-nguoi-tra", kind)
+  await payerContext.close()
+
+  // 19j. tong-quan-thu-nhap (AP): Tổng quan, viền đỏ thẻ Thu nhập tháng này
+  await page.goto("/dashboard")
+  await expect(page.getByTestId("alert-group-place")).toBeVisible()
+  await mark(page.getByTestId("stat-card").filter({ hasText: "Thu nhập tháng này" }))
+  await shot(page, "tong-quan-thu-nhap", kind)
+
+  // 19k. chuyen-can-thang (AP): Chuyên cần tháng này, viền đỏ ô Tỉ lệ đi học
+  await page.goto("/attendance")
+  const rateCard = page.getByTestId("stat-card").filter({ hasText: "Tỉ lệ đi học" })
+  await expect(rateCard.getByTestId("stat-value")).toContainText("%")
+  await mark(rateCard)
+  await shot(page, "chuyen-can-thang", kind)
+
+  // 19l. chuyen-can-nam-hoc (AP): chọn kỳ Năm học, viền đỏ bảng dải màu
+  await page.getByRole("button", { name: new RegExp(`Tháng ${months.current.month}/${months.current.year}`) }).first().click()
+  await page.getByRole("button", { name: "Năm học", exact: true }).click()
+  await page.keyboard.press("Escape")
+  const yearView = page.getByTestId("attendance-year")
+  await expect(yearView).toBeVisible()
+  await mark(yearView)
+  await shot(page, "chuyen-can-nam-hoc", kind)
 
   // 20. cai-dat-ngan-hang: /settings phần Tài khoản nhận học phí, viền đỏ ô tìm ngân hàng
   await page.goto("/settings")

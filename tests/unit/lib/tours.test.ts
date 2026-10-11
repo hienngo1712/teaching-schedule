@@ -6,8 +6,8 @@ import { GUIDE_TOURS, MISSING_STEPS, TOURS, parseTourParam, tourHref, type TourS
 const ALL_STEPS: TourStep[] = [...Object.values(TOURS).flatMap((t) => t.steps), ...Object.values(MISSING_STEPS)]
 
 describe("tours", () => {
-  it("đủ 6 tour, id khớp khoá, href đúng trang", () => {
-    expect(Object.keys(TOURS).sort()).toEqual(["attendance", "bank", "import", "session", "student", "tuition"])
+  it("đủ 8 tour, id khớp khoá, href đúng trang", () => {
+    expect(Object.keys(TOURS).sort()).toEqual(["attendance", "bank", "import", "income", "place", "session", "student", "tuition"])
     for (const [id, tour] of Object.entries(TOURS)) expect(tour.id).toBe(id)
     expect(TOURS.student.href).toBe("/students")
     expect(TOURS.import.href).toBe("/students")
@@ -15,6 +15,26 @@ describe("tours", () => {
     expect(TOURS.attendance.href).toBe("/calendar")
     expect(TOURS.tuition.href).toBe("/tuition")
     expect(TOURS.bank.href).toBe("/settings")
+    expect(TOURS.place.href).toBe("/places")
+    expect(TOURS.income.href).toBe("/timesheet?tab=income")
+  })
+
+  // Spec AP §6: tour Nơi dạy 6 bước; Thu nhập cần nơi theo ca/giờ, thiếu thì chuyển sang tour Nơi dạy.
+  it("tour place và income đúng bước; income thiếu nơi theo ca/giờ thì chuyển sang place", () => {
+    expect(TOURS.place.steps.map((s) => s.target)).toEqual([
+      "place-add", "place-form-name", "place-form-kind", "place-form-billing", "place-form-rate", "place-form-submit",
+    ])
+    expect(TOURS.place.steps[0].advanceOn).toBe("click")
+    expect(TOURS.income.steps.map((s) => s.target)).toEqual(["income-month", "income-row", "income-notice", "income-row", "income-record"])
+    expect(TOURS.income.steps[3].advanceOn).toBe("click")
+    expect(TOURS.income.requires).toBe("perSessionPlace")
+    expect(MISSING_STEPS.perSessionPlace).toMatchObject({ target: null, nextTour: "place" })
+  })
+
+  it("Standard: bước Phiếu báo và Ghi nhận đã nhận nói rõ cần gói Plus", () => {
+    const body = (i: number) => (vi as Record<string, string>)[TOURS.income.steps[i].bodyKey]
+    expect(body(2)).toContain("gói Plus")
+    expect(body(4)).toContain("gói Plus")
   })
 
   it("Điểm danh cần ca, Thu học phí cần học sinh; bước báo thiếu chuyển sang đúng tour", () => {
@@ -46,13 +66,15 @@ describe("tours", () => {
   it("tourHref và parseTourParam", () => {
     expect(tourHref("student")).toBe("/students?tour=student")
     expect(tourHref("bank")).toBe("/settings?tour=bank")
+    expect(tourHref("income")).toBe("/timesheet?tab=income&tour=income")
+    expect(parseTourParam("place")).toBe("place")
     expect(parseTourParam("tuition")).toBe("tuition")
     expect(parseTourParam("abc")).toBeNull()
     expect(parseTourParam("toString")).toBeNull()
     expect(parseTourParam(null)).toBeNull()
   })
 
-  it("/guide: 6 mục gắn đúng tour", () => {
+  it("/guide: 9 mục gắn đúng tour", () => {
     expect(GUIDE_TOURS).toEqual({
       "hoc-sinh": "student",
       "nhap-excel": "import",
@@ -60,6 +82,9 @@ describe("tours", () => {
       "diem-danh": "attendance",
       "hoc-phi": "tuition",
       "tai-khoan-ngan-hang": "bank",
+      "noi-day": "place",
+      "bang-cong": "income",
+      "phieu-noi-day": "income",
     })
   })
 })

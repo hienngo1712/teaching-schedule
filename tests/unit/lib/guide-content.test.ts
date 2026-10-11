@@ -13,12 +13,20 @@ import { RELEASES } from "@/lib/releases"
 import { GOOGLE_FORM_QUESTIONS } from "@/lib/student-import"
 
 const EXPECTED_IDS = [
-  "bat-dau", "mon-hoc", "hoc-sinh", "nhap-excel", "lich-day", "diem-danh", "hoc-phi",
-  "bao-cao", "tai-khoan-ngan-hang", "payos-hoc-phi", "goi-dich-vu", "thung-rac", "sao-luu", "bao-mat",
+  "bat-dau", "mon-hoc", "hoc-sinh", "nhap-excel", "lich-day", "diem-danh", "noi-day", "hoc-phi",
+  "bao-cao", "bang-cong", "phieu-noi-day", "chuyen-can",
+  "tai-khoan-ngan-hang", "payos-hoc-phi", "goi-dich-vu", "thung-rac", "sao-luu", "bao-mat",
+]
+
+// Spec AP §5: shot mới cho Nơi dạy, Bảng công, Phiếu nơi dạy, Chuyên cần.
+const AP_SHOTS = [
+  "noi-day-popup", "noi-day-danh-sach", "noi-day-form", "lich-day-noi-day", "bang-cong-don-gia", "bang-cong",
+  "thu-nhap", "thu-nhap-chi-tiet", "tong-quan-thu-nhap", "phieu-noi-day", "phieu-noi-day-nguoi-tra",
+  "chuyen-can-thang", "chuyen-can-nam-hoc",
 ]
 
 describe("guide-content (spec W §3.1)", () => {
-  it("đủ 14 mục đúng thứ tự, id không trùng, mỗi mục ≥ 2 bước", () => {
+  it("đủ 18 mục đúng thứ tự, id không trùng, mỗi mục ≥ 2 bước", () => {
     expect(GUIDE_SECTIONS.map((s) => s.id)).toEqual(EXPECTED_IDS)
     expect(GUIDE_IDS.size).toBe(GUIDE_SECTIONS.length)
     for (const s of GUIDE_SECTIONS) expect(s.steps.length, s.id).toBeGreaterThanOrEqual(2)
@@ -51,6 +59,31 @@ describe("guide-content (spec W §3.1)", () => {
     expect(tips.toLowerCase()).toContain("quản trị viên")
   })
 
+  it("4 mục mới (spec AP §3) mỗi mục có ảnh; đủ 13 shot mới", () => {
+    for (const id of ["noi-day", "bang-cong", "phieu-noi-day", "chuyen-can"]) {
+      const s = GUIDE_SECTIONS.find((x) => x.id === id)!
+      expect(s.steps.some((st) => stepShot(st)), id).toBe(true)
+    }
+    for (const shot of AP_SHOTS) expect(GUIDE_SHOTS, shot).toContain(shot)
+  })
+
+  it("mục cũ khớp giao diện AK→AO (spec AP §4)", () => {
+    const text = (id: string) => JSON.stringify(GUIDE_SECTIONS.find((x) => x.id === id))
+    expect(text("bat-dau")).toContain("**Bạn đang dạy ở đâu?**")
+    expect(text("bat-dau")).toContain("**Các tháng trước**")
+    expect(text("hoc-sinh")).toContain("**Nâng lớp hàng loạt**")
+    expect(text("hoc-sinh")).toContain("**Bộ lọc**")
+    expect(text("lich-day")).toContain("**Lịch lặp**")
+    expect(text("hoc-phi")).toContain("**Xoá lọc**")
+    expect(text("bao-cao")).toContain("**Nơi học**")
+    expect(text("payos-hoc-phi")).toContain("**Tiền vào qua payOS**")
+    expect(text("goi-dich-vu")).toContain("Standard 20")
+    expect(text("goi-dich-vu")).not.toMatch(/\d+\.000đ\/tháng/)
+    expect(text("thung-rac")).toContain("**⋯**")
+    expect(text("sao-luu")).toContain("**Tiền nơi dạy trả**")
+    expect(text("phieu-noi-day")).toContain("không có tên học sinh")
+  })
+
   it("mục nhập Excel có cách tự tạo Google Form (spec AB)", () => {
     const text = JSON.stringify(GUIDE_SECTIONS.find((s) => s.id === "nhap-excel"))
     expect(text).toContain("**Tạo Google Form**")
@@ -62,8 +95,8 @@ describe("guide-content (spec W §3.1)", () => {
 describe("ảnh hướng dẫn (plan AA)", () => {
   const files = new Set(readdirSync(join(process.cwd(), "public/guide")).filter((f) => f.endsWith(".jpg")))
 
-  it("có 29 shot, không trùng, đúng dạng kebab-case", () => {
-    expect(GUIDE_SHOTS.length).toBe(29)
+  it("có 42 shot, không trùng, đúng dạng kebab-case", () => {
+    expect(GUIDE_SHOTS.length).toBe(42)
     expect(new Set(GUIDE_SHOTS).size).toBe(GUIDE_SHOTS.length)
     for (const s of GUIDE_SHOTS) expect(s).toMatch(/^[a-z0-9-]+$/)
   })

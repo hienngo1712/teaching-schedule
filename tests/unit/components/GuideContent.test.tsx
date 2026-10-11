@@ -60,7 +60,7 @@ describe("GuideContent (spec W §3.2 & Task 9)", () => {
     expect(shots.length).toBe(GUIDE_SHOTS.length)
   })
 
-  it("canTour: 6 mục có nút Chỉ cho tôi; mặc định không có", () => {
+  it("canTour: 9 mục có nút Chỉ cho tôi (AP thêm Nơi dạy, Bảng công, Phiếu nơi dạy); mặc định không có", () => {
     const { unmount } = render(<LanguageProvider forcedLanguage="vi"><GuideContent canTour /></LanguageProvider>)
     const hrefs = screen.getAllByRole("link", { name: "Chỉ cho tôi" }).map((a) => a.getAttribute("href"))
     expect(hrefs).toEqual([
@@ -68,7 +68,10 @@ describe("GuideContent (spec W §3.2 & Task 9)", () => {
       "/students?tour=import",
       "/calendar?tour=session",
       "/calendar?tour=attendance",
+      "/places?tour=place",
       "/tuition?tour=tuition",
+      "/timesheet?tab=income&tour=income",
+      "/timesheet?tab=income&tour=income",
       "/settings?tour=bank",
     ])
     unmount()

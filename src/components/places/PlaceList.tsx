@@ -126,7 +126,7 @@ export function PlaceList() {
         title={t("places")}
         description={t("places_desc")}
         actions={
-          <Button onClick={() => setForm({ open: true })} className="h-11 md:h-10">
+          <Button onClick={() => setForm({ open: true })} className="h-11 md:h-10" data-tour="place-add">
             <Plus className="mr-2 size-4" />
             {t("add_place")}
           </Button>

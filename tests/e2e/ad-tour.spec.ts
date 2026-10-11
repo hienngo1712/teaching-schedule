@@ -143,7 +143,7 @@ test('Esc tắt tour sạch, không còn lớp phủ; tải lại không chạy 
   await expect(popover(page)).toHaveCount(0);
 });
 
-test('/guide: chưa đăng nhập không có nút; giáo viên đăng nhập có 6 nút', async ({ browser }) => {
+test('/guide: chưa đăng nhập không có nút; giáo viên đăng nhập có 9 nút (AP thêm Nơi dạy, Bảng công, Phiếu nơi dạy)', async ({ browser }) => {
   const guest = await browser.newPage();
   await guest.goto('/guide');
   await expect(guest.locator('section#hoc-sinh')).toBeVisible();
@@ -152,7 +152,7 @@ test('/guide: chưa đăng nhập không có nút; giáo viên đăng nhập có
   const page = await browser.newPage();
   await login(page);
   await page.goto('/guide');
-  await expect(page.getByRole('link', { name: 'Chỉ cho tôi' })).toHaveCount(6);
+  await expect(page.getByRole('link', { name: 'Chỉ cho tôi' })).toHaveCount(9);
   await page.close();
 });
 

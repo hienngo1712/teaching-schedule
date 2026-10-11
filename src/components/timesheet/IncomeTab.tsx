@@ -71,6 +71,7 @@ export function IncomeTab({
         size="sm"
         className="h-11 md:h-9"
         data-testid="place-notice-button"
+        data-tour="income-notice"
         disabled={r.doneCount === 0}
         title={r.doneCount === 0 ? t("place_notice_disabled_reason") : undefined}
         onClick={(e) => {
@@ -189,10 +190,12 @@ export function IncomeTab({
             errorText={t("load_error")}
             retryText={t("retry")}
             emptyText={t("income_empty")}
-            renderCard={(r) => (
+            firstRowTour="income-row"
+            renderCard={(r, index) => (
               <div
                 role="button"
                 tabIndex={0}
+                data-tour={index === 0 ? "income-row" : undefined}
                 onClick={() => setSelected(r)}
                 onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSelected(r)}
                 className="rounded-lg border bg-white p-4 transition-transform active:scale-[0.98]"

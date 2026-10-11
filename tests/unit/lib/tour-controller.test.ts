@@ -126,6 +126,17 @@ describe("runTour", () => {
     expect(calls[0].element).toBe(c)
   })
 
+  // Spec AP §6.1: ô Đơn giá chỉ có khi chọn Theo ca/giờ; thiếu thì bỏ qua ngay, không bắt chờ 3 giây.
+  it("bước optional thiếu phần tử thì bỏ qua ngay", async () => {
+    const c = addTarget("c")
+    const { calls } = setup([
+      { target: "missing", titleKey: "tour_student_2_title", bodyKey: "tour_student_2_body", optional: true },
+      { target: "c", titleKey: "tour_student_3_title", bodyKey: "tour_student_3_body" },
+    ])
+    await flush()
+    expect(calls[0].element).toBe(c)
+  })
+
   it("bước 👆 thiếu phần tử: báo + tắt, onEnd được gọi dù chưa hiện bước nào", async () => {
     const { calls, onMissingClickTarget, onEnd } = setup([
       { target: "missing", titleKey: "tour_student_1_title", bodyKey: "tour_student_1_body", advanceOn: "click" },

@@ -54,6 +54,7 @@ File này quy định các tiêu chuẩn code cho dự án **Teaching Schedule M
     - `refactor:` (Tái cấu trúc)
     - `docs:` (Tài liệu)
     - `test:` (Viết test)
+- **Hướng dẫn đi cùng tính năng (bắt buộc, 2026-10-11):** Mọi màn, chức năng hoặc tính năng mới (hoặc đổi giao diện màn cũ) phải kèm trong CÙNG đợt: mục Hướng dẫn sử dụng (`src/lib/guide-content.ts`), ảnh chụp lại (`tests/guide-shots` + `pnpm guide:docx`), tour "Chỉ cho tôi" (`src/lib/tours.ts`) nếu màn có thao tác nhiều bước, và "Có gì mới" (`src/lib/releases.ts`). Plan phải có task riêng cho phần này trước task phát hành; review thiếu phần này là FIX.
 
 ---
 
