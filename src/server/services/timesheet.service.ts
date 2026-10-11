@@ -291,7 +291,8 @@ export async function setPlaceRate(
   assertOwnership(place, userId)
   const { year, month } = vnDateParts()
   const cur = monthKey(year, month)
-  const hasSessions = (await db.teachingSession.count({ where: { placeId: place.id, isDeleted: false } })) > 0
+  // Như PlaceDTO.hasSessions: tính cả ca đã xoá (đã có lịch sử thì không ghi đè mọi tháng).
+  const hasSessions = (await db.teachingSession.count({ where: { placeId: place.id } })) > 0
   return db.$transaction(async (tx) => {
     if (!hasSessions) {
       await tx.placeRateChange.deleteMany({ where: { placeId: place.id } })

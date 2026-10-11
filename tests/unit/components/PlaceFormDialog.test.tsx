@@ -6,14 +6,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 
-const mutate = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn() }))
+const mutate = vi.hoisted(() => ({
+  create: vi.fn(),
+  update: vi.fn(),
+  rate: vi.fn(),
+  onSaved: undefined as undefined | ((saved: { id: number }) => void),
+}))
 vi.mock("@/lib/trpc", () => ({
   trpc: {
-    useUtils: () => ({ place: { invalidate: vi.fn() } }),
+    useUtils: () => ({ place: { invalidate: vi.fn() }, income: { invalidate: vi.fn() } }),
     place: {
-      create: { useMutation: () => ({ mutate: mutate.create, isPending: false }) },
-      update: { useMutation: () => ({ mutate: mutate.update, isPending: false }) },
+      create: { useMutation: (o: { onSuccess: (s: { id: number }) => void }) => ((mutate.onSaved = o.onSuccess), { mutate: mutate.create, isPending: false }) },
+      update: { useMutation: (o: { onSuccess: (s: { id: number }) => void }) => ((mutate.onSaved = o.onSuccess), { mutate: mutate.update, isPending: false }) },
     },
+    placeRate: { set: { useMutation: () => ({ mutate: mutate.rate, isPending: false }) } },
   },
 }))
 
@@ -22,7 +28,7 @@ import { PlaceFormDialog } from "@/components/places/PlaceFormDialog"
 type Place = NonNullable<Parameters<typeof PlaceFormDialog>[0]["place"]>
 const existing: Place = {
   id: 7, name: "Lớp tại nhà", kind: "home", color: "#4F46E5", billing: "per_student",
-  sortOrder: 0, activeStudents: 3, futureSessions: 2, hasData: true,
+  sortOrder: 0, activeStudents: 3, futureSessions: 2, hasData: true, hasSessions: true, rate: null,
 }
 
 function renderForm(place?: Place) {
@@ -36,6 +42,7 @@ function renderForm(place?: Place) {
 beforeEach(() => {
   mutate.create.mockReset()
   mutate.update.mockReset()
+  mutate.rate.mockReset()
   vi.setSystemTime(new Date(Date.UTC(2026, 9, 20, 5)))
 })
 afterEach(() => vi.useRealTimers())
@@ -72,5 +79,48 @@ describe("PlaceFormDialog", () => {
     renderForm({ ...existing, hasData: false, activeStudents: 0, futureSessions: 0 })
     fireEvent.click(screen.getByRole("radio", { name: "Theo ca/giờ, nơi này trả" }))
     expect(screen.queryByTestId("place-billing-from")).toBeNull()
+  })
+})
+
+describe("PlaceFormDialog: đơn giá (spec AM §4.2)", () => {
+  const center: Place = { ...existing, id: 9, name: "TT Ánh Dương", kind: "center", billing: "per_session" }
+
+  it("nơi theo học sinh không có khối Đơn giá; chọn theo ca/giờ thì có", () => {
+    renderForm(existing)
+    expect(screen.queryByText("Đơn giá (không bắt buộc)")).toBeNull()
+    fireEvent.click(screen.getByRole("radio", { name: "Theo ca/giờ, nơi này trả" }))
+    expect(screen.getByText("Đơn giá (không bắt buộc)")).toBeTruthy()
+  })
+
+  it("nơi mới (chưa có ca): không hỏi tháng; lưu xong gọi placeRate.set theo giờ", () => {
+    renderForm()
+    fireEvent.click(screen.getByRole("radio", { name: "Trung tâm" }))
+    fireEvent.change(screen.getByLabelText("Tên nơi dạy"), { target: { value: "TT Ánh Dương" } })
+    expect(screen.queryByLabelText("Áp dụng từ tháng")).toBeNull()
+    fireEvent.click(screen.getByRole("radio", { name: "Theo giờ" }))
+    fireEvent.change(screen.getByLabelText("Số tiền mỗi giờ"), { target: { value: "185000" } })
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
+    mutate.onSaved!({ id: 12 })
+    expect(mutate.rate).toHaveBeenCalledTimes(1)
+    expect(mutate.rate.mock.calls[0][0]).toEqual({ placeId: 12, unit: "hour", amount: 185000, fromYear: 2026, fromMonth: 10 })
+  })
+
+  it("nơi đã có ca: hiện Áp dụng từ tháng (mặc định tháng hiện tại, lùi tối đa 12 tháng); lưu gửi đúng tháng", () => {
+    renderForm({ ...center, rate: { unit: "session", amount: 150000 } })
+    const from = screen.getByLabelText("Áp dụng từ tháng") as HTMLSelectElement
+    expect(from.value).toBe("2026-10")
+    expect(from.options).toHaveLength(13)
+    fireEvent.change(from, { target: { value: "2026-08" } })
+    fireEvent.change(screen.getByLabelText("Số tiền mỗi ca"), { target: { value: "160000" } })
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
+    mutate.onSaved!({ id: 9 })
+    expect(mutate.rate.mock.calls[0][0]).toEqual({ placeId: 9, unit: "session", amount: 160000, fromYear: 2026, fromMonth: 8 })
+  })
+
+  it("không đổi đơn giá → không gọi placeRate.set", () => {
+    renderForm({ ...center, rate: { unit: "session", amount: 150000 } })
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
+    mutate.onSaved!({ id: 9 })
+    expect(mutate.rate).not.toHaveBeenCalled()
   })
 })

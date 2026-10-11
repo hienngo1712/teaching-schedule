@@ -147,6 +147,17 @@ describe("AM: bảng công + thu nhập nơi dạy", () => {
     expect((await caller.income.month({ year: 2026, month: 9 })).map((r) => [r.name, r.expected])).toEqual([["TT Ánh Dương", 250000]])
   })
 
+  it("nơi theo học sinh có đơn giá cũ (đã đổi cách tính) không có trong Thu nhập", async () => {
+    const caller = await getAuthedCaller()
+    const u = await userOf("teacher")
+    const p = (await caller.place.create(center))!
+    await caller.placeRate.set({ placeId: p.id, unit: "session", amount: 200000, fromYear: 2026, fromMonth: 10 })
+    await addSession(u.id, p.id, "2026-10-05")
+    await caller.place.update({ id: p.id, billing: "per_student" })
+    expect(await caller.income.month({ year: 2026, month: 10 })).toEqual([])
+    expect((await caller.timesheet.month({ year: 2026, month: 10 })).sessions).toEqual([])
+  })
+
   it("nơi của user khác → NOT_FOUND", async () => {
     const owner = await getAuthedCaller()
     const other = await getAuthedCaller("teacher2")

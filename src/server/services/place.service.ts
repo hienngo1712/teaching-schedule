@@ -5,6 +5,7 @@ import { monthKey, resolvePlaceBilling, type PlaceBilling } from "@/lib/billing"
 import { vnDateParts } from "@/lib/utils"
 import type { PlaceCreateInput, PlaceKind, PlaceSetupInput, PlaceUpdateInput } from "@/lib/schemas/place"
 import { SUBJECT_COLORS } from "@/lib/subject-colors"
+import { resolveRate, type Rate } from "./timesheet.service"
 
 // Khoá advisory 2 số int4 riêng cho popup chọn nơi (7401 bảng giá, 7402 chép lịch, 7403 góp ý).
 const PLACE_SETUP_LOCK_NS = 7404
@@ -20,6 +21,10 @@ export type PlaceDTO = {
   futureSessions: number
   // Đã có HS/ca (kể cả cũ): đổi cách tính sẽ áp từ tháng hiện tại, form cần cảnh báo.
   hasData: boolean
+  // Đã có ca: đơn giá hỏi "Áp dụng từ tháng" (spec AM §4.2).
+  hasSessions: boolean
+  // Đơn giá có hiệu lực tháng hiện tại (nơi theo ca/giờ); null = chưa có.
+  rate: Rate | null
 }
 
 export type PlaceSummary = { count: number; hasPerStudent: boolean; hasPerSession: boolean }
@@ -39,7 +44,10 @@ const bad = (message: string) => new TRPCError({ code: "BAD_REQUEST", message })
 async function loadPlaces(db: PrismaClient | Prisma.TransactionClient, userId: number) {
   return db.teachingPlace.findMany({
     where: { userId, isDeleted: false },
-    include: { billingChanges: { select: { fromKey: true, billing: true } } },
+    include: {
+      billingChanges: { select: { fromKey: true, billing: true } },
+      rateChanges: { select: { fromKey: true, unit: true, amount: true } },
+    },
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
   })
 }
@@ -69,6 +77,8 @@ export async function listPlaces(db: PrismaClient, userId: number): Promise<Plac
     activeStudents: count(students, p.id),
     futureSessions: count(sessions, p.id),
     hasData: count(allStudents, p.id) + count(allSessions, p.id) > 0,
+    hasSessions: count(allSessions, p.id) > 0,
+    rate: resolveRate(p.rateChanges, key),
   }))
 }
 
