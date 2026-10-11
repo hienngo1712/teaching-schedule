@@ -171,7 +171,7 @@ export async function getMonthlyTuitionStatus(
   // Dashboard (spec P1): chỉ tính cho các HS này, bỏ lọc isActive/grade của danh sách màn Học phí.
   onlyStudentIds?: number[]
 ): Promise<PaginatedResponse<TuitionStatusDTO>> {
-  const { year, month, grade, search, studentId, status, noticeFilter, page, limit } = filter
+  const { year, month, grade, search, studentId, status, noticeFilter, placeId, page, limit } = filter
   if (onlyStudentIds && onlyStudentIds.length === 0) return { items: [], totalCount: 0, totalPages: 0 }
 
   // 1. Lấy toàn bộ học sinh active theo filter
@@ -180,6 +180,7 @@ export async function getMonthlyTuitionStatus(
       ? { userId, id: { in: onlyStudentIds } }
       : {
           userId,
+          ...(placeId ? { placeId } : {}),
           ...(studentId
             ? { id: studentId }
             : grade
@@ -317,6 +318,7 @@ export async function getMonthlyTuitionStatus(
       inProgress,
       debtMonths,
       placeFree: !!billing.free,
+      placeId: student.placeId,
     }
   })
 
@@ -414,6 +416,7 @@ export async function getMonthlyTuitionStatus(
       payosPaidAmount: item.payosPaidAmount,
       inProgress: item.inProgress,
       debtMonths: item.debtMonths,
+      placeId: item.placeId,
     })),
     totalCount,
     totalPages: Math.ceil(totalCount / limit),

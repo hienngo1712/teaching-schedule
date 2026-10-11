@@ -21,15 +21,23 @@ export type NavItem = {
   icon: LucideIcon
   feature?: Feature
   external?: boolean
+  // Chỉ hiện khi GV có nơi tính tiền theo học sinh (spec AL §4.4).
+  requires?: "perStudent"
 }
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/calendar", labelKey: "calendar", icon: CalendarDays },
   { href: "/students", labelKey: "students", icon: Users },
-  { href: "/tuition", labelKey: "tuition", icon: Wallet },
-  { href: "/reports", labelKey: "reports", icon: BarChart3, feature: "monthlyReport" },
+  { href: "/tuition", labelKey: "tuition", icon: Wallet, requires: "perStudent" },
+  { href: "/reports", labelKey: "reports", icon: BarChart3, feature: "monthlyReport", requires: "perStudent" },
 ]
+
+// Ẩn Học phí/Báo cáo khi chắc chắn không có nơi theo học sinh; chưa tải xong thì giữ như cũ.
+export function filterByPlaces<T extends NavItem>(items: T[], summary: { hasPerStudent: boolean } | undefined): T[] {
+  if (!summary || summary.hasPerStudent) return items
+  return items.filter((i) => i.requires !== "perStudent")
+}
 
 export function isNavActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/")
@@ -46,7 +54,7 @@ export const MANAGE_ITEMS: NavItem[] = [
 
 // Tab "Thêm" trên mobile gom các màn không có tab riêng.
 export const MORE_ITEMS: (NavItem & { descKey: keyof typeof vi })[] = [
-  { href: "/reports", labelKey: "reports", icon: BarChart3, descKey: "more_reports_desc", feature: "monthlyReport" },
+  { href: "/reports", labelKey: "reports", icon: BarChart3, descKey: "more_reports_desc", feature: "monthlyReport", requires: "perStudent" },
   { href: "/subjects", labelKey: "subject", icon: BookOpen, descKey: "more_subjects_desc" },
   { href: "/places", labelKey: "places", icon: MapPin, descKey: "more_places_desc" },
   { href: "/settings", labelKey: "settings", icon: Settings, descKey: "more_settings_desc" },

@@ -22,7 +22,8 @@ function todayVn(): string {
 }
 
 function sessionLine(s: ParentSessionDTO): string {
-  return `${formatDayOfWeek(s.date)} · ${formatDate(s.date).slice(0, 5)} · ${s.startTime}–${s.endTime} · ${s.subjectName}`
+  // Tên nơi chỉ có khi GV dạy ≥ 2 nơi (spec AL §4.6).
+  return `${formatDayOfWeek(s.date)} · ${formatDate(s.date).slice(0, 5)} · ${s.startTime}–${s.endTime} · ${s.subjectName}${s.placeName ? ` · ${s.placeName}` : ""}`
 }
 
 function MonthLink({ href, label }: { href: string | null; label: string }) {
@@ -55,10 +56,10 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
           <div className="space-y-1">
             <h1 className="text-xl font-bold text-slate-900">{view.student.fullName}</h1>
             <p className="hidden text-sm text-slate-600 lg:block">
-              {`${t("grade")} ${view.student.grade} · ${t("teacher_fallback")}: ${view.notice.teacherName}`}
+              {`${t("grade")} ${view.student.grade} · ${t("teacher_fallback")}: ${view.teacherName}`}
             </p>
             <p className="text-sm text-slate-600 lg:hidden">{`${t("grade")} ${view.student.grade}`}</p>
-            <p className="text-sm text-slate-600 lg:hidden">{`${t("teacher_fallback")}: ${view.notice.teacherName}`}</p>
+            <p className="text-sm text-slate-600 lg:hidden">{`${t("teacher_fallback")}: ${view.teacherName}`}</p>
           </div>
 
           <nav className="flex items-center justify-between rounded-lg border border-slate-200 bg-white lg:min-w-[360px]">
@@ -70,7 +71,7 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
           </nav>
         </header>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+        <div className={cn("grid grid-cols-1 gap-6 lg:items-start", view.notice && "lg:grid-cols-[minmax(0,1fr)_400px]")}>
           {/* Cột trái: Điểm danh & Lịch sắp tới */}
           <div className="min-w-0 space-y-6">
             <section className="rounded-lg border border-slate-200 bg-white p-4">
@@ -136,7 +137,8 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
             </section>
           </div>
 
-          {/* Cột phải: Phiếu báo */}
+          {/* Cột phải: Phiếu báo — không có khi HS ở nơi tính theo ca/giờ (spec AL §4.6). */}
+          {view.notice && (
           <aside className="order-first space-y-2 lg:order-last lg:sticky lg:top-4">
             {isWide ? (
               <TuitionNoticeCard notice={view.notice} variant="wide" />
@@ -167,9 +169,10 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
               {t("parent_footer")}
             </footer>
           </aside>
+          )}
         </div>
 
-        <footer className="pb-4 text-center text-xs text-slate-500 lg:hidden">
+        <footer className={cn("pb-4 text-center text-xs text-slate-500", view.notice && "lg:hidden")}>
           {t("parent_footer")}
         </footer>
       </div>

@@ -19,6 +19,7 @@ import { cn, formatCurrency, formatDate, formatDayOfWeek } from "@/lib/utils"
 import type { SessionDTO, SessionListDTO } from "@/lib/types/models"
 import { noticeAgeDays, NOTICE_OVERDUE_DAYS } from "@/lib/tuition-display"
 import dayjs from "@/lib/dayjs"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 
 type Alerts = RouterOutputs["report"]["alerts"]
 type UnrescheduledSession = Omit<Alerts["unrescheduled"][number], "sessionDate"> & { sessionDate: Date }
@@ -71,6 +72,8 @@ function AlertGroup<T>({ testId, icon, title, description, items, getKey, render
 export function DashboardAlerts() {
   const { t } = useTranslation()
   const gate = useFeatureGate("dashboardAlerts")
+  // Không có nơi theo học sinh thì không có nợ học phí để nhắc (spec AL §4.4).
+  const noPerStudent = usePlaceSummary().summary?.hasPerStudent === false
   const query = trpc.report.alerts.useQuery(undefined, { enabled: gate.allowed })
 
   const [selected, setSelected] = useState<SessionListDTO | undefined>()
@@ -116,8 +119,8 @@ export function DashboardAlerts() {
 
   // Lỗi hoặc không có gì cần xử lý → ẩn cả khối (spec S10).
   const data = query.data
-  const hasAlerts =
-    !!data && (data.debts.length > 0 || data.idleStudents.length > 0 || unrescheduled.length > 0)
+  const debts = noPerStudent ? [] : (data?.debts ?? [])
+  const hasAlerts = !!data && (debts.length > 0 || data.idleStudents.length > 0 || unrescheduled.length > 0)
 
   return (
     <>
@@ -130,7 +133,7 @@ export function DashboardAlerts() {
               icon={<Wallet className="size-4 shrink-0 text-muted-foreground" />}
               title={t("alert_debt_title")}
               description={t("alert_debt_desc")}
-              items={data.debts}
+              items={debts}
               getKey={(d) => d.studentId}
               renderRow={(d) => (
                 <Link

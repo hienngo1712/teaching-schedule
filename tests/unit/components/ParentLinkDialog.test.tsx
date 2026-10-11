@@ -19,6 +19,9 @@ vi.mock("@/lib/trpc", () => ({
 
 import { toast } from "sonner"
 
+// AL: mặc định không có nơi nào (chữ chia sẻ như cũ).
+vi.mock("@/hooks/usePlaceSummary", () => ({ usePlaceSummary: () => ({ places: [], multi: false, placeById: () => undefined }) }))
+
 beforeEach(() => {
   vi.clearAllMocks()
 })

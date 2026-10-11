@@ -8,6 +8,20 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 import TuitionPage from "@/app/(app)/tuition/page"
 
+// AL: mặc định TK 1 nơi theo học sinh (giao diện như cũ); test "chỉ trung tâm" đổi placeState.summary.
+const placeState = vi.hoisted(() => ({
+  places: [] as { id: number; name: string; color: string; billing: string }[],
+  summary: undefined as { count: number; hasPerStudent: boolean; hasPerSession: boolean } | undefined,
+}))
+vi.mock("@/hooks/usePlaceSummary", () => ({
+  usePlaceSummary: () => ({
+    places: placeState.places,
+    summary: placeState.summary,
+    multi: placeState.places.length >= 2,
+    placeById: (id: number | null | undefined) => placeState.places.find((p) => p.id === id),
+  }),
+}))
+
 const queryInputs = vi.hoisted(() => [] as unknown[])
 
 vi.mock("next/navigation", () => ({
@@ -101,5 +115,15 @@ describe("Học phí — thanh lọc AK", () => {
     expect(url).not.toContain("grade=")
     expect(url).not.toContain("noticeFilter=")
     expect(url).toContain("status=unpaid")
+  })
+})
+
+describe("Học phí — chỉ dạy trung tâm (spec AL §4.4) [RF 2]", () => {
+  it("gõ thẳng /tuition: trang trống có nút Mở Nơi dạy", () => {
+    placeState.summary = { count: 1, hasPerStudent: false, hasPerSession: true }
+    renderAt("")
+    expect(screen.getByTestId("no-per-student-place")).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Mở Nơi dạy" }).getAttribute("href")).toBe("/places")
+    placeState.summary = undefined
   })
 })

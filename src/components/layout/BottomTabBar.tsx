@@ -6,10 +6,9 @@ import { usePathname } from "next/navigation"
 import { Ellipsis } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-import { NAV_ITEMS, isMoreActive, isNavActive } from "./nav-items"
+import { NAV_ITEMS, filterByPlaces, isMoreActive, isNavActive } from "./nav-items"
 import { MoreSheet } from "./MoreSheet"
-
-const TAB_ITEMS = NAV_ITEMS.slice(0, 4)
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 
 function tabClass(active: boolean) {
   return cn(
@@ -30,13 +29,16 @@ export function BottomTabBar() {
   // Route đổi mà Radix không gọi onOpenChange → xoá openAt, không thì quay lại route cũ sheet tự mở.
   if (openAt !== null && openAt !== pathname) setOpenAt(null)
   const moreActive = isMoreActive(pathname)
+  // Tab dưới = 4 mục đầu còn hiện + Thêm; chỉ dạy trung tâm thì không có tab Học phí (spec AL §4.4).
+  const { summary } = usePlaceSummary()
+  const TAB_ITEMS = filterByPlaces(NAV_ITEMS, summary).slice(0, 4)
 
   return (
     <nav
       aria-label={t("main_navigation")}
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      <ul className="grid grid-cols-5">
+      <ul className={cn("grid", TAB_ITEMS.length === 4 ? "grid-cols-5" : "grid-cols-4")}>
         {TAB_ITEMS.map((item) => {
           const Icon = item.icon
           const active = isNavActive(pathname, item.href)

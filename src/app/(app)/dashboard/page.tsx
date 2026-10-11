@@ -12,12 +12,15 @@ import { FeedbackPrompt } from "@/components/feedback/FeedbackPrompt"
 import { trpc } from "@/lib/trpc"
 import { cn, formatCurrency } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 
 export default function DashboardPage() {
   const { data: stats, isLoading } = trpc.report.dashboard.useQuery()
   const { t } = useTranslation()
   const [showMore, setShowMore] = useState(false)
   const money = (v?: number) => (v === undefined ? undefined : formatCurrency(v))
+  // Chỉ dạy nơi tính theo ca/giờ: không có học phí → ẩn các ô tiền (spec AL §4.4, mẫu 04b).
+  const noPerStudent = usePlaceSummary().summary?.hasPerStudent === false
 
   return (
     <div className="space-y-6">
@@ -34,6 +37,8 @@ export default function DashboardPage() {
           icon={<CalendarDays className="size-4 text-muted-foreground" />}
           hint={t("total_sessions_day")}
         />
+        {!noPerStudent && (
+        <>
         <StatCard
           label={t("revenue_this_month")}
           value={money(stats?.totalRevenueMonth)}
@@ -65,10 +70,12 @@ export default function DashboardPage() {
             )
           }
         />
+        </>
+        )}
       </div>
 
-      {/* Mobile ẩn 4 số phụ sau nút "Xem thêm"; desktop luôn hiện */}
-      <div className={cn("grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4", !showMore && "hidden md:grid")}>
+      {/* Mobile ẩn 4 số phụ sau nút "Xem thêm"; desktop luôn hiện. Không có ô tiền thì luôn hiện (chỉ còn ít ô). */}
+      <div className={cn("grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4", !showMore && !noPerStudent && "hidden md:grid")}>
         <StatCard
           label={t("total_students")}
           value={stats?.totalStudents}
@@ -90,18 +97,22 @@ export default function DashboardPage() {
           icon={<BarChart3 className="size-4 text-muted-foreground" />}
           hint={t("average_this_month")}
         />
-        <StatCard
-          label={t("expected_revenue")}
-          value={money(stats?.expectedRevenueMonth)}
-          loading={isLoading}
-          icon={<Banknote className="size-4 text-muted-foreground" />}
-          hint={t("hint_expected_fees")}
-        />
+        {!noPerStudent && (
+          <StatCard
+            label={t("expected_revenue")}
+            value={money(stats?.expectedRevenueMonth)}
+            loading={isLoading}
+            icon={<Banknote className="size-4 text-muted-foreground" />}
+            hint={t("hint_expected_fees")}
+          />
+        )}
       </div>
 
-      <Button variant="ghost" className="h-11 w-full md:hidden" onClick={() => setShowMore((v) => !v)}>
-        {showMore ? t("show_less_stats") : t("show_more_stats")}
-      </Button>
+      {!noPerStudent && (
+        <Button variant="ghost" className="h-11 w-full md:hidden" onClick={() => setShowMore((v) => !v)}>
+          {showMore ? t("show_less_stats") : t("show_more_stats")}
+        </Button>
+      )}
 
       <DashboardAlerts />
 

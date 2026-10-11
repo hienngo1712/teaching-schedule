@@ -9,6 +9,8 @@ export const monthlyTuitionFilterSchema = z.object({
   studentId: z.number().int().positive().optional(),
   status: z.enum(["all", "fully_paid", "paid_this_month", "partial", "unpaid"]).optional(),
   noticeFilter: z.enum(["all", "unsent", "sent"]).optional(),
+  // Bộ lọc Nơi học (spec AL §4.5).
+  placeId: z.number().int().positive().optional(),
 }).merge(paginationSchema)
 
 export type MonthlyTuitionFilterInput = z.infer<typeof monthlyTuitionFilterSchema>

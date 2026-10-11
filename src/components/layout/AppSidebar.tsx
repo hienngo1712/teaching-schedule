@@ -10,7 +10,8 @@ import { usePlan } from "@/hooks/usePlan"
 import { LockBadge } from "@/components/plan/LockBadge"
 import { CurrentPlanBadge } from "@/components/plan/CurrentPlanBadge"
 import { openUpgrade } from "@/components/plan/upgrade-store"
-import { MANAGE_ITEMS, NAV_ITEMS, isNavActive, type NavItem } from "./nav-items"
+import { MANAGE_ITEMS, NAV_ITEMS, filterByPlaces, isNavActive, type NavItem } from "./nav-items"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 
 function SidebarLink({ item, pathname, label, locked }: { item: NavItem; pathname: string; label: string; locked: boolean }) {
   const { t } = useTranslation()
@@ -68,6 +69,7 @@ export function AppSidebar() {
   const { t } = useTranslation()
   const { ready, has } = usePlan()
   const isLocked = (item: NavItem) => !!item.feature && ready && !has(item.feature)
+  const { summary } = usePlaceSummary()
 
   return (
     <aside className="flex h-full w-[232px] shrink-0 flex-col gap-7 border-r bg-white px-3.5 py-5">
@@ -80,7 +82,7 @@ export function AppSidebar() {
       </div>
 
       <nav className="flex flex-col gap-1">
-        {NAV_ITEMS.map((item) => (
+        {filterByPlaces(NAV_ITEMS, summary).map((item) => (
           <SidebarLink key={item.href} item={item} pathname={pathname} label={t(item.labelKey)} locked={isLocked(item)} />
         ))}
       </nav>

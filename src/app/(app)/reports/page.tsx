@@ -5,6 +5,8 @@ import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useFilters } from "@/hooks/useFilters"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
+import { NoPerStudentPlace } from "@/components/places/NoPerStudentPlace"
 import { 
   Select, 
   SelectContent, 
@@ -108,9 +110,13 @@ export default function ReportsPage() {
   const reportLocked = reportGate.locked
   const reportPlan = reportGate.requiredPlan
   // Vào thẳng /reports khi chưa đủ gói: khung báo cáo mờ + mở popup nâng cấp 1 lần.
+  const noPerStudent = usePlaceSummary().summary?.hasPerStudent === false
   useEffect(() => {
-    if (reportLocked) openUpgrade({ plan: reportPlan })
-  }, [reportLocked, reportPlan])
+    if (reportLocked && !noPerStudent) openUpgrade({ plan: reportPlan })
+  }, [reportLocked, reportPlan, noPerStudent])
+
+  // Chỉ dạy nơi tính theo ca/giờ: Báo cáo học phí không có ý nghĩa (spec AL §4.4).
+  if (noPerStudent) return <NoPerStudentPlace title={t("reports")} />
 
   if (reportLocked) {
     return (
