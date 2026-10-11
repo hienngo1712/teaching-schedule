@@ -3,6 +3,7 @@ import { healthRouter } from "@/server/trpc/routers/health"
 import { authRouter } from "@/server/trpc/routers/auth"
 import { studentRouter } from "@/server/trpc/routers/student"
 import { subjectRouter } from "@/server/trpc/routers/subject"
+import { placeRouter } from "@/server/trpc/routers/place"
 import { sessionRouter } from "@/server/trpc/routers/session"
 import { attendanceRouter } from "@/server/trpc/routers/attendance"
 import { reportRouter } from "@/server/trpc/routers/report"
@@ -23,6 +24,7 @@ export const appRouter = createTRPCRouter({
   health: healthRouter,
   auth: authRouter,
   subject: subjectRouter,
+  place: placeRouter,
   student: studentRouter,
   session: sessionRouter,
   attendance: attendanceRouter,

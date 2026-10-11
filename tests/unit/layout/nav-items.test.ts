@@ -16,6 +16,7 @@ describe("danh sách mục điều hướng", () => {
     expect(NAV_ITEMS.map((i) => i.href)).toEqual(["/dashboard", "/calendar", "/students", "/tuition", "/reports"])
     expect(MANAGE_ITEMS.map((i) => [i.href, i.labelKey])).toEqual([
       ["/subjects", "subject"],
+      ["/places", "places"],
       ["/settings", "settings"],
       ["/plan", "my_plan"],
       ["/trash", "trash"],
@@ -24,6 +25,7 @@ describe("danh sách mục điều hướng", () => {
     expect(MORE_ITEMS.map((i) => [i.href, i.labelKey, i.descKey])).toEqual([
       ["/reports", "reports", "more_reports_desc"],
       ["/subjects", "subject", "more_subjects_desc"],
+      ["/places", "places", "more_places_desc"],
       ["/settings", "settings", "more_settings_desc"],
       ["/plan", "my_plan", "more_plan_desc"],
       ["/trash", "trash", "more_trash_desc"],

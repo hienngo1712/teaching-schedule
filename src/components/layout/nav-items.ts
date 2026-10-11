@@ -5,6 +5,7 @@ import {
   CircleHelp,
   Crown,
   LayoutDashboard,
+  MapPin,
   Settings,
   Trash2,
   Users,
@@ -36,6 +37,7 @@ export function isNavActive(pathname: string, href: string) {
 
 export const MANAGE_ITEMS: NavItem[] = [
   { href: "/subjects", labelKey: "subject", icon: BookOpen },
+  { href: "/places", labelKey: "places", icon: MapPin },
   { href: "/settings", labelKey: "settings", icon: Settings },
   { href: "/plan", labelKey: "my_plan", icon: Crown },
   { href: "/trash", labelKey: "trash", icon: Trash2 },
@@ -46,6 +48,7 @@ export const MANAGE_ITEMS: NavItem[] = [
 export const MORE_ITEMS: (NavItem & { descKey: keyof typeof vi })[] = [
   { href: "/reports", labelKey: "reports", icon: BarChart3, descKey: "more_reports_desc", feature: "monthlyReport" },
   { href: "/subjects", labelKey: "subject", icon: BookOpen, descKey: "more_subjects_desc" },
+  { href: "/places", labelKey: "places", icon: MapPin, descKey: "more_places_desc" },
   { href: "/settings", labelKey: "settings", icon: Settings, descKey: "more_settings_desc" },
   { href: "/plan", labelKey: "my_plan", icon: Crown, descKey: "more_plan_desc" },
   { href: "/trash", labelKey: "trash", icon: Trash2, descKey: "more_trash_desc" },
