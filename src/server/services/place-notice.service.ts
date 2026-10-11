@@ -6,7 +6,9 @@ import { assertOwnership } from "./_base.service"
 import { getBankAccount } from "./settings.service"
 import { computeIncome, getTimesheetMonth, incomeStatus, resolveRate, type Rate } from "./timesheet.service"
 import { hashParentToken } from "@/server/crypto/parent-token"
-import { monthKey } from "@/lib/billing"
+import { monthKey, resolvePlaceBilling } from "@/lib/billing"
+import { effectivePlan, hasFeature } from "@/lib/plans"
+import { vnDateParts } from "@/lib/utils"
 import { buildPlaceTransferContent, buildVietQrPayload } from "@/lib/vietqr"
 import { findBank } from "@/lib/vn-banks"
 
@@ -156,4 +158,115 @@ export async function disablePlaceShareLink(db: PrismaClient, userId: number, pl
   await assertActivePlace(db, userId, placeId)
   await db.placeShareLink.deleteMany({ where: { placeId } })
   return { success: true as const }
+}
+
+// ── Trang người trả /n/<token> (spec AN §2) ─────────────────────────────────
+
+// Dữ liệu thẻ phiếu dùng chung cho hộp phiếu (GV) và trang người trả: không id nội bộ, không trạng thái gửi.
+export type PlaceNoticeCardData = Omit<PlaceNotice, "place" | "sentAt" | "sentAmount" | "amountChanged" | "status"> & { placeName: string }
+
+export function toNoticeCard(n: PlaceNotice): PlaceNoticeCardData {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- bỏ các trường nội bộ/trạng thái gửi
+  const { place, sentAt, sentAmount, amountChanged, status, ...rest } = n
+  return { ...rest, placeName: place.name }
+}
+
+export type PayerSession = {
+  date: string
+  start: string
+  end: string
+  subject: string
+  hours: number
+  presentCount: number
+  // Số HS của ca (chỉ là số): ca chưa gắn HS thì không ghi "0 HS có mặt".
+  totalCount: number
+  kind: "done" | "upcoming" | "cancelled"
+  isMakeup: boolean
+}
+
+export type PayerViewDTO = {
+  placeName: string
+  teacherName: string
+  year: number
+  month: number
+  prevMonth: string | null
+  nextMonth: string | null
+  notice: PlaceNoticeCardData | null
+  sessions: PayerSession[]
+}
+
+const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/
+// Tối đa 6 tháng về trước (spec AN §2).
+const PAYER_MONTHS_BACK = 6
+const toIdx = (year: number, month: number) => year * 12 + (month - 1)
+const toYm = (idx: number) => `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}`
+
+// Chỉ đọc. null = 404 như token sai: token sai, nơi đã xoá, nơi không còn theo ca/giờ, GV bị khoá/xoá, GV hết gói Plus.
+export async function getPublicPlaceNotice(db: PrismaClient, token: string, thang?: string): Promise<PayerViewDTO | null> {
+  if (!PLACE_TOKEN_REGEX.test(token)) return null
+  const link = await db.placeShareLink.findUnique({
+    where: { tokenHash: hashParentToken(token) },
+    select: {
+      place: {
+        select: {
+          id: true,
+          name: true,
+          isDeleted: true,
+          createdAt: true,
+          billingChanges: { select: { fromKey: true, billing: true } },
+          user: { select: { id: true, isActive: true, isDeleted: true, fullName: true, plan: true, planExpiresAt: true, trialEndsAt: true } },
+        },
+      },
+    },
+  })
+  const place = link?.place
+  if (!place || place.isDeleted) return null
+  const { user } = place
+  if (!user.isActive || user.isDeleted) return null
+  // Như D9 của link PH: hết gói thì tạm 404, token giữ nguyên để gia hạn là sống lại.
+  if (!hasFeature(effectivePlan(user, new Date()).plan, "placeNotice")) return null
+  const now = vnDateParts()
+  if (resolvePlaceBilling(place.billingChanges, monthKey(now.year, now.month)) !== "per_session") return null
+
+  const maxIdx = toIdx(now.year, now.month)
+  const created = vnDateParts(place.createdAt)
+  const minIdx = Math.max(maxIdx - PAYER_MONTHS_BACK, toIdx(created.year, created.month))
+  let idx = maxIdx
+  if (thang && MONTH_REGEX.test(thang)) {
+    const [y, m] = thang.split("-").map(Number)
+    if (toIdx(y, m) >= minIdx && toIdx(y, m) <= maxIdx) idx = toIdx(y, m)
+  }
+  const year = Math.floor(idx / 12)
+  const month = (idx % 12) + 1
+
+  let notice: PlaceNoticeCardData | null = null
+  try {
+    notice = toNoticeCard(await getPlaceNotice(db, user.id, place.id, year, month))
+  } catch (e) {
+    // Review Focus 1: tháng chưa có ca đã dạy / chưa có giá → "Chưa có phiếu".
+    if (!(e instanceof TRPCError && e.message === "notice_empty")) throw e
+  }
+  const ts = await getTimesheetMonth(db, user.id, { placeId: place.id, year, month })
+
+  return {
+    placeName: place.name,
+    teacherName: user.fullName || "Giáo viên",
+    year,
+    month,
+    prevMonth: idx > minIdx ? toYm(idx - 1) : null,
+    nextMonth: idx < maxIdx ? toYm(idx + 1) : null,
+    notice,
+    // Không có tiêu đề ca / lý do huỷ: GV có thể gõ tên HS vào đó. Chỉ số HS có mặt.
+    sessions: ts.sessions.map((s) => ({
+      date: s.date,
+      start: s.start,
+      end: s.end,
+      subject: s.subject,
+      hours: s.hours,
+      presentCount: s.presentCount,
+      totalCount: s.totalCount,
+      kind: s.kind,
+      isMakeup: s.isMakeup,
+    })),
+  }
 }
