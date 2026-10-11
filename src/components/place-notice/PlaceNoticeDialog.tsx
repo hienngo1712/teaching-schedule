@@ -122,6 +122,8 @@ export function PlaceNoticeDialog({ placeId, year, month, onClose }: Props) {
             }
           />
           {captureFailed && <p className="text-center text-sm text-red-600">{t("load_error")}</p>}
+          {/* GV có payOS nhưng tạo link lỗi: phiếu dùng VietQR (spec AO §3.1). */}
+          {notice.payosFailed && <p className="text-center text-xs text-amber-700">{t("place_notice_payos_failed")}</p>}
         </div>
       )}
     </div>

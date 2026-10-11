@@ -87,6 +87,17 @@ export function PayerView({ view }: { view: PayerViewDTO }) {
               <>
                 <PlaceNoticeCard notice={view.notice} variant={isWide ? "wide" : "default"} />
                 {view.notice.qr && <p className="text-center text-xs text-slate-500">{t("parent_qr_hint")}</p>}
+                {/* payOS (spec AO §3.3): trang thanh toán của payOS; ảnh phiếu không cần nút này. */}
+                {view.notice.qr?.checkoutUrl && (
+                  <a
+                    href={view.notice.qr.checkoutUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-white"
+                  >
+                    {t("payos_open_checkout")}
+                  </a>
+                )}
               </>
             ) : (
               <p data-testid="payer-no-notice" className="rounded-lg border border-dashed border-slate-200 bg-white p-4 text-center text-sm text-slate-500">

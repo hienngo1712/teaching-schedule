@@ -28,6 +28,14 @@ export default function TimesheetPage() {
     router.replace(`${pathname}${nextQuery.size ? `?${nextQuery}` : ""}`)
   }
 
+  // Link từ chuông báo tiền (spec AO §3.4): ?placeId= mở sheet nơi đó, mở xong bỏ khỏi URL để không mở lại.
+  const openPlaceId = Number(query.get("placeId")) || null
+  const clearPlaceId = () => {
+    const nextQuery = new URLSearchParams(query.toString())
+    nextQuery.delete("placeId")
+    router.replace(`${pathname}?${nextQuery}`)
+  }
+
   const period = (
     <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
       <Button variant="ghost" size="icon" onClick={prevMonth} className="size-9" aria-label={t("prev_month")}>
@@ -59,7 +67,7 @@ export default function TimesheetPage() {
           </button>
         ))}
       </div>
-      {tab === "timesheet" ? <TimesheetTab year={year} month={month} period={period} /> : <IncomeTab year={year} month={month} period={period} />}
+      {tab === "timesheet" ? <TimesheetTab year={year} month={month} period={period} /> : <IncomeTab year={year} month={month} period={period} openPlaceId={openPlaceId} onPlaceOpened={clearPlaceId} />}
     </div>
   )
 }

@@ -18,8 +18,11 @@ export const PAYOS_POLL_MS = 30_000
 type Item = RouterOutputs["payosNotice"]["list"]["items"][number]
 
 // HS đã xoá không còn trong trang Học phí nên không tạo link (spec AI §7).
-export const noticeHref = (i: Pick<Item, "studentDeleted" | "year" | "month" | "studentId">) =>
-  i.studentDeleted ? null : `/tuition?year=${i.year}&month=${i.month}&studentId=${i.studentId}`
+// Tiền nơi dạy (spec AO §3.4): mở Thu nhập tháng đó, sheet của nơi; nơi đã xoá không còn dòng Thu nhập → không link.
+export const noticeHref = (i: Item) =>
+  i.kind === "place"
+    ? i.placeDeleted ? null : `/timesheet?tab=income&year=${i.year}&month=${i.month}&placeId=${i.placeId}`
+    : i.studentDeleted ? null : `/tuition?year=${i.year}&month=${i.month}&studentId=${i.studentId}`
 
 export function PayosBell() {
   const { t } = useTranslation()

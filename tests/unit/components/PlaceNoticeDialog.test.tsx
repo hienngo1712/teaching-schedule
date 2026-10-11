@@ -149,6 +149,20 @@ describe("PlaceNoticeDialog", () => {
     await waitFor(() => expect((screen.getByRole("button", { name: "Tải ảnh" }) as HTMLButtonElement).disabled).toBe(false))
   })
 
+  // Spec AO §3: QR payOS có nhãn payOS + gợi ý tự xác nhận; tạo link lỗi → báo nhẹ, phiếu VietQR.
+  it("QR payOS: ảnh alt payOS và dòng 'Quét để trả, tự xác nhận khi tiền vào'", async () => {
+    state.notice = { ...WITH_QR, qr: { ...WITH_QR.qr, provider: "payos", content: "ND 5", checkoutUrl: "https://pay/1" } }
+    renderDialog()
+    expect(await screen.findByAltText("payOS")).toBeTruthy()
+    expect(screen.getByTestId("place-notice-qr").textContent).toContain("Quét để trả, tự xác nhận khi tiền vào")
+  })
+
+  it("payosFailed: báo 'Chưa tạo được QR payOS'", () => {
+    state.notice = { ...WITH_QR, payosFailed: true }
+    renderDialog()
+    expect(screen.getByText("Chưa tạo được QR payOS, phiếu dùng VietQR")).toBeTruthy()
+  })
+
   it("Đánh dấu đã gửi bằng tay", () => {
     renderDialog()
     fireEvent.click(screen.getByRole("button", { name: "Đánh dấu đã gửi" }))
