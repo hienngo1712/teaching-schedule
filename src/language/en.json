@@ -658,6 +658,7 @@
   "place_notice_remaining": "Still to pay",
   "place_notice_paid": "Received in full, thank you!",
   "place_notice_no_bank": "No bank account yet, so this notice has no QR code.",
+  "place_notice_qr_failed": "Could not create the QR code",
   "place_notice_add_bank": "Add bank account",
   "payer_sessions_title": "Sessions in month {m}",
   "payer_no_notice": "No notice this month yet (no sessions taught).",

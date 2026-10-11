@@ -14,20 +14,21 @@ type Props = {
   // Phiếu chưa có QR vì GV chưa nhập ngân hàng: hộp của GV truyền link tới Cài đặt; trang người trả để trống.
   noBankAction?: ReactNode
   onReady?: () => void
-  onError?: (e: unknown) => void
 }
 
 const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
 
 // Phiếu báo theo nơi dạy (spec AN §1, mẫu 12), dựng như TuitionNoticeCard. Chỉ block/grid để html2canvas vẽ đúng.
 export const PlaceNoticeCard = forwardRef<HTMLDivElement, Props>(function PlaceNoticeCard(
-  { notice, variant = "default", noBankAction, onReady, onError },
+  { notice, variant = "default", noBankAction, onReady },
   ref
 ) {
   const { t } = useTranslation()
   const isWide = variant === "wide"
   const payload = notice.qr?.payload ?? null
   const [qrSrc, setQrSrc] = useState<string | null>(null)
+  // QR lỗi (tạo hoặc hiển thị): phiếu vẫn xong, ô QR ghi lỗi — nút lưu ảnh không treo (FIX AN F2).
+  const [qrFailed, setQrFailed] = useState(false)
 
   useEffect(() => {
     if (!payload) {
@@ -41,12 +42,16 @@ export const PlaceNoticeCard = forwardRef<HTMLDivElement, Props>(function PlaceN
       })
       .catch((e) => {
         console.error("Không tạo được mã QR:", e)
-        if (!cancelled) onError?.(e)
+        if (!cancelled) setQrFailed(true)
       })
     return () => {
       cancelled = true
     }
-  }, [payload, onReady, onError])
+  }, [payload, onReady])
+
+  useEffect(() => {
+    if (qrFailed) onReady?.()
+  }, [qrFailed, onReady])
 
   const rateLabel = t(notice.rate.unit === "hour" ? "income_rate_hour" : "income_rate_session").replace(
     "{amount}",
@@ -117,11 +122,24 @@ export const PlaceNoticeCard = forwardRef<HTMLDivElement, Props>(function PlaceN
           data-testid="place-notice-qr"
           className={cn("border-t border-slate-200 pt-3", isWide ? "grid grid-cols-[160px_1fr] items-center gap-4 text-left" : "space-y-1 text-center")}
         >
-          {qrSrc ? (
+          {qrSrc && !qrFailed ? (
             // eslint-disable-next-line @next/next/no-img-element -- data URL; html2canvas cần <img> thường
-            <img src={qrSrc} alt="VietQR" width={qrSize} height={qrSize} className={cn("block", !isWide && "mx-auto")} onLoad={onReady} />
+            <img
+              src={qrSrc}
+              alt="VietQR"
+              width={qrSize}
+              height={qrSize}
+              className={cn("block", !isWide && "mx-auto")}
+              onLoad={onReady}
+              onError={() => setQrFailed(true)}
+            />
           ) : (
-            <div className={cn("bg-slate-100", !isWide && "mx-auto")} style={{ width: qrSize, height: qrSize }} />
+            <div
+              className={cn("flex items-center justify-center bg-slate-100 p-3 text-xs text-slate-500", !isWide && "mx-auto")}
+              style={{ width: qrSize, height: qrSize }}
+            >
+              {qrFailed && t("place_notice_qr_failed")}
+            </div>
           )}
           <div className={cn("space-y-1", !isWide && "pt-2")}>
             <p className="font-semibold">{notice.bank.bankShortName}</p>

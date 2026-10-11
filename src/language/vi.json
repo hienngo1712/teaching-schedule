@@ -658,6 +658,7 @@
   "place_notice_remaining": "Còn phải trả",
   "place_notice_paid": "Đã nhận đủ, cảm ơn!",
   "place_notice_no_bank": "Giáo viên chưa thêm tài khoản ngân hàng nên phiếu chưa có mã QR.",
+  "place_notice_qr_failed": "Không tạo được mã QR",
   "place_notice_add_bank": "Thêm tài khoản ngân hàng",
   "payer_sessions_title": "Chi tiết ca đã dạy tháng {m}",
   "payer_no_notice": "Chưa có phiếu tháng này (chưa có ca đã dạy).",

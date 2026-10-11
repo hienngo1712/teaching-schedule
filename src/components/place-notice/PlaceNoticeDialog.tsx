@@ -67,10 +67,6 @@ export function PlaceNoticeDialog({ placeId, year, month, onClose }: Props) {
         if (cardRef.current === el) setCaptureFailed(true)
       })
   }, [])
-  const handleCardError = useCallback(() => {
-    setBlob(null)
-    setCaptureFailed(true)
-  }, [])
 
   const copyLink = async () => {
     try {
@@ -119,7 +115,6 @@ export function PlaceNoticeDialog({ placeId, year, month, onClose }: Props) {
             ref={cardRef}
             notice={notice}
             onReady={handleReady}
-            onError={handleCardError}
             noBankAction={
               <Link href="/settings" className="inline-block font-medium text-primary underline">
                 {t("place_notice_add_bank")}

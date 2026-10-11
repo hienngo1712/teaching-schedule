@@ -9,6 +9,8 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider"
 const state = vi.hoisted(() => ({
   markMutate: vi.fn(),
   linkMutateAsync: vi.fn(async () => ({ token: "t".repeat(43), path: `/n/${"t".repeat(43)}` })),
+  notice: null as unknown,
+  toDataURL: vi.fn<(payload: string, opts?: unknown) => Promise<string>>(async () => "data:image/png;base64,QR"),
 }))
 
 const NOTICE = {
@@ -46,7 +48,7 @@ vi.mock("@/lib/trpc", () => ({
       client: { placeNotice: { markSent: { mutate: vi.fn(async () => ({})) } } },
     }),
     placeNotice: {
-      get: { useQuery: () => ({ data: NOTICE, isError: false, dataUpdatedAt: 1, refetch: vi.fn() }) },
+      get: { useQuery: () => ({ data: state.notice, isError: false, dataUpdatedAt: 1, refetch: vi.fn() }) },
       link: { useMutation: () => ({ mutateAsync: state.linkMutateAsync, isPending: false }) },
       markSent: { useMutation: () => ({ mutate: state.markMutate, isPending: false }) },
     },
@@ -59,11 +61,22 @@ vi.mock("@/lib/share-image", () => ({
   shareOrDownloadPng: vi.fn(),
 }))
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }))
+vi.mock("qrcode", () => ({ toDataURL: state.toDataURL }))
 
 import { PlaceNoticeDialog } from "@/components/place-notice/PlaceNoticeDialog"
 
+const WITH_QR = {
+  ...NOTICE,
+  bank: { bankShortName: "VCB", accountNumber: "0123456789", accountName: "NGUYEN THU HA" },
+  qr: { payload: "000201...", amount: 455000, content: "GV Ha T10 TT Anh Duong" },
+}
+
 beforeEach(() => {
   state.markMutate.mockReset()
+  state.notice = NOTICE
+  state.toDataURL.mockReset()
+  state.toDataURL.mockResolvedValue("data:image/png;base64,QR")
+  vi.spyOn(console, "error").mockImplementation(() => {})
   Object.assign(navigator, { clipboard: { writeText: vi.fn(async () => {}) } })
 })
 
@@ -103,6 +116,37 @@ describe("PlaceNoticeDialog", () => {
     await waitFor(() => expect(state.markMutate).toHaveBeenCalledWith({ placeId: 9, year: 2026, month: 10, sent: true }))
     expect(state.linkMutateAsync).toHaveBeenCalledWith({ placeId: 9 })
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/n/${"t".repeat(43)}?thang=2026-10`)
+  })
+
+  // FIX AN F2: nút Tải ảnh chỉ xoay chờ QR; QR lỗi thì hết xoay và vẫn lưu được (ảnh không có QR).
+  it("có QR: Tải ảnh xoay tới khi ảnh QR tải xong rồi bật", async () => {
+    state.notice = WITH_QR
+    renderDialog()
+    const btn = screen.getByRole("button", { name: "Tải ảnh" })
+    expect((btn as HTMLButtonElement).disabled).toBe(true)
+    const img = await screen.findByAltText("VietQR")
+    expect((btn as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.load(img)
+    await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false))
+  })
+
+  it("tạo QR lỗi: nút Tải ảnh hết xoay và bật lại, bấm là lưu", async () => {
+    state.notice = WITH_QR
+    state.toDataURL.mockRejectedValue(new Error("qr fail"))
+    renderDialog()
+    const btn = screen.getByRole("button", { name: "Tải ảnh" })
+    await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false))
+    expect(btn.querySelector(".animate-spin")).toBeNull()
+    expect(screen.getByTestId("place-notice-qr").textContent).toContain("Không tạo được mã QR")
+    fireEvent.click(btn)
+    expect(state.markMutate).toHaveBeenCalledWith({ placeId: 9, year: 2026, month: 10, sent: true })
+  })
+
+  it("ảnh QR không hiển thị được (onError): nút Tải ảnh vẫn bật", async () => {
+    state.notice = WITH_QR
+    renderDialog()
+    fireEvent.error(await screen.findByAltText("VietQR"))
+    await waitFor(() => expect((screen.getByRole("button", { name: "Tải ảnh" }) as HTMLButtonElement).disabled).toBe(false))
   })
 
   it("Đánh dấu đã gửi bằng tay", () => {
