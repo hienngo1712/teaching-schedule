@@ -260,4 +260,24 @@ describe("admin.purgeUser (spec AQ)", () => {
     expect(logged).not.toContain(NAME)
     expect(logged).not.toContain("Cô Xoá Hẳn")
   })
+
+  it("deletedUsers trả purgeAvailableAt = deletedAt + 30 ngày", async () => {
+    const s = await seedUser(10)
+    const admin = await getAuthedCaller("admin_test")
+    const row = (await admin.admin.deletedUsers()).find((u) => u.id === s.user.id)!
+    expect(row.purgeAvailableAt.getTime()).toBe(s.user.deletedAt!.getTime() + 30 * DAY)
+  })
+
+  it("[RF 4] Tổng quan admin, TK mới, thống kê không tính bia mộ", async () => {
+    const s = await seedUser()
+    const admin = await getAuthedCaller("admin_test")
+    await db.user.update({ where: { id: s.user.id }, data: { adminSeenAt: null } })
+    const statsBefore = await getAdminStats(db)
+    await admin.admin.purgeUser({ userId: s.user.id, confirmUsername: NAME })
+    const overview = await admin.admin.overview()
+    expect(overview.users.some((u) => u.id === s.user.id)).toBe(false)
+    const fresh = await admin.admin.newAccounts()
+    expect(fresh.items.some((u) => u.id === s.user.id)).toBe(false)
+    expect({ ...(await getAdminStats(db)), updatedAt: null }).toEqual({ ...statsBefore, updatedAt: null })
+  })
 })

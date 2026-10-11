@@ -33,8 +33,9 @@ export async function purgeUser(
   if (isAdminUsername(user.username) || userId === admin.id) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Không xoá được tài khoản quản trị" })
   }
-  if (!user.isDeleted || user.purgedAt || !user.deletedAt) throw notFound()
-  if (purgeAvailableAt(user.deletedAt) > new Date()) throw new TRPCError({ code: "BAD_REQUEST", message: "purge_too_early" })
+  if (!user.isDeleted || user.purgedAt) throw notFound()
+  // Không có deleted_at (dữ liệu cũ): như đã đủ 30 ngày, khớp danh sách Đã xoá.
+  if (purgeAvailableAt(user.deletedAt ?? new Date(0)) > new Date()) throw new TRPCError({ code: "BAD_REQUEST", message: "purge_too_early" })
   // So khớp nguyên văn (Review Focus 5): không trim, không đổi hoa thường.
   if (confirmUsername !== user.username) throw new TRPCError({ code: "BAD_REQUEST", message: "purge_confirm_mismatch" })
 

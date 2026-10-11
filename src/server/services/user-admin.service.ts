@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { isAdminUsername } from "@/lib/admin"
+import { purgeAvailableAt } from "./admin-purge.service"
 
 const notFound = () => new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy tài khoản" })
 
@@ -33,10 +34,12 @@ export async function adminRestoreUser(db: PrismaClient, admin: string, userId: 
 }
 
 export async function listDeletedUsers(db: PrismaClient) {
-  return db.user.findMany({
+  const rows = await db.user.findMany({
     // Bia mộ đã xoá vĩnh viễn (spec AQ §3) không còn trong Đã xoá.
     where: { isDeleted: true, purgedAt: null },
     orderBy: [{ deletedAt: "desc" }, { id: "desc" }],
     select: { id: true, username: true, fullName: true, deletedAt: true, deletedBy: true },
   })
+  // TK xoá trước khi có cột deleted_at: tính như đã đủ 30 ngày (mốc 0).
+  return rows.map((r) => ({ ...r, purgeAvailableAt: purgeAvailableAt(r.deletedAt ?? new Date(0)) }))
 }
