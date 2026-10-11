@@ -56,9 +56,11 @@ export async function getStudentReport(
     month: number
     toYear?: number
     toMonth?: number
+    // Nơi của CA (TeachingSession.placeId) khi Báo cáo chọn Nơi học (FIX AN F1).
+    placeId?: number
   }
 ) {
-  const { studentId, year, month, toYear, toMonth } = params
+  const { studentId, year, month, toYear, toMonth, placeId } = params
 
   // Verify student ownership
   const student = await db.student.findUnique({ where: { id: studentId } })
@@ -76,6 +78,7 @@ export async function getStudentReport(
     toYear: hasRange ? (toYear ?? year) : undefined,
     toMonth: hasRange ? (toMonth ?? month) : undefined,
     studentId,
+    placeId,
     includeStudents: true,
   })
 

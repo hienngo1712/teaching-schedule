@@ -76,4 +76,30 @@ describe("AN: Thu nhập 12 tháng + Báo cáo lọc nơi học", () => {
     expect([all.totalStudents, all.totalRevenue, all.totalPaid]).toEqual([2, 350000, 350000])
     expect([onlyB.totalStudents, onlyB.totalRevenue, onlyB.totalPaid]).toEqual([1, 200000, 200000])
   })
+
+  // FIX AN F1: chọn Nơi học thì biểu đồ + danh sách ca chỉ còn ca của nơi đó (TeachingSession.placeId).
+  it("report.student + session.getMonth lọc nơi: chọn nơi A không có ca của nơi B", async () => {
+    const caller = await getAuthedCaller()
+    const a = (await caller.place.create({ name: "Lớp tại nhà", kind: "home", color: "#4F46E5", billing: "per_student" }))!
+    const b = (await caller.place.create({ name: "Nhóm GS Cầu Giấy", kind: "tutor", color: "#DB2777", billing: "per_student" }))!
+    const subjectId = (await db.subject.findFirstOrThrow({ where: { userId } })).id
+    const an = await db.student.create({ data: { userId, fullName: "An", grade: 5, placeId: a.id } })
+    const mk = (placeId: number, iso: string) =>
+      db.teachingSession.create({
+        data: {
+          userId, subjectId, placeId, sessionDate: day(iso), startTime: time("08:00"), endTime: time("09:30"),
+          sessionStudents: { create: [{ studentId: an.id, attendance: "present", fee: 150000, grade: 5 }] },
+        },
+      })
+    const sa = await mk(a.id, "2026-10-05")
+    const sb = await mk(b.id, "2026-10-06")
+
+    const all = await caller.report.student({ studentId: an.id, year: 2026, month: 10 })
+    expect(all.sessions.map((s) => s.id).sort()).toEqual([sa.id, sb.id].sort())
+    const onlyA = await caller.report.student({ studentId: an.id, year: 2026, month: 10, placeId: a.id })
+    expect(onlyA.sessions.map((s) => s.id)).toEqual([sa.id])
+    expect(onlyA.summary.totalRevenue).toBe(150000)
+    const monthA = await caller.session.getMonth({ year: 2026, month: 10, includeStudents: true, placeId: a.id })
+    expect(monthA.map((s) => s.id)).toEqual([sa.id])
+  })
 })

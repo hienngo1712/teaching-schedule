@@ -85,6 +85,8 @@ export default function ReportsPage() {
       ...queryParams,
       grade: grade || undefined,
       studentId: selectedStudentId || undefined,
+      // Ca thuộc nơi chọn (TeachingSession.placeId), khác số tổng hợp lọc theo nơi của HS.
+      placeId,
       includeStudents: true,
     },
     { enabled: reportGate.allowed }
@@ -277,7 +279,7 @@ export default function ReportsPage() {
         </>
       ) : reportGate.allowed ? (
         // Chờ biết gói rồi mới render: StudentReport gọi report.student ngay khi mount.
-        <StudentReport studentId={selectedStudentId} {...queryParams} />
+        <StudentReport studentId={selectedStudentId} placeId={placeId} {...queryParams} />
       ) : null}
     </div>
   )
