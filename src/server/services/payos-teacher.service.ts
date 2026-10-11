@@ -57,7 +57,7 @@ export async function connectTeacherPayos(db: PrismaClient, userId: number, inpu
   return { connectedAt: row.connectedAt }
 }
 
-async function cancelActiveLinks(db: PrismaClient, userId: number, cfg: PayosConfig) {
+export async function cancelActiveLinks(db: PrismaClient, userId: number, cfg: PayosConfig) {
   // Gồm cả link phiếu nơi dạy (AO): cùng kênh payOS nên cùng bị webhook từ chối khi đổi/ngắt kênh.
   const links = [
     ...(await db.tuitionPayLink.findMany({ where: { userId, status: "active" }, select: { id: true, payosLinkId: true } })),

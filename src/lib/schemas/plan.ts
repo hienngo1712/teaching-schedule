@@ -32,6 +32,8 @@ export const userTrialDaysSchema = z.number().int().min(0).max(3650)
 
 export const updateTrialDaysSchema = z.object({ days: trialDaysSchema, expected: z.number().int() })
 export const userIdSchema = z.object({ userId: z.number().int().positive() })
+// Tên gõ để xác nhận so nguyên văn (spec AQ Review Focus 5): không trim.
+export const purgeUserSchema = userIdSchema.extend({ confirmUsername: z.string().max(100) })
 export const setUserTrialSchema = userIdSchema.extend({ days: userTrialDaysSchema })
 
 export const orderIdSchema = z.object({ id: z.number().int().positive() })
