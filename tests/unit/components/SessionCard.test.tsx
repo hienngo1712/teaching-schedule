@@ -32,6 +32,7 @@ const base: SessionListDTO = {
   endTime: "09:30",
   durationMins: 90,
   subjectId: 1,
+  placeId: null,
   subject: { id: 1, name: "Toán", color: "#0891B2" },
   title: null,
   notes: null,

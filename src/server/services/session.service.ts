@@ -144,6 +144,7 @@ function toDTO(s: SessionWithSubjectAndStudents, changes?: Map<number, BillingCh
     level: deriveLevel(students),
     students,
     makeupOfId: s.makeupOfId,
+    placeId: s.placeId,
     cancelReason: s.cancelReason,
     cancelledAt: s.cancelledAt,
     isDeleted: s.isDeleted,

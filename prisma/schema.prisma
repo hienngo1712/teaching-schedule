@@ -51,6 +51,7 @@ model User {
   feedbacks     Feedback[]
   chatConversation ChatConversation?
   teacherPayos  TeacherPayos?
+  places        TeachingPlace[]
 
   @@map("users")
 }
@@ -114,9 +115,13 @@ model Student {
   billingChanges  StudentBillingChange[]
   payLinks        TuitionPayLink[]
   user            User             @relation(fields: [userId], references: [id])
+  // Nơi học (spec AL): null = nơi per_student mặc định của user. Đổi nơi không có lịch sử.
+  placeId         Int?             @map("place_id")
+  place           TeachingPlace?   @relation(fields: [placeId], references: [id], onDelete: SetNull)
 
   @@index([userId, grade])
   @@index([userId, isActive])
+  @@index([placeId])
   @@map("students")
 }
 
@@ -203,8 +208,12 @@ model TeachingSession {
   user            User             @relation(fields: [userId], references: [id])
   makeupOf        TeachingSession?  @relation("Makeup", fields: [makeupOfId], references: [id], onDelete: SetNull)
   makeupSessions  TeachingSession[] @relation("Makeup")
+  // Nơi dạy của ca (spec AL); học phí HS vẫn theo nơi học của HS.
+  placeId         Int?             @map("place_id")
+  place           TeachingPlace?   @relation(fields: [placeId], references: [id], onDelete: SetNull)
 
   @@index([userId, sessionDate])
+  @@index([userId, placeId, sessionDate])
   @@index([userId, sessionDate, startTime])
   @@index([subjectId])
   @@index([makeupOfId])
@@ -484,4 +493,38 @@ model TuitionPayLinkPayment {
   // Mã giao dịch chỉ duy nhất theo ngân hàng/kênh: mỗi GV 1 kênh nên không được unique toàn bảng (review AH).
   @@unique([linkId, reference])
   @@map("tuition_pay_link_payments")
+}
+
+// Nơi dạy (spec AL §2): lớp tại nhà / gia sư / trung tâm.
+model TeachingPlace {
+  id             Int                  @id @default(autoincrement())
+  userId         Int                  @map("user_id")
+  name           String               @db.VarChar(100)
+  kind           String               @db.VarChar(10) // home | tutor | center
+  color          String               @db.VarChar(7)
+  sortOrder      Int                  @default(0) @map("sort_order")
+  isDeleted      Boolean              @default(false) @map("is_deleted")
+  deletedAt      DateTime?            @map("deleted_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billingChanges PlaceBillingChange[]
+  students       Student[]
+  sessions       TeachingSession[]
+
+  @@unique([userId, name])
+  @@index([userId, isDeleted, sortOrder])
+  @@map("teaching_places")
+}
+
+// Cách tính tiền của nơi theo thời gian, giống StudentBillingChange: fromKey = year*12 + month-1, 0 = mọi tháng.
+model PlaceBillingChange {
+  id        Int           @id @default(autoincrement())
+  placeId   Int           @map("place_id")
+  fromKey   Int           @map("from_key")
+  billing   String        @db.VarChar(12) // per_student | per_session
+  createdAt DateTime      @default(now()) @map("created_at")
+  place     TeachingPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([placeId, fromKey])
+  @@map("place_billing_changes")
 }
