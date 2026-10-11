@@ -25,6 +25,7 @@ type DeletedU = {
   fullName: string | null
   deletedAt: Date
   deletedBy: string | null
+  purgeAvailableAt: Date
 }
 
 const state = vi.hoisted(() => ({
@@ -86,6 +87,11 @@ vi.mock("@/components/admin/TrialDaysDialog", () => ({
 }))
 vi.mock("@/components/admin/ResetPasswordDialog", () => ({
   ResetPasswordDialog: ({ user }: { user: U }) => <div data-testid="reset-dialog">{user.username}</div>,
+}))
+vi.mock("@/components/admin/PurgeAccountDialog", () => ({
+  PurgeAccountDialog: ({ user }: { user: { id: number; username: string } }) => (
+    <div data-testid="purge-dialog">{user.username}</div>
+  ),
 }))
 vi.mock("@/components/admin/DeleteAccountDialog", () => ({
   DeleteAccountDialog: ({ user }: { user: { id: number; username: string } }) => (
@@ -198,6 +204,7 @@ describe("AdminAccounts — cột Hành động, tab Đã xoá, phân trang", ()
         fullName: "Giáo viên Xoá",
         deletedAt: new Date("2026-09-20T10:00:00Z"),
         deletedBy: "admin_test",
+        purgeAvailableAt: new Date("2026-10-20T10:00:00Z"),
       },
     ]
     renderPage()
@@ -214,5 +221,22 @@ describe("AdminAccounts — cột Hành động, tab Đã xoá, phân trang", ()
     expect(restoreBtn).toBeTruthy()
     fireEvent.click(restoreBtn)
     expect(state.restoreMutate).toHaveBeenCalledWith({ userId: 99 })
+  })
+
+  // Spec AQ §6: nút Xoá vĩnh viễn chỉ khi đã đủ 30 ngày; trước đó ghi ngày được xoá.
+  it("tab Đã xoá: chưa đủ 30 ngày → không có nút, có dòng 'Xoá vĩnh viễn được từ'; đủ ngày → nút mở hộp xác nhận", () => {
+    state.deletedUsers = [
+      { id: 98, username: "gv_moi_xoa", fullName: null, deletedAt: new Date(), deletedBy: "admin_test", purgeAvailableAt: new Date(Date.now() + 29 * 86_400_000) },
+      { id: 97, username: "gv_xoa_lau", fullName: null, deletedAt: new Date("2026-08-01T03:00:00Z"), deletedBy: "admin_test", purgeAvailableAt: new Date("2026-08-31T03:00:00Z") },
+    ]
+    renderPage()
+    fireEvent.click(screen.getByRole("tab", { name: /Đã xoá \(2\)/ }))
+    const rowOf = (name: string) => within(table()).getByText(name).closest("tr")!
+    expect(within(rowOf("gv_moi_xoa")).queryByTestId("admin-purge-user")).toBeNull()
+    expect(within(rowOf("gv_moi_xoa")).getByText(/Xoá vĩnh viễn được từ \d{2}\/\d{2}\/\d{4}/)).toBeTruthy()
+    const purge = within(rowOf("gv_xoa_lau")).getByTestId("admin-purge-user")
+    expect(purge.textContent).toContain("Xoá vĩnh viễn")
+    fireEvent.click(purge)
+    expect(screen.getByTestId("purge-dialog").textContent).toBe("gv_xoa_lau")
   })
 })
