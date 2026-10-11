@@ -32,6 +32,7 @@ describe("AppSidebar", () => {
       "/tuition",
       "/reports",
       "/subjects",
+      "/places",
       "/settings",
       "/plan",
       "/trash",

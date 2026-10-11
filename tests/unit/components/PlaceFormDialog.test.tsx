@@ -19,12 +19,13 @@ vi.mock("@/lib/trpc", () => ({
 
 import { PlaceFormDialog } from "@/components/places/PlaceFormDialog"
 
-const existing = {
-  id: 7, name: "Lớp tại nhà", kind: "home" as const, color: "#4F46E5", billing: "per_student" as const,
+type Place = NonNullable<Parameters<typeof PlaceFormDialog>[0]["place"]>
+const existing: Place = {
+  id: 7, name: "Lớp tại nhà", kind: "home", color: "#4F46E5", billing: "per_student",
   sortOrder: 0, activeStudents: 3, futureSessions: 2, hasData: true,
 }
 
-function renderForm(place?: typeof existing) {
+function renderForm(place?: Place) {
   render(
     <LanguageProvider forcedLanguage="vi">
       <PlaceFormDialog place={place} usedColors={[]} onClose={vi.fn()} />
@@ -55,6 +56,16 @@ describe("PlaceFormDialog", () => {
     expect(screen.queryByTestId("place-billing-from")).toBeNull()
     fireEvent.click(screen.getByRole("radio", { name: "Theo ca/giờ, nơi này trả" }))
     expect(screen.getByTestId("place-billing-from").textContent).toBe("Áp dụng từ tháng 10/2026, các tháng trước giữ nguyên")
+  })
+
+  // FIX AL Task 3: form sửa nạp đúng cách tính hiện tại; Lưu không đổi gì thì không gửi billing.
+  it("sửa nơi per_session: chọn sẵn Theo ca/giờ; Lưu không đổi gì → không gửi billing", () => {
+    renderForm({ ...existing, name: "TT Ánh Dương", kind: "center", billing: "per_session" })
+    expect(screen.getByRole("radio", { name: "Theo ca/giờ, nơi này trả" }).getAttribute("aria-checked")).toBe("true")
+    expect(screen.getByRole("radio", { name: "Trung tâm" }).getAttribute("aria-checked")).toBe("true")
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }))
+    expect(mutate.update).toHaveBeenCalledTimes(1)
+    expect(mutate.update.mock.calls[0][0]).not.toHaveProperty("billing")
   })
 
   it("nơi chưa có dữ liệu: đổi cách tính không cảnh báo", () => {

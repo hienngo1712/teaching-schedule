@@ -54,7 +54,8 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
 
   const save = () => {
     setError(null)
-    if (place) updateMut.mutate({ id: place.id, name: trimmed, kind, color, billing })
+    // Chỉ gửi billing khi thật sự đổi: tránh ghi lịch sử cách tính khi chỉ sửa tên/màu.
+    if (place) updateMut.mutate({ id: place.id, name: trimmed, kind, color, ...(billing !== place.billing && { billing }) })
     else createMut.mutate({ name: trimmed, kind, color, billing })
   }
 
