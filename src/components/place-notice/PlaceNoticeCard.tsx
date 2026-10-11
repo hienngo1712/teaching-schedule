@@ -65,8 +65,8 @@ export const PlaceNoticeCard = forwardRef<HTMLDivElement, Props>(function PlaceN
     <div
       ref={ref}
       data-testid="place-notice-card"
-      style={isWide ? undefined : { width: 360 }}
-      className={cn("space-y-4 border border-slate-200 bg-white p-5 text-sm text-slate-900", isWide && "w-full")}
+      // Rộng tối đa 360px nhưng co theo khung (375/360px còn 343/328px): không tràn mép, không cuộn ngang (FIX AN Task 2).
+      className={cn("w-full space-y-4 border border-slate-200 bg-white p-5 text-sm text-slate-900", !isWide && "mx-auto max-w-[360px]")}
     >
       <h2 className="text-center text-base font-bold">
         {t("place_notice_title")} {notice.month}/{notice.year}

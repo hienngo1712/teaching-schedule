@@ -61,6 +61,15 @@ test('mở /n/<token> không đăng nhập: thấy QR + số tiền, noindex, kh
   expect(await page.content()).not.toContain(SECRET);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
+  // FIX AN Task 2: ở 360px thẻ phiếu cùng lề 16px 2 bên như thẻ Chi tiết ca, không tràn, không cuộn ngang.
+  await page.setViewportSize({ width: 360, height: 800 });
+  const card = (await page.getByTestId('place-notice-card').boundingBox())!;
+  const sessions = (await page.getByTestId('payer-sessions').locator('xpath=..').boundingBox())!;
+  expect(card.x).toBeGreaterThanOrEqual(16);
+  expect(card.x + card.width).toBeLessThanOrEqual(360 - 16);
+  expect(Math.abs(card.x - sessions.x)).toBeLessThanOrEqual(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
   const bad = await page.goto(`/n/${'A'.repeat(43)}`);
   expect(bad?.status()).toBe(404);
 });

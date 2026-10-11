@@ -85,15 +85,7 @@ export function PayerView({ view }: { view: PayerViewDTO }) {
           <aside className="order-first space-y-2 lg:order-last lg:sticky lg:top-4">
             {view.notice ? (
               <>
-                {isWide ? (
-                  <PlaceNoticeCard notice={view.notice} variant="wide" />
-                ) : (
-                  <div className="overflow-x-auto">
-                    <div className="mx-auto w-fit">
-                      <PlaceNoticeCard notice={view.notice} variant="default" />
-                    </div>
-                  </div>
-                )}
+                <PlaceNoticeCard notice={view.notice} variant={isWide ? "wide" : "default"} />
                 {view.notice.qr && <p className="text-center text-xs text-slate-500">{t("parent_qr_hint")}</p>}
               </>
             ) : (
