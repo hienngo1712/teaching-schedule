@@ -33,9 +33,11 @@ export function ReportPeriodPicker({
     if (type === 'month') return `${t("month")} ${month}/${year}`
     if (type === 'year') return `${t("year")} ${year}`
     if (type === 'range') {
-        const start = `${t("from_month")} ${month}/${year}`
-        const end = `${t("to_month")} ${toMonth || month}/${toYear || year}`
-        return `${start} - ${end}`
+        // Nhãn rút gọn "T1–T3/2026" (khác năm: "T11/2025–T2/2026") để không tràn ở 360px.
+        const m = t("month_abbr")
+        const ty = toYear || year
+        const tm = toMonth || month
+        return ty === year ? `${m}${month}–${m}${tm}/${year}` : `${m}${month}/${year}–${m}${tm}/${ty}`
     }
     return t("select_report_period")
   }, [type, year, month, toYear, toMonth, t])
@@ -46,12 +48,12 @@ export function ReportPeriodPicker({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="justify-between min-w-[200px] h-10 px-4 bg-white border-slate-200 hover:bg-slate-50">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="size-4 text-primary" />
-            <span className="font-semibold text-slate-700">{label}</span>
+        <Button variant="outline" className="h-11 min-w-0 max-w-full flex-1 justify-between px-3 bg-white border-slate-200 hover:bg-slate-50 md:h-10 md:flex-none md:px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <CalendarIcon className="size-4 shrink-0 text-primary" />
+            <span className="truncate font-semibold text-slate-700">{label}</span>
           </div>
-          <ChevronDown className="size-4 text-slate-400 ml-2" />
+          <ChevronDown className="size-4 shrink-0 text-slate-400 ml-2" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[320px] p-4 bg-white shadow-xl border-slate-200" align="end">

@@ -2,7 +2,8 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
 
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: null }) }))
@@ -37,6 +38,22 @@ describe("ExportExcelButton (spec P10)", () => {
     expect(btn.textContent).toBe("")
     expect(btn.className).toContain("size-11")
     expect(btn.querySelector("svg")).not.toBeNull()
+  })
+  // AK: ở Lịch, Xuất Excel là menu con trong ⋯, giữ nguyên các kiểu xuất.
+  it("asSubmenu: mục Xuất Excel mở menu con có các kiểu xuất", async () => {
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <DropdownMenu defaultOpen>
+          <DropdownMenuTrigger>⋯</DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <ExportExcelButton sessions={[]} asSubmenu />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </LanguageProvider>
+    )
+    const sub = await screen.findByRole("menuitem", { name: "Xuất Excel" })
+    fireEvent.keyDown(sub, { key: "ArrowRight" })
+    expect(await screen.findByRole("menuitem", { name: /Xuất lịch tháng/ })).toBeTruthy()
   })
   it("mặc định (màn Báo cáo): vẫn có chữ Xuất Excel", () => {
     renderBtn()

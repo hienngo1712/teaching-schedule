@@ -85,7 +85,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       { text: "Chọn ngày, giờ bắt đầu, giờ kết thúc, môn và các học sinh trong ca.", shot: "lich-day-tao-ca" },
       "Muốn ca lặp hằng tuần: chọn **Lặp lại vào các thứ** và khoảng ngày.",
       { text: "Bấm vào ca để xem chi tiết, sửa, chuyển sang ngày giờ khác, huỷ ca (ghi lý do) hoặc tạo **Ca bù**.", shot: "lich-day-chi-tiet-ca" },
-      { text: "Cuối tháng dùng **Chép lịch tháng** để chép lịch sang tháng sau.", shot: "lich-day-chep-thang" },
+      { text: "Cuối tháng bấm mũi tên cạnh **Tạo ca dạy**, chọn **Chép lịch tháng** để chép lịch sang tháng sau.", shot: "lich-day-chep-thang" },
     ],
     tips: ["App báo khi ca mới trùng giờ với ca đã có."],
   },

@@ -9,6 +9,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useExcelExport } from "@/hooks/useExcelExport"
@@ -25,9 +28,11 @@ interface ExportExcelButtonProps {
   students?: StudentDTO[]
   className?: string
   iconOnly?: boolean
+  // AK: render thành mục "Xuất Excel" có menu con, đặt trong menu ⋯ của thanh lọc (màn Lịch).
+  asSubmenu?: boolean
 }
 
-export function ExportExcelButton({ sessions, students = [], className, iconOnly = false }: ExportExcelButtonProps) {
+export function ExportExcelButton({ sessions, students = [], className, iconOnly = false, asSubmenu = false }: ExportExcelButtonProps) {
   const { t } = useTranslation()
   const { data: session } = useSession()
   const { isExporting, exportMonthlySchedule, exportStudentSchedule, exportGradeReport, exportAttendanceSummary } = useExcelExport()
@@ -91,6 +96,49 @@ export function ExportExcelButton({ sessions, students = [], className, iconOnly
     ? sessions.filter(s => s.students.some(st => st.grade === selectedGrade))
     : sessions
 
+  const items = (
+    <>
+      <DropdownMenuLabel>{t("export_options")}</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+
+      <DropdownMenuItem onClick={() => exportMonthlySchedule(displaySessions, year, month, teacherName)}>
+        📅 {t("export_monthly")} {selectedGrade ? `(${t("grade")} ${selectedGrade})` : ""}
+      </DropdownMenuItem>
+
+      {selectedStudentId && (
+        <DropdownMenuItem onClick={handleExportStudent}>
+          👤 {t("export_student")}
+        </DropdownMenuItem>
+      )}
+
+      {selectedGrade && (
+        <DropdownMenuItem onClick={() => exportGradeReport(selectedGrade, students, sessions, year, month)}>
+          🏫 {t("export_by_grade")} {selectedGrade}
+        </DropdownMenuItem>
+      )}
+
+      <DropdownMenuItem onClick={() => exportAttendanceSummary(displayStudents, displaySessions, year, month)}>
+        📊 {t("export_attendance")} {selectedGrade ? `(${t("grade")} ${selectedGrade})` : ""}
+      </DropdownMenuItem>
+    </>
+  )
+
+  if (asSubmenu) {
+    return (
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger className="min-h-11 gap-2 md:min-h-9" disabled={isExporting}>
+          {isExporting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <FileSpreadsheet className="size-4 text-green-600" />
+          )}
+          {t("export_excel")}
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-56">{items}</DropdownMenuSubContent>
+      </DropdownMenuSub>
+    )
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -112,28 +160,7 @@ export function ExportExcelButton({ sessions, students = [], className, iconOnly
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>{t("export_options")}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem onClick={() => exportMonthlySchedule(displaySessions, year, month, teacherName)}>
-          📅 {t("export_monthly")} {selectedGrade ? `(${t("grade")} ${selectedGrade})` : ""}
-        </DropdownMenuItem>
-
-        {selectedStudentId && (
-          <DropdownMenuItem onClick={handleExportStudent}>
-            👤 {t("export_student")}
-          </DropdownMenuItem>
-        )}
-
-        {selectedGrade && (
-          <DropdownMenuItem onClick={() => exportGradeReport(selectedGrade, students, sessions, year, month)}>
-            🏫 {t("export_by_grade")} {selectedGrade}
-          </DropdownMenuItem>
-        )}
-
-        <DropdownMenuItem onClick={() => exportAttendanceSummary(displayStudents, displaySessions, year, month)}>
-          📊 {t("export_attendance")} {selectedGrade ? `(${t("grade")} ${selectedGrade})` : ""}
-        </DropdownMenuItem>
+        {items}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -32,7 +32,8 @@ import { LockBadge } from "@/components/plan/LockBadge"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { PageHeader } from "@/components/common/PageHeader"
-import { FilterBar } from "@/components/common/FilterBar"
+import { FilterBar, type FilterChip } from "@/components/common/FilterBar"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
 import type { MonthlyTuitionFilterInput } from "@/lib/schemas/tuition"
 
@@ -51,6 +52,7 @@ export default function TuitionPage() {
     setNoticeFilter,
     selectedStudentId,
     setStudentId,
+    clearFilters,
   } = useFilters()
   const [localSearch, setLocalSearch] = useDebouncedSearch(searchStudentName, setSearch)
 
@@ -204,11 +206,20 @@ export default function TuitionPage() {
     },
   ]
 
-  const activeFilterCount =
-    (selectedGrade ? 1 : 0) +
-    (selectedStatus && selectedStatus !== "all" ? 1 : 0) +
-    (selectedNoticeFilter && selectedNoticeFilter !== "all" ? 1 : 0)
+  // Chip cho ô trong Bộ lọc (Phiếu báo, Lớp); Trạng thái nằm ngoài thanh nên không có chip.
+  const activeChips: FilterChip[] = []
+  if (selectedNoticeFilter && selectedNoticeFilter !== "all") {
+    activeChips.push({
+      key: "notice",
+      label: `${t("notice_filter")}: ${t(selectedNoticeFilter === "sent" ? "notice_sent" : "notice_unsent")}`,
+      onRemove: () => setNoticeFilter("all"),
+    })
+  }
+  if (selectedGrade) {
+    activeChips.push({ key: "grade", label: `${t("grade")} ${selectedGrade}`, onRemove: () => setGrade(null) })
+  }
 
+  const isDesktop = useMediaQuery("(min-width: 768px)")
   const nowVn = vnDateParts()
   const prevMonthKey = monthKey(nowVn.year, nowVn.month) - 1
   const viewingMonthKey = monthKey(year, month)
@@ -223,35 +234,25 @@ export default function TuitionPage() {
       />
 
       <FilterBar
-        actions={
-          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1" data-tour="tuition-month">
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="size-9">
-              <ChevronLeft className="size-5" />
-            </Button>
-            <span className="min-w-[110px] px-2 text-center text-sm font-semibold">{monthLabel}</span>
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="size-9">
-              <ChevronRight className="size-5" />
-            </Button>
-          </div>
-        }
         search={{ value: localSearch, onChange: setLocalSearch, placeholder: t("search_student") }}
-        activeCount={activeFilterCount}
+        primaryFilter={
+          <Select value={selectedStatus || "all"} onValueChange={(v) => setStatus(v)}>
+            <SelectTrigger className="h-11 w-auto gap-2 md:h-10 md:w-[170px]">
+              <SelectValue placeholder={t("status")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("all_status")}</SelectItem>
+              <SelectItem value="fully_paid">{t("fully_paid")}</SelectItem>
+              <SelectItem value="paid_this_month">{t("paid_this_month")}</SelectItem>
+              <SelectItem value="partial">{t("partial_paid")}</SelectItem>
+              <SelectItem value="unpaid">{t("unpaid")}</SelectItem>
+            </SelectContent>
+          </Select>
+        }
         filters={
           <>
-            <Select value={selectedStatus || "all"} onValueChange={(v) => setStatus(v)}>
-              <SelectTrigger className="w-[170px]">
-                <SelectValue placeholder={t("status")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("all_status")}</SelectItem>
-                <SelectItem value="fully_paid">{t("fully_paid")}</SelectItem>
-                <SelectItem value="paid_this_month">{t("paid_this_month")}</SelectItem>
-                <SelectItem value="partial">{t("partial_paid")}</SelectItem>
-                <SelectItem value="unpaid">{t("unpaid")}</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={selectedNoticeFilter || "all"} onValueChange={(v) => setNoticeFilter(v)}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger aria-label={t("notice_filter")}>
                 <SelectValue placeholder={t("notice_filter")} />
               </SelectTrigger>
               <SelectContent>
@@ -264,7 +265,7 @@ export default function TuitionPage() {
               value={selectedGrade?.toString() || "all"}
               onValueChange={(v) => setGrade(v === "all" ? null : parseInt(v))}
             >
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger aria-label={t("grade")}>
                 <SelectValue placeholder={t("all_grades")} />
               </SelectTrigger>
               <SelectContent>
@@ -277,6 +278,22 @@ export default function TuitionPage() {
               </SelectContent>
             </Select>
           </>
+        }
+        activeChips={activeChips}
+        onClearAll={() => clearFilters(["noticeFilter", "grade"])}
+        period={
+          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1" data-tour="tuition-month">
+            <Button variant="ghost" size="icon" onClick={prevMonth} className="size-9">
+              <ChevronLeft className="size-5" />
+            </Button>
+            {/* Điện thoại: "T9/2026" để nhường chỗ cho thanh lọc. */}
+            <span className="whitespace-nowrap px-2 text-center text-sm font-semibold md:min-w-[110px]">
+              {isDesktop ? monthLabel : `${t("month_abbr")}${month}/${year}`}
+            </span>
+            <Button variant="ghost" size="icon" onClick={nextMonth} className="size-9">
+              <ChevronRight className="size-5" />
+            </Button>
+          </div>
         }
       />
 

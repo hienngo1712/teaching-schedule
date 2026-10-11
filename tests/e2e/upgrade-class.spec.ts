@@ -12,13 +12,16 @@ test.describe('Class Upgrade flow', () => {
   test('manual upgrade button is visible and either fires or stays disabled', async ({ page }) => {
     await page.goto('/students');
 
-    const upgradeBtn = page.getByRole('button', {
-      name: /nâng lớp hàng loạt|bulk grade up/i,
+    // AK: Nâng lớp hàng loạt là mục trong menu ⋯ của thanh lọc.
+    const openMenu = () => page.getByRole('button', { name: /thêm thao tác|more actions/i }).click();
+    await openMenu();
+    const upgradeBtn = page.getByRole('menuitem', {
+      name: /nâng lớp hàng loạt|bulk grade up|đã nâng lớp năm|already/i,
     });
     await expect(upgradeBtn).toBeVisible();
 
-    // If already upgraded this year, button must be disabled — skip the flow.
-    if (await upgradeBtn.isDisabled()) {
+    // If already upgraded this year, item must be disabled — skip the flow.
+    if ((await upgradeBtn.getAttribute('aria-disabled')) === 'true') {
       test.skip(true, 'Already upgraded this year — skipping manual flow');
       return;
     }
@@ -37,6 +40,7 @@ test.describe('Class Upgrade flow', () => {
       page.getByText(/đã nâng lớp|upgraded/i),
     ).toBeVisible({ timeout: 10000 });
 
-    await expect(upgradeBtn).toBeDisabled();
+    await openMenu();
+    await expect(upgradeBtn).toHaveAttribute('aria-disabled', 'true');
   });
 });

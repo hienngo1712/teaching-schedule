@@ -237,8 +237,11 @@ test.describe('Thùng rác & Xoá mềm (E2E)', () => {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Đã nghỉ' }).click();
     await expect(page.getByText('Đã chuyển học sinh sang Đã nghỉ')).toBeVisible();
 
-    await page.click('button:has-text("Đang học")');
+    // AK: ô Trạng thái nằm trong nút "Bộ lọc" (popover).
+    await page.getByRole('button', { name: /^Bộ lọc/ }).click();
+    await page.getByRole('dialog').getByRole('combobox', { name: 'Trạng thái' }).click();
     await page.getByRole('option', { name: 'Đã nghỉ' }).click();
+    await page.keyboard.press('Escape');
     const rowInactive = page.locator('tr', { hasText: nameDebt });
     await rowInactive.getByRole('button', { name: 'Menu hành động' }).click();
     await page.getByRole('menuitem', { name: /Xóa học sinh/ }).click();

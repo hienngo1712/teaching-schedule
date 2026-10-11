@@ -97,6 +97,9 @@ vi.mock("@/lib/trpc", () => ({
   },
 }))
 
+// AK: 2 nút dọn nằm trong menu ⋯ cạnh hàng tab.
+const openMore = () => fireEvent.keyDown(screen.getByRole("button", { name: "Thêm thao tác" }), { key: "Enter" })
+
 function renderTrash() {
   return render(
     <LanguageProvider forcedLanguage="vi">
@@ -205,36 +208,59 @@ describe("TrashList", () => {
     expect(screen.getByText("Thùng rác trống")).toBeTruthy()
   })
 
-  it("nút Dọn tab này có số mục của tab, bấm → popup cảnh báo, Xóa vĩnh viễn gọi purge đúng loại", () => {
+  it("⋯ → Dọn tab này có số mục của tab, bấm → popup cảnh báo, Xóa vĩnh viễn gọi purge đúng loại", async () => {
     mockCounts.data = { session: 1, student: 0, payment: 2, subject: 0 }
     renderTrash()
-    fireEvent.click(screen.getByRole("button", { name: "Dọn tab này (1)" }))
+    openMore()
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Dọn tab này (1)" }))
     expect(screen.getByText(/vĩnh viễn không lấy lại được/)).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "Xóa vĩnh viễn" }))
     expect(mockPurge.mutate).toHaveBeenCalledWith({ type: "session" })
   })
 
-  it("Dọn sạch thùng rác → popup tổng 3 mục → gọi purgeAll", () => {
+  it("⋯ → Dọn sạch thùng rác → popup tổng 3 mục → gọi purgeAll", async () => {
     mockCounts.data = { session: 1, student: 0, payment: 2, subject: 0 }
     renderTrash()
-    fireEvent.click(screen.getByRole("button", { name: "Dọn sạch thùng rác" }))
+    openMore()
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Dọn sạch thùng rác" }))
     expect(screen.getByText("Xóa vĩnh viễn 3 mục?")).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "Xóa vĩnh viễn" }))
     expect(mockPurgeAll.mutate).toHaveBeenCalled()
   })
 
-  it("thùng rác trống → 2 nút dọn disabled", () => {
+  // [RF 4] tab rỗng / thùng rác rỗng → mục dọn bị khoá như nút cũ.
+  it("thùng rác trống → 2 mục dọn disabled", async () => {
     mockCounts.data = { session: 0, student: 0, payment: 0, subject: 0 }
     renderTrash()
-    expect((screen.getByRole("button", { name: "Dọn sạch thùng rác" }) as HTMLButtonElement).disabled).toBe(true)
-    expect((screen.getByRole("button", { name: "Dọn tab này (0)" }) as HTMLButtonElement).disabled).toBe(true)
+    openMore()
+    expect((await screen.findByRole("menuitem", { name: "Dọn sạch thùng rác" })).getAttribute("aria-disabled")).toBe("true")
+    expect(screen.getByRole("menuitem", { name: "Dọn tab này (0)" }).getAttribute("aria-disabled")).toBe("true")
   })
 
-  it("tab Học sinh: popup có dòng tiền vẫn giữ trong Báo cáo", () => {
+  it("tab đang chọn rỗng nhưng tab khác còn: Dọn tab này khoá, Dọn sạch vẫn bấm được", async () => {
+    mockCounts.data = { session: 0, student: 0, payment: 2, subject: 0 }
+    renderTrash()
+    openMore()
+    expect((await screen.findByRole("menuitem", { name: "Dọn tab này (0)" })).getAttribute("aria-disabled")).toBe("true")
+    expect(screen.getByRole("menuitem", { name: "Dọn sạch thùng rác" }).getAttribute("aria-disabled")).toBeNull()
+  })
+
+  it("không còn nút Dọn sạch ở đầu trang; tab cuộn ngang trên điện thoại, chữ không gãy", () => {
+    renderTrash()
+    expect(screen.queryByRole("button", { name: "Dọn sạch thùng rác" })).toBeNull()
+    expect(screen.getByRole("tablist").className).toContain("overflow-x-auto")
+    for (const tab of screen.getAllByRole("tab")) {
+      expect(tab.className).toContain("shrink-0")
+      expect(tab.className).toContain("whitespace-nowrap")
+    }
+  })
+
+  it("tab Học sinh: popup có dòng tiền vẫn giữ trong Báo cáo", async () => {
     mockCounts.data = { session: 0, student: 2, payment: 0, subject: 0 }
     renderTrash()
     fireEvent.click(screen.getByRole("tab", { name: /Học sinh/ }))
-    fireEvent.click(screen.getByRole("button", { name: "Dọn tab này (2)" }))
+    openMore()
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Dọn tab này (2)" }))
     expect(screen.getByText(/vẫn được giữ trong Báo cáo/)).toBeTruthy()
   })
 })

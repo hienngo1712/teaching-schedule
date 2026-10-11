@@ -56,11 +56,17 @@ test.afterAll(async () => {
   await db.$disconnect();
 });
 
+// AK: Lịch lặp + Chép lịch tháng nằm trong menu ▾ cạnh nút Tạo ca dạy.
+async function openCreateMenu(page: Page) {
+  await page.getByTestId('create-session-more').click();
+}
+
 test('desktop: xem trước theo lịch gốc, tạo 3 tháng, chạy lại không trùng', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await login(page, 'teacher');
   await page.goto('/calendar?year=2030&month=1');
 
+  await openCreateMenu(page);
   await page.getByTestId('copy-month-button').click();
   const dlg = page.getByTestId('copy-month-dialog');
   await expect(dlg.getByTestId('copy-source')).toContainText('Tháng 1 / 2030');
@@ -90,34 +96,34 @@ test('desktop: xem trước theo lịch gốc, tạo 3 tháng, chạy lại khô
 
   // Chạy lại từ tháng 1: mọi ca tháng 2 đã có → 0 ca, nút Tạo khóa.
   await page.goto('/calendar?year=2030&month=1');
+  await openCreateMenu(page);
   await page.getByTestId('copy-month-button').click();
   await expect(dlg.getByTestId('copy-total')).toHaveText('Sẽ tạo 0 ca');
   await expect(dlg.getByText('12 ca đã có, bỏ qua')).toBeVisible();
   await expect(dlg.getByTestId('copy-confirm')).toBeDisabled();
 });
 
-test('mobile 390px: nút toolbar ≥44px không chồng nhau, dialog toàn màn hình không tràn, tạo được', async ({ page }) => {
+test('mobile 390px: Tạo ca dạy ▾ và mục menu ≥44px, thanh lọc không tràn, dialog toàn màn hình, tạo được', async ({ page }) => {
   await db.teachingSession.deleteMany({ where: { userId: teacherId, sessionDate: { gte: D('2030-02-01'), lt: D('2031-01-01') } } });
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page, 'teacher');
   await page.goto('/calendar?year=2030&month=1');
 
-  const copyBtn = await boxOf(page, 'copy-month-button');
-  const bulkBtn = (await page.getByRole('button', { name: 'Lịch lặp' }).boundingBox())!;
   const createBtn = (await page.getByRole('button', { name: 'Tạo ca dạy' }).filter({ visible: true }).first().boundingBox())!;
-  for (const b of [copyBtn, bulkBtn, createBtn]) expect(b.height).toBeGreaterThanOrEqual(44);
-  expect(intersects(copyBtn, bulkBtn)).toBe(false);
-  expect(intersects(copyBtn, createBtn)).toBe(false);
-  expect(intersects(bulkBtn, createBtn)).toBe(false);
-
-  const exportBtn = (await page.getByRole('button', { name: 'Xuất Excel' }).boundingBox())!;
+  const exportBtn = (await page.getByRole('button', { name: 'Thêm thao tác' }).boundingBox())!;
+  expect(createBtn.height).toBeGreaterThanOrEqual(44);
   expect(exportBtn.height).toBeGreaterThanOrEqual(44);
   expect(exportBtn.width).toBeGreaterThanOrEqual(44);
-  for (const b of [copyBtn, bulkBtn, createBtn]) expect(intersects(exportBtn, b)).toBe(false);
-  // Hàng 1 chia đôi; hàng 2: icon + Tạo ca dạy cùng hàng.
-  expect(Math.abs(copyBtn.y - bulkBtn.y)).toBeLessThanOrEqual(1);
-  expect(Math.abs(exportBtn.y - createBtn.y)).toBeLessThanOrEqual(1);
+  expect(intersects(exportBtn, createBtn)).toBe(false);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+
+  await openCreateMenu(page);
+  // Đo khi menu còn hiệu ứng mở (zoom-in-95) thì chiều cao bị thu nhỏ → chờ animation xong.
+  await page.getByRole('menu').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  const copyBtn = await boxOf(page, 'copy-month-button');
+  const bulkBtn = (await page.getByRole('menuitem', { name: 'Lịch lặp' }).boundingBox())!;
+  for (const b of [copyBtn, bulkBtn]) expect(b.height).toBeGreaterThanOrEqual(44);
+  expect(intersects(copyBtn, bulkBtn)).toBe(false);
 
   await page.getByTestId('copy-month-button').click();
   const dlg = page.getByTestId('copy-month-dialog');
@@ -151,6 +157,7 @@ test('Standard: nút có khóa, bấm mở popup nâng cấp, không gọi xem t
   await login(page, 'teacher_std');
   await page.goto('/calendar');
 
+  await openCreateMenu(page);
   const btn = page.getByTestId('copy-month-button');
   await expect(btn.getByTestId('lock-badge')).toBeVisible();
   await btn.click();

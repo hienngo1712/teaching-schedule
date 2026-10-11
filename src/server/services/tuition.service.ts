@@ -518,7 +518,7 @@ export async function getMonthlyOutstanding(
   db: PrismaClient,
   userId: number,
   params: { year: number; month: number; grade?: number }
-): Promise<{ totalOutstanding: number }> {
+): Promise<{ totalOutstanding: number; previousOutstanding: number }> {
   // R4 (CHỦ ĐÍCH, đừng "sửa" thành grade-aware từng tháng): "Còn nợ" là TỔNG nợ
   // lũy kế của HS đang thuộc khối lọc tại tháng cuối kỳ. Nợ là số dư chạy xuyên
   // nhiều tháng/khối, không tách sạch theo khối được — tách ra sẽ GIẤU nợ thật,
@@ -539,10 +539,14 @@ export async function getMonthlyOutstanding(
   )
 
   let totalOutstanding = 0
+  let previousOutstanding = 0
   for (const it of items) {
     // isFullPaid = tất toán tháng cuối kỳ → không còn nợ dương (khớp carry-over)
-    totalOutstanding += it.isFullPaid ? 0 : Math.max(0, it.totalAmountDue - it.paidAmount)
+    const owed = it.isFullPaid ? 0 : Math.max(0, it.totalAmountDue - it.paidAmount)
+    totalOutstanding += owed
+    // Tiền thu trừ nợ cũ trước (FIFO như spec Y), phần còn lại mới là nợ tháng này.
+    previousOutstanding += Math.min(owed, Math.max(0, it.previousBalance - it.paidAmount))
   }
 
-  return { totalOutstanding }
+  return { totalOutstanding, previousOutstanding }
 }

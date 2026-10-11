@@ -128,6 +128,15 @@ export function useFilters() {
     [router, pathname, createQueryString]
   )
 
+  // Bỏ nhiều ô lọc trong 1 lần push: gọi từng setter liền nhau thì lần push sau đè lần trước.
+  const clearFilters = useCallback(
+    (keys: ("grade" | "noticeFilter" | "status" | "studentName")[]) => {
+      const queryString = createQueryString({ ...Object.fromEntries(keys.map((k) => [k, null])), studentId: null })
+      router.push(`${pathname}?${queryString}`)
+    },
+    [router, pathname, createQueryString]
+  )
+
   const resetFilters = useCallback(() => {
     router.push(pathname)
   }, [router, pathname])
@@ -163,6 +172,7 @@ export function useFilters() {
     setStatus,
     setNoticeFilter,
     resetFilters,
+    clearFilters,
     filterParams,
     hasActiveFilter,
     toYear,

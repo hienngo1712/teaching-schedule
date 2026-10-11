@@ -177,6 +177,8 @@ test("capture-25-shots", async ({ page, browser }, testInfo) => {
   await page.keyboard.press("Escape")
 
   // 10. lich-day-chep-thang: hộp Chép lịch tháng đang mở, viền đỏ nút xác nhận chép
+  // AK: Chép lịch tháng nằm trong menu ▾ cạnh Tạo ca dạy.
+  await page.getByTestId("create-session-more").click()
   await page.locator('[data-testid="copy-month-button"]').locator("visible=true").first().click()
   const copyDialog = page.locator('[data-testid="copy-month-dialog"]')
   await expect(copyDialog).toBeVisible()
