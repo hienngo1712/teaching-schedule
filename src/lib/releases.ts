@@ -13,6 +13,20 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.24.0",
+    date: "2026-10-11",
+    title: "Hướng dẫn cho Nơi dạy, Bảng công, Chuyên cần",
+    summary: "Hướng dẫn sử dụng có thêm mục cho Nơi dạy, Bảng công và Thu nhập, Phiếu báo nơi dạy, Chuyên cần; thêm nút Chỉ cho tôi cho Nơi dạy và Thu nhập.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Hướng dẫn Nơi dạy", body: "Cách khai báo nơi dạy, chọn tính tiền theo học sinh hay theo ca/giờ, có ảnh từng bước.", guideId: "noi-day" },
+      { kind: "new", title: "Hướng dẫn Bảng công, Thu nhập và Phiếu báo", body: "Đặt đơn giá, đối chiếu số ca với trung tâm, ghi nhận tiền đã nhận và gửi phiếu báo kèm mã QR.", guideId: "bang-cong" },
+      { kind: "new", title: "Hướng dẫn Chuyên cần", body: "Xem tỉ lệ đi học theo tháng và theo năm học, lọc theo nơi dạy, lớp.", guideId: "chuyen-can" },
+      { kind: "improve", title: "Chỉ cho tôi: Nơi dạy và Thu nhập", body: "Bấm Chỉ cho tôi ở trang Hướng dẫn để app chỉ từng bước thêm nơi dạy và xem thu nhập.", guideId: "noi-day" },
+      { kind: "improve", title: "Ảnh hướng dẫn mới", body: "Toàn bộ ảnh và file Word hướng dẫn được chụp lại theo giao diện hiện tại." },
+    ],
+  },
+  {
     version: "0.23.0",
     date: "2026-10-11",
     title: "payOS cho phiếu nơi dạy",
