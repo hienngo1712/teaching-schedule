@@ -13,6 +13,18 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.23.0",
+    date: "2026-10-11",
+    title: "payOS cho phiếu nơi dạy",
+    summary: "Gói Pro đã nối payOS: phiếu báo nơi dạy có QR payOS, tiền vào là app tự ghi Đã nhận và chuông báo ngay.",
+    notify: true,
+    items: [
+      { kind: "new", title: "QR payOS trên phiếu nơi dạy", body: "Khi đã nối payOS ở Cài đặt, phiếu báo của nơi dạy dùng QR payOS. Trang xem phiếu của người trả có thêm nút Mở trang thanh toán." },
+      { kind: "new", title: "Tự ghi Đã nhận", body: "Nơi dạy quét QR chuyển tiền xong, Thu nhập tháng đó tự ghi Đã nhận, không cần nhập tay." },
+      { kind: "improve", title: "Chuông báo tiền có tiền nơi dạy", body: "Chuông hiện cả khoản nơi dạy trả qua payOS. Bấm vào mở đúng tháng và nơi dạy trong Thu nhập." },
+    ],
+  },
+  {
     version: "0.22.0",
     date: "2026-10-11",
     title: "Phiếu báo cho nơi dạy và Chuyên cần",
