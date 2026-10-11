@@ -31,16 +31,21 @@ export async function getAttendance(
   const key = monthKey(session!.sessionDate.getUTCFullYear(), session!.sessionDate.getUTCMonth() + 1)
   const changes = await loadBillingChanges(db, studentIds)
 
-  return session!.sessionStudents.map((ss) => ({
-    studentId: ss.studentId,
-    fullName: ss.student.fullName,
-    grade: ss.student.grade,
-    level: getLevel(ss.student.grade),
-    attendance: ss.attendance,
-    note: ss.note,
-    fee: ss.fee,
-    billingMode: resolveBilling(changes.get(ss.studentId) ?? [], key).mode,
-  }))
+  return session!.sessionStudents.map((ss) => {
+    const billing = resolveBilling(changes.get(ss.studentId) ?? [], key)
+    return {
+      studentId: ss.studentId,
+      fullName: ss.student.fullName,
+      grade: ss.student.grade,
+      level: getLevel(ss.student.grade),
+      attendance: ss.attendance,
+      note: ss.note,
+      // Giữ giá buổi đã lưu (panel gửi ngược lại khi lưu); placeFree chỉ để ẩn ô giá (spec AL §3).
+      fee: ss.fee,
+      billingMode: billing.mode,
+      placeFree: !!billing.free,
+    }
+  })
 }
 
 export async function updateAttendance(

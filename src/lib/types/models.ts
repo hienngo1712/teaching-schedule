@@ -111,6 +111,8 @@ export interface AttendanceDTO {
   note: string | null
   fee: number
   billingMode?: BillingMode
+  // HS ở nơi tính theo ca/giờ trong tháng của ca (spec AL §3): không có học phí buổi.
+  placeFree?: boolean
 }
 
 /**

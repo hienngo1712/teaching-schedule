@@ -27,6 +27,7 @@ async function clean() {
   await db.payment.deleteMany()
   await db.monthlyTuition.deleteMany()
   await db.student.deleteMany()
+  await db.studentPlaceChange.deleteMany()
   await db.teachingPlace.deleteMany()
 }
 
@@ -72,10 +73,15 @@ describe("AL migration: backfill Lớp tại nhà", () => {
     // HS/ca gắn đúng nơi của chính user đó.
     for (const st of await db.student.findMany({ include: { place: true } })) expect(st.place!.userId).toBe(st.userId)
     for (const s of await db.teachingSession.findMany({ include: { place: true } })) expect(s.place!.userId).toBe(s.userId)
+    // Lịch sử ẩn nơi học (RULING AL Task 2): mỗi HS 1 dòng fromKey 0 trỏ đúng nơi hiện tại.
+    for (const st of await db.student.findMany({ include: { placeChanges: true } })) {
+      expect(st.placeChanges.map((c) => [c.fromKey, c.placeId])).toEqual([[0, st.placeId]])
+    }
 
     await runBackfill()
     expect(await db.teachingPlace.count()).toBe(users.length)
     expect(await db.placeBillingChange.count()).toBe(users.length)
+    expect(await db.studentPlaceChange.count()).toBe(await db.student.count())
   })
 
   it("số tiền Tổng quan và Báo cáo trước = sau backfill", async () => {

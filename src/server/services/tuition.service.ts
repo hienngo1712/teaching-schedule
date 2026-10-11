@@ -316,6 +316,7 @@ export async function getMonthlyTuitionStatus(
       payosPaidAmount: payosPaid.get(student.id)?.amount ?? null,
       inProgress,
       debtMonths,
+      placeFree: !!billing.free,
     }
   })
 
@@ -350,10 +351,13 @@ export async function getMonthlyTuitionStatus(
     )
   }
 
+  // Spec AL §3: HS ở nơi tính theo ca/giờ trong tháng này không vào Học phí, trừ khi còn nợ cũ để thu nốt.
+  const billable = results.filter((item) => !item.placeFree || item.previousBalance > 0)
+
   // 7. Lọc theo status và noticeFilter — dùng chung helper với badge client.
   let filteredResults =
     status && status !== "all"
-      ? results.filter(item => {
+      ? billable.filter(item => {
           const rowStatus = getRowStatus(item)
           if (status === "fully_paid") {
             return (
@@ -368,7 +372,7 @@ export async function getMonthlyTuitionStatus(
           if (status === "unpaid") return rowStatus === "unpaid"
           return true
         })
-      : results
+      : billable
 
   if (noticeFilter && noticeFilter !== "all") {
     filteredResults = filteredResults.filter(item => {

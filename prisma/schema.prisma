@@ -115,9 +115,10 @@ model Student {
   billingChanges  StudentBillingChange[]
   payLinks        TuitionPayLink[]
   user            User             @relation(fields: [userId], references: [id])
-  // Nơi học (spec AL): null = nơi per_student mặc định của user. Đổi nơi không có lịch sử.
+  // Nơi học hiện tại (spec AL): null = nơi per_student mặc định của user. Lịch sử ẩn ở placeChanges.
   placeId         Int?             @map("place_id")
   place           TeachingPlace?   @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  placeChanges    StudentPlaceChange[]
 
   @@index([userId, grade])
   @@index([userId, isActive])
@@ -510,6 +511,7 @@ model TeachingPlace {
   billingChanges PlaceBillingChange[]
   students       Student[]
   sessions       TeachingSession[]
+  studentChanges StudentPlaceChange[]
 
   @@unique([userId, name])
   @@index([userId, isDeleted, sortOrder])
@@ -527,4 +529,19 @@ model PlaceBillingChange {
 
   @@unique([placeId, fromKey])
   @@map("place_billing_changes")
+}
+
+// Lịch sử ẩn nơi học của HS (RULING AL Task 2): học phí tháng M theo nơi của HS tại M, UI không hiện.
+model StudentPlaceChange {
+  id        Int           @id @default(autoincrement())
+  studentId Int           @map("student_id")
+  // year*12 + month-1; 0 = áp cho mọi tháng (HS tạo mới / backfill).
+  fromKey   Int           @map("from_key")
+  placeId   Int           @map("place_id")
+  createdAt DateTime      @default(now()) @map("created_at")
+  student   Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  place     TeachingPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, fromKey])
+  @@map("student_place_changes")
 }
