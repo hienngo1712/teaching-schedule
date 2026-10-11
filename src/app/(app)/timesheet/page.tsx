@@ -16,16 +16,16 @@ export default function TimesheetPage() {
   const { t } = useTranslation()
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const tab = searchParams.get("tab") === "income" ? "income" : "timesheet"
+  const query = useSearchParams()
+  const tab = query.get("tab") === "income" ? "income" : "timesheet"
   const { year, month, monthLabel, prevMonth, nextMonth } = useCalendar()
   const isDesktop = useMediaQuery("(min-width: 768px)")
 
   const setTab = (next: "timesheet" | "income") => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (next === "income") params.set("tab", "income")
-    else params.delete("tab")
-    router.replace(`${pathname}${params.size ? `?${params}` : ""}`)
+    const nextQuery = new URLSearchParams(query.toString())
+    if (next === "income") nextQuery.set("tab", "income")
+    else nextQuery.delete("tab")
+    router.replace(`${pathname}${nextQuery.size ? `?${nextQuery}` : ""}`)
   }
 
   const period = (
