@@ -13,7 +13,7 @@ export const PLAN_RANK: Record<Plan, number> = { standard: 0, plus: 1, pro: 2 }
 export const PLAN_LABEL: Record<Plan, string> = { standard: "Standard", plus: "Plus", pro: "Pro" }
 export type PlanPrices = Record<PaidPlan, Record<Period, number>>
 // Chỉ dùng khi DB thiếu dòng giá (spec L Q4); giá thật nằm ở bảng plan_price_changes.
-export const DEFAULT_MONTH_PRICES: Record<PaidPlan, number> = { plus: 49000, pro: 99000 }
+export const DEFAULT_MONTH_PRICES: Record<PaidPlan, number> = { plus: 39000, pro: 69000 }
 // Năm = 10 tháng nên nhãn "Tiết kiệm 2 tháng" luôn đúng (spec L Q2).
 export const PERIOD_PRICE_FACTOR: Record<Period, number> = { month: 1, year: 10, "2year": 20 }
 
@@ -28,7 +28,7 @@ export function pricesFromMonthly(m: Record<PaidPlan, number>): PlanPrices {
 export const PERIOD_MONTHS: Record<Period, number> = { month: 1, year: 12, "2year": 24 }
 // Số ngày danh nghĩa 1 kỳ cho quy đổi D7: đơn giá ngày = giá kỳ / số ngày.
 export const PERIOD_DAYS: Record<Period, number> = { month: 30, year: 365, "2year": 730 }
-export const STUDENT_LIMITS: Record<Plan, number | null> = { standard: 10, plus: 40, pro: null }
+export const STUDENT_LIMITS: Record<Plan, number | null> = { standard: 20, plus: 50, pro: null }
 // Chỉ dùng khi DB thiếu dòng số ngày dùng thử mặc định (spec L mục 15); số thật ở bảng trial_day_changes.
 export const DEFAULT_TRIAL_DAYS = 60
 // Kỳ 2 năm luôn tặng tối thiểu 2 tháng (P1); gia hạn sớm thay bằng mức cao hơn, không cộng dồn.
@@ -59,6 +59,7 @@ export const PLAN_FEATURES = [
   { id: "schedule", plan: "standard" },
   { id: "attendance", plan: "standard" },
   { id: "students", plan: "standard" },
+  { id: "places", plan: "standard" },
   { id: "tuitionCalc", plan: "standard" },
   { id: "dashboardStats", plan: "standard" },
   { id: "backup", plan: "standard" },
@@ -74,6 +75,10 @@ export const PLAN_FEATURES = [
   { id: "unlimitedStudents", plan: "pro" },
 ] as const satisfies readonly { id: string; plan: Plan }[]
 export type PlanFeatureId = (typeof PLAN_FEATURES)[number]["id"]
+
+// Nhãn "MỚI" ở Gói của tôi / so sánh gói: chỉ trong 30 ngày từ khi phát hành 0.20.0 (spec AL §6).
+export const NEW_FEATURES: readonly PlanFeatureId[] = ["places"]
+export const NEW_BADGE_UNTIL = new Date("2026-11-10T17:00:00.000Z") // hết ngày 10/11/2026 giờ VN
 
 export function featuresAddedIn(plan: Plan): PlanFeatureId[] {
   return PLAN_FEATURES.filter((f) => f.plan === plan).map((f) => f.id)

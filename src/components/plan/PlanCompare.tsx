@@ -6,6 +6,8 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import type { RouterOutputs } from "@/lib/trpc"
 import { FEATURE_LABEL_KEY } from "./feature-labels"
 import {
+  NEW_BADGE_UNTIL,
+  NEW_FEATURES,
   PLANS,
   PLAN_LABEL,
   STUDENT_LIMITS,
@@ -26,10 +28,12 @@ const CARD_ORDER: Record<Plan, string> = {
 const BELOW: Record<Plan, Plan | null> = { standard: null, plus: "standard", pro: "plus" }
 
 type Me = RouterOutputs["plan"]["me"]
-type Props = { me: Me; plusBlocked: boolean; onChoose: (plan: PaidPlan) => void }
+// hideNewBadges: popup đăng ký không hiện nhãn "MỚI" (spec AL §6).
+type Props = { me: Me; plusBlocked: boolean; onChoose: (plan: PaidPlan) => void; hideNewBadges?: boolean }
 
-export function PlanCompare({ me, plusBlocked, onChoose }: Props) {
+export function PlanCompare({ me, plusBlocked, onChoose, hideNewBadges = false }: Props) {
   const { t } = useTranslation()
+  const showNew = !hideNewBadges && Date.now() < NEW_BADGE_UNTIL.getTime()
   return (
     <section className="space-y-3">
       <h2 className="text-base font-semibold text-foreground">{t("plan_compare")}</h2>
@@ -95,7 +99,14 @@ export function PlanCompare({ me, plusBlocked, onChoose }: Props) {
                 {featuresAddedIn(plan).map((id) => (
                   <li key={id} className="flex gap-2">
                     <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" />
-                    <span>{t(FEATURE_LABEL_KEY[id])}</span>
+                    <span>
+                      {t(FEATURE_LABEL_KEY[id])}
+                      {showNew && NEW_FEATURES.includes(id) && (
+                        <span data-testid="plan-new-badge" className="ml-1.5 rounded bg-primary/10 px-1.5 text-[10px] font-semibold leading-4 text-primary">
+                          {t("plan_new_badge")}
+                        </span>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

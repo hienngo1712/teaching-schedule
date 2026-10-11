@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc"
-import { placeCreateSchema, placeUpdateSchema } from "@/lib/schemas/place"
-import { createPlace, deletePlace, getPlaceSummary, listPlaces, updatePlace } from "@/server/services/place.service"
+import { placeCreateSchema, placeSetupSchema, placeUpdateSchema } from "@/lib/schemas/place"
+import { createPlace, deletePlace, getPlaceSummary, listPlaces, setupInitialPlaces, updatePlace } from "@/server/services/place.service"
 
 // Nơi dạy (spec AL §4.1): mọi gói đều dùng được.
 export const placeRouter = createTRPCRouter({
@@ -16,4 +16,6 @@ export const placeRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(({ ctx, input }) => deletePlace(ctx.db, ctx.userId, input.id)),
+
+  setupInitial: protectedProcedure.input(placeSetupSchema).mutation(({ ctx, input }) => setupInitialPlaces(ctx.db, ctx.userId, input)),
 })

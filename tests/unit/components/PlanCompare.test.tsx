@@ -109,3 +109,33 @@ describe("PlanCompare — tiết kiệm % và nhãn Khuyên dùng", () => {
     expect(within(card).getByRole("heading").parentElement!.textContent).not.toContain("Khuyên dùng")
   })
 })
+
+describe("PlanCompare — nhãn MỚI (spec AL §6)", () => {
+  const renderAt = (iso: string, hideNewBadges = false) => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date(iso))
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <PlanCompare me={makeMe()} plusBlocked={false} onChoose={vi.fn()} hideNewBadges={hideNewBadges} />
+      </LanguageProvider>
+    )
+    vi.useRealTimers()
+  }
+
+  it("trong 30 ngày: dòng Nơi dạy ở thẻ Standard có nhãn MỚI", () => {
+    renderAt("2026-10-20T05:00:00Z")
+    const badge = screen.getByTestId("plan-new-badge")
+    expect(badge.textContent).toBe("MỚI")
+    expect(within(screen.getByTestId("plan-card-standard")).getByText(/Nơi dạy: lớp tại nhà, gia sư, trung tâm/)).toBeTruthy()
+  })
+
+  it("popup đăng ký (hideNewBadges) hoặc quá 30 ngày: không có nhãn", () => {
+    renderAt("2026-10-20T05:00:00Z", true)
+    expect(screen.queryByTestId("plan-new-badge")).toBeNull()
+  })
+
+  it("sau ngày 10/11/2026: không có nhãn", () => {
+    renderAt("2026-11-11T05:00:00Z")
+    expect(screen.queryByTestId("plan-new-badge")).toBeNull()
+  })
+})

@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { PlanBanner } from "@/components/plan/PlanBanner"
 import { UpgradeDialog } from "@/components/plan/UpgradeDialog"
 import { TourRunner } from "@/components/tour/TourRunner"
+import { PlaceSetupDialog } from "@/components/onboarding/PlaceSetupDialog"
 import { AppSidebar } from "./AppSidebar"
 import { AppHeader } from "./AppHeader"
 import { BottomTabBar } from "./BottomTabBar"
@@ -27,6 +28,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       <BottomTabBar />
       <UpgradeDialog />
+      {/* Chưa có nơi dạy (TK mới): chọn nơi + gói trước; Có gì mới tự chờ khi còn hộp đang mở. */}
+      <PlaceSetupDialog />
       {/* useSearchParams cần Suspense khi trang render tĩnh. */}
       <Suspense fallback={null}>
         <TourRunner />

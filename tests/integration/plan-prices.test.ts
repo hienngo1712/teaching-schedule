@@ -47,7 +47,7 @@ describe("plan-price.service (đọc)", () => {
       db.$transaction(async (tx) => {
         await tx.planPriceChange.create({ data: { plan: "plus", monthPrice: 59000, previousMonthPrice: 49000, changedBy: "price_test" } })
         await tx.planPriceChange.deleteMany({ where: { plan: "pro" } })
-        expect(await getMonthlyPrices(tx)).toEqual({ plus: 59000, pro: 99000 })
+        expect(await getMonthlyPrices(tx)).toEqual({ plus: 59000, pro: 69000 })
         throw new Error("rollback")
       })
     ).rejects.toThrow("rollback")

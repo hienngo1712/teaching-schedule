@@ -3,7 +3,11 @@ import { Prisma, type PrismaClient } from "@prisma/client"
 import { assertOwnership } from "./_base.service"
 import { monthKey, resolvePlaceBilling, type PlaceBilling } from "@/lib/billing"
 import { vnDateParts } from "@/lib/utils"
-import type { PlaceCreateInput, PlaceKind, PlaceUpdateInput } from "@/lib/schemas/place"
+import type { PlaceCreateInput, PlaceKind, PlaceSetupInput, PlaceUpdateInput } from "@/lib/schemas/place"
+import { SUBJECT_COLORS } from "@/lib/subject-colors"
+
+// Khoá advisory 2 số int4 riêng cho popup chọn nơi (7401 bảng giá, 7402 chép lịch, 7403 góp ý).
+const PLACE_SETUP_LOCK_NS = 7404
 
 export type PlaceDTO = {
   id: number
@@ -220,4 +224,28 @@ export async function resolveSessionPlace(
     if (first?.placeId) return first.placeId
   }
   return defaultPlaceId(db, userId)
+}
+
+// Popup đăng ký (spec AL §5): tạo nơi theo ô đã tick, 1 transaction. Đã có nơi thì bỏ qua (bấm đúp / 2 tab) [RF 3].
+export async function setupInitialPlaces(db: PrismaClient, userId: number, input: PlaceSetupInput) {
+  await db.$transaction(async (tx) => {
+    // Khoá theo user: 2 request song song chạy lần lượt, request sau thấy nơi đã có và dừng.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PLACE_SETUP_LOCK_NS}::int, ${userId}::int)`
+    if ((await tx.teachingPlace.count({ where: { userId, isDeleted: false } })) > 0) return
+    const wanted: PlaceCreateInput[] = []
+    const color = () => SUBJECT_COLORS[wanted.length % SUBJECT_COLORS.length]
+    if (input.home) wanted.push({ name: "Lớp tại nhà", kind: "home", color: color(), billing: "per_student" })
+    if (input.tutor) wanted.push({ name: "Gia sư", kind: "tutor", color: color(), billing: "per_student" })
+    const centers = input.centers.map((c) => c.trim())
+    for (const raw of centers.length > 0 ? centers : []) {
+      const base = raw || "Trung tâm"
+      let name = base
+      for (let n = 2; wanted.some((w) => w.name === name); n++) name = `${base} ${n}`
+      wanted.push({ name, kind: "center", color: color(), billing: "per_session" })
+    }
+    // Không tick gì vẫn cho Tiếp tục → tạo "Lớp tại nhà".
+    if (wanted.length === 0) wanted.push({ name: "Lớp tại nhà", kind: "home", color: color(), billing: "per_student" })
+    for (const w of wanted) await createPlaceTx(tx, userId, w)
+  })
+  return listPlaces(db, userId)
 }

@@ -115,13 +115,13 @@ describe("hasFeature / studentLimit / minPlanForStudents / planLabel", () => {
       expect(hasFeature("pro", f)).toBe(true)
     }
   })
-  it("giới hạn HS 10 / 40 / không giới hạn", () => {
-    expect([studentLimit("standard"), studentLimit("plus"), studentLimit("pro")]).toEqual([10, 40, null])
+  it("giới hạn HS 20 / 50 / không giới hạn (spec AL §6)", () => {
+    expect([studentLimit("standard"), studentLimit("plus"), studentLimit("pro")]).toEqual([20, 50, null])
   })
   it("gói nhỏ nhất đủ chỗ", () => {
-    expect(minPlanForStudents(11)).toBe("plus")
-    expect(minPlanForStudents(40)).toBe("plus")
-    expect(minPlanForStudents(41)).toBe("pro")
+    expect(minPlanForStudents(21)).toBe("plus")
+    expect(minPlanForStudents(50)).toBe("plus")
+    expect(minPlanForStudents(51)).toBe("pro")
   })
   it("planLabel: tên gói, giá trị lạ giữ nguyên", () => {
     expect([planLabel("standard"), planLabel("plus"), planLabel("pro"), planLabel("gold")]).toEqual(["Standard", "Plus", "Pro", "gold"])
@@ -145,7 +145,7 @@ describe("PLAN_FEATURES (P11: bậc thang không lặp, 1 nguồn với chặn q
     }
   })
   it("thẻ Standard / Plus / Pro", () => {
-    expect(featuresAddedIn("standard")).toEqual(["schedule", "attendance", "students", "tuitionCalc", "dashboardStats", "backup"])
+    expect(featuresAddedIn("standard")).toEqual(["schedule", "attendance", "students", "places", "tuitionCalc", "dashboardStats", "backup"])
     expect(featuresAddedIn("plus")).toEqual(["payments", "tuitionNotice", "monthlyReport", "copyMonth"])
     expect(FEATURE_PLAN.copyMonth).toBe("plus")
     expect(featuresAddedIn("pro")).toEqual(["parentLink", "dashboardAlerts", "studentImport", "multiMonthReport", "payosTuition", "unlimitedStudents"])

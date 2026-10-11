@@ -42,7 +42,7 @@ describe("plan.me", () => {
       source: "free",
       expiresAt: null,
       paidPlan: "standard",
-      studentLimit: 10,
+      studentLimit: 20,
       plusCreditOrder: null,
       pendingOrder: null,
       orders: [],

@@ -106,7 +106,7 @@ beforeAll(async () => {
     },
   })
 
-  await db.user.create({
+  const userAdmin = await db.user.create({
     data: {
       username: "admin_test",
       passwordHash: await bcrypt.hash("teacher123", 4),
@@ -117,6 +117,13 @@ beforeAll(async () => {
       feedbackPromptAt: new Date(),
     },
   })
+
+  // TK có sẵn như sau migration AL: mỗi user 1 nơi "Lớp tại nhà" theo học sinh (không hiện popup chọn nơi).
+  for (const u of [user1, user2, userStd, userAdmin]) {
+    await db.teachingPlace.create({
+      data: { userId: u.id, name: "Lớp tại nhà", kind: "home", color: "#4F46E5", billingChanges: { create: { fromKey: 0, billing: "per_student" } } },
+    })
+  }
 
   await db.subject.create({
     data: {

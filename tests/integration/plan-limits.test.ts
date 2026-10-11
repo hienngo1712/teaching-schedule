@@ -45,26 +45,26 @@ afterAll(async () => {
 })
 
 describe("Giới hạn HS đang học (spec I D8)", () => {
-  it("Standard: 9 HS → tạo thêm được; đủ 10 → tạo bị chặn, planRequired=plus, message có số", async () => {
-    await addStudents(9)
+  it("Standard: 19 HS → tạo thêm được; đủ 20 → tạo bị chặn, planRequired=plus, message có số", async () => {
+    await addStudents(19)
     const c = await getAuthedCaller("teacher_std")
     await c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thứ Mười", grade: 3 })
     const e = await errorOf(c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Thứ Mười Một", grade: 3 }))
     expect(e.code).toBe("FORBIDDEN")
     expect((e.cause as PlanRequiredError).plan).toBe("plus")
-    expect(e.message).toBe("Gói Standard tối đa 10 học sinh đang học (hiện có 10)")
-    expect(await db.student.count({ where: { userId, isActive: true } })).toBe(10)
+    expect(e.message).toBe("Gói Standard tối đa 20 học sinh đang học (hiện có 20)")
+    expect(await db.student.count({ where: { userId, isActive: true } })).toBe(20)
   })
 
-  it("đủ 10: tạo HS 'Đã nghỉ' vẫn được", async () => {
-    await addStudents(10)
+  it("đủ 20: tạo HS 'Đã nghỉ' vẫn được", async () => {
+    await addStudents(20)
     const c = await getAuthedCaller("teacher_std")
     const s = await c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Nghỉ Sẵn", grade: 3, isActive: false })
     expect(s.isActive).toBe(false)
   })
 
-  it("đủ 10: bật lại HS nghỉ bị chặn; sửa HS đang học (kể cả gửi isActive:true) vẫn được", async () => {
-    await addStudents(10)
+  it("đủ 20: bật lại HS nghỉ bị chặn; sửa HS đang học (kể cả gửi isActive:true) vẫn được", async () => {
+    await addStudents(20)
     const c = await getAuthedCaller("teacher_std")
     const dropped = await c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Đã Nghỉ", grade: 3, isActive: false })
     const e = await errorOf(c.student.update({ consent: CONSENT_ACCEPTED,  id: dropped.id, data: { isActive: true } }))
@@ -77,27 +77,27 @@ describe("Giới hạn HS đang học (spec I D8)", () => {
     expect(renamed.fullName).toBe("Đổi Tên Được")
   })
 
-  it("Plus: đủ 40 → chặn, planRequired=pro", async () => {
+  it("Plus: đủ 50 → chặn, planRequired=pro", async () => {
     await setPlan("plus")
-    await addStudents(40)
+    await addStudents(50)
     const c = await getAuthedCaller("teacher_std")
     const e = await errorOf(c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bốn Mốt", grade: 3 }))
     expect((e.cause as PlanRequiredError).plan).toBe("pro")
-    expect(e.message).toBe("Gói Plus tối đa 40 học sinh đang học (hiện có 40)")
+    expect(e.message).toBe("Gói Plus tối đa 50 học sinh đang học (hiện có 50)")
   })
 
   it("Pro: không giới hạn", async () => {
     await setPlan("pro")
-    await addStudents(45)
+    await addStudents(55)
     const c = await getAuthedCaller("teacher_std")
     await expect(c.student.create({ consent: CONSENT_ACCEPTED,  fullName: "HS Bốn Sáu", grade: 3 })).resolves.toMatchObject({ isActive: true })
   })
 
-  it("hạ gói còn 12 HS đang học: list đủ 12, điểm danh vẫn lưu, không HS nào bị tắt", async () => {
-    await addStudents(12)
+  it("hạ gói còn 22 HS đang học: list đủ 22, điểm danh vẫn lưu, không HS nào bị tắt", async () => {
+    await addStudents(22)
     const c = await getAuthedCaller("teacher_std")
     const list = await c.student.list({ limit: 50 })
-    expect(list.items).toHaveLength(12)
+    expect(list.items).toHaveLength(22)
     const subject = (await c.subject.list({}))[0]
     const st = list.items[0]
     const session = await c.session.create({
@@ -110,18 +110,18 @@ describe("Giới hạn HS đang học (spec I D8)", () => {
     await c.attendance.update({ sessionId: session.id, attendances: [{ studentId: st.id, attendance: "present" }] })
     const link = await db.sessionStudent.findFirstOrThrow({ where: { sessionId: session.id, studentId: st.id } })
     expect(link.attendance).toBe("present")
-    expect(await db.student.count({ where: { userId, isActive: true } })).toBe(12)
+    expect(await db.student.count({ where: { userId, isActive: true } })).toBe(22)
   })
 
-  it("importStudents (service) ở Standard: 9 + 2 dòng → chặn cả lô; Pro qua", async () => {
-    await addStudents(9)
+  it("importStudents (service) ở Standard: 19 + 2 dòng → chặn cả lô; Pro qua", async () => {
+    await addStudents(19)
     const rows = [
       { fullName: "Nhập Một", grade: 2, tuitionFee: 0, allowDuplicate: false },
       { fullName: "Nhập Hai", grade: 2, tuitionFee: 0, allowDuplicate: false },
     ]
     const e = await errorOf(importStudents(db, userId, rows))
     expect((e.cause as PlanRequiredError).plan).toBe("plus")
-    expect(await db.student.count({ where: { userId } })).toBe(9)
+    expect(await db.student.count({ where: { userId } })).toBe(19)
     await setPlan("pro")
     await expect(importStudents(db, userId, rows)).resolves.toEqual({ created: 2 })
   })
