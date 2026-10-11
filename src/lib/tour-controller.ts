@@ -126,7 +126,7 @@ export function runTour(opts: RunTourOptions): TourHandle {
     const step = steps[i]
     let el: HTMLElement | undefined
     if (step.target) {
-      const found = await waitForTarget(step.target, nextWait, () => stopped)
+      const found = await waitForTarget(step.target, step.optional ? 0 : nextWait, () => stopped)
       nextWait = waitMs
       if (stopped || my !== seq) return
       if (!found) {

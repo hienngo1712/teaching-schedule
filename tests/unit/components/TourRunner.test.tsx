@@ -14,7 +14,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: nav.replace, push: nav.push }),
 }))
 const status = vi.hoisted(() => ({ fetch: vi.fn() }))
-vi.mock("@/lib/trpc", () => ({ trpc: { useUtils: () => ({ onboarding: { status: { fetch: status.fetch } } }) } }))
+const placeSummary = vi.hoisted(() => ({ fetch: vi.fn() }))
+vi.mock("@/lib/trpc", () => ({
+  trpc: { useUtils: () => ({ onboarding: { status: { fetch: status.fetch } }, place: { summary: { fetch: placeSummary.fetch } } }) },
+}))
 const toast = vi.hoisted(() => vi.fn())
 vi.mock("sonner", () => ({ toast }))
 const run = vi.hoisted(() => ({ runTour: vi.fn(() => ({ stop: vi.fn() })) }))
@@ -78,6 +81,30 @@ describe("TourRunner", () => {
     const opts = (run.runTour.mock.calls[0] as unknown as [{ steps: { nextTour?: string }[] }])[0]
     expect(opts.steps).toHaveLength(1)
     expect(opts.steps[0].nextTour).toBe("session")
+  })
+
+  // Spec AP §6.2 [RF 2]: chưa có nơi theo ca/giờ → 1 bước báo thiếu, Tiếp sang tour Nơi dạy.
+  it("Thu nhập khi chưa có nơi theo ca/giờ: bước báo thiếu chuyển sang tour place", async () => {
+    nav.search = "tab=income&tour=income"
+    nav.pathname = "/timesheet"
+    placeSummary.fetch.mockResolvedValue({ count: 1, hasPerStudent: true, hasPerSession: false })
+    renderVi()
+    expect(nav.replace).toHaveBeenCalledWith("/timesheet?tab=income", { scroll: false })
+    await waitFor(() => expect(run.runTour).toHaveBeenCalled())
+    expect(placeSummary.fetch).toHaveBeenCalledWith(undefined, { staleTime: 0 })
+    const opts = (run.runTour.mock.calls[0] as unknown as [{ steps: { nextTour?: string }[] }])[0]
+    expect(opts.steps).toHaveLength(1)
+    expect(opts.steps[0].nextTour).toBe("place")
+  })
+
+  it("Thu nhập khi có nơi theo ca/giờ: chạy đủ 5 bước", async () => {
+    nav.search = "tab=income&tour=income"
+    nav.pathname = "/timesheet"
+    placeSummary.fetch.mockResolvedValue({ count: 2, hasPerStudent: true, hasPerSession: true })
+    renderVi()
+    await waitFor(() => expect(run.runTour).toHaveBeenCalled())
+    const opts = (run.runTour.mock.calls[0] as unknown as [{ steps: unknown[] }])[0]
+    expect(opts.steps).toHaveLength(5)
   })
 
   it("không có ?tour=: không làm gì", () => {

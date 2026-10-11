@@ -58,7 +58,12 @@ export function TourRunner() {
       try {
         const tour = TOURS[id]
         let steps: TourStep[] = tour.steps
-        if (tour.requires) {
+        if (tour.requires === "perSessionPlace") {
+          // Vừa thêm nơi theo ca/giờ xong bấm lại: không lấy cache.
+          const summary = await utils.place.summary.fetch(undefined, { staleTime: 0 })
+          if (my !== runId.current) return
+          if (!summary.hasPerSession) steps = [MISSING_STEPS.perSessionPlace]
+        } else if (tour.requires) {
           // Cache 60s có thể còn "chưa có ca" dù vừa tạo ca xong.
           const status = await utils.onboarding.status.fetch(undefined, { staleTime: 0 })
           if (my !== runId.current) return

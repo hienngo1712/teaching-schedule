@@ -1,6 +1,6 @@
 import type vi from "@/language/vi.json"
 
-export type TourId = "student" | "import" | "session" | "attendance" | "tuition" | "bank"
+export type TourId = "student" | "import" | "session" | "attendance" | "tuition" | "bank" | "place" | "income"
 export type TourKey = keyof typeof vi
 // target = giá trị data-tour; null = khung giữa màn. "click" = chờ người dùng bấm target (spec AD §3).
 export type TourStep = {
@@ -12,8 +12,11 @@ export type TourStep = {
   nextLabelKey?: TourKey
   // Trang tự dùng ← → ở bước này (vd chuyển ca): tour không bắt phím mũi tên.
   pageArrows?: true
+  // Phần tử chỉ có theo lựa chọn ở bước trước (vd Đơn giá khi chọn Theo ca/giờ): thiếu thì bỏ qua ngay, không chờ.
+  optional?: true
 }
-export type Tour = { id: TourId; href: string; steps: TourStep[]; requires?: "student" | "session" }
+export type TourRequire = "student" | "session" | "perSessionPlace"
+export type Tour = { id: TourId; href: string; steps: TourStep[]; requires?: TourRequire }
 
 export const TOUR_PARAM = "tour"
 export const TOUR_WAIT_MS = 3000
@@ -90,12 +93,38 @@ export const TOURS: Record<TourId, Tour> = {
       { target: "bank-submit", titleKey: "tour_bank_4_title", bodyKey: "tour_bank_4_body" },
     ],
   },
+  // Spec AP §6.
+  place: {
+    id: "place",
+    href: "/places",
+    steps: [
+      { target: "place-add", titleKey: "tour_place_1_title", bodyKey: "tour_place_1_body", advanceOn: "click" },
+      { target: "place-form-name", titleKey: "tour_place_2_title", bodyKey: "tour_place_2_body" },
+      { target: "place-form-kind", titleKey: "tour_place_3_title", bodyKey: "tour_place_3_body" },
+      { target: "place-form-billing", titleKey: "tour_place_4_title", bodyKey: "tour_place_4_body" },
+      { target: "place-form-rate", titleKey: "tour_place_5_title", bodyKey: "tour_place_5_body", optional: true },
+      { target: "place-form-submit", titleKey: "tour_place_6_title", bodyKey: "tour_place_6_body" },
+    ],
+  },
+  income: {
+    id: "income",
+    href: "/timesheet?tab=income",
+    requires: "perSessionPlace",
+    steps: [
+      { target: "income-month", titleKey: "tour_income_1_title", bodyKey: "tour_income_1_body" },
+      { target: "income-row", titleKey: "tour_income_2_title", bodyKey: "tour_income_2_body" },
+      { target: "income-notice", titleKey: "tour_income_3_title", bodyKey: "tour_income_3_body" },
+      { target: "income-row", titleKey: "tour_income_4_title", bodyKey: "tour_income_4_body", advanceOn: "click" },
+      { target: "income-record", titleKey: "tour_income_5_title", bodyKey: "tour_income_5_body" },
+    ],
+  },
 }
 
 // Thiếu dữ liệu trước (spec AD §3.1): 1 bước giữa màn, nút Tiếp chuyển sang tour tạo dữ liệu đó.
-export const MISSING_STEPS: Record<"student" | "session", TourStep> = {
+export const MISSING_STEPS: Record<TourRequire, TourStep> = {
   session: { target: null, titleKey: "tour_need_session_title", bodyKey: "tour_need_session_body", nextTour: "session", nextLabelKey: "tour_need_session_next" },
   student: { target: null, titleKey: "tour_need_student_title", bodyKey: "tour_need_student_body", nextTour: "student", nextLabelKey: "tour_need_student_next" },
+  perSessionPlace: { target: null, titleKey: "tour_need_place_title", bodyKey: "tour_need_place_body", nextTour: "place", nextLabelKey: "tour_need_place_next" },
 }
 
 export const GUIDE_TOURS: Partial<Record<string, TourId>> = {
@@ -105,10 +134,14 @@ export const GUIDE_TOURS: Partial<Record<string, TourId>> = {
   "diem-danh": "attendance",
   "hoc-phi": "tuition",
   "tai-khoan-ngan-hang": "bank",
+  "noi-day": "place",
+  "bang-cong": "income",
+  "phieu-noi-day": "income",
 }
 
 export function tourHref(id: TourId): string {
-  return `${TOURS[id].href}?${TOUR_PARAM}=${id}`
+  const href = TOURS[id].href
+  return `${href}${href.includes("?") ? "&" : "?"}${TOUR_PARAM}=${id}`
 }
 
 export function parseTourParam(v: string | null): TourId | null {

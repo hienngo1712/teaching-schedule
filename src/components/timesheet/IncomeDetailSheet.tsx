@@ -197,7 +197,7 @@ function IncomeDetailBody({ target, onOpenNotice }: { target: Target; onOpenNoti
           <FileText className="mr-1.5 size-4" />
           {t("place_notice")}
         </Button>
-        <Button className="h-11" disabled={!data} onClick={gate.guard(() => setRecording(true))}>
+        <Button className="h-11" disabled={!data} onClick={gate.guard(() => setRecording(true))} data-tour="income-record">
           {t("income_record")}
         </Button>
       </div>
