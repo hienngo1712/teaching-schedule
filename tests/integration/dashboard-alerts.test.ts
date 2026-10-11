@@ -428,7 +428,7 @@ describe("getDashboardAlerts — an toàn", () => {
   it("router report.alerts trả đúng shape", async () => {
     const caller = await getAuthedCaller()
     const res = await caller.report.alerts()
-    expect(Object.keys(res).sort()).toEqual(["debts", "idleStudents", "month", "unrescheduled", "year"])
+    expect(Object.keys(res).sort()).toEqual(["debts", "idleStudents", "month", "placeShortfall", "unrescheduled", "year"])
     expect(typeof res.year).toBe("number")
     expect(res.month).toBeGreaterThanOrEqual(1)
     expect(res.month).toBeLessThanOrEqual(12)

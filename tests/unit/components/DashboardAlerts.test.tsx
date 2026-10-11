@@ -27,6 +27,7 @@ const alerts = {
   debts: [{ studentId: 1, fullName: "Nguyễn Văn An", grade: 5, amount: 1800000, months: 2, isActive: true }],
   idleStudents: [{ studentId: 2, fullName: "Trần Bình", grade: 3 }],
   unrescheduled: [],
+  placeShortfall: [] as { placeId: number; name: string; color: string; amount: number; year: number; month: number }[],
 }
 
 const mockPlan = vi.hoisted(() => ({ allow: true, alertsCalls: [] as unknown[] }))
@@ -105,3 +106,18 @@ describe("DashboardAlerts — HS đã nghỉ còn nợ (spec P1)", () => {
   })
 })
 
+describe("DashboardAlerts — nơi dạy còn thiếu tiền tháng trước (spec AM §4.3)", () => {
+  it("dòng: tên nơi · số còn thiếu; bấm mở Thu nhập tháng trước", () => {
+    alerts.placeShortfall = [{ placeId: 5, name: "TT Ánh Dương", color: "#0891B2", amount: 250000, year: 2026, month: 9 }]
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <DashboardAlerts />
+      </LanguageProvider>
+    )
+    const group = screen.getByTestId("alert-group-place")
+    expect(within(group).getByText("Nơi dạy còn thiếu tiền tháng trước")).toBeTruthy()
+    expect(within(group).getByText(formatCurrency(250000)).className).toContain("text-debt")
+    expect(within(group).getByRole("link").getAttribute("href")).toBe("/timesheet?tab=income&year=2026&month=9")
+    alerts.placeShortfall = []
+  })
+})
