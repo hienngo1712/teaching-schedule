@@ -22,6 +22,41 @@ export default function DashboardPage() {
   // Chỉ dạy nơi tính theo ca/giờ: không có học phí → ẩn các ô tiền (spec AL §4.4, mẫu 04b).
   const noPerStudent = usePlaceSummary().summary?.hasPerStudent === false
 
+  const todayCard = (
+    <StatCard
+      label={t("sessions_today")}
+      value={stats?.sessionsToday}
+      loading={isLoading}
+      icon={<CalendarDays className="size-4 text-muted-foreground" />}
+      hint={t("total_sessions_day")}
+    />
+  )
+  const secondaryCards = (
+    <>
+      <StatCard
+        label={t("total_students")}
+        value={stats?.totalStudents}
+        loading={isLoading}
+        icon={<Users className="size-4 text-muted-foreground" />}
+        hint={t("active_students")}
+      />
+      <StatCard
+        label={t("sessions_this_month")}
+        value={stats?.totalSessionsMonth}
+        loading={isLoading}
+        icon={<CalendarCheck className="size-4 text-muted-foreground" />}
+        hint={t("scheduled_this_month")}
+      />
+      <StatCard
+        label={t("attendance_rate")}
+        value={stats ? `${stats.attendanceRate}%` : undefined}
+        loading={isLoading}
+        icon={<BarChart3 className="size-4 text-muted-foreground" />}
+        hint={t("average_this_month")}
+      />
+    </>
+  )
+
   return (
     <div className="space-y-6">
       <PageHeader title={t("dashboard")} />
@@ -29,89 +64,65 @@ export default function DashboardPage() {
       <StartCard />
       <FeedbackPrompt />
 
-      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-        <StatCard
-          label={t("sessions_today")}
-          value={stats?.sessionsToday}
-          loading={isLoading}
-          icon={<CalendarDays className="size-4 text-muted-foreground" />}
-          hint={t("total_sessions_day")}
-        />
-        {!noPerStudent && (
+      {noPerStudent ? (
+        // Không có ô tiền: 4 ô còn lại chung 1 lưới để xếp liền, không lỗ (FIX AL F2).
+        <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+          {todayCard}
+          {secondaryCards}
+        </div>
+      ) : (
         <>
-        <StatCard
-          label={t("revenue_this_month")}
-          value={money(stats?.totalRevenueMonth)}
-          loading={isLoading}
-          icon={<Banknote className="size-4 text-muted-foreground" />}
-          hint={t("hint_taught_fees")}
-        />
-        <StatCard
-          label={t("collected_amount")}
-          value={money(stats?.totalPaidMonth)}
-          valueClassName="text-primary"
-          loading={isLoading}
-          icon={<Wallet className="size-4 text-muted-foreground" />}
-          hint={t("hint_collected")}
-        />
-        <StatCard
-          label={t("unpaid_this_month")}
-          value={money(stats?.totalUnpaidMonth)}
-          valueClassName="text-debt"
-          loading={isLoading}
-          icon={<AlertCircle className="size-4 text-muted-foreground" />}
-          hint={
-            stats && (
-              <>
-                {/* Thẻ 2 cột ở 375px hẹp: xuống dòng giữa nhãn và số, không gãy số tiền. */}
-                <p>{t("unpaid_this_month_part")} <span className="whitespace-nowrap">{money(stats.totalUnpaidMonth - stats.unpaidPrevMonths)}</span></p>
-                <p>{t("unpaid_prev_months_part")} <span className="whitespace-nowrap">{money(stats.unpaidPrevMonths)}</span></p>
-              </>
-            )
-          }
-        />
+          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+            {todayCard}
+            <StatCard
+              label={t("revenue_this_month")}
+              value={money(stats?.totalRevenueMonth)}
+              loading={isLoading}
+              icon={<Banknote className="size-4 text-muted-foreground" />}
+              hint={t("hint_taught_fees")}
+            />
+            <StatCard
+              label={t("collected_amount")}
+              value={money(stats?.totalPaidMonth)}
+              valueClassName="text-primary"
+              loading={isLoading}
+              icon={<Wallet className="size-4 text-muted-foreground" />}
+              hint={t("hint_collected")}
+            />
+            <StatCard
+              label={t("unpaid_this_month")}
+              value={money(stats?.totalUnpaidMonth)}
+              valueClassName="text-debt"
+              loading={isLoading}
+              icon={<AlertCircle className="size-4 text-muted-foreground" />}
+              hint={
+                stats && (
+                  <>
+                    {/* Thẻ 2 cột ở 375px hẹp: xuống dòng giữa nhãn và số, không gãy số tiền. */}
+                    <p>{t("unpaid_this_month_part")} <span className="whitespace-nowrap">{money(stats.totalUnpaidMonth - stats.unpaidPrevMonths)}</span></p>
+                    <p>{t("unpaid_prev_months_part")} <span className="whitespace-nowrap">{money(stats.unpaidPrevMonths)}</span></p>
+                  </>
+                )
+              }
+            />
+          </div>
+
+          {/* Mobile ẩn 4 số phụ sau nút "Xem thêm"; desktop luôn hiện. */}
+          <div className={cn("grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4", !showMore && "hidden md:grid")}>
+            {secondaryCards}
+            <StatCard
+              label={t("expected_revenue")}
+              value={money(stats?.expectedRevenueMonth)}
+              loading={isLoading}
+              icon={<Banknote className="size-4 text-muted-foreground" />}
+              hint={t("hint_expected_fees")}
+            />
+          </div>
+
+          <Button variant="ghost" className="h-11 w-full md:hidden" onClick={() => setShowMore((v) => !v)}>
+            {showMore ? t("show_less_stats") : t("show_more_stats")}
+          </Button>
         </>
-        )}
-      </div>
-
-      {/* Mobile ẩn 4 số phụ sau nút "Xem thêm"; desktop luôn hiện. Không có ô tiền thì luôn hiện (chỉ còn ít ô). */}
-      <div className={cn("grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4", !showMore && !noPerStudent && "hidden md:grid")}>
-        <StatCard
-          label={t("total_students")}
-          value={stats?.totalStudents}
-          loading={isLoading}
-          icon={<Users className="size-4 text-muted-foreground" />}
-          hint={t("active_students")}
-        />
-        <StatCard
-          label={t("sessions_this_month")}
-          value={stats?.totalSessionsMonth}
-          loading={isLoading}
-          icon={<CalendarCheck className="size-4 text-muted-foreground" />}
-          hint={t("scheduled_this_month")}
-        />
-        <StatCard
-          label={t("attendance_rate")}
-          value={stats ? `${stats.attendanceRate}%` : undefined}
-          loading={isLoading}
-          icon={<BarChart3 className="size-4 text-muted-foreground" />}
-          hint={t("average_this_month")}
-        />
-        {!noPerStudent && (
-          <StatCard
-            label={t("expected_revenue")}
-            value={money(stats?.expectedRevenueMonth)}
-            loading={isLoading}
-            icon={<Banknote className="size-4 text-muted-foreground" />}
-            hint={t("hint_expected_fees")}
-          />
-        )}
-      </div>
-
-      {!noPerStudent && (
-        <Button variant="ghost" className="h-11 w-full md:hidden" onClick={() => setShowMore((v) => !v)}>
-          {showMore ? t("show_less_stats") : t("show_more_stats")}
-        </Button>
       )}
 
       <DashboardAlerts />

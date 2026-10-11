@@ -25,16 +25,16 @@ test.afterAll(async () => {
   await db.$disconnect();
 });
 
-async function registerAndLogin(page: Page) {
+async function registerAndLogin(page: Page, user = USER) {
   await page.goto('/register');
-  await page.fill('input[name="username"]', USER);
-  await page.fill('input[name="fullName"]', 'GV ' + USER);
+  await page.fill('input[name="username"]', user);
+  await page.fill('input[name="fullName"]', 'GV ' + user);
   await page.fill('input[name="password"]', PASSWORD);
   await page.fill('input[name="confirmPassword"]', PASSWORD);
   await page.getByRole('checkbox', { name: /đồng ý/i }).click();
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/\/login/);
-  await page.fill('input[name="username"]', USER);
+  await page.fill('input[name="username"]', user);
   await page.fill('input[name="password"]', PASSWORD);
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/.*dashboard/);
@@ -76,4 +76,18 @@ test('đăng ký → chọn Trung tâm "TT Ánh Dương" → không có Học ph
   await page.goto('/calendar');
   await page.getByRole('button', { name: 'Tạo ca dạy' }).first().click();
   await expect(page.getByRole('dialog').getByRole('combobox', { name: 'Nơi dạy' })).toContainText('Lớp tại nhà');
+});
+
+test('375px: bước chọn gói, nút "Bắt đầu miễn phí" luôn thấy ở đáy popup (FIX AL F1)', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await registerAndLogin(page, `${USER}m`);
+  const setup = page.getByTestId('place-setup-dialog');
+  await setup.getByRole('button', { name: 'Tiếp tục' }).click();
+  await expect(setup.getByText('Chọn gói để bắt đầu')).toBeVisible();
+  const start = setup.getByRole('button', { name: 'Bắt đầu miễn phí' });
+  await expect(start).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await start.click();
+  await expect(setup).toHaveCount(0);
 });

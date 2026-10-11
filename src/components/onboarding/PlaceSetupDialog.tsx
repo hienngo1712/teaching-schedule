@@ -147,9 +147,12 @@ export function PlaceSetupDialog() {
                   }}
                 />
               )}
-              <Button className="h-12 w-full text-base" onClick={() => setStep("done")}>
-                {t("setup_start_free")}
-              </Button>
+              {/* < 768px: nút chính dính đáy popup (luôn thấy), thẻ gói cuộn phía trên. -bottom-6 bù padding p-6 của popup để sát đáy. */}
+              <div className="sticky -bottom-6 -mx-6 -mb-6 border-t bg-background px-6 pb-6 pt-3 md:static md:m-0 md:border-0 md:p-0">
+                <Button className="h-12 w-full text-base" onClick={() => setStep("done")}>
+                  {t("setup_start_free")}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>

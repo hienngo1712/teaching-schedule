@@ -79,6 +79,11 @@ describe("PlaceSetupDialog", () => {
     await state.onSuccess!()
     expect(await screen.findByText("Chọn gói để bắt đầu")).toBeTruthy()
     expect(screen.getByTestId("plan-compare").getAttribute("data-hide-new")).toBe("true")
+    // < 768px: nút chính dính đáy popup, thẻ gói cuộn phía trên (FIX AL F1).
+    const footer = screen.getByRole("button", { name: "Bắt đầu miễn phí" }).parentElement!
+    expect(footer.className).toContain("sticky")
+    expect(footer.className).toContain("-bottom-6")
+    expect(footer.className).toContain("md:static")
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu miễn phí" }))
     await waitFor(() => expect(screen.queryByTestId("place-setup-dialog")).toBeNull())
   })

@@ -90,4 +90,16 @@ describe("Dashboard — chỉ dạy trung tâm (spec AL §4.4) [RF 2]", () => {
     expect(labels).toContain("Ca dạy hôm nay")
     placeState.summary = undefined
   })
+
+  it("4 ô còn lại nằm chung 1 lưới (không lỗ ở 375/1280), không có nút Xem thêm (FIX AL F2)", () => {
+    placeState.summary = { count: 1, hasPerStudent: false, hasPerSession: true }
+    renderPage()
+    const cards = screen.getAllByTestId("stat-card")
+    expect(cards).toHaveLength(4)
+    const grids = new Set(cards.map((c) => c.parentElement))
+    expect(grids.size).toBe(1)
+    expect([...grids][0]!.className).not.toContain("hidden")
+    expect(screen.queryByRole("button", { name: /Xem thêm/ })).toBeNull()
+    placeState.summary = undefined
+  })
 })
