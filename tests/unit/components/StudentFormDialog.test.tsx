@@ -217,6 +217,23 @@ describe("StudentFormDialog: Nơi học (spec AL §4.2)", () => {
     expect(createMutate.mock.calls[0][0]).toMatchObject({ placeId: HOME.id })
   })
 
+  it("danh sách nơi tải xong sau khi mở form: không xoá tên đã gõ, vẫn chọn sẵn nơi mặc định", async () => {
+    placeState.places = []
+    const { rerender } = renderDialog()
+    fireEvent.change(screen.getByLabelText(new RegExp(viText.full_name)), { target: { value: "Lê Văn Minh" } })
+    placeState.places = [CENTER, HOME]
+    rerender(
+      <LanguageProvider>
+        <StudentFormDialog open onOpenChange={() => {}} mode="create" />
+      </LanguageProvider>
+    )
+    expect((screen.getByLabelText(new RegExp(viText.full_name)) as HTMLInputElement).value).toBe("Lê Văn Minh")
+    fireEvent.click(screen.getByRole("checkbox", { name: viText.consent_student }))
+    fireEvent.click(screen.getByRole("button", { name: viText.add }))
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1))
+    expect(createMutate.mock.calls[0][0]).toMatchObject({ fullName: "Lê Văn Minh", placeId: HOME.id })
+  })
+
   it("nơi theo ca/giờ: ẩn khối học phí, HS mới gửi học phí 0", async () => {
     placeState.places = [CENTER, CENTER2]
     renderDialog()

@@ -88,7 +88,13 @@ export function StudentFormDialog({ open, onOpenChange, mode, student }: Props) 
         placeId: student?.placeId ?? defaultPlace,
       })
     }
-  }, [open, student, form, defaultPlace])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- defaultPlace có thể tải sau khi mở form: không reset lại form (mất chữ đã gõ).
+  }, [open, student, form])
+
+  // Danh sách nơi tải xong sau khi mở form: chỉ điền nơi mặc định nếu ô Nơi học còn trống.
+  useEffect(() => {
+    if (open && defaultPlace !== undefined && form.getValues("placeId") === undefined) form.setValue("placeId", defaultPlace)
+  }, [open, defaultPlace, form])
 
   const createMut = trpc.student.create.useMutation({
     onSuccess: () => {
