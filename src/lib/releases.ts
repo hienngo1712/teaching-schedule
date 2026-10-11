@@ -13,6 +13,17 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    // Tính năng của quản trị viên (spec AQ §7): giáo viên không thấy thay đổi nên không tự mở ô Có gì mới.
+    version: "0.25.0",
+    date: "2026-10-11",
+    title: "Quản trị: xoá vĩnh viễn tài khoản",
+    summary: "Quản trị viên xoá vĩnh viễn được tài khoản đã nằm trong Đã xoá từ 30 ngày, dữ liệu dạy học và thông tin cá nhân bị xoá hẳn.",
+    notify: false,
+    items: [
+      { kind: "new", title: "Xoá vĩnh viễn tài khoản (quản trị)", body: "Ở Tài khoản & gói, tab Đã xoá, tài khoản đã xoá từ 30 ngày có nút Xoá vĩnh viễn. Gõ đúng tên đăng nhập để xác nhận. Học sinh, lịch, học phí, nơi dạy, khoá payOS bị xoá hẳn; đơn mua gói giữ lại trong Doanh thu với tên TK đã xoá." },
+    ],
+  },
+  {
     version: "0.24.0",
     date: "2026-10-11",
     title: "Hướng dẫn cho Nơi dạy, Bảng công, Chuyên cần",
