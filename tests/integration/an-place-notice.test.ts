@@ -134,3 +134,39 @@ describe("AN: phiếu báo theo nơi dạy (service)", () => {
     expect(await db.placeShareLink.count({ where: { placeId } })).toBe(0)
   })
 })
+
+describe("AN: router placeNotice + trạng thái phiếu ở Thu nhập", () => {
+  beforeEach(async () => {
+    await clean()
+    vi.setSystemTime(new Date(Date.UTC(2026, 9, 20, 5, 0, 0)))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it("get/link/markSent; income.month có noticeStatus none → sent → changed; Standard → FORBIDDEN", async () => {
+    const caller = await getAuthedCaller()
+    const u = await db.user.findUniqueOrThrow({ where: { username: "teacher" } })
+    const p = (await caller.place.create(center))!
+    await caller.placeRate.set({ placeId: p.id, unit: "session", amount: 200000, fromYear: 2026, fromMonth: 10 })
+    await addSession(u.id, p.id, "2026-10-05")
+
+    const n = await caller.placeNotice.get({ placeId: p.id, year: 2026, month: 10 })
+    expect(n).toMatchObject({ placeName: "TT Ánh Dương", remaining: 200000, sentAt: null, amountChanged: false })
+    expect((await caller.income.month({ year: 2026, month: 10 }))[0]).toMatchObject({ noticeStatus: "none", noticeSentAt: null })
+
+    const link = await caller.placeNotice.link({ placeId: p.id })
+    expect(link.path).toMatch(/^\/n\/[A-Za-z0-9_-]{43}$/)
+    await caller.placeNotice.markSent({ placeId: p.id, year: 2026, month: 10, sent: true })
+    expect((await caller.income.month({ year: 2026, month: 10 }))[0].noticeStatus).toBe("sent")
+    await addSession(u.id, p.id, "2026-10-06")
+    expect((await caller.income.month({ year: 2026, month: 10 }))[0].noticeStatus).toBe("changed")
+    const rotated = await caller.placeNotice.rotate({ placeId: p.id })
+    expect(rotated.token).not.toBe(link.token)
+    await caller.placeNotice.disable({ placeId: p.id })
+
+    const std = await getAuthedCaller("teacher_std")
+    const sp = (await std.place.create(center))!
+    await expect(std.placeNotice.get({ placeId: sp.id, year: 2026, month: 10 })).rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(std.placeNotice.link({ placeId: sp.id })).rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(std.placeNotice.markSent({ placeId: sp.id, year: 2026, month: 10, sent: true })).rejects.toMatchObject({ code: "FORBIDDEN" })
+  })
+})

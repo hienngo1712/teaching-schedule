@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react"
 import Link from "next/link"
-import { MapPin } from "lucide-react"
+import { FileText, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FilterBar } from "@/components/common/FilterBar"
@@ -14,6 +14,9 @@ import { formatCurrency } from "@/lib/utils"
 import { formatHours } from "@/lib/timesheet-export"
 import { IncomeStatusBadge } from "./IncomeStatusBadge"
 import { IncomeDetailSheet } from "./IncomeDetailSheet"
+import { PlaceNoticeDialog } from "@/components/place-notice/PlaceNoticeDialog"
+import { LockBadge } from "@/components/plan/LockBadge"
+import { useFeatureGate } from "@/hooks/useFeatureGate"
 
 type Row = RouterOutputs["income"]["month"][number]
 type StatusFilter = "all" | "unpaid" | "partial" | "paid"
@@ -23,6 +26,8 @@ export function IncomeTab({ year, month, period }: { year: number; month: number
   const { t } = useTranslation()
   const [status, setStatus] = useState<StatusFilter>("all")
   const [selected, setSelected] = useState<Row | null>(null)
+  const [noticeFor, setNoticeFor] = useState<Row | null>(null)
+  const noticeGate = useFeatureGate("placeNotice")
   const query = trpc.income.month.useQuery({ year, month })
   const all = query.data ?? []
   const items = status === "all" ? all : all.filter((r) => r.status === status)
@@ -37,6 +42,39 @@ export function IncomeTab({ year, month, period }: { year: number; month: number
         ? t("income_shortfall").replace("{amount}", formatCurrency(r.expected - r.received))
         : null
 
+  // Phiếu báo (spec AN §1): 0 ca đã dạy thì không có phiếu (Review Focus 1); Standard bấm → popup nâng gói.
+  const noticeButton = (r: Row) => (
+    <div className="space-y-1">
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-11 md:h-9"
+        data-testid="place-notice-button"
+        disabled={r.doneCount === 0}
+        title={r.doneCount === 0 ? t("place_notice_disabled_reason") : undefined}
+        onClick={(e) => {
+          e.stopPropagation()
+          noticeGate.guard(() => setNoticeFor(r))()
+        }}
+      >
+        <FileText className="mr-1.5 size-4" />
+        {t("place_notice")}
+        {noticeGate.locked && <LockBadge plan={noticeGate.requiredPlan} className="ml-1.5" />}
+      </Button>
+      {r.doneCount === 0 ? (
+        <p className="text-xs text-slate-400">{t("place_notice_no_sessions")}</p>
+      ) : (
+        <p className={r.noticeStatus === "changed" ? "text-xs font-medium text-amber-700" : "text-xs text-slate-500"}>
+          {r.noticeStatus === "changed"
+            ? t("place_notice_changed")
+            : r.noticeSentAt
+              ? t("place_notice_sent_at").replace("{d}", new Date(r.noticeSentAt).toLocaleDateString("vi-VN"))
+              : t("place_notice_unsent")}
+        </p>
+      )}
+    </div>
+  )
+
   const columns: Column<Row>[] = [
     { header: t("stt"), cell: (_, i) => i + 1, className: "w-[60px] text-center text-slate-400" },
     {
@@ -47,9 +85,19 @@ export function IncomeTab({ year, month, period }: { year: number; month: number
           {r.name}
         </span>
       ),
+      // Thêm cột Phiếu báo (AN) thì tên nơi bị bóp xuống 3 dòng: giữ tối thiểu 1 dòng cho tên ngắn.
+      className: "min-w-[180px]",
     },
-    { header: t("income_col_count"), cell: count, className: "whitespace-nowrap text-slate-600" },
-    { header: t("income_col_rate"), cell: rate, className: "whitespace-nowrap text-slate-600" },
+    // Đơn giá là dòng phụ của ô ca/giờ: thêm cột Phiếu báo (AN) thì bảng 1280 không còn chỗ cho cột riêng.
+    {
+      header: t("income_col_count"),
+      cell: (r) => (
+        <div className="whitespace-nowrap">
+          <p className="text-slate-700">{count(r)}</p>
+          <p className="text-xs text-slate-500">{rate(r)}</p>
+        </div>
+      ),
+    },
     { header: t("income_expected"), cell: (r) => formatCurrency(r.expected), className: "whitespace-nowrap text-right font-medium tabular-nums" },
     { header: t("income_received"), cell: (r) => formatCurrency(r.received), className: "whitespace-nowrap text-right tabular-nums text-primary" },
     {
@@ -62,6 +110,7 @@ export function IncomeTab({ year, month, period }: { year: number; month: number
       ),
       className: "w-44",
     },
+    { header: t("place_notice"), cell: noticeButton, className: "w-44" },
   ]
 
   const expected = all.reduce((a, r) => a + r.expected, 0)
@@ -146,6 +195,7 @@ export function IncomeTab({ year, month, period }: { year: number; month: number
                   </div>
                   {extra(r) && <p className="text-xs font-medium text-slate-600">{extra(r)}</p>}
                 </div>
+                <div className="mt-3 border-t border-slate-100 pt-3">{noticeButton(r)}</div>
               </div>
             )}
           />
@@ -155,7 +205,13 @@ export function IncomeTab({ year, month, period }: { year: number; month: number
       <IncomeDetailSheet
         target={selected && { placeId: selected.placeId, name: selected.name, color: selected.color, year, month }}
         onOpenChange={(o) => !o && setSelected(null)}
+        onOpenNotice={
+          selected && selected.doneCount > 0
+            ? () => noticeGate.guard(() => setNoticeFor(selected))()
+            : undefined
+        }
       />
+      {noticeFor && <PlaceNoticeDialog placeId={noticeFor.placeId} year={year} month={month} onClose={() => setNoticeFor(null)} />}
     </div>
   )
 }

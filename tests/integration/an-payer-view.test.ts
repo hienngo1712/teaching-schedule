@@ -91,7 +91,7 @@ describe("AN: trang người trả /n/<token>", () => {
     expect((await getPublicPlaceNotice(db, token, "2025-01"))!.month).toBe(10)
     expect((await getPublicPlaceNotice(db, token, "2026-13"))!.month).toBe(10)
     expect((await getPublicPlaceNotice(db, token, "2026-11"))!.month).toBe(10)
-    await db.teachingPlace.update({ where: { id: placeId }, data: { createdAt: new Date(Date.UTC(2026, 0, 1)) } })
+    // Không chặn theo ngày tạo nơi (nơi tạo hôm nay vẫn xem được tháng trước có ca).
     const apr = (await getPublicPlaceNotice(db, token, "2026-04"))!
     expect([apr.year, apr.month, apr.prevMonth, apr.nextMonth]).toEqual([2026, 4, null, "2026-05"])
     expect(apr.notice).toBeNull()

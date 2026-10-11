@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Loader2, Trash2 } from "lucide-react"
+import { FileText, Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -29,11 +29,20 @@ import { PlacePaymentDialog } from "./PlacePaymentDialog"
 type Target = { placeId: number; name: string; color: string; year: number; month: number }
 
 // Chi tiết thu nhập 1 nơi (mẫu 10s, theo TuitionDetailSheet): tab Diễn giải | Lịch sử nhận.
-export function IncomeDetailSheet({ target, onOpenChange }: { target: Target | null; onOpenChange: (open: boolean) => void }) {
+// onOpenNotice: có khi tháng có ca đã dạy (mở hộp Phiếu báo, spec AN §1).
+export function IncomeDetailSheet({
+  target,
+  onOpenChange,
+  onOpenNotice,
+}: {
+  target: Target | null
+  onOpenChange: (open: boolean) => void
+  onOpenNotice?: () => void
+}) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const { t } = useTranslation()
   const title = target ? target.name : ""
-  const body = target && <IncomeDetailBody target={target} />
+  const body = target && <IncomeDetailBody target={target} onOpenNotice={onOpenNotice} />
 
   if (isDesktop) {
     return (
@@ -59,7 +68,7 @@ export function IncomeDetailSheet({ target, onOpenChange }: { target: Target | n
   )
 }
 
-function IncomeDetailBody({ target }: { target: Target }) {
+function IncomeDetailBody({ target, onOpenNotice }: { target: Target; onOpenNotice?: () => void }) {
   const { t } = useTranslation()
   const utils = trpc.useUtils()
   const gate = useFeatureGate("placePayments")
@@ -183,8 +192,12 @@ function IncomeDetailBody({ target }: { target: Target }) {
         )}
       </div>
 
-      <div className="border-t p-4">
-        <Button className="h-11 w-full" disabled={!data} onClick={gate.guard(() => setRecording(true))}>
+      <div className="grid grid-cols-2 gap-2 border-t p-4">
+        <Button variant="outline" className="h-11" disabled={!onOpenNotice} onClick={onOpenNotice}>
+          <FileText className="mr-1.5 size-4" />
+          {t("place_notice")}
+        </Button>
+        <Button className="h-11" disabled={!data} onClick={gate.guard(() => setRecording(true))}>
           {t("income_record")}
         </Button>
       </div>

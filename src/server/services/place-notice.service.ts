@@ -212,7 +212,6 @@ export async function getPublicPlaceNotice(db: PrismaClient, token: string, than
           id: true,
           name: true,
           isDeleted: true,
-          createdAt: true,
           billingChanges: { select: { fromKey: true, billing: true } },
           user: { select: { id: true, isActive: true, isDeleted: true, fullName: true, plan: true, planExpiresAt: true, trialEndsAt: true } },
         },
@@ -229,8 +228,8 @@ export async function getPublicPlaceNotice(db: PrismaClient, token: string, than
   if (resolvePlaceBilling(place.billingChanges, monthKey(now.year, now.month)) !== "per_session") return null
 
   const maxIdx = toIdx(now.year, now.month)
-  const created = vnDateParts(place.createdAt)
-  const minIdx = Math.max(maxIdx - PAYER_MONTHS_BACK, toIdx(created.year, created.month))
+  // Không chặn theo ngày tạo nơi: nơi do migration AL tạo (hoặc tạo sau) vẫn có ca của các tháng trước.
+  const minIdx = maxIdx - PAYER_MONTHS_BACK
   let idx = maxIdx
   if (thang && MONTH_REGEX.test(thang)) {
     const [y, m] = thang.split("-").map(Number)

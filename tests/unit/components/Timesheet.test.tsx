@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
   timesheet: undefined as unknown,
   income: [] as unknown[],
   locked: false,
+  openUpgrade: vi.fn(),
   createMutate: vi.fn(),
 }))
 
@@ -37,7 +38,13 @@ vi.mock("@/hooks/usePlaceSummary", () => ({
   usePlaceSummary: () => ({ places: [{ id: 2, name: "TT Ánh Dương", color: "#0891B2", billing: "per_session" }] }),
 }))
 vi.mock("@/hooks/useFeatureGate", () => ({
-  useFeatureGate: () => ({ locked: state.locked, allowed: !state.locked, requiredPlan: "plus", openUpgrade: vi.fn(), guard: (fn: () => void) => fn }),
+  useFeatureGate: () => ({
+    locked: state.locked,
+    allowed: !state.locked,
+    requiredPlan: "plus",
+    openUpgrade: state.openUpgrade,
+    guard: (fn: () => void) => (state.locked ? state.openUpgrade : fn),
+  }),
 }))
 vi.mock("@/hooks/useMediaQuery", () => ({ useMediaQuery: () => true }))
 vi.mock("@/hooks/useExport", () => ({ useExport: () => ({ captureElement: vi.fn(), isCapturing: false }) }))
@@ -67,6 +74,7 @@ const s = (id: number, over: Record<string, unknown>) => ({
 
 beforeEach(() => {
   state.locked = false
+  state.openUpgrade.mockReset()
   state.createMutate.mockReset()
   state.timesheet = {
     place: { id: 2, name: "TT Ánh Dương", color: "#0891B2" },
@@ -124,6 +132,22 @@ describe("IncomeTab", () => {
     const empty = screen.getByTestId("income-empty")
     expect(empty.textContent).toContain("Nhập đơn giá ở Nơi dạy để xem thu nhập")
     expect(empty.querySelector("a")?.getAttribute("href")).toBe("/places")
+  })
+
+  it("[RF 1] nút Phiếu báo khoá khi tháng chưa có ca đã dạy; Standard bấm → popup nâng gói", () => {
+    state.income = [
+      { placeId: 2, name: "TT Ánh Dương", color: "#0891B2", unit: "hour", amount: 185000, doneCount: 0, doneHours: 0, expected: 0, received: 0, status: "unpaid", noticeStatus: "none", noticeSentAt: null },
+      { placeId: 3, name: "TT Sao Mai", color: "#D97706", unit: "session", amount: 200000, doneCount: 2, doneHours: 3, expected: 400000, received: 0, status: "unpaid", noticeStatus: "changed", noticeSentAt: "2026-10-01T00:00:00.000Z" },
+    ]
+    state.locked = true
+    wrap(<IncomeTab year={2026} month={10} period={null} />)
+    const buttons = screen.getAllByTestId("place-notice-button")
+    // Bảng desktop + thẻ mobile → mỗi dòng 2 nút.
+    expect((buttons[0] as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getAllByText("Chưa có ca đã dạy").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Số tiền đã đổi").length).toBeGreaterThan(0)
+    fireEvent.click(buttons[1])
+    expect(state.openUpgrade).toHaveBeenCalled()
   })
 
   it("dòng nhận một phần hiện còn thiếu", () => {
