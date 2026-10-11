@@ -146,9 +146,10 @@ function CompactFilterBar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-3 md:p-4">
-      {search && <SearchBox search={search} className="relative min-w-0 flex-1 md:max-w-72" />}
+      {/* Điện thoại: ô tìm ≥40%, ô ngoài ≥30% để ô ngoài xuống hàng 2 thay vì bóp ô tìm. */}
+      {search && <SearchBox search={search} className="relative min-w-[40%] flex-1 md:min-w-44 md:max-w-72" />}
       {/* Điện thoại: hàng 1 = tìm + Bộ lọc, hàng 2 = ô ngoài (co giãn) + kỳ/⋯. Laptop: đúng thứ tự DOM. */}
-      {primaryFilter && <div className="order-1 min-w-0 flex-1 md:order-none md:flex-none">{primaryFilter}</div>}
+      {primaryFilter && <div className="order-1 min-w-[30%] flex-1 md:order-none md:min-w-0 md:flex-none">{primaryFilter}</div>}
 
       {filters && (isDesktop ? (
         <Popover>

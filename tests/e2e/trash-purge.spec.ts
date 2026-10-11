@@ -35,6 +35,8 @@ for (const width of [1280, 390]) {
     await expect(page.getByText(name).filter({ visible: true })).toBeVisible();
     // AK: nút dọn nằm trong menu ⋯ cạnh hàng tab.
     await page.getByRole('button', { name: 'Thêm thao tác' }).click();
+    // Đo khi menu còn hiệu ứng mở (zoom-in-95) thì chiều cao bị thu nhỏ → chờ animation xong.
+    await page.getByRole('menu').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
     const purgeBtn = page.getByRole('menuitem', { name: /Dọn tab này/ });
     const box = await purgeBtn.boundingBox();
     if (width === 390) expect(box!.height).toBeGreaterThanOrEqual(44);
