@@ -9,9 +9,9 @@ export function teacherPayosConfig(row: { clientId: string; apiKey: string; chec
   return { clientId: row.clientId, apiKey: row.apiKey, checksumKey: row.checksumKey, baseUrl: payosBaseUrl() }
 }
 
-async function unlocked(db: PrismaClient, userId: number, now: Date) {
+async function unlocked(db: PrismaClient, userId: number, now: Date, feature: "payosTuition" | "payosPlace" = "payosTuition") {
   const u = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { plan: true, planExpiresAt: true, trialEndsAt: true } })
-  return hasFeature(effectivePlan(u, now).plan, "payosTuition")
+  return hasFeature(effectivePlan(u, now).plan, feature)
 }
 
 export async function getTeacherPayosStatus(db: PrismaClient, userId: number) {
@@ -19,9 +19,12 @@ export async function getTeacherPayosStatus(db: PrismaClient, userId: number) {
   return { connected: row !== null, connectedAt: row?.connectedAt ?? null, featureUnlocked: await unlocked(db, userId, new Date()) }
 }
 
-export async function activeTeacherPayos(db: PrismaClient, userId: number, now = new Date()): Promise<PayosConfig | null> {
+// Kết nối payOS dùng chung cho HS và nơi dạy (AO); mỗi luồng kiểm tính năng của mình.
+export async function activeTeacherPayos(
+  db: PrismaClient, userId: number, now = new Date(), feature: "payosTuition" | "payosPlace" = "payosTuition"
+): Promise<PayosConfig | null> {
   const row = await db.teacherPayos.findUnique({ where: { userId } })
-  if (!row || !(await unlocked(db, userId, now))) return null
+  if (!row || !(await unlocked(db, userId, now, feature))) return null
   return teacherPayosConfig(row)
 }
 
@@ -55,7 +58,11 @@ export async function connectTeacherPayos(db: PrismaClient, userId: number, inpu
 }
 
 async function cancelActiveLinks(db: PrismaClient, userId: number, cfg: PayosConfig) {
-  const links = await db.tuitionPayLink.findMany({ where: { userId, status: "active" }, select: { id: true, payosLinkId: true } })
+  // Gồm cả link phiếu nơi dạy (AO): cùng kênh payOS nên cùng bị webhook từ chối khi đổi/ngắt kênh.
+  const links = [
+    ...(await db.tuitionPayLink.findMany({ where: { userId, status: "active" }, select: { id: true, payosLinkId: true } })),
+    ...(await db.placePayLink.findMany({ where: { userId, status: "active" }, select: { id: true, payosLinkId: true } })),
+  ]
   for (const l of links) {
     if (!l.payosLinkId) continue
     try {
@@ -65,6 +72,7 @@ async function cancelActiveLinks(db: PrismaClient, userId: number, cfg: PayosCon
     }
   }
   await db.tuitionPayLink.updateMany({ where: { userId, status: "active" }, data: { status: "cancelled" } })
+  await db.placePayLink.updateMany({ where: { userId, status: "active" }, data: { status: "cancelled" } })
 }
 
 export async function disconnectTeacherPayos(db: PrismaClient, userId: number) {

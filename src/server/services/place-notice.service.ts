@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto"
 import { Prisma, type PrismaClient } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { assertOwnership } from "./_base.service"
+import { ensurePlacePayLink } from "./place-paylink.service"
 import { getBankAccount } from "./settings.service"
 import { computeIncome, getTimesheetMonth, incomeStatus, resolveRate, type Rate } from "./timesheet.service"
 import { hashParentToken } from "@/server/crypto/parent-token"
@@ -32,7 +33,10 @@ export type PlaceNotice = {
   status: ReturnType<typeof incomeStatus>
   bank?: { bankShortName: string; accountNumber: string; accountName: string }
   transferContent: string
-  qr: { payload: string; amount: number; content: string } | null
+  // payOS (GV Pro đã nối, spec AO): payload là QR payOS, có checkoutUrl; còn lại VietQR tới tài khoản Cài đặt.
+  qr: { provider: "payos" | "vietqr"; payload: string; amount: number; content: string; checkoutUrl: string | null } | null
+  // GV có payOS nhưng tạo link lỗi → phiếu VietQR, hộp phiếu báo nhẹ.
+  payosFailed: boolean
   createdAt: string
   sentAt: Date | null
   sentAmount: number | null
@@ -41,7 +45,11 @@ export type PlaceNotice = {
 
 const emptyNotice = () => new TRPCError({ code: "BAD_REQUEST", message: "notice_empty" })
 
-export async function getPlaceNotice(db: PrismaClient, userId: number, placeId: number, year: number, month: number): Promise<PlaceNotice> {
+export async function getPlaceNotice(
+  db: PrismaClient, userId: number, placeId: number, year: number, month: number,
+  // Có origin (mở phiếu) thì mới đụng payOS; đánh dấu đã gửi chỉ cần số tiền.
+  opts: { origin?: string | null; returnPath?: string } = {}
+): Promise<PlaceNotice> {
   // getTimesheetMonth kiểm chủ sở hữu (NOT_FOUND) và trả ca của nơi trong tháng.
   const ts = await getTimesheetMonth(db, userId, { placeId, year, month })
   const [rates, payments, sent, bank, user] = await Promise.all([
@@ -66,6 +74,10 @@ export async function getPlaceNotice(db: PrismaClient, userId: number, placeId: 
   // BIN không còn trong danh sách ngân hàng → coi như chưa cài để không tạo QR sai.
   const bankInfo = bank ? findBank(bank.bankBin) : undefined
   const sentAmount = sent?.sentAmount ?? null
+  const pay = opts.origin
+    ? await ensurePlacePayLink(db, userId, placeId, { year, month }, remaining, { origin: opts.origin, returnPath: opts.returnPath ?? "/" })
+    : { link: null, failed: false }
+  const payLink = pay.link
 
   return {
     place: ts.place!,
@@ -82,18 +94,30 @@ export async function getPlaceNotice(db: PrismaClient, userId: number, placeId: 
     received,
     remaining,
     status: incomeStatus(expected, received),
-    ...(bank && bankInfo
-      ? { bank: { bankShortName: bankInfo.shortName, accountNumber: bank.bankAccountNumber, accountName: bank.bankAccountName } }
-      : {}),
+    ...(payLink
+      ? {
+          bank: {
+            bankShortName: (payLink.bankBin && findBank(payLink.bankBin)?.shortName) || "payOS",
+            accountNumber: payLink.accountNumber ?? "",
+            accountName: payLink.accountName ?? "",
+          },
+        }
+      : bank && bankInfo
+        ? { bank: { bankShortName: bankInfo.shortName, accountNumber: bank.bankAccountNumber, accountName: bank.bankAccountName } }
+        : {}),
     transferContent,
-    qr:
-      bank && bankInfo && remaining > 0
+    qr: payLink
+      ? { provider: "payos", payload: payLink.qrCode, amount: remaining, content: `ND ${payLink.id}`, checkoutUrl: payLink.checkoutUrl }
+      : bank && bankInfo && remaining > 0
         ? {
+            provider: "vietqr",
             payload: buildVietQrPayload({ bin: bankInfo.bin, accountNumber: bank.bankAccountNumber, amount: remaining, content: transferContent }),
             amount: remaining,
             content: transferContent,
+            checkoutUrl: null,
           }
         : null,
+    payosFailed: pay.failed,
     createdAt: new Date().toISOString(),
     sentAt: sent?.sentAt ?? null,
     sentAmount,
@@ -202,7 +226,7 @@ const toIdx = (year: number, month: number) => year * 12 + (month - 1)
 const toYm = (idx: number) => `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}`
 
 // Chỉ đọc. null = 404 như token sai: token sai, nơi đã xoá, nơi không còn theo ca/giờ, GV bị khoá/xoá, GV hết gói Plus.
-export async function getPublicPlaceNotice(db: PrismaClient, token: string, thang?: string): Promise<PayerViewDTO | null> {
+export async function getPublicPlaceNotice(db: PrismaClient, token: string, thang?: string, origin?: string | null): Promise<PayerViewDTO | null> {
   if (!PLACE_TOKEN_REGEX.test(token)) return null
   const link = await db.placeShareLink.findUnique({
     where: { tokenHash: hashParentToken(token) },
@@ -240,7 +264,7 @@ export async function getPublicPlaceNotice(db: PrismaClient, token: string, than
 
   let notice: PlaceNoticeCardData | null = null
   try {
-    notice = toNoticeCard(await getPlaceNotice(db, user.id, place.id, year, month))
+    notice = toNoticeCard(await getPlaceNotice(db, user.id, place.id, year, month, { origin, returnPath: `/n/${token}` }))
   } catch (e) {
     // Review Focus 1: tháng chưa có ca đã dạy / chưa có giá → "Chưa có phiếu".
     if (!(e instanceof TRPCError && e.message === "notice_empty")) throw e

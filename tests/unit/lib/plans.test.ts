@@ -148,7 +148,7 @@ describe("PLAN_FEATURES (P11: bậc thang không lặp, 1 nguồn với chặn q
     expect(featuresAddedIn("standard")).toEqual(["schedule", "attendance", "students", "places", "tuitionCalc", "dashboardStats", "backup"])
     expect(featuresAddedIn("plus")).toEqual(["payments", "tuitionNotice", "monthlyReport", "copyMonth", "timesheet", "placePayments", "placeNotice", "attendanceMonth"])
     expect(FEATURE_PLAN.copyMonth).toBe("plus")
-    expect(featuresAddedIn("pro")).toEqual(["parentLink", "dashboardAlerts", "studentImport", "multiMonthReport", "payosTuition", "attendanceYear", "income12m", "unlimitedStudents"])
+    expect(featuresAddedIn("pro")).toEqual(["parentLink", "dashboardAlerts", "studentImport", "multiMonthReport", "payosTuition", "attendanceYear", "income12m", "payosPlace", "unlimitedStudents"])
   })
 })
 

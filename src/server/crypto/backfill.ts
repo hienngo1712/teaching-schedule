@@ -30,6 +30,8 @@ export const FIELD_TARGETS: readonly FieldTarget[] = [
   { model: "TeacherPayos", table: "teacher_payos", column: "checksum_key", field: "checksumKey", idColumn: "user_id" },
   { model: "TuitionPayLink", table: "tuition_pay_links", column: "account_number", field: "accountNumber" },
   { model: "TuitionPayLink", table: "tuition_pay_links", column: "account_name", field: "accountName" },
+  { model: "PlacePayLink", table: "place_pay_links", column: "account_number", field: "accountNumber" },
+  { model: "PlacePayLink", table: "place_pay_links", column: "account_name", field: "accountName" },
 ]
 
 export type BackfillMode = "dry-run" | "apply" | "verify" | "decrypt" | "rotate"

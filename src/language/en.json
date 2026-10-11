@@ -617,6 +617,7 @@
   "plan_feat_attendance_month": "Monthly attendance",
   "plan_feat_attendance_year": "School-year attendance, filter by grade",
   "plan_feat_income_12m": "12-month income chart",
+  "plan_feat_payos_place": "payOS marks place notices as received",
   "income_12m_title": "Income, last 12 months",
   "income_12m_tuition": "Tuition collected",
   "income_12m_places": "Paid by places",
