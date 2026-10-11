@@ -152,6 +152,20 @@ describe("IncomeTab", () => {
     expect(state.openUpgrade).toHaveBeenCalled()
   })
 
+  // Spec AO §3.4: bấm dòng tiền nơi dạy ở chuông → /timesheet?tab=income&...&placeId= mở sheet đúng nơi, rồi báo trang bỏ placeId.
+  it("openPlaceId: mở sheet chi tiết đúng nơi và gọi onPlaceOpened", async () => {
+    state.income = [
+      { placeId: 2, name: "TT Ánh Dương", color: "#0891B2", unit: "hour", amount: 185000, doneCount: 2, doneHours: 3, expected: 555000, received: 555000, status: "paid", noticeStatus: "none", noticeSentAt: null },
+      { placeId: 3, name: "TT Sao Mai", color: "#D97706", unit: "session", amount: 200000, doneCount: 2, doneHours: 3, expected: 400000, received: 0, status: "unpaid", noticeStatus: "none", noticeSentAt: null },
+    ]
+    const opened = vi.fn()
+    wrap(<IncomeTab year={2026} month={9} period={null} openPlaceId={2} onPlaceOpened={opened} />)
+    const dialog = await screen.findByRole("dialog")
+    expect(dialog.textContent).toContain("TT Ánh Dương")
+    expect(dialog.textContent).not.toContain("TT Sao Mai")
+    expect(opened).toHaveBeenCalled()
+  })
+
   it("dòng nhận một phần hiện còn thiếu", () => {
     state.income = [
       { placeId: 2, name: "TT Ánh Dương", color: "#0891B2", unit: "hour", amount: 185000, doneCount: 2, doneHours: 3, expected: 555000, received: 500000, status: "partial" },

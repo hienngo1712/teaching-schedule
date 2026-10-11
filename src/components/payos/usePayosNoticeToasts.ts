@@ -38,6 +38,7 @@ export function usePayosNoticeToasts(data: ListData | undefined, onOpenBell: () 
     void utils.tuition.invalidate()
     void utils.payment.invalidate()
     void utils.report.invalidate()
+    if (fresh.some((i) => i.kind === "place")) void utils.income.invalidate()
     if (fresh.length > MAX_SINGLE) {
       many(fresh.length)
       return
@@ -45,7 +46,9 @@ export function usePayosNoticeToasts(data: ListData | undefined, onOpenBell: () 
     for (const i of fresh) {
       const href = noticeHref(i)
       toast.success(
-        t("payos_notice_line").replace("{name}", i.studentName).replace("{amount}", formatCurrency(i.amount)),
+        i.kind === "place"
+          ? t("payos_notice_place_line").replace("{name}", i.placeName).replace("{month}", String(i.month)).replace("{amount}", formatCurrency(i.amount))
+          : t("payos_notice_line").replace("{name}", i.studentName).replace("{amount}", formatCurrency(i.amount)),
         href ? { action: { label: t("payos_notice_view"), onClick: () => router.push(href) } } : undefined
       )
     }

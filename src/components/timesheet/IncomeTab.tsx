@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { FileText, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,20 @@ type Row = RouterOutputs["income"]["month"][number]
 type StatusFilter = "all" | "unpaid" | "partial" | "paid"
 
 // Tab Thu nhập (mẫu 10, theo trang Học phí): mỗi nơi theo ca/giờ có đơn giá là 1 dòng; nơi chưa có giá không hiện.
-export function IncomeTab({ year, month, period }: { year: number; month: number; period: ReactNode }) {
+export function IncomeTab({
+  year,
+  month,
+  period,
+  openPlaceId,
+  onPlaceOpened,
+}: {
+  year: number
+  month: number
+  period: ReactNode
+  // Bấm dòng tiền nơi dạy ở chuông (spec AO §3.4): mở sheet của nơi này 1 lần rồi báo trang bỏ ?placeId.
+  openPlaceId?: number | null
+  onPlaceOpened?: () => void
+}) {
   const { t } = useTranslation()
   const [status, setStatus] = useState<StatusFilter>("all")
   const [selected, setSelected] = useState<Row | null>(null)
@@ -32,6 +45,13 @@ export function IncomeTab({ year, month, period }: { year: number; month: number
   const query = trpc.income.month.useQuery({ year, month })
   const all = query.data ?? []
   const items = status === "all" ? all : all.filter((r) => r.status === status)
+
+  useEffect(() => {
+    if (!openPlaceId || !query.data) return
+    const row = query.data.find((r) => r.placeId === openPlaceId)
+    if (row) setSelected(row)
+    onPlaceOpened?.()
+  }, [openPlaceId, query.data, onPlaceOpened])
 
   const rate = (r: Row) =>
     t(r.unit === "hour" ? "income_rate_hour" : "income_rate_session").replace("{amount}", formatCurrency(r.amount))

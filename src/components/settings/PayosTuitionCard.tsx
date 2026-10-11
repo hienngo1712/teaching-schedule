@@ -50,6 +50,8 @@ export function PayosTuitionCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="rounded-lg bg-primary/5 p-3 text-sm text-slate-700">{t("payos_benefit")}</p>
+        {/* Một kết nối cho cả học phí và phiếu nơi dạy (spec AO §1). */}
+        <p className="text-sm text-slate-700">{t("payos_shared_note")}</p>
         <p className="text-xs leading-relaxed text-slate-600">{t("payos_cost_note")}</p>
         <div className="space-y-2">
           <p className="text-sm text-slate-600">

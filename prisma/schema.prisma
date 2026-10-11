@@ -516,6 +516,7 @@ model TeachingPlace {
   payments       PlacePayment[]
   shareLink      PlaceShareLink?
   monthNotices   PlaceMonthNotice[]
+  payLinks       PlacePayLink[]
 
   @@unique([userId, name])
   @@index([userId, isDeleted, sortOrder])
@@ -590,6 +591,47 @@ model PlaceMonthNotice {
 
   @@id([placeId, year, month])
   @@map("place_month_notices")
+}
+
+// QR payOS cho phiếu nơi dạy/tháng (spec AO §2). orderCode gửi payOS = PLACE_ORDER_OFFSET + id
+// để không trùng TuitionPayLink.id (cùng một tài khoản payOS của GV).
+model PlacePayLink {
+  id            Int                   @id @default(autoincrement())
+  userId        Int                   @map("user_id")
+  placeId       Int                   @map("place_id")
+  year          Int
+  month         Int
+  amount        Int
+  status        String                @default("active") @db.VarChar(10) // active | cancelled | paid
+  payosLinkId   String                @map("payos_link_id") @db.VarChar(64)
+  qrCode        String                @map("qr_code") @db.Text
+  checkoutUrl   String                @map("checkout_url") @db.Text
+  // Tài khoản nhận của QR payOS (như TuitionPayLink): thẻ phiếu hiện đúng tài khoản của QR, không phải tài khoản Cài đặt.
+  bankBin       String?               @map("bank_bin") @db.VarChar(8)
+  accountNumber String?               @map("account_number") // ENCRYPTED_FIELDS
+  accountName   String?               @map("account_name") // ENCRYPTED_FIELDS
+  createdAt     DateTime              @default(now()) @map("created_at")
+  place         TeachingPlace         @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  payments      PlacePayLinkPayment[]
+
+  @@index([placeId, year, month, status])
+  @@index([userId])
+  @@map("place_pay_links")
+}
+
+// Mỗi giao dịch payOS 1 dòng: unique (link, reference) chống ghi 2 lần khi payOS gửi lại.
+model PlacePayLinkPayment {
+  id             Int          @id @default(autoincrement())
+  linkId         Int          @map("link_id")
+  reference      String       @db.VarChar(64)
+  amount         Int
+  paidAt         DateTime     @map("paid_at")
+  placePaymentId Int          @map("place_payment_id") // dòng PlacePayment đã ghi
+  createdAt      DateTime     @default(now()) @map("created_at")
+  link           PlacePayLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@unique([linkId, reference])
+  @@map("place_pay_link_payments")
 }
 
 // Lịch sử ẩn nơi học của HS (RULING AL Task 2): học phí tháng M theo nơi của HS tại M, UI không hiện.

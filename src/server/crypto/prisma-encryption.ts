@@ -15,6 +15,7 @@ export const ENCRYPTED_FIELDS = {
   ChatMessage: ["body"],
   TeacherPayos: ["clientId", "apiKey", "checksumKey"],
   TuitionPayLink: ["accountNumber", "accountName"],
+  PlacePayLink: ["accountNumber", "accountName"],
 } as const
 
 export const ENCRYPTED_KEYS: ReadonlySet<string> = new Set<string>(Object.values(ENCRYPTED_FIELDS).flat())

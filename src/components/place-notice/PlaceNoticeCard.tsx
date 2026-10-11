@@ -126,7 +126,7 @@ export const PlaceNoticeCard = forwardRef<HTMLDivElement, Props>(function PlaceN
             // eslint-disable-next-line @next/next/no-img-element -- data URL; html2canvas cần <img> thường
             <img
               src={qrSrc}
-              alt="VietQR"
+              alt={notice.qr.provider === "payos" ? "payOS" : "VietQR"}
               width={qrSize}
               height={qrSize}
               className={cn("block", !isWide && "mx-auto")}
@@ -155,6 +155,7 @@ export const PlaceNoticeCard = forwardRef<HTMLDivElement, Props>(function PlaceN
             <p>
               {t("notice_transfer_content")}: {notice.qr.content}
             </p>
+            {notice.qr.provider === "payos" && <p className="text-xs text-emerald-700">{t("payos_scan_hint")}</p>}
           </div>
         </div>
       ) : (

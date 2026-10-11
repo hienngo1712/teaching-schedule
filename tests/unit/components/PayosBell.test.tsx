@@ -93,7 +93,7 @@ describe("PayosBell (spec AI §5)", () => {
     h.data = { enabled: true, unread: 0, items: [{ ...ITEM, unread: false }] }
     renderBell()
     fireEvent.click(bell())
-    await screen.findByText("Tiền học qua payOS")
+    await screen.findByText("Tiền vào qua payOS")
     expect(h.markSeen).not.toHaveBeenCalled()
   })
   it("bấm dòng → push /tuition?year=2026&month=8&studentId=<id> và đóng", async () => {
@@ -102,8 +102,29 @@ describe("PayosBell (spec AI §5)", () => {
     fireEvent.click(bell())
     fireEvent.click(await screen.findByRole("button", { name: /Trần Thị Bé/ }))
     expect(h.push).toHaveBeenCalledWith("/tuition?year=2026&month=8&studentId=42")
-    expect(screen.queryByText("Tiền học qua payOS")).toBeNull()
+    expect(screen.queryByText("Tiền vào qua payOS")).toBeNull()
   })
+  // Spec AO §3.4: dòng tiền nơi dạy "<tên nơi> · Tháng M · +X đ", bấm mở Thu nhập tháng M, sheet nơi đó.
+  it("dòng nơi dạy: hiện tên nơi · tháng · số tiền; bấm → /timesheet?tab=income&year=&month=&placeId=", async () => {
+    const place = { kind: "place", id: 5, placeId: 9, placeName: "TT Ánh Dương", placeDeleted: false, amount: 455000, paidAt: ITEM.paidAt, year: 2026, month: 9, createdAt: ITEM.createdAt, unread: true }
+    h.data = { enabled: true, unread: 2, items: [place as unknown as Item, ITEM] }
+    renderBell()
+    fireEvent.click(bell())
+    const row = await screen.findByRole("button", { name: /TT Ánh Dương · Tháng 9 · \+455\.000/ })
+    expect(row.textContent).toContain("Tiền nơi dạy")
+    fireEvent.click(row)
+    expect(h.push).toHaveBeenCalledWith("/timesheet?tab=income&year=2026&month=9&placeId=9")
+  })
+
+  it("dòng nơi dạy đã xoá → không bấm được", async () => {
+    const place = { kind: "place", id: 6, placeId: 9, placeName: "TT Cũ", placeDeleted: true, amount: 1000, paidAt: ITEM.paidAt, year: 2026, month: 9, createdAt: ITEM.createdAt, unread: false }
+    h.data = { enabled: true, unread: 0, items: [place as unknown as Item] }
+    renderBell()
+    fireEvent.click(bell())
+    await screen.findByText("TT Cũ")
+    expect(screen.queryByRole("button", { name: /TT Cũ/ })).toBeNull()
+  })
+
   it("HS đã xoá → dòng không bấm được (không có link/nút)", async () => {
     h.data = { enabled: true, unread: 0, items: [{ ...ITEM, studentDeleted: true, unread: false }] }
     renderBell()
@@ -129,7 +150,7 @@ describe("PayosBell (spec AI §5)", () => {
     renderBell()
     fireEvent.click(bell())
     const dialog = await screen.findByRole("dialog")
-    expect(dialog.textContent).toContain("Tiền học qua payOS")
+    expect(dialog.textContent).toContain("Tiền vào qua payOS")
   })
   it("mở chuông → huỷ lần hỏi đang chạy rồi mới tắt huy hiệu; markSeen xong thì hỏi lại (review AI #1)", async () => {
     const order: string[] = []

@@ -17,7 +17,7 @@ export const placeNoticeRouter = createTRPCRouter({
   get: planProcedure("placeNotice")
     .input(incomeDetailSchema)
     .query(async ({ ctx, input }) => {
-      const n = await getPlaceNotice(ctx.db, ctx.userId, input.placeId, input.year, input.month)
+      const n = await getPlaceNotice(ctx.db, ctx.userId, input.placeId, input.year, input.month, { origin: ctx.origin, returnPath: "/da-thanh-toan" })
       return {
         ...toNoticeCard(n),
         placeId: n.place.id,
