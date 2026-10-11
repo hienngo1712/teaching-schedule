@@ -13,6 +13,7 @@ export const sessionCreateSchema = z
     title: z.string().max(200).optional(),
     notes: z.string().max(1000).optional(),
     studentIds: z.array(z.number().int().positive()).optional(),
+    placeId: z.number().int().positive().optional(),
   })
   .refine((d) => d.endTime > d.startTime, {
     message: "Giờ kết thúc phải sau giờ bắt đầu",
@@ -30,6 +31,7 @@ export const sessionUpdateSchema = z.object({
       title: z.string().max(200).optional(),
       notes: z.string().max(1000).optional(),
       studentIds: z.array(z.number().int().positive()).optional(),
+      placeId: z.number().int().positive().optional(),
     })
     .refine(
       (d) =>
@@ -48,6 +50,8 @@ export const sessionFilterSchema = z.object({
   grade: z.number().int().min(1).max(12).optional(),
   studentName: z.string().trim().max(100).optional(),
   studentId: z.number().int().positive().optional(),
+  // Lọc theo nơi dạy của ca (spec AL §4.3).
+  placeId: z.number().int().positive().optional(),
   includeStudents: z.boolean().optional(),
 })
 
@@ -62,6 +66,7 @@ export const sessionBulkCreateSchema = z
     title: z.string().max(200).optional(),
     notes: z.string().max(1000).optional(),
     studentIds: z.array(z.number().int().positive()).optional(),
+    placeId: z.number().int().positive().optional(),
   })
   .refine((d) => d.endTime > d.startTime, {
     message: "Giờ kết thúc phải sau giờ bắt đầu",
@@ -86,6 +91,7 @@ export const sessionBulkUpdateFutureSchema = z.object({
       title: z.string().max(200).optional(),
       notes: z.string().max(1000).optional(),
       studentIds: z.array(z.number().int().positive()).optional(),
+      placeId: z.number().int().positive().optional(),
     })
     .refine(
       (d) =>

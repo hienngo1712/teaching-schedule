@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { getSessionLabel } from "@/lib/session-label"
 import { formatGrades } from "@/lib/format-grades"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { PlaceTag } from "@/components/places/PlaceTag"
 
 type Props = {
   session: SessionListDTO
@@ -53,6 +54,7 @@ export function SessionCard({ session, onClick }: Props) {
         )}
         {count && `${label || gradeFull ? " · " : ""}${count}`}
       </div>
+      <PlaceTag placeId={session.placeId} className="text-[11px] text-slate-600" />
       {isCancelled && (
         <div className="text-[10px] font-semibold text-red-600">
           {t("cancelled_label")}

@@ -19,6 +19,8 @@ export type SourceSession = {
   status: string
   makeupOfId: number | null
   studentIds: number[]
+  // Nơi dạy của ca nguồn (spec AL §4.3): ca chép giữ nguyên nơi.
+  placeId?: number | null
 }
 
 export type WeeklyPattern = {
@@ -34,6 +36,7 @@ export type WeeklyPattern = {
   count: number
   lastDate: Date
   kind: PatternKind
+  placeId?: number | null
 }
 
 export type ExistingSession = { sessionDate: Date; startTime: string; endTime: string; status: string; label: string }
@@ -47,6 +50,7 @@ export type CopyCandidate = {
   subjectName: string
   title: string | null
   studentIds: number[]
+  placeId?: number | null
 }
 
 export type MonthCount = { year: number; month: number; slots: number; created: number; existing: number; conflict: number; past: number }
@@ -143,6 +147,7 @@ export function deriveWeeklyPatterns(
       count: dayNums.length,
       lastDate: latest.sessionDate,
       kind,
+      placeId: latest.placeId ?? null,
     })
   }
   return out.sort(
@@ -219,6 +224,7 @@ export function planMonthCopy(args: {
       subjectName: p.subjectName,
       title: p.title,
       studentIds: p.studentIds,
+      placeId: p.placeId ?? null,
     })
   }
 

@@ -45,6 +45,7 @@ import { AttendancePanel } from "./AttendancePanel"
 import { StudentPicker } from "./StudentPicker"
 import { SessionNavBar, sortSessions } from "./SessionNavBar"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { PlaceTag } from "@/components/places/PlaceTag"
 
 type Props = {
   open: boolean
@@ -310,6 +311,7 @@ export function SessionDetailDialog({
                       <CalendarDays className="size-4" />
                       {dayjs(session.sessionDate).format("DD/MM/YYYY")}
                     </div>
+                    <PlaceTag placeId={session.placeId} />
                     <div className="flex items-center gap-1">
                       <Clock className="size-4" />
                       {session.startTime} – {session.endTime} ({session.durationMins}p)

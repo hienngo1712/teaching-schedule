@@ -190,3 +190,34 @@ export async function deletePlace(db: PrismaClient, userId: number, id: number) 
     return { success: true as const }
   })
 }
+
+// Nơi phải của chính user và chưa xoá; sai → NOT_FOUND (không lộ nơi của người khác).
+export async function assertPlaceOwned(db: PrismaClient | Prisma.TransactionClient, userId: number, placeId: number) {
+  const place = await db.teachingPlace.findFirst({ where: { id: placeId, isDeleted: false }, select: { userId: true } })
+  assertOwnership(place, userId)
+}
+
+// Nơi mặc định (spec AL §2): nơi theo học sinh đầu tiên theo sortOrder; không có thì nơi đầu tiên; chưa có nơi → null.
+export async function defaultPlaceId(db: PrismaClient | Prisma.TransactionClient, userId: number): Promise<number | null> {
+  const key = currentKey()
+  const places = await loadPlaces(db, userId)
+  return (places.find((p) => resolvePlaceBilling(p.billingChanges, key) === "per_student") ?? places[0])?.id ?? null
+}
+
+// Nơi của ca mới (spec AL §4.3): nơi chọn trong form, không có thì nơi học của HS đầu tiên, rồi mới tới nơi mặc định.
+export async function resolveSessionPlace(
+  db: PrismaClient | Prisma.TransactionClient,
+  userId: number,
+  placeId: number | undefined,
+  studentIds: number[] | undefined
+): Promise<number | null> {
+  if (placeId) {
+    await assertPlaceOwned(db, userId, placeId)
+    return placeId
+  }
+  if (studentIds?.length) {
+    const first = await db.student.findFirst({ where: { id: studentIds[0], userId }, select: { placeId: true } })
+    if (first?.placeId) return first.placeId
+  }
+  return defaultPlaceId(db, userId)
+}

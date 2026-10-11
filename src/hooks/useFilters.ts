@@ -34,6 +34,12 @@ export function useFilters() {
     return id ? parseInt(id, 10) : null
   }, [searchParams])
 
+  // Bộ lọc Nơi dạy ở Lịch (spec AL §4.3).
+  const selectedPlaceId = useMemo(() => {
+    const id = searchParams.get("place")
+    return id ? parseInt(id, 10) : null
+  }, [searchParams])
+
   const selectedStatus = useMemo(() => {
     return searchParams.get("status") || "all"
   }, [searchParams])
@@ -77,6 +83,13 @@ export function useFilters() {
         studentId: null 
       })
       router.push(`${pathname}?${queryString}`)
+    },
+    [router, pathname, createQueryString]
+  )
+
+  const setPlace = useCallback(
+    (placeId: number | null) => {
+      router.push(`${pathname}?${createQueryString({ place: placeId, studentId: null })}`)
     },
     [router, pathname, createQueryString]
   )
@@ -130,7 +143,7 @@ export function useFilters() {
 
   // Bỏ nhiều ô lọc trong 1 lần push: gọi từng setter liền nhau thì lần push sau đè lần trước.
   const clearFilters = useCallback(
-    (keys: ("grade" | "noticeFilter" | "status" | "studentName")[]) => {
+    (keys: ("grade" | "noticeFilter" | "status" | "studentName" | "place")[]) => {
       const queryString = createQueryString({ ...Object.fromEntries(keys.map((k) => [k, null])), studentId: null })
       router.push(`${pathname}?${queryString}`)
     },
@@ -147,8 +160,9 @@ export function useFilters() {
       studentName: searchStudentName || undefined,
       studentId: selectedStudentId || undefined,
       status: selectedStatus || undefined,
+      placeId: selectedPlaceId || undefined,
     }
-  }, [selectedGrade, searchStudentName, selectedStudentId, selectedStatus])
+  }, [selectedGrade, searchStudentName, selectedStudentId, selectedStatus, selectedPlaceId])
 
   const hasActiveFilter = useMemo(() => {
     return (
@@ -166,6 +180,8 @@ export function useFilters() {
     selectedStudentId,
     selectedStatus,
     selectedNoticeFilter,
+    selectedPlaceId,
+    setPlace,
     setGrade,
     setSearch,
     setStudentId,

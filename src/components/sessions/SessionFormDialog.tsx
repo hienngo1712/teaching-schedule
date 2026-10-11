@@ -49,6 +49,11 @@ import { withCurrentSubject } from "@/lib/subject-options"
 import { trpc } from "@/lib/trpc"
 import type { SessionDTO } from "@/lib/types/models"
 import { StudentPicker } from "./StudentPicker"
+import { usePlaceSummary } from "@/hooks/usePlaceSummary"
+import { PlaceSelect } from "@/components/places/PlaceSelect"
+
+// Nơi của ca vừa tạo trong phiên này: ca mới chưa chọn HS thì gợi ý lại nơi đó (spec AL §4.3).
+let lastCreatedPlaceId: number | undefined
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
@@ -69,6 +74,14 @@ export function SessionFormDialog({
   const { t } = useTranslation()
   const isEdit = !!editingSession
   const [isUpdateFuture, setIsUpdateFuture] = useState(false)
+  const { places, multi } = usePlaceSummary()
+  const [placeTouched, setPlaceTouched] = useState(false)
+  // Cùng query với StudentPicker (React Query dùng chung cache) để biết nơi học của từng HS.
+  const { data: studentListData } = trpc.student.list.useQuery({ isActive: true, limit: 1000 }, { enabled: multi })
+  const studentPlace = useMemo(
+    () => new Map((studentListData?.items ?? []).map((s) => [s.id, s.placeId])),
+    [studentListData]
+  )
 
   const { data: subjectsData } = trpc.subject.list.useQuery({ isActive: true })
   const subjects = useMemo(() => subjectsData ?? [], [subjectsData])
@@ -106,6 +119,7 @@ export function SessionFormDialog({
         title: editingSession.title || "",
         notes: editingSession.notes || "",
         studentIds: editingSession.students.map((s) => s.studentId),
+        placeId: editingSession.placeId ?? undefined,
       })
     } else {
       form.reset({
@@ -119,6 +133,7 @@ export function SessionFormDialog({
       })
     }
     setIsUpdateFuture(false)
+    setPlaceTouched(false)
   }, [open, editingSession, initialDate, form])
 
   // Điền môn mặc định cho ca mới, chạy sau effect reset ở trên.
@@ -128,6 +143,21 @@ export function SessionFormDialog({
     const defaultSubject = subjects.find((s) => s.isDefault) || subjects[0]
     form.setValue("subjectId", defaultSubject.id)
   }, [open, subjects, isEdit, form])
+
+  // Ca mới, GV chưa tự chọn nơi: theo nơi học của HS đầu tiên, rồi nơi ca vừa tạo, rồi nơi theo học sinh đầu tiên.
+  const studentIds = form.watch("studentIds")
+  const firstStudentPlace = studentIds?.length ? studentPlace.get(studentIds[0]) ?? undefined : undefined
+  const autoPlace = firstStudentPlace ?? lastCreatedPlaceId ?? (places.find((p) => p.billing === "per_student") ?? places[0])?.id
+  useEffect(() => {
+    if (!open || isEdit || placeTouched || !multi || !autoPlace) return
+    if (form.getValues("placeId") !== autoPlace) form.setValue("placeId", autoPlace)
+  }, [open, isEdit, placeTouched, multi, autoPlace, form])
+  const curPlace = form.watch("placeId")
+  const placeMismatch =
+    multi && !!curPlace && (studentIds ?? []).some((id) => {
+      const p = studentPlace.get(id)
+      return p != null && p !== curPlace
+    })
 
   const createMutation = trpc.session.create.useMutation({
     onSuccess: () => {
@@ -174,7 +204,11 @@ export function SessionFormDialog({
     },
   })
 
-  function onSubmit(values: SessionCreateInput) {
+  function onSubmit(raw: SessionCreateInput) {
+    // TK 1 nơi: không gửi nơi, server tự gán (form giữ nguyên như trước AL).
+    const { placeId, ...rest } = raw
+    const values: SessionCreateInput = multi && placeId ? { ...rest, placeId } : rest
+    if (!isEdit) lastCreatedPlaceId = values.placeId
     if (isEdit) {
       if (isUpdateFuture) {
         updateFutureMutation.mutate({
@@ -287,6 +321,20 @@ export function SessionFormDialog({
               />
             </div>
 
+            {multi && (
+              <div className="space-y-2">
+                <Label htmlFor="session-place">{t("session_place")}</Label>
+                <PlaceSelect
+                  id="session-place"
+                  value={curPlace}
+                  onChange={(id) => {
+                    setPlaceTouched(true)
+                    form.setValue("placeId", id)
+                  }}
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4" data-tour="session-form-time">
               <FormField
                 control={form.control}
@@ -342,6 +390,11 @@ export function SessionFormDialog({
                       onChange={field.onChange}
                     />
                   </FormControl>
+                  {placeMismatch && (
+                    <p data-testid="session-place-mismatch" className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      {t("session_place_mismatch")}
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

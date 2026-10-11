@@ -8,6 +8,7 @@ import {
   parseTimeToDate,
 } from "@/lib/utils"
 import { assertOwnership } from "./_base.service"
+import { assertPlaceOwned, resolveSessionPlace } from "./place.service"
 import { LIVE, LIVE_LINK, softDeleteData } from "@/server/soft-delete"
 import {
   type SessionBulkCreateInput,
@@ -164,7 +165,7 @@ export async function getMonthSessions(
   userId: number,
   filter: SessionFilterInput
 ): Promise<SessionDTO[]> {
-  const { year, month, toYear, toMonth, grade, studentName, studentId, includeStudents } = filter
+  const { year, month, toYear, toMonth, grade, studentName, studentId, placeId, includeStudents } = filter
   const start = new Date(Date.UTC(year, month - 1, 1))
   const end = toYear && toMonth 
     ? new Date(Date.UTC(toYear, toMonth, 1))
@@ -181,6 +182,7 @@ export async function getMonthSessions(
     where: {
       userId,
       sessionDate: { gte: start, lt: end },
+      ...(placeId ? { placeId } : {}),
       ...(grade || studentName || studentId
         ? {
             sessionStudents: {
@@ -286,6 +288,7 @@ export async function createSession(
   if (input.studentIds) {
     studentFees = await assertStudentsOwned(db, userId, input.studentIds)
   }
+  const placeId = await resolveSessionPlace(db, userId, input.placeId, input.studentIds)
 
   const created = await db.$transaction(async (tx) => {
     await lockLiveSubject(tx, userId, input.subjectId)
@@ -298,6 +301,7 @@ export async function createSession(
         subjectId: input.subjectId,
         title: input.title ?? null,
         notes: input.notes ?? null,
+        placeId,
         ...(studentFees.length > 0
           ? {
               sessionStudents: {
@@ -324,6 +328,7 @@ export type SessionUpdateData = {
   title?: string
   notes?: string
   studentIds?: number[]
+  placeId?: number
 }
 
 /**
@@ -379,6 +384,7 @@ export async function updateSession(
   if (data.subjectId !== undefined) {
     await assertSubjectOwned(db, userId, data.subjectId)
   }
+  if (data.placeId !== undefined) await assertPlaceOwned(db, userId, data.placeId)
 
   // Verify studentIds thuộc userId và lấy học phí
   let studentFees: Array<{ id: number; tuitionFee: number; grade: number }> = []
@@ -438,6 +444,7 @@ export async function updateSession(
         ...(data.subjectId !== undefined && { subjectId: data.subjectId }),
         ...(data.title !== undefined && { title: data.title }),
         ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.placeId !== undefined && { placeId: data.placeId }),
       },
       include: SESSION_DETAIL_INCLUDE,
     })
@@ -642,6 +649,7 @@ export async function bulkCreateSessions(
   if (input.studentIds) {
     studentFees = await assertStudentsOwned(db, userId, input.studentIds)
   }
+  const placeId = await resolveSessionPlace(db, userId, input.placeId, input.studentIds)
 
   const start = parseSessionDate(input.startDate)
   const end = parseSessionDate(input.endDate)
@@ -715,6 +723,7 @@ export async function bulkCreateSessions(
         data: toCreate.map((data) => ({
           ...data,
           userId,
+          placeId,
         })),
       })
 
@@ -849,6 +858,7 @@ export async function bulkUpdateFutureSessions(
         ...(data.subjectId && { subjectId: data.subjectId }),
         ...(data.title !== undefined && { title: data.title }),
         ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.placeId !== undefined && { placeId: data.placeId }),
       },
     })
   })
@@ -889,6 +899,7 @@ export async function duplicateSession(
       subjectId: existing.subjectId,
       title: existing.title,
       notes: existing.notes,
+      placeId: existing.placeId,
       ...(studentFees.length > 0
         ? {
             sessionStudents: {
@@ -962,6 +973,7 @@ export async function createMakeupSession(
         subjectId: original.subjectId,
         title: original.title,
         notes: original.notes,
+        placeId: original.placeId,
         makeupOfId: originalId,
         ...(studentData.length > 0 ? { sessionStudents: { create: studentData } } : {}),
       },

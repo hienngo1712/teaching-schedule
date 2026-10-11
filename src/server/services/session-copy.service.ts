@@ -37,6 +37,7 @@ async function loadCopyContext(db: Db, userId: number, input: CopyRange) {
       title: true,
       status: true,
       makeupOfId: true,
+      placeId: true,
       subject: { select: { name: true, color: true } },
       sessionStudents: { select: { studentId: true } },
     },
@@ -54,6 +55,7 @@ async function loadCopyContext(db: Db, userId: number, input: CopyRange) {
       status: r.status,
       makeupOfId: r.makeupOfId,
       studentIds: r.sessionStudents.map((s) => s.studentId),
+      placeId: r.placeId,
     }
   })
 
@@ -134,6 +136,7 @@ export async function copyMonth(db: PrismaClient, userId: number, input: Session
           subjectId: c.subjectId,
           title: c.title,
           notes: null,
+          placeId: c.placeId ?? null,
         })),
       })
       // Ngày + giờ bắt đầu là duy nhất trong lô vì planMonthCopy đã loại ứng viên chồng giờ nhau.
