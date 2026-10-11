@@ -157,7 +157,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     title: "Bảng công và Thu nhập",
     intro: "Dành cho nơi tính tiền theo ca/giờ: đối chiếu số ca, số giờ với trung tâm và theo dõi tiền nơi đó đã trả.",
     steps: [
-      { text: "Đặt **Đơn giá**: mở **Nơi dạy**, sửa nơi dạy, chọn **Theo ca** hoặc **Theo giờ** rồi nhập số tiền. Nơi đã có ca thì chọn **Áp dụng từ tháng**. Để trống nếu chưa muốn tính thu nhập.", shot: "bang-cong-don-gia" },
+      { text: "Đặt **Đơn giá**: mở **Nơi dạy**, bấm **⋯** của nơi đó → **Sửa**, chọn **Theo ca** hoặc **Theo giờ** rồi nhập số tiền. Nơi đã có ca thì chọn **Áp dụng từ tháng**. Để trống nếu chưa muốn tính thu nhập.", shot: "bang-cong-don-gia" },
       { text: "Mở **Bảng công** (điện thoại: **Thêm** → **Bảng công**), tab **Bảng công** (gói Plus): chọn nơi và tháng để xem số ca đã dạy, số giờ, ca bù, ca huỷ.", shot: "bang-cong" },
       "Bấm **⋯** → **Xuất Excel** hoặc **Tải ảnh** để gửi trung tâm. Mặc định không kèm tiền; tick **Kèm số tiền** nếu cần.",
       { text: "Tab **Thu nhập**: mỗi nơi có thu nhập dự kiến, đã nhận, còn thiếu và trạng thái **Chưa nhận**, **Nhận một phần** hoặc **Đã nhận đủ**.", shot: "thu-nhap" },
