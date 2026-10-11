@@ -512,6 +512,8 @@ model TeachingPlace {
   students       Student[]
   sessions       TeachingSession[]
   studentChanges StudentPlaceChange[]
+  rateChanges    PlaceRateChange[]
+  payments       PlacePayment[]
 
   @@unique([userId, name])
   @@index([userId, isDeleted, sortOrder])
@@ -529,6 +531,39 @@ model PlaceBillingChange {
 
   @@unique([placeId, fromKey])
   @@map("place_billing_changes")
+}
+
+// Đơn giá nơi theo ca/giờ theo thời gian (fromKey như PlaceBillingChange). amount 0 hoặc không có dòng = chưa có đơn giá (spec AM §2).
+model PlaceRateChange {
+  id        Int           @id @default(autoincrement())
+  placeId   Int           @map("place_id")
+  fromKey   Int           @map("from_key")
+  unit      String        @db.VarChar(8) // session | hour
+  amount    Int
+  createdAt DateTime      @default(now()) @map("created_at")
+  place     TeachingPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([placeId, fromKey])
+  @@map("place_rate_changes")
+}
+
+// Mỗi lần nhận tiền từ nơi dạy 1 dòng (nhận nhiều đợt được). Xoá mềm như Payment.
+model PlacePayment {
+  id         Int           @id @default(autoincrement())
+  placeId    Int           @map("place_id")
+  year       Int
+  month      Int
+  amount     Int
+  receivedAt DateTime      @map("received_at") @db.Date
+  note       String?       @db.Text
+  source     String        @default("manual") @db.VarChar(8) // manual | payos (AO)
+  isDeleted  Boolean       @default(false) @map("is_deleted")
+  deletedAt  DateTime?     @map("deleted_at")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  place      TeachingPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@index([placeId, year, month])
+  @@map("place_payments")
 }
 
 // Lịch sử ẩn nơi học của HS (RULING AL Task 2): học phí tháng M theo nơi của HS tại M, UI không hiện.
