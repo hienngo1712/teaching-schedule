@@ -15,7 +15,7 @@ const DATA_SHEETS = [
 const HEADERS: Record<string, string[]> = {
   "Thông tin": ["Mục", "Giá trị"],
   "Học sinh": [
-    "ID", "Họ tên", "Lớp", "Tên phụ huynh", "SĐT phụ huynh", "Học phí/buổi",
+    "ID", "Họ tên", "Lớp", "Nơi học", "Tên phụ huynh", "SĐT phụ huynh", "Học phí/buổi",
     "Cách thu", "Học phí tháng",
     "Đang học", "Ghi chú", "Ngày tạo", "Cập nhật lần cuối",
   ],

@@ -92,6 +92,7 @@ export async function buildBackupWorkbook(
       select: {
         id: true, fullName: true, grade: true, parentName: true, parentPhone: true,
         tuitionFee: true, billingMode: true, monthlyFee: true, isActive: true, notes: true, createdAt: true, updatedAt: true,
+        place: { select: { name: true } },
       },
     }),
     db.studentBillingChange.findMany({
@@ -169,6 +170,8 @@ export async function buildBackupWorkbook(
     { header: "ID", width: 8, value: (s) => s.id },
     { header: "Họ tên", width: 26, value: (s) => s.fullName },
     { header: "Lớp", width: 6, value: (s) => s.grade },
+    // Nơi học hiện tại (spec AL §4.2).
+    { header: "Nơi học", width: 20, value: (s) => s.place?.name },
     { header: "Tên phụ huynh", width: 22, value: (s) => s.parentName },
     { header: "SĐT phụ huynh", width: 15, kind: "phone", value: (s) => s.parentPhone },
     { header: "Học phí/buổi", width: 14, kind: "money", value: (s) => s.tuitionFee },
