@@ -48,6 +48,13 @@ describe("PayosTuitionCard (spec AH §4.2)", () => {
     expect(screen.getByText("contact")).toBeTruthy()
     expect(screen.getByTestId("locked-section")).toBeTruthy()
   })
+  // FIX AO: một kết nối payOS dùng cho cả học phí và phiếu nơi dạy.
+  it("ghi rõ kết nối dùng chung cho học phí và phiếu nơi dạy (gói Pro)", () => {
+    h.status = { connected: false, connectedAt: null, featureUnlocked: true }
+    renderCard()
+    expect(screen.getByText("Dùng chung cho học phí và phiếu nơi dạy (gói Pro).")).toBeTruthy()
+  })
+
   it("Pro chưa nối: 3 ô khoá + nút Kết nối gọi connect với giá trị đã nhập", () => {
     h.status = { connected: false, connectedAt: null, featureUnlocked: true }
     renderCard()

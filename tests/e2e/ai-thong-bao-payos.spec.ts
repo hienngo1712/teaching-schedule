@@ -114,7 +114,7 @@ for (const vp of [{ width: 375, height: 812 }, { width: 1280, height: 800 }]) {
 
     // 4. Mở chuông: có dòng của HS, số chưa đọc tắt.
     await bell.click();
-    const panel = page.getByRole('dialog').filter({ hasText: 'Tiền học qua payOS' });
+    const panel = page.getByRole('dialog').filter({ hasText: 'Tiền vào qua payOS' });
     const row = panel.getByRole('button', { name: new RegExp(`PH của ${NAME} đã chuyển`) });
     // Chờ Sheet/Popover chạy xong hiệu ứng mở rồi mới chụp.
     await expect(row).toBeInViewport();

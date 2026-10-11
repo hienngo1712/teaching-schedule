@@ -290,7 +290,7 @@ test("capture-25-shots", async ({ page, browser }, testInfo) => {
 
   // 20e. chuong-payos: chuông tiền payOS trên cùng mở ra, viền đỏ danh sách (bản 0.18.0)
   await page.getByRole("button", { name: "Thông báo tiền học" }).click()
-  const bellList = page.getByRole("dialog").filter({ hasText: "Tiền học qua payOS" })
+  const bellList = page.getByRole("dialog").filter({ hasText: "Tiền vào qua payOS" })
   await expect(bellList.getByText(/PH của .* đã chuyển/).first()).toBeVisible()
   await mark(bellList)
   await shot(page, "chuong-payos", kind)

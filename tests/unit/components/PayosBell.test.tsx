@@ -93,7 +93,7 @@ describe("PayosBell (spec AI §5)", () => {
     h.data = { enabled: true, unread: 0, items: [{ ...ITEM, unread: false }] }
     renderBell()
     fireEvent.click(bell())
-    await screen.findByText("Tiền học qua payOS")
+    await screen.findByText("Tiền vào qua payOS")
     expect(h.markSeen).not.toHaveBeenCalled()
   })
   it("bấm dòng → push /tuition?year=2026&month=8&studentId=<id> và đóng", async () => {
@@ -102,7 +102,7 @@ describe("PayosBell (spec AI §5)", () => {
     fireEvent.click(bell())
     fireEvent.click(await screen.findByRole("button", { name: /Trần Thị Bé/ }))
     expect(h.push).toHaveBeenCalledWith("/tuition?year=2026&month=8&studentId=42")
-    expect(screen.queryByText("Tiền học qua payOS")).toBeNull()
+    expect(screen.queryByText("Tiền vào qua payOS")).toBeNull()
   })
   // Spec AO §3.4: dòng tiền nơi dạy "<tên nơi> · Tháng M · +X đ", bấm mở Thu nhập tháng M, sheet nơi đó.
   it("dòng nơi dạy: hiện tên nơi · tháng · số tiền; bấm → /timesheet?tab=income&year=&month=&placeId=", async () => {
@@ -150,7 +150,7 @@ describe("PayosBell (spec AI §5)", () => {
     renderBell()
     fireEvent.click(bell())
     const dialog = await screen.findByRole("dialog")
-    expect(dialog.textContent).toContain("Tiền học qua payOS")
+    expect(dialog.textContent).toContain("Tiền vào qua payOS")
   })
   it("mở chuông → huỷ lần hỏi đang chạy rồi mới tắt huy hiệu; markSeen xong thì hỏi lại (review AI #1)", async () => {
     const order: string[] = []
