@@ -30,6 +30,10 @@ const stats = {
   totalSessionsMonth: 12,
   attendanceRate: 90,
   expectedRevenueMonth: 1200000,
+  hasPlaceRate: false,
+  placeIncomeMonth: 0,
+  placeReceivedMonth: 0,
+  teachingHoursMonth: 0,
 }
 
 vi.mock("@/lib/trpc", () => ({
@@ -91,15 +95,59 @@ describe("Dashboard — chỉ dạy trung tâm (spec AL §4.4) [RF 2]", () => {
     placeState.summary = undefined
   })
 
-  it("4 ô còn lại nằm chung 1 lưới (không lỗ ở 375/1280), không có nút Xem thêm (FIX AL F2)", () => {
+  it("các ô còn lại (4 + Giờ dạy) nằm chung 1 lưới, ô lẻ cuối chiếm cả hàng ở mobile (không lỗ), không có nút Xem thêm (FIX AL F2)", () => {
     placeState.summary = { count: 1, hasPerStudent: false, hasPerSession: true }
     renderPage()
     const cards = screen.getAllByTestId("stat-card")
-    expect(cards).toHaveLength(4)
+    expect(cards).toHaveLength(5)
+    expect(cards[4].className).toContain("col-span-2")
     const grids = new Set(cards.map((c) => c.parentElement))
     expect(grids.size).toBe(1)
     expect([...grids][0]!.className).not.toContain("hidden")
     expect(screen.queryByRole("button", { name: /Xem thêm/ })).toBeNull()
     placeState.summary = undefined
+  })
+})
+
+describe("Dashboard — thu nhập nơi dạy + giờ dạy (spec AM §4.3)", () => {
+  const set = (o: Partial<typeof stats>) => Object.assign(stats, o)
+  const reset = () => {
+    set({ hasPlaceRate: false, placeIncomeMonth: 0, placeReceivedMonth: 0, teachingHoursMonth: 0 })
+    placeState.summary = undefined
+  }
+  const labels = () => screen.getAllByTestId("stat-card").map((c) => c.querySelector("p")?.textContent)
+  const card = (label: string) => screen.getAllByTestId("stat-card").find((c) => c.querySelector("p")?.textContent === label)!
+
+  it("chỉ theo học sinh: không thêm thẻ Thu nhập, không có Giờ dạy", () => {
+    placeState.summary = { count: 1, hasPerStudent: true, hasPerSession: false }
+    renderPage()
+    expect(labels()).not.toContain("Thu nhập tháng này")
+    expect(labels()).not.toContain("Giờ dạy tháng này")
+    reset()
+  })
+
+  it("hỗn hợp có đơn giá: Thu nhập = học phí + nơi, 2 dòng phụ; Giờ dạy", () => {
+    placeState.summary = { count: 2, hasPerStudent: true, hasPerSession: true }
+    set({ hasPlaceRate: true, placeIncomeMonth: 555000, placeReceivedMonth: 500000, teachingHoursMonth: 4.5 })
+    renderPage()
+    expect(valueOf("Thu nhập tháng này").textContent).toBe("1.555.000 đ")
+    expect(card("Thu nhập tháng này").textContent).toContain("Học phí 1.000.000 đ")
+    expect(card("Thu nhập tháng này").textContent).toContain("Nơi dạy 555.000 đ · đã nhận 500.000 đ")
+    expect(valueOf("Giờ dạy tháng này").textContent).toBe("4,5 giờ")
+    // 10 ô chung 1 lưới: không có hàng lửng giữa 2 lưới ở desktop.
+    const cards = screen.getAllByTestId("stat-card")
+    expect(cards).toHaveLength(10)
+    expect(new Set(cards.map((c) => c.parentElement)).size).toBe(1)
+    reset()
+  })
+
+  it("[RF 4] chỉ theo ca/giờ có đơn giá: thẻ Thu nhập chỉ có dòng Nơi dạy", () => {
+    placeState.summary = { count: 1, hasPerStudent: false, hasPerSession: true }
+    set({ hasPlaceRate: true, placeIncomeMonth: 555000, placeReceivedMonth: 0, teachingHoursMonth: 3 })
+    renderPage()
+    expect(valueOf("Thu nhập tháng này").textContent).toBe("555.000 đ")
+    expect(card("Thu nhập tháng này").textContent).not.toContain("Học phí")
+    expect(card("Thu nhập tháng này").textContent).toContain("Nơi dạy 555.000 đ")
+    reset()
   })
 })

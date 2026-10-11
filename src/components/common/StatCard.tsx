@@ -10,11 +10,12 @@ type Props = {
   icon?: ReactNode
   loading?: boolean
   valueClassName?: string
+  className?: string
 }
 
-export function StatCard({ label, value, hint, icon, loading, valueClassName }: Props) {
+export function StatCard({ label, value, hint, icon, loading, valueClassName, className }: Props) {
   return (
-    <Card data-testid="stat-card" className="bg-white">
+    <Card data-testid="stat-card" className={cn("bg-white", className)}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium text-muted-foreground">{label}</p>

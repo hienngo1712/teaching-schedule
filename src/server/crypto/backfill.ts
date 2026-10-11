@@ -21,6 +21,7 @@ export const FIELD_TARGETS: readonly FieldTarget[] = [
   { model: "TeachingSession", table: "teaching_sessions", column: "cancel_reason", field: "cancelReason" },
   { model: "MonthlyTuition", table: "monthly_tuition", column: "notes", field: "notes" },
   { model: "Payment", table: "payments", column: "note", field: "note" },
+  { model: "PlacePayment", table: "place_payments", column: "note", field: "note" },
   { model: "PlanOrder", table: "plan_orders", column: "note", field: "note" },
   { model: "ChatMessage", table: "chat_messages", column: "body", field: "body" },
   { model: "TeacherPayos", table: "teacher_payos", column: "client_id", field: "clientId", idColumn: "user_id" },

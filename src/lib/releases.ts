@@ -13,6 +13,18 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.21.0",
+    date: "2026-10-11",
+    title: "Bảng công và thu nhập theo nơi dạy",
+    summary: "Nơi trả theo ca/giờ có Bảng công (số ca, số giờ), Thu nhập dự kiến theo đơn giá và ghi nhận tiền đã nhận.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Bảng công", body: "Số ca, số giờ đã dạy từng tháng ở mỗi nơi trả theo ca/giờ (gồm ca bù, không tính ca huỷ); xuất Excel hoặc tải ảnh để đối chiếu với trung tâm." },
+      { kind: "new", title: "Thu nhập theo nơi dạy", body: "Nhập đơn giá theo ca hoặc theo giờ ở Nơi dạy để xem thu nhập dự kiến mỗi tháng; Tổng quan có thẻ Thu nhập và Giờ dạy." },
+      { kind: "new", title: "Đã nhận tiền", body: "Ghi lại từng lần nơi dạy trả tiền, xem còn thiếu bao nhiêu; Cần chú ý nhắc nơi còn thiếu tiền tháng trước." },
+    ],
+  },
+  {
     version: "0.20.0",
     date: "2026-10-11",
     title: "Dạy nhiều nơi",

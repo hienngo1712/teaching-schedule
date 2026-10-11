@@ -5,8 +5,10 @@ import { Check, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { SUBJECT_COLORS, pickNextColor } from "@/lib/subject-colors"
 import { cn, vnDateParts } from "@/lib/utils"
@@ -25,6 +27,16 @@ type Props = {
 }
 
 const BILLINGS: PlaceBilling[] = ["per_student", "per_session"]
+const RATE_UNITS = ["session", "hour"] as const
+type RateUnit = (typeof RATE_UNITS)[number]
+
+// 13 tháng: tháng hiện tại và 12 tháng trước (spec AM §4.2), dạng "YYYY-MM".
+function rateMonths(year: number, month: number): string[] {
+  return Array.from({ length: 13 }, (_, i) => {
+    const d = new Date(Date.UTC(year, month - 1 - i, 1))
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
+  })
+}
 
 // Như SubjectFormDialog (mẫu AJ 07a): chỉ mount khi mở nên state khởi tạo thẳng từ props.
 export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) {
@@ -35,11 +47,34 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
   const [billing, setBilling] = useState<PlaceBilling>(place?.billing ?? "per_student")
   const [color, setColor] = useState(place?.color ?? pickNextColor(usedColors))
   const [error, setError] = useState<string | null>(null)
+  const { year, month } = vnDateParts()
+  const currentMonth = `${year}-${String(month).padStart(2, "0")}`
+  const [rateUnit, setRateUnit] = useState<RateUnit>(place?.rate?.unit ?? "session")
+  const [rateAmount, setRateAmount] = useState<number | undefined>(place?.rate?.amount)
+  const [rateFrom, setRateFrom] = useState(currentMonth)
+  const rateMut = trpc.placeRate.set.useMutation({
+    onSuccess: () => {
+      utils.place.invalidate()
+      utils.income.invalidate()
+    },
+    onError: (e) => toast.error(e.message),
+  })
+  // Đơn giá chỉ cho nơi theo ca/giờ; gửi khi số tiền/đơn vị/tháng áp dụng đổi so với hiện tại.
+  const amount = rateAmount ?? 0
+  const rateChanged =
+    billing === "per_session" &&
+    (amount !== (place?.rate?.amount ?? 0) ||
+      (amount > 0 && rateUnit !== place?.rate?.unit) ||
+      (amount > 0 && !!place?.hasSessions && rateFrom !== currentMonth))
 
   const handlers = {
     onSuccess: (saved: { id: number } | undefined) => {
       toast.success(t("place_saved"))
       utils.place.invalidate()
+      if (saved && rateChanged) {
+        const [fromYear, fromMonth] = rateFrom.split("-").map(Number)
+        rateMut.mutate({ placeId: saved.id, unit: rateUnit, amount, fromYear, fromMonth })
+      }
       if (saved) onSaved?.(saved.id)
       onClose()
     },
@@ -49,7 +84,6 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
   const updateMut = trpc.place.update.useMutation(handlers)
   const isPending = createMut.isPending || updateMut.isPending
   const trimmed = name.trim()
-  const { year, month } = vnDateParts()
   const billingChanged = !!place && place.hasData && billing !== place.billing
 
   const save = () => {
@@ -132,6 +166,58 @@ export function PlaceFormDialog({ place, usedColors, onClose, onSaved }: Props) 
               </p>
             )}
           </div>
+
+          {billing === "per_session" && (
+            <div className="space-y-2" data-testid="place-rate">
+              <p className="text-sm font-medium">{t("place_rate")}</p>
+              <div role="radiogroup" aria-label={t("place_rate")} className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
+                {RATE_UNITS.map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    role="radio"
+                    aria-checked={rateUnit === u}
+                    onClick={() => setRateUnit(u)}
+                    className={cn("min-h-11 rounded-md text-xs font-bold md:min-h-9", rateUnit === u ? "bg-white text-primary shadow-sm" : "text-slate-500")}
+                  >
+                    {t(u === "session" ? "place_rate_session" : "place_rate_hour")}
+                  </button>
+                ))}
+              </div>
+              <Label htmlFor="place-rate-amount" className="sr-only">
+                {t(rateUnit === "session" ? "place_rate_amount_session" : "place_rate_amount_hour")}
+              </Label>
+              <CurrencyInput
+                id="place-rate-amount"
+                inputMode="numeric"
+                value={rateAmount}
+                onChange={setRateAmount}
+                placeholder={t(rateUnit === "session" ? "place_rate_amount_session" : "place_rate_amount_hour")}
+                className="h-11 md:h-10"
+              />
+              <p className="text-xs text-slate-500">{t("place_rate_hint")}</p>
+              {place?.hasSessions && (
+                <div className="space-y-1">
+                  <Label htmlFor="place-rate-from" className="text-xs font-medium text-slate-600">
+                    {t("place_rate_from")}
+                  </Label>
+                  {/* Radix có lúc gọi onValueChange("") → bỏ qua (như PlaceSelect). */}
+                  <Select value={rateFrom} onValueChange={(v) => v && setRateFrom(v)}>
+                    <SelectTrigger id="place-rate-from" className="h-11 md:h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rateMonths(year, month).map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {`${t("month_abbr")}${Number(m.slice(5))}/${m.slice(0, 4)}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <p className="text-sm font-medium">{t("place_color")}</p>

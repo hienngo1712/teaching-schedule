@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { Ellipsis } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-import { NAV_ITEMS, filterByPlaces, isMoreActive, isNavActive } from "./nav-items"
+import { isMoreActive, isNavActive, tabItems } from "./nav-items"
 import { MoreSheet } from "./MoreSheet"
 import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 
@@ -28,10 +28,10 @@ export function BottomTabBar() {
   const [openAt, setOpenAt] = useState<string | null>(null)
   // Route đổi mà Radix không gọi onOpenChange → xoá openAt, không thì quay lại route cũ sheet tự mở.
   if (openAt !== null && openAt !== pathname) setOpenAt(null)
-  const moreActive = isMoreActive(pathname)
-  // Tab dưới = 4 mục đầu còn hiện + Thêm; chỉ dạy trung tâm thì không có tab Học phí (spec AL §4.4).
+  // Tab dưới = 4 mục đầu còn hiện + Thêm; chỉ dạy trung tâm thì Bảng công thay Học phí (spec AL §4.4, AM RF 4).
   const { summary } = usePlaceSummary()
-  const TAB_ITEMS = filterByPlaces(NAV_ITEMS, summary).slice(0, 4)
+  const moreActive = isMoreActive(pathname, summary)
+  const TAB_ITEMS = tabItems(summary)
 
   return (
     <nav

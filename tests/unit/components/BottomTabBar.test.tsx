@@ -158,7 +158,7 @@ describe("BottomTabBar", () => {
 })
 
 describe("BottomTabBar — chỉ dạy trung tâm (spec AL §4.4) [RF 2]", () => {
-  it("tab không có Học phí; sheet Thêm không có Báo cáo", async () => {
+  it("tab không có Học phí, Bảng công vào chỗ đó (AM RF 4); sheet Thêm không có Báo cáo, không lặp Bảng công", async () => {
     placeState.summary = { count: 1, hasPerStudent: false, hasPerSession: true }
     render(
       <LanguageProvider forcedLanguage="vi">
@@ -167,10 +167,12 @@ describe("BottomTabBar — chỉ dạy trung tâm (spec AL §4.4) [RF 2]", () =>
     )
     const nav = screen.getByRole("navigation")
     const hrefs = within(nav).getAllByRole("link").map((l) => l.getAttribute("href"))
-    expect(hrefs).toEqual(["/dashboard", "/calendar", "/students"])
+    expect(hrefs).toEqual(["/dashboard", "/calendar", "/students", "/timesheet"])
     fireEvent.click(screen.getByRole("button", { name: /Thêm/ }))
     const dialog = await screen.findByRole("dialog")
-    expect(within(dialog).getAllByRole("link").map((l) => l.getAttribute("href"))).not.toContain("/reports")
+    const more = within(dialog).getAllByRole("link").map((l) => l.getAttribute("href"))
+    expect(more).not.toContain("/reports")
+    expect(more).not.toContain("/timesheet")
     placeState.summary = undefined
   })
 })

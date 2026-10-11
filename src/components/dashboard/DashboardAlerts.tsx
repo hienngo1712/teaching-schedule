@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react"
 import Link from "next/link"
-import { CalendarClock, CalendarX, Wallet } from "lucide-react"
+import { CalendarClock, CalendarX, MapPin, Wallet } from "lucide-react"
 import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -120,7 +120,8 @@ export function DashboardAlerts() {
   // Lỗi hoặc không có gì cần xử lý → ẩn cả khối (spec S10).
   const data = query.data
   const debts = noPerStudent ? [] : (data?.debts ?? [])
-  const hasAlerts = !!data && (debts.length > 0 || data.idleStudents.length > 0 || unrescheduled.length > 0)
+  const hasAlerts =
+    !!data && (debts.length > 0 || data.idleStudents.length > 0 || unrescheduled.length > 0 || data.placeShortfall.length > 0)
 
   return (
     <>
@@ -190,6 +191,23 @@ export function DashboardAlerts() {
                       {t("alert_debt_months").replace("{n}", d.months >= 12 ? "12+" : String(d.months))}
                     </p>
                   </div>
+                </Link>
+              )}
+            />
+            <AlertGroup
+              testId="alert-group-place"
+              icon={<MapPin className="size-4 shrink-0 text-muted-foreground" />}
+              title={t("alert_place_title")}
+              description={t("alert_place_desc")}
+              items={data.placeShortfall}
+              getKey={(p) => p.placeId}
+              renderRow={(p) => (
+                <Link href={`/timesheet?tab=income&year=${p.year}&month=${p.month}`} className={ROW_CLASS}>
+                  <p className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+                    <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.color }} />
+                    <span className="truncate font-medium text-slate-900">{p.name}</span>
+                  </p>
+                  <p className="shrink-0 whitespace-nowrap text-sm font-semibold text-debt">{formatCurrency(p.amount)}</p>
                 </Link>
               )}
             />

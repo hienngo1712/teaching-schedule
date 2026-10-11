@@ -9,6 +9,7 @@ import { computeClosingBalances, getMonthlyOutstanding, getMonthlyTuitionStatus 
 import { byGradeThenName } from "@/lib/name-search"
 import { monthKey, resolveBilling, revenueForMonth, type BillingChange } from "@/lib/billing"
 import { loadBillingChanges } from "./billing.service"
+import { getIncomeMonth, sessionHours } from "./timesheet.service"
 
 // Gom link theo (HS, tháng) rồi tính theo cách thu tháng đó: trọn tháng cộng 1 lần/tháng.
 function sumRevenue(
@@ -271,7 +272,7 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
   const endOfMonth = new Date(Date.UTC(vnYear, vnMonth, 1))
 
   // Chạy các query song song để giảm latency tổng (đặc biệt quan trọng với serverless DB)
-  const [totalStudents, sessionsToday, sessionsThisMonth, outstanding, paidAgg] = await Promise.all([
+  const [totalStudents, sessionsToday, sessionsThisMonth, outstanding, paidAgg, placeIncome] = await Promise.all([
     // 1. Total active students
     db.student.count({ where: { userId, isActive: true } }),
 
@@ -297,6 +298,9 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
       where: { student: { userId }, year: vnYear, month: vnMonth },
       _sum: { paidAmount: true },
     }),
+
+    // Thu nhập nơi theo ca/giờ có đơn giá (spec AM §4.3): chỉ ca đã dạy tới hôm nay.
+    getIncomeMonth(db, userId, { year: vnYear, month: vnMonth }),
   ])
 
   const totalSessionsMonth = sessionsThisMonth.length
@@ -332,6 +336,10 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
 
   const totalUnpaidMonth = outstanding.totalOutstanding
 
+  // Giờ dạy tháng này: ca đã dạy (≤ hôm nay, không huỷ) ở mọi nơi.
+  const teachingHoursMonth =
+    Math.round(sessionsThisMonth.filter((s) => s.sessionDate <= today).reduce((a, s) => a + sessionHours(s.startTime, s.endTime), 0) * 100) / 100
+
   return {
     totalStudents,
     sessionsToday,
@@ -342,6 +350,10 @@ export async function getDashboardStats(db: PrismaClient, userId: number) {
     totalUnpaidMonth,
     unpaidPrevMonths: outstanding.previousOutstanding,
     totalPaidMonth: paidAgg._sum.paidAmount ?? 0,
+    hasPlaceRate: placeIncome.length > 0,
+    placeIncomeMonth: placeIncome.reduce((a, r) => a + r.expected, 0),
+    placeReceivedMonth: placeIncome.reduce((a, r) => a + r.received, 0),
+    teachingHoursMonth,
   }
 }
 
@@ -359,6 +371,8 @@ export type DashboardAlerts = {
   }[]
   idleStudents: { studentId: number; fullName: string; grade: number }[]
   unrescheduled: SessionDTO[]
+  // Nơi theo ca/giờ còn thiếu tiền tháng trước (spec AM §4.3).
+  placeShortfall: { placeId: number; name: string; color: string; amount: number; year: number; month: number }[]
 }
 
 const DEBT_LOOKBACK_MONTHS = 12
@@ -399,7 +413,10 @@ export async function getDashboardAlerts(
   const idleTo = dayOffset(7)
   const cancelFrom = dayOffset(-60)
 
-  const [tuition, inactiveStudents, idle, unrescheduled] = await Promise.all([
+  const prevYear = month === 1 ? year - 1 : year
+  const prevMonth = month === 1 ? 12 : month - 1
+
+  const [tuition, inactiveStudents, idle, unrescheduled, prevIncome] = await Promise.all([
     // Cùng tham số với getMonthlyOutstanding để số nợ khớp màn Học phí; persist=false: không ghi DB.
     getMonthlyTuitionStatus(db, userId, { year, month, status: "all", page: 1, limit: 1_000_000 }, false),
     db.student.findMany({ where: { userId, isActive: false }, select: { id: true } }),
@@ -421,6 +438,7 @@ export async function getDashboardAlerts(
       select: { id: true, fullName: true, grade: true },
     }),
     getCancelledWithoutMakeup(db, userId, { from: cancelFrom }),
+    getIncomeMonth(db, userId, { year: prevYear, month: prevMonth }),
   ])
 
   const inactiveIds = new Set(inactiveStudents.map((s) => s.id))
@@ -443,9 +461,6 @@ export async function getDashboardAlerts(
       isActive: !inactiveIds.has(it.studentId),
     }))
     .filter((d) => d.amount > 0)
-
-  const prevYear = month === 1 ? year - 1 : year
-  const prevMonth = month === 1 ? 12 : month - 1
 
   const debtorIds = debtors.map((d) => d.studentId)
   const [monthsById, prevNotices] = await Promise.all([
@@ -473,5 +488,8 @@ export async function getDashboardAlerts(
     debts,
     idleStudents: [...idle].sort(byGradeThenName).map((s) => ({ studentId: s.id, fullName: s.fullName, grade: s.grade })),
     unrescheduled,
+    placeShortfall: prevIncome
+      .filter((r) => r.expected > r.received)
+      .map((r) => ({ placeId: r.placeId, name: r.name, color: r.color, amount: r.expected - r.received, year: prevYear, month: prevMonth })),
   }
 }

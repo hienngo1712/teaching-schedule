@@ -9,7 +9,7 @@ import { FEATURE_PLAN } from "@/lib/plans"
 import { usePlan } from "@/hooks/usePlan"
 import { LockBadge } from "@/components/plan/LockBadge"
 import { openUpgrade } from "@/components/plan/upgrade-store"
-import { MORE_ITEMS, filterByPlaces } from "./nav-items"
+import { moreItems } from "./nav-items"
 import { usePlaceSummary } from "@/hooks/usePlaceSummary"
 
 type Props = {
@@ -37,7 +37,7 @@ export function MoreSheet({ open, onOpenChange, children }: Props) {
         <SheetTitle className="sr-only">{t("more")}</SheetTitle>
         <div aria-hidden className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-[#D5D8DE]" />
         <ul className="flex flex-col gap-1">
-          {filterByPlaces(MORE_ITEMS, summary).map((item) => {
+          {moreItems(summary).map((item) => {
             const Icon = item.icon
             const plan = item.feature ? FEATURE_PLAN[item.feature] : null
             const content = (

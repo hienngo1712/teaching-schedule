@@ -10,6 +10,7 @@ const NOW = new Date("2026-09-25T14:30:00Z")
 
 const DATA_SHEETS = [
   "Học sinh", "Lịch sử cách thu", "Môn học", "Ca dạy", "Điểm danh", "Học phí tháng", "Lần thu", "Lịch sử lên lớp",
+  "Nơi dạy", "Đơn giá", "Tiền nơi dạy trả",
 ]
 
 const HEADERS: Record<string, string[]> = {
@@ -40,6 +41,10 @@ const HEADERS: Record<string, string[]> = {
     "Ghi chú", "Ngày tạo", "Cập nhật lần cuối",
   ],
   "Lịch sử lên lớp": ["ID", "Năm học", "Thời điểm chạy", "Cách chạy", "Số HS lên lớp", "Số HS cho nghỉ"],
+  // FIX AM F3: dữ liệu nơi dạy (spec AL/AM).
+  "Nơi dạy": ["ID", "Tên nơi dạy", "Loại", "Cách tính hiện tại", "Đơn giá hiện tại", "Tính theo", "Đã xoá", "Ngày tạo"],
+  "Đơn giá": ["ID", "ID nơi dạy", "Nơi dạy", "Từ tháng", "Tính theo", "Đơn giá", "Ngày tạo"],
+  "Tiền nơi dạy trả": ["ID", "ID nơi dạy", "Nơi dạy", "Năm", "Tháng", "Ngày nhận", "Số tiền", "Ghi chú", "Ngày tạo"],
   "Cài đặt": ["Mục", "Giá trị"],
 }
 
@@ -53,6 +58,10 @@ const COUNTERS: Record<string, (userId: number) => Promise<number>> = {
   "Học phí tháng": (userId) => db.monthlyTuition.count({ where: { student: { userId } } }),
   "Lần thu": (userId) => db.payment.count({ where: { monthlyTuition: { student: { userId } } } }),
   "Lịch sử lên lớp": (userId) => db.classUpgradeLog.count({ where: { userId } }),
+  "Nơi dạy": (userId) => db.teachingPlace.count({ where: { userId } }),
+  "Đơn giá": (userId) => db.placeRateChange.count({ where: { place: { userId } } }),
+  // Lần nhận đã xoá không xuất (như xoá hẳn khỏi dữ liệu người dùng thấy).
+  "Tiền nơi dạy trả": (userId) => db.placePayment.count({ where: { place: { userId }, isDeleted: false } }),
 }
 
 // Cột token của G chỉ có sau khi G merge; có thì phải chắc chắn không lọt ra file.
@@ -62,7 +71,7 @@ const HAS_PARENT_TOKEN =
     ?.fields.some((f) => f.name === "parentLinkToken") ?? false
 const PARENT_TOKEN = "BKtoken_" + "x".repeat(35) // 43 ký tự, đúng dạng token G
 
-const FOREIGN_TEXTS = ["Người Lạ GV2", "Môn Lạ GV2", "Ca Lạ GV2", "Tiền Lạ GV2"]
+const FOREIGN_TEXTS = ["Người Lạ GV2", "Môn Lạ GV2", "Ca Lạ GV2", "Tiền Lạ GV2", "Nơi Lạ GV2", "Tiền nơi Lạ GV2"]
 
 async function loadBackup(userId: number): Promise<ExcelJS.Workbook> {
   const wb = await buildBackupWorkbook(db, userId, NOW)
@@ -119,6 +128,8 @@ describe("buildBackupWorkbook", () => {
   let cancelledSessionId: number
   let makeupSessionId: number
   let paymentId: number
+  let centerId: number
+  let placePaymentId: number
 
   beforeAll(async () => {
     const a = await getAuthedCaller("teacher")
@@ -198,6 +209,18 @@ describe("buildBackupWorkbook", () => {
       studentId: stranger.id, year: 2026, month: 5, amount: 90000,
       paidAt: "2026-05-11", method: "cash", note: "Tiền Lạ GV2",
     })
+
+    // Nơi dạy theo ca/giờ có đơn giá + tiền nơi dạy trả (1 lần đã xoá không xuất).
+    const center = (await a.place.create({ name: "TT Sao Lưu", kind: "center", color: "#0891B2", billing: "per_session" }))!
+    centerId = center.id
+    await a.placeRate.set({ placeId: centerId, unit: "hour", amount: 185000, fromYear: 2026, fromMonth: 9 })
+    placePaymentId = (await a.placePayment.create({
+      placeId: centerId, year: 2026, month: 8, amount: 555000, receivedAt: "2026-09-05", note: "TT chuyển khoản",
+    })).id
+    const gone = await a.placePayment.create({ placeId: centerId, year: 2026, month: 8, amount: 1000, receivedAt: "2026-09-06" })
+    await a.placePayment.delete({ id: gone.id })
+    const strangerPlace = (await b.place.create({ name: "Nơi Lạ GV2", kind: "center", color: "#0891B2", billing: "per_session" }))!
+    await b.placePayment.create({ placeId: strangerPlace.id, year: 2026, month: 8, amount: 1, receivedAt: "2026-09-05", note: "Tiền nơi Lạ GV2" })
   })
 
   it("đủ sheet đúng thứ tự, dòng 1 đúng tiêu đề", async () => {
@@ -309,6 +332,29 @@ describe("buildBackupWorkbook", () => {
       expect(sheet(wb, name).actualRowCount, name).toBe(1)
       expect(infoValue(wb, `Số dòng: ${name}`), name).toBe(0)
     }
+  })
+
+  it("Nơi dạy / Đơn giá / Tiền nơi dạy trả: nhãn tiếng Việt, tiền số nguyên, ghi chú đã giải mã", async () => {
+    const wb = await loadBackup(teacherId)
+    const places = sheet(wb, "Nơi dạy")
+    expect(cellOf(places, centerId, "Tên nơi dạy").value).toBe("TT Sao Lưu")
+    expect(cellOf(places, centerId, "Loại").value).toBe("Trung tâm")
+    expect(cellOf(places, centerId, "Cách tính hiện tại").value).toBe("Theo ca/giờ")
+    expect(cellOf(places, centerId, "Đơn giá hiện tại").value).toBe(185000)
+    expect(cellOf(places, centerId, "Tính theo").value).toBe("Theo giờ")
+    expect(cellOf(places, centerId, "Đã xoá").value).toBe("Không")
+
+    const rates = sheet(wb, "Đơn giá")
+    expect(rates.getRow(2).values).toEqual(expect.arrayContaining([centerId, "TT Sao Lưu", "Từ đầu", "Theo giờ", 185000]))
+
+    const pays = sheet(wb, "Tiền nơi dạy trả")
+    expect(pays.actualRowCount).toBe(2)
+    expect(cellOf(pays, placePaymentId, "Nơi dạy").value).toBe("TT Sao Lưu")
+    expect(cellOf(pays, placePaymentId, "Số tiền").value).toBe(555000)
+    expect(cellOf(pays, placePaymentId, "Ghi chú").value).toBe("TT chuyển khoản")
+    const received = cellOf(pays, placePaymentId, "Ngày nhận")
+    expect((received.value as Date).toISOString().slice(0, 10)).toBe("2026-09-05")
+    expect(received.numFmt).toBe("dd/mm/yyyy")
   })
 
   it("Ca dạy: ngày là ô Date dd/mm/yyyy, giờ HH:mm, nhãn trạng thái, ca bù trỏ ca gốc", async () => {

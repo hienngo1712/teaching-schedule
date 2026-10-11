@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { History, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -21,6 +21,8 @@ import { trpc, type RouterOutputs } from "@/lib/trpc"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import type vi from "@/language/vi.json"
 import { PlaceFormDialog } from "./PlaceFormDialog"
+import { PlaceRateHistoryDialog } from "./PlaceRateHistoryDialog"
+import { formatCurrency } from "@/lib/utils"
 
 type Place = RouterOutputs["place"]["list"][number]
 
@@ -43,6 +45,7 @@ export function PlaceList() {
 
   const [form, setForm] = useState<{ open: false } | { open: true; place?: Place }>({ open: false })
   const [deleteTarget, setDeleteTarget] = useState<Place | null>(null)
+  const [historyOf, setHistoryOf] = useState<Place | null>(null)
 
   const places = query.data ?? []
   const groups = [
@@ -55,9 +58,19 @@ export function PlaceList() {
       <span className="size-4 shrink-0 rounded-full" style={{ backgroundColor: p.color }} />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-slate-900">{p.name}</p>
-        <p className="truncate text-sm text-slate-500">
-          {t(`place_kind_${p.kind}`)} · {t(`place_billing_short_${p.billing}`)}
-        </p>
+        {/* Nơi theo ca/giờ có đơn giá: "Trung tâm · Theo giờ · 185.000 đ/giờ" (spec AM §4.2), xuống dòng thay vì cắt số tiền. */}
+        {p.billing === "per_session" && p.rate ? (
+          <p className="text-sm text-slate-500">
+            {t(`place_kind_${p.kind}`)} · {t(p.rate.unit === "hour" ? "place_rate_hour" : "place_rate_session")} ·{" "}
+            <span className="whitespace-nowrap">
+              {t(p.rate.unit === "hour" ? "income_rate_hour" : "income_rate_session").replace("{amount}", formatCurrency(p.rate.amount))}
+            </span>
+          </p>
+        ) : (
+          <p className="truncate text-sm text-slate-500">
+            {t(`place_kind_${p.kind}`)} · {t(`place_billing_short_${p.billing}`)}
+          </p>
+        )}
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -70,6 +83,12 @@ export function PlaceList() {
             <Pencil className="mr-2 size-4" />
             {t("edit")}
           </DropdownMenuItem>
+          {p.billing === "per_session" && (
+            <DropdownMenuItem className="min-h-11 md:min-h-9" onSelect={() => setHistoryOf(p)}>
+              <History className="mr-2 size-4" />
+              {t("place_rate_history")}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem className="min-h-11 text-red-600 focus:text-red-700 md:min-h-9" onSelect={() => setDeleteTarget(p)}>
             <Trash2 className="mr-2 size-4" />
             {t("delete")}
@@ -121,6 +140,7 @@ export function PlaceList() {
       {form.open && (
         <PlaceFormDialog place={form.place} usedColors={places.map((p) => p.color)} onClose={() => setForm({ open: false })} />
       )}
+      {historyOf && <PlaceRateHistoryDialog place={historyOf} onClose={() => setHistoryOf(null)} />}
 
       <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
