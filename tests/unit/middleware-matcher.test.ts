@@ -16,6 +16,11 @@ describe("middleware matcher", () => {
     expect(needsAuth("/p/khongtontai")).toBe(false)
   })
 
+  it("/n/<token> (trang người trả của nơi dạy) là route công khai (spec AN §2)", () => {
+    expect(needsAuth("/n/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ")).toBe(false)
+    expect(needsAuth("/n/abc?thang=2026-10")).toBe(false)
+  })
+
   it("/privacy là route công khai (spec O 6.7)", () => {
     expect(needsAuth("/privacy")).toBe(false)
   })
@@ -39,7 +44,7 @@ describe("middleware matcher", () => {
   })
 
   it("các route khác vẫn phải đăng nhập, kể cả route bắt đầu bằng 'p'", () => {
-    for (const path of ["/", "/dashboard", "/students", "/profile", "/pay", "/p", "/tuition", "/api/other"]) {
+    for (const path of ["/", "/dashboard", "/students", "/profile", "/pay", "/p", "/n", "/notes", "/tuition", "/api/other"]) {
       expect(needsAuth(path), path).toBe(true)
     }
   })

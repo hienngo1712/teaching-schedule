@@ -33,7 +33,8 @@ describe("Hợp đồng Next 15", () => {
     const identifierPattern = /\b(params|searchParams)\b/
     // Ngoại lệ: reports/page.tsx có biến local `params` (input tRPC); p/[token]/page.tsx là
     // page duy nhất dùng prop route, đã await theo kiểu async của Next 15 (test bên dưới).
-    const ALLOWED = new Set(["src/app/(app)/reports/page.tsx", "src/app/p/[token]/page.tsx"])
+    // n/[token]/page.tsx (trang người trả, spec AN §2) cũng await prop route như trang phụ huynh.
+    const ALLOWED = new Set(["src/app/(app)/reports/page.tsx", "src/app/p/[token]/page.tsx", "src/app/n/[token]/page.tsx"])
 
     const offenders: string[] = []
     function walk(dir: string): void {
@@ -56,11 +57,14 @@ describe("Hợp đồng Next 15", () => {
     expect(offenders, `Các file dính params/searchParams chưa xử lý async: ${offenders.join(", ")}`).toEqual([])
   })
 
-  it("trang phụ huynh await params và searchParams (prop route là Promise ở Next 15)", () => {
-    const src = readFileSync("src/app/p/[token]/page.tsx", "utf8")
-    expect(src).toContain("await params")
-    expect(src).toContain("await searchParams")
-  })
+  it.each(["src/app/p/[token]/page.tsx", "src/app/n/[token]/page.tsx"])(
+    "%s await params và searchParams (prop route là Promise ở Next 15)",
+    (file) => {
+      const src = readFileSync(file, "utf8")
+      expect(src).toContain("await params")
+      expect(src).toContain("await searchParams")
+    }
+  )
 
   it("không dùng fetch() ở bất kỳ đâu trong src/ — nếu thêm phải tự khai báo cache", () => {
     // Next 15 bỏ cache mặc định của fetch. Dự án đi hết qua tRPC nên không

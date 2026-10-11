@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildTransferContent, buildVietQrPayload, crc16Ccitt, tlv } from "@/lib/vietqr"
+import { buildTransferContent, buildVietQrPayload, crc16Ccitt, tlv, buildPlaceTransferContent } from "@/lib/vietqr"
 
 // Mẫu ở spec C §7.1 (đã tính tay bằng CRC-16/CCITT-FALSE).
 const SAMPLE_INPUT = {
@@ -71,5 +71,17 @@ describe("buildTransferContent", () => {
 
   it("ký tự đặc biệt và khoảng trắng thừa bị lọc/gộp", () => {
     expect(buildTransferContent("  Lê  O'Neil (Bin) ", 3)).toBe("HP T3 Le ONeil Bin")
+  })
+})
+
+describe("buildPlaceTransferContent (spec AN §1)", () => {
+  it("GV <chữ cuối họ tên> T<M> <tên nơi>, không dấu, ≤ 25 ký tự", () => {
+    expect(buildPlaceTransferContent("Nguyễn Thu Hà", 9, "TT Ánh Dương")).toBe("GV Ha T9 TT Anh Duong")
+    const long = buildPlaceTransferContent("Nguyễn Thu Hà", 12, "Trung tâm Ngoại ngữ Đông Đô")
+    expect(long.length).toBeLessThanOrEqual(25)
+    expect(long).toMatch(/^[A-Za-z0-9 ]+$/)
+  })
+  it("chữ cuối không có chữ cái (\"Test 2\") thì lấy chữ có chữ cái gần nhất", () => {
+    expect(buildPlaceTransferContent("Giáo viên Test 2", 10, "TT Sao Mai")).toBe("GV Test T10 TT Sao Mai")
   })
 })

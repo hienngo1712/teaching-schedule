@@ -15,9 +15,10 @@ interface StudentReportProps {
   month: number
   toYear?: number
   toMonth?: number
+  placeId?: number
 }
 
-export function StudentReport({ studentId, year, month, toYear, toMonth }: StudentReportProps) {
+export function StudentReport({ studentId, year, month, toYear, toMonth, placeId }: StudentReportProps) {
   const { t } = useTranslation()
   const { data, isLoading, error } = trpc.report.student.useQuery({
     studentId,
@@ -25,6 +26,7 @@ export function StudentReport({ studentId, year, month, toYear, toMonth }: Stude
     month,
     toYear,
     toMonth,
+    placeId,
   })
 
   const sessions = useMemo<SessionDTO[]>(() => {

@@ -216,6 +216,9 @@ export type IncomeRow = {
   expected: number
   received: number
   status: IncomeStatus
+  // Phiếu báo tháng này (spec AN §1): chưa gửi / đã gửi / số tiền đã đổi sau khi gửi.
+  noticeStatus: "none" | "sent" | "changed"
+  noticeSentAt: string | null
 }
 
 // Chỉ nơi theo ca/giờ có đơn giá tại tháng; tháng hiện tại chỉ tính ca đã dạy (≤ hôm nay).
@@ -229,11 +232,17 @@ export async function getIncomeMonth(db: PrismaClient, userId: number, input: { 
   })
   const ids = places.map((p) => p.id)
   const sessions = await loadSessions(db, userId, ids, year, month)
-  const received = await receivedByPlace(db, ids, year, month)
+  const [received, notices] = await Promise.all([
+    receivedByPlace(db, ids, year, month),
+    ids.length === 0 ? [] : db.placeMonthNotice.findMany({ where: { placeId: { in: ids }, year, month } }),
+  ])
+  const noticeOf = new Map(notices.map((n) => [n.placeId, n]))
   return places.map((p) => {
     const stats = summarize(sessions.filter((s) => s.placeId === p.id).map((r) => toTimesheetSession(r, today)))
     const expected = computeIncome({ doneCount: stats.doneCount, doneHours: stats.doneHours, rate: p.rate }) ?? 0
     const got = received.get(p.id) ?? 0
+    const sent = noticeOf.get(p.id)
+    const remaining = Math.max(0, expected - got)
     return {
       placeId: p.id,
       name: p.name,
@@ -245,6 +254,9 @@ export async function getIncomeMonth(db: PrismaClient, userId: number, input: { 
       expected,
       received: got,
       status: incomeStatus(expected, got),
+      // Như phiếu HS: đã trả hết thì coi như đã gửi, không nhắc gửi lại.
+      noticeStatus: !sent ? "none" : remaining === sent.sentAmount || remaining === 0 ? "sent" : "changed",
+      noticeSentAt: sent?.sentAt.toISOString() ?? null,
     }
   })
 }
@@ -320,6 +332,32 @@ export async function getPlaceRateHistory(db: PrismaClient, userId: number, plac
       unit: (r.unit === "hour" ? "hour" : "session") as RateUnit,
       amount: r.amount,
     }))
+}
+
+// Thu nhập 12 tháng gần nhất (spec AN §4): học phí đã thu (MonthlyTuition.paidAmount) + nơi dạy đã nhận, cũ → mới.
+export async function getIncomeLast12(db: PrismaClient, userId: number) {
+  const { year, month } = vnDateParts()
+  const cur = monthKey(year, month)
+  const first = cur - 11
+  const fromYear = Math.floor(first / 12)
+  const [tuitions, payments] = await Promise.all([
+    db.monthlyTuition.groupBy({
+      by: ["year", "month"],
+      where: { student: { userId }, year: { gte: fromYear, lte: year } },
+      _sum: { paidAmount: true },
+    }),
+    db.placePayment.groupBy({
+      by: ["year", "month"],
+      where: { place: { userId }, isDeleted: false, year: { gte: fromYear, lte: year } },
+      _sum: { amount: true },
+    }),
+  ])
+  const tuition = new Map(tuitions.map((r) => [monthKey(r.year, r.month), r._sum.paidAmount ?? 0]))
+  const places = new Map(payments.map((r) => [monthKey(r.year, r.month), r._sum.amount ?? 0]))
+  return Array.from({ length: 12 }, (_, i) => {
+    const k = first + i
+    return { year: Math.floor(k / 12), month: (k % 12) + 1, tuition: tuition.get(k) ?? 0, places: places.get(k) ?? 0 }
+  })
 }
 
 export async function createPlacePayment(

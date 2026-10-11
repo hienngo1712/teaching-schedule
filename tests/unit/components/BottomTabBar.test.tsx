@@ -85,7 +85,7 @@ describe("BottomTabBar", () => {
     fireEvent.click(moreButton())
     const dialog = await screen.findByRole("dialog", { name: "Thêm" })
     const links = within(dialog).getAllByRole("link")
-    expect(links.map((l) => l.getAttribute("href"))).toEqual(["/reports", "/subjects", "/places", "/settings", "/plan", "/trash", "/guide"])
+    expect(links.map((l) => l.getAttribute("href"))).toEqual(["/reports", "/attendance", "/subjects", "/places", "/settings", "/plan", "/trash", "/guide"])
     expect(within(dialog).getByText("Doanh thu, công nợ theo tháng và năm")).toBeTruthy()
     expect(within(dialog).getByText("Thêm, đổi màu, ẩn môn")).toBeTruthy()
     expect(within(dialog).getByText("Tài khoản ngân hàng nhận học phí")).toBeTruthy()

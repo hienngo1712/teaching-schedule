@@ -12,8 +12,8 @@ describe("isMoreActive", () => {
 })
 
 describe("danh sách mục điều hướng", () => {
-  it("NAV_ITEMS 6 mục (Bảng công sau Học phí); MANAGE_ITEMS và MORE_ITEMS đúng thứ tự, có mô tả", () => {
-    expect(NAV_ITEMS.map((i) => i.href)).toEqual(["/dashboard", "/calendar", "/students", "/tuition", "/timesheet", "/reports"])
+  it("NAV_ITEMS 7 mục (Bảng công sau Học phí, Chuyên cần sau Báo cáo); MANAGE_ITEMS và MORE_ITEMS đúng thứ tự, có mô tả", () => {
+    expect(NAV_ITEMS.map((i) => i.href)).toEqual(["/dashboard", "/calendar", "/students", "/tuition", "/timesheet", "/reports", "/attendance"])
     expect(MANAGE_ITEMS.map((i) => [i.href, i.labelKey])).toEqual([
       ["/subjects", "subject"],
       ["/places", "places"],
@@ -25,6 +25,7 @@ describe("danh sách mục điều hướng", () => {
     expect(MORE_ITEMS.map((i) => [i.href, i.labelKey, i.descKey])).toEqual([
       ["/timesheet", "timesheet", "more_timesheet_desc"],
       ["/reports", "reports", "more_reports_desc"],
+      ["/attendance", "attendance_report", "more_attendance_desc"],
       ["/subjects", "subject", "more_subjects_desc"],
       ["/places", "places", "more_places_desc"],
       ["/settings", "settings", "more_settings_desc"],
@@ -69,5 +70,19 @@ describe("Bảng công theo nơi dạy (spec AM §4.1, RF 4)", () => {
     expect(tabItems(both).map((i) => i.href)).toEqual(["/dashboard", "/calendar", "/students", "/tuition"])
     expect(moreItems(both)[0].href).toBe("/timesheet")
     expect(isMoreActive("/timesheet", both)).toBe(true)
+  })
+})
+
+describe("Chuyên cần (spec AN §3)", () => {
+  it("gắn tính năng attendanceMonth (khoá ở Standard); có cả ở sidebar lẫn sheet Thêm, không chiếm tab dưới", () => {
+    expect(NAV_ITEMS.find((i) => i.href === "/attendance")?.feature).toBe("attendanceMonth")
+    for (const summary of [
+      { hasPerStudent: true, hasPerSession: false },
+      { hasPerStudent: false, hasPerSession: true },
+    ]) {
+      expect(filterByPlaces(NAV_ITEMS, summary).map((i) => i.href)).toContain("/attendance")
+      expect(tabItems(summary).map((i) => i.href)).not.toContain("/attendance")
+      expect(moreItems(summary).map((i) => i.href)).toContain("/attendance")
+    }
   })
 })

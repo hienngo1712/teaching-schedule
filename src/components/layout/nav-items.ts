@@ -9,6 +9,7 @@ import {
   MapPin,
   Settings,
   Trash2,
+  UserCheck,
   Users,
   Wallet,
   type LucideIcon,
@@ -33,6 +34,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/tuition", labelKey: "tuition", icon: Wallet, requires: "perStudent" },
   { href: "/timesheet", labelKey: "timesheet", icon: ClipboardList, requires: "perSession" },
   { href: "/reports", labelKey: "reports", icon: BarChart3, feature: "monthlyReport", requires: "perStudent" },
+  // Chuyên cần (spec AN §3): mọi GV; Standard thấy khoá. Chỉ dạy theo ca/giờ thì Báo cáo ẩn → nằm đúng chỗ Báo cáo.
+  { href: "/attendance", labelKey: "attendance_report", icon: UserCheck, feature: "attendanceMonth" },
 ]
 
 type PlaceFlags = { hasPerStudent: boolean; hasPerSession: boolean }
@@ -75,6 +78,7 @@ export const MANAGE_ITEMS: NavItem[] = [
 export const MORE_ITEMS: (NavItem & { descKey: keyof typeof vi })[] = [
   { href: "/timesheet", labelKey: "timesheet", icon: ClipboardList, descKey: "more_timesheet_desc", requires: "perSession" },
   { href: "/reports", labelKey: "reports", icon: BarChart3, descKey: "more_reports_desc", feature: "monthlyReport", requires: "perStudent" },
+  { href: "/attendance", labelKey: "attendance_report", icon: UserCheck, descKey: "more_attendance_desc", feature: "attendanceMonth" },
   { href: "/subjects", labelKey: "subject", icon: BookOpen, descKey: "more_subjects_desc" },
   { href: "/places", labelKey: "places", icon: MapPin, descKey: "more_places_desc" },
   { href: "/settings", labelKey: "settings", icon: Settings, descKey: "more_settings_desc" },

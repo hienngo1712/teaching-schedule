@@ -17,6 +17,7 @@ export const reportRouter = createTRPCRouter({
       month: z.number().int().min(1).max(12),
       toYear: z.number().int().optional(),
       toMonth: z.number().int().min(1).max(12).optional(),
+      placeId: z.number().int().positive().optional(),
     }))
     .query(async ({ ctx, input }) => {
       // D10: đúng 1 tháng, không lọc lớp là Plus; nhiều tháng hoặc có lớp là Pro.
@@ -31,6 +32,7 @@ export const reportRouter = createTRPCRouter({
       toYear: z.number().int().optional(),
       toMonth: z.number().int().min(1).max(12).optional(),
       grade: z.number().int().min(1).max(12).optional(),
+      placeId: z.number().int().positive().optional(),
     }))
     .query(async ({ ctx, input }) => {
       await assertFeature(ctx.db, ctx.userId, isMultiMonthReport(input) ? "multiMonthReport" : "monthlyReport")

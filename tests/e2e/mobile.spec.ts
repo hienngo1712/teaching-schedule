@@ -64,12 +64,13 @@ test.describe('Mobile 390px', () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test('sheet Thêm: 7 mục cao ≥ 56px có mô tả; vào Cài đặt rồi Môn học', async ({ page }) => {
+  test('sheet Thêm: 8 mục cao ≥ 56px có mô tả; vào Cài đặt rồi Môn học', async ({ page }) => {
     const more = mainNav(page).getByRole('button', { name: 'Thêm', exact: true });
     let sheet = await openMore(page);
-    await expect(sheet.getByRole('link')).toHaveCount(7);
+    await expect(sheet.getByRole('link')).toHaveCount(8);
     const items = [
       { name: /Báo cáo/, desc: 'Doanh thu, công nợ theo tháng và năm' },
+      { name: /Chuyên cần/, desc: 'Tỉ lệ đi học theo tháng, năm học' },
       { name: /Môn học/, desc: 'Thêm, đổi màu, ẩn môn' },
       { name: /Nơi dạy/, desc: 'Lớp tại nhà, gia sư, trung tâm' },
       { name: /Cài đặt/, desc: 'Tài khoản ngân hàng nhận học phí' },

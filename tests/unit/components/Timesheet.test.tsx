@@ -15,7 +15,9 @@ globalThis.ResizeObserver ??= class {
 const state = vi.hoisted(() => ({
   timesheet: undefined as unknown,
   income: [] as unknown[],
+  last12: [] as { year: number; month: number; tuition: number; places: number }[],
   locked: false,
+  openUpgrade: vi.fn(),
   createMutate: vi.fn(),
 }))
 
@@ -26,6 +28,7 @@ vi.mock("@/lib/trpc", () => ({
     income: {
       month: { useQuery: () => ({ data: state.income, isPending: false, isError: false, isSuccess: true, refetch: vi.fn() }) },
       detail: { useQuery: () => ({ data: undefined, isPending: true }) },
+      last12: { useQuery: () => ({ data: state.last12, isPending: false }) },
     },
     placePayment: {
       create: { useMutation: () => ({ mutate: state.createMutate, isPending: false }) },
@@ -37,7 +40,13 @@ vi.mock("@/hooks/usePlaceSummary", () => ({
   usePlaceSummary: () => ({ places: [{ id: 2, name: "TT Ánh Dương", color: "#0891B2", billing: "per_session" }] }),
 }))
 vi.mock("@/hooks/useFeatureGate", () => ({
-  useFeatureGate: () => ({ locked: state.locked, allowed: !state.locked, requiredPlan: "plus", openUpgrade: vi.fn(), guard: (fn: () => void) => fn }),
+  useFeatureGate: () => ({
+    locked: state.locked,
+    allowed: !state.locked,
+    requiredPlan: "plus",
+    openUpgrade: state.openUpgrade,
+    guard: (fn: () => void) => (state.locked ? state.openUpgrade : fn),
+  }),
 }))
 vi.mock("@/hooks/useMediaQuery", () => ({ useMediaQuery: () => true }))
 vi.mock("@/hooks/useExport", () => ({ useExport: () => ({ captureElement: vi.fn(), isCapturing: false }) }))
@@ -67,6 +76,7 @@ const s = (id: number, over: Record<string, unknown>) => ({
 
 beforeEach(() => {
   state.locked = false
+  state.openUpgrade.mockReset()
   state.createMutate.mockReset()
   state.timesheet = {
     place: { id: 2, name: "TT Ánh Dương", color: "#0891B2" },
@@ -126,6 +136,22 @@ describe("IncomeTab", () => {
     expect(empty.querySelector("a")?.getAttribute("href")).toBe("/places")
   })
 
+  it("[RF 1] nút Phiếu báo khoá khi tháng chưa có ca đã dạy; Standard bấm → popup nâng gói", () => {
+    state.income = [
+      { placeId: 2, name: "TT Ánh Dương", color: "#0891B2", unit: "hour", amount: 185000, doneCount: 0, doneHours: 0, expected: 0, received: 0, status: "unpaid", noticeStatus: "none", noticeSentAt: null },
+      { placeId: 3, name: "TT Sao Mai", color: "#D97706", unit: "session", amount: 200000, doneCount: 2, doneHours: 3, expected: 400000, received: 0, status: "unpaid", noticeStatus: "changed", noticeSentAt: "2026-10-01T00:00:00.000Z" },
+    ]
+    state.locked = true
+    wrap(<IncomeTab year={2026} month={10} period={null} />)
+    const buttons = screen.getAllByTestId("place-notice-button")
+    // Bảng desktop + thẻ mobile → mỗi dòng 2 nút.
+    expect((buttons[0] as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getAllByText("Chưa có ca đã dạy").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Số tiền đã đổi").length).toBeGreaterThan(0)
+    fireEvent.click(buttons[1])
+    expect(state.openUpgrade).toHaveBeenCalled()
+  })
+
   it("dòng nhận một phần hiện còn thiếu", () => {
     state.income = [
       { placeId: 2, name: "TT Ánh Dương", color: "#0891B2", unit: "hour", amount: 185000, doneCount: 2, doneHours: 3, expected: 555000, received: 500000, status: "partial" },
@@ -143,5 +169,20 @@ describe("PlacePaymentDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ghi nhận đã nhận" }))
     await waitFor(() => expect(state.createMutate).toHaveBeenCalledTimes(1))
     expect(state.createMutate.mock.calls[0][0]).toMatchObject({ placeId: 2, year: 2026, month: 9, amount: 55000 })
+  })
+})
+
+describe("Income12Card (spec AN §4)", () => {
+  it("chưa Pro: thẻ khoá; Pro: 12 cột, tổng = học phí + nơi dạy", async () => {
+    const { Income12Card } = await import("@/components/timesheet/Income12Card")
+    state.locked = true
+    const { unmount } = wrap(<Income12Card />)
+    expect(screen.getByTestId("income-12m-locked")).toBeTruthy()
+    unmount()
+    state.locked = false
+    state.last12 = Array.from({ length: 12 }, (_, i) => ({ year: 2026, month: i + 1, tuition: i === 8 ? 400000 : 0, places: i === 8 ? 500000 : 100000 }))
+    wrap(<Income12Card />)
+    expect(screen.getAllByTestId("chart-bar")).toHaveLength(12)
+    expect(screen.getByTestId("income-12m").textContent).toContain("Tổng 2.000.000 đ")
   })
 })

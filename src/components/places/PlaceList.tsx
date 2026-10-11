@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { History, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { History, Link2Off, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -23,6 +23,7 @@ import type vi from "@/language/vi.json"
 import { PlaceFormDialog } from "./PlaceFormDialog"
 import { PlaceRateHistoryDialog } from "./PlaceRateHistoryDialog"
 import { formatCurrency } from "@/lib/utils"
+import { useFeatureGate } from "@/hooks/useFeatureGate"
 
 type Place = RouterOutputs["place"]["list"][number]
 
@@ -46,6 +47,15 @@ export function PlaceList() {
   const [form, setForm] = useState<{ open: false } | { open: true; place?: Place }>({ open: false })
   const [deleteTarget, setDeleteTarget] = useState<Place | null>(null)
   const [historyOf, setHistoryOf] = useState<Place | null>(null)
+  // Link người trả (spec AN §1): tạo mới thì link cũ 404 ngay, tắt thì link mất → hỏi lại trước.
+  const [linkAction, setLinkAction] = useState<{ place: Place; kind: "rotate" | "disable" } | null>(null)
+  const noticeGate = useFeatureGate("placeNotice")
+  const linkDone = (msg: "place_link_rotated" | "place_link_disabled") => () => {
+    toast.success(t(msg))
+    setLinkAction(null)
+  }
+  const rotateMut = trpc.placeNotice.rotate.useMutation({ onSuccess: linkDone("place_link_rotated"), onError: (e) => toast.error(e.message) })
+  const disableMut = trpc.placeNotice.disable.useMutation({ onSuccess: linkDone("place_link_disabled"), onError: (e) => toast.error(e.message) })
 
   const places = query.data ?? []
   const groups = [
@@ -88,6 +98,18 @@ export function PlaceList() {
               <History className="mr-2 size-4" />
               {t("place_rate_history")}
             </DropdownMenuItem>
+          )}
+          {p.billing === "per_session" && (
+            <>
+              <DropdownMenuItem className="min-h-11 md:min-h-9" onSelect={() => noticeGate.guard(() => setLinkAction({ place: p, kind: "rotate" }))()}>
+                <RefreshCw className="mr-2 size-4" />
+                {t("place_link_rotate")}
+              </DropdownMenuItem>
+              <DropdownMenuItem className="min-h-11 md:min-h-9" onSelect={() => setLinkAction({ place: p, kind: "disable" })}>
+                <Link2Off className="mr-2 size-4" />
+                {t("place_link_disable")}
+              </DropdownMenuItem>
+            </>
           )}
           <DropdownMenuItem className="min-h-11 text-red-600 focus:text-red-700 md:min-h-9" onSelect={() => setDeleteTarget(p)}>
             <Trash2 className="mr-2 size-4" />
@@ -161,6 +183,32 @@ export function PlaceList() {
               }}
             >
               {deleteMut.isPending ? t("deleting") : t("delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={linkAction !== null} onOpenChange={(open) => !open && setLinkAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{linkAction && t(linkAction.kind === "rotate" ? "place_link_rotate" : "place_link_disable")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {linkAction && t(linkAction.kind === "rotate" ? "place_link_rotate_confirm" : "place_link_disable_confirm").replace("{name}", linkAction.place.name)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={rotateMut.isPending || disableMut.isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                if (!linkAction) return
+                const input = { placeId: linkAction.place.id }
+                if (linkAction.kind === "rotate") rotateMut.mutate(input)
+                else disableMut.mutate(input)
+              }}
+            >
+              {t("confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

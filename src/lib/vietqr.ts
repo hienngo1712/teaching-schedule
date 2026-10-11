@@ -24,8 +24,19 @@ const SERVICE_TO_ACCOUNT = "QRIBFTTA"
 const MAX_CONTENT_LENGTH = 25
 
 export function buildTransferContent(fullName: string, month: number): string {
+  return toTransferText(`HP T${month} ${fullName}`)
+}
+
+// Phiếu nơi dạy (spec AN §1): "GV <tên ngắn> T<M> <tên nơi>", tên ngắn = chữ cuối có chữ cái của họ tên GV ("Test 2" → "Test").
+export function buildPlaceTransferContent(teacherName: string, month: number, placeName: string): string {
+  const short = teacherName.trim().split(/\s+/).filter((w) => /\p{L}/u.test(w)).pop() ?? ""
+  return toTransferText(`GV ${short} T${month} ${placeName}`)
+}
+
+// Không dấu, chỉ chữ/số/khoảng trắng, ≤ 25 ký tự: an toàn ở mọi ngân hàng.
+export function toTransferText(text: string): string {
   // "đ/Đ" không tách được bằng NFD nên phải đổi riêng.
-  return `HP T${month} ${fullName}`
+  return text
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/đ/g, "d")
