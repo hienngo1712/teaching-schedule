@@ -6,6 +6,7 @@ import { subjectRouter } from "@/server/trpc/routers/subject"
 import { placeRouter } from "@/server/trpc/routers/place"
 import { incomeRouter, placePaymentRouter, placeRateRouter, timesheetRouter } from "@/server/trpc/routers/timesheet"
 import { placeNoticeRouter } from "@/server/trpc/routers/place-notice"
+import { attendanceReportRouter } from "@/server/trpc/routers/attendance-report"
 import { sessionRouter } from "@/server/trpc/routers/session"
 import { attendanceRouter } from "@/server/trpc/routers/attendance"
 import { reportRouter } from "@/server/trpc/routers/report"
@@ -32,6 +33,7 @@ export const appRouter = createTRPCRouter({
   timesheet: timesheetRouter,
   income: incomeRouter,
   placeNotice: placeNoticeRouter,
+  attendanceReport: attendanceReportRouter,
   student: studentRouter,
   session: sessionRouter,
   attendance: attendanceRouter,

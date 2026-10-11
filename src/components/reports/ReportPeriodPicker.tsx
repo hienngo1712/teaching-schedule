@@ -11,12 +11,15 @@ import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { LockBadge } from "@/components/plan/LockBadge"
 
+// schoolYear (Chuyên cần, spec AN §3): chỉ 2 chế độ Tháng | Năm học; năm học lưu type=school, year = năm bắt đầu (T9).
 export function ReportPeriodPicker({
   multiMonthLocked = false,
   onLockedClick,
+  schoolYear = false,
 }: {
   multiMonthLocked?: boolean
   onLockedClick?: () => void
+  schoolYear?: boolean
 }) {
   const { t } = useTranslation()
   const { year, month } = useCalendar()
@@ -30,6 +33,7 @@ export function ReportPeriodPicker({
   const type = multiMonthLocked ? "month" : filterType
 
   const label = useMemo(() => {
+    if (type === 'school') return t("school_year_label").replace("{a}", String(year)).replace("{b}", String(year + 1))
     if (type === 'month') return `${t("month")} ${month}/${year}`
     if (type === 'year') return `${t("year")} ${year}`
     if (type === 'range') {
@@ -60,6 +64,22 @@ export function ReportPeriodPicker({
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("report_type")}</label>
+            {schoolYear ? (
+              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-lg">
+                <button
+                  onClick={() => setRange({ type: 'month' })}
+                  className={cn("text-xs py-1.5 rounded-md transition-all font-bold", type === 'month' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700")}
+                >{t("month")}</button>
+                <button
+                  // Từ tháng đang xem: T9–T12 thuộc năm học bắt đầu năm đó, T1–T8 thuộc năm học bắt đầu năm trước.
+                  onClick={() => (multiMonthLocked ? onLockedClick?.() : setRange({ type: 'school', year: month >= 9 ? year : year - 1 }))}
+                  className={cn(
+                    "inline-flex items-center justify-center gap-1 text-xs py-1.5 rounded-md transition-all font-bold",
+                    type === 'school' ? "bg-white shadow-sm text-primary" : "text-slate-500 hover:text-slate-700"
+                  )}
+                >{t("school_year")}{multiMonthLocked && <LockBadge plan="pro" />}</button>
+              </div>
+            ) : (
             <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
                 <button
                     onClick={() => setRange({ type: 'month' })}
@@ -83,6 +103,7 @@ export function ReportPeriodPicker({
                     )}
                 >{t("range")}{multiMonthLocked && <LockBadge plan="pro" />}</button>
             </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -91,7 +112,7 @@ export function ReportPeriodPicker({
                     {type === 'range' ? t("from_month") : t("month")}
                 </label>
                 <Select
-                    disabled={type === 'year'}
+                    disabled={type === 'year' || type === 'school'}
                     value={month.toString()}
                     onValueChange={(v) => setRange({ month: parseInt(v) })}
                 >
@@ -116,7 +137,9 @@ export function ReportPeriodPicker({
                     </SelectTrigger>
                     <SelectContent className="bg-white border-slate-200">
                         {YEARS.map(y => (
-                            <SelectItem key={y} value={y.toString()}>{t("year")} {y}</SelectItem>
+                            <SelectItem key={y} value={y.toString()}>
+                              {type === 'school' ? `${y}–${y + 1}` : `${t("year")} ${y}`}
+                            </SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
