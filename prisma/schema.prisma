@@ -514,6 +514,8 @@ model TeachingPlace {
   studentChanges StudentPlaceChange[]
   rateChanges    PlaceRateChange[]
   payments       PlacePayment[]
+  shareLink      PlaceShareLink?
+  monthNotices   PlaceMonthNotice[]
 
   @@unique([userId, name])
   @@index([userId, isDeleted, sortOrder])
@@ -564,6 +566,30 @@ model PlacePayment {
 
   @@index([placeId, year, month])
   @@map("place_payments")
+}
+
+// Link công khai cho người trả của 1 nơi dạy (spec AN §1): như link phụ huynh, tra bằng hash, token thật mã hoá.
+model PlaceShareLink {
+  placeId   Int           @id @map("place_id")
+  token     String        @map("token")
+  tokenHash String        @unique @map("token_hash") @db.VarChar(64)
+  createdAt DateTime      @default(now()) @map("created_at")
+  place     TeachingPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@map("place_share_links")
+}
+
+// Đánh dấu đã gửi phiếu nơi dạy theo tháng (như MonthlyTuition.noticeSentAt/noticeSentAmount).
+model PlaceMonthNotice {
+  placeId    Int           @map("place_id")
+  year       Int
+  month      Int
+  sentAt     DateTime      @map("sent_at")
+  sentAmount Int           @map("sent_amount")
+  place      TeachingPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@id([placeId, year, month])
+  @@map("place_month_notices")
 }
 
 // Lịch sử ẩn nơi học của HS (RULING AL Task 2): học phí tháng M theo nơi của HS tại M, UI không hiện.

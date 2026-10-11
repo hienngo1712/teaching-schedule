@@ -10,6 +10,7 @@ export const ENCRYPTED_FIELDS = {
   MonthlyTuition: ["notes"],
   Payment: ["note"],
   PlacePayment: ["note"],
+  PlaceShareLink: ["token"],
   PlanOrder: ["note"],
   ChatMessage: ["body"],
   TeacherPayos: ["clientId", "apiKey", "checksumKey"],
