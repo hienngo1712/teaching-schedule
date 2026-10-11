@@ -34,6 +34,8 @@ model User {
   isDeleted          Boolean           @default(false) @map("is_deleted")
   deletedAt          DateTime?         @map("deleted_at")
   deletedBy          String?           @map("deleted_by") @db.VarChar(50)
+  // Admin xoá vĩnh viễn (spec AQ): dòng user còn lại là "bia mộ" ẩn danh giữ đơn mua gói.
+  purgedAt           DateTime?         @map("purged_at")
   // Bản "Có gì mới" đã xem gần nhất; null = chưa xem bản nào (spec W §5.4).
   lastSeenRelease       String?   @map("last_seen_release") @db.VarChar(20)
   onboardingDismissedAt DateTime? @map("onboarding_dismissed_at")

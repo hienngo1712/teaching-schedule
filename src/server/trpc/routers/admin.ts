@@ -11,6 +11,7 @@ import {
   updatePricesSchema,
   updateTrialDaysSchema,
   userIdSchema,
+  purgeUserSchema,
 } from "@/lib/schemas/plan"
 import { resetPasswordSchema } from "@/lib/schemas/auth"
 import { adminSetPlan, approveOrder, getAdminOverview, getOrderHistory, getPendingCount, rejectOrder } from "@/server/services/plan-admin.service"
@@ -18,6 +19,7 @@ import { getMonthlyPrices, getPriceHistory, updatePrices } from "@/server/servic
 import { adminResetPassword } from "@/server/services/password-reset.service"
 import { getDefaultTrialDays, getTrialHistory, getUserTrialChanges, setUserTrialDays, updateDefaultTrialDays } from "@/server/services/trial.service"
 import { adminDeleteUser, adminRestoreUser, listDeletedUsers } from "@/server/services/user-admin.service"
+import { purgeUser } from "@/server/services/admin-purge.service"
 import { getRevenue } from "@/server/services/revenue.service"
 import { getAccountTrend, getAdminStats } from "@/server/services/admin-stats.service"
 import { getNewAccounts, markAccountsSeen } from "@/server/services/new-accounts.service"
@@ -84,6 +86,12 @@ export const adminRouter = createTRPCRouter({
     .mutation(({ ctx, input }) => adminRestoreUser(ctx.db, ctx.session.user.username, input.userId)),
 
   deletedUsers: adminProcedure.query(({ ctx }) => listDeletedUsers(ctx.db)),
+
+  purgeUser: adminProcedure
+    .input(purgeUserSchema)
+    .mutation(({ ctx, input }) =>
+      purgeUser(ctx.db, { id: ctx.userId, username: ctx.session.user.username }, input.userId, input.confirmUsername)
+    ),
 
   feedbackList: adminProcedure
     .input(z.object({ cursor: z.number().int().positive().optional() }))

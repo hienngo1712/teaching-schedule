@@ -16,6 +16,7 @@ import { SetPlanDialog } from "./SetPlanDialog"
 import { TrialDaysDialog } from "./TrialDaysDialog"
 import { ResetPasswordDialog } from "./ResetPasswordDialog"
 import { DeleteAccountDialog } from "./DeleteAccountDialog"
+import { PurgeAccountDialog } from "./PurgeAccountDialog"
 import { SOURCE_KEY, dateOrDash } from "./admin-format"
 import { cn } from "@/lib/utils"
 
@@ -36,6 +37,7 @@ export function AdminAccounts() {
   const [trialFor, setTrialFor] = useState<UserRow | null>(null)
   const [resetFor, setResetFor] = useState<UserRow | null>(null)
   const [deleteFor, setDeleteFor] = useState<UserRow | null>(null)
+  const [purgeFor, setPurgeFor] = useState<DeletedUserRow | null>(null)
 
   const restore = trpc.admin.restoreUser.useMutation({
     onSuccess: (_, v) => {
@@ -106,6 +108,39 @@ export function AdminAccounts() {
     { header: t("admin_col_actions"), cell: actionsMenu, className: `w-14 ${NOWRAP} text-right` },
   ]
 
+  // Khôi phục + Xoá vĩnh viễn (spec AQ §6): chưa đủ 30 ngày thì thay nút đỏ bằng dòng ngày được xoá.
+  const deletedActions = (d: DeletedUserRow) => (
+    <div className="flex flex-wrap items-center gap-2 md:flex-nowrap md:justify-end">
+      <Button
+        type="button"
+        variant="outline"
+        className="h-11 md:h-9"
+        data-testid="admin-restore-user"
+        aria-label={`${t("restore")} ${d.username}`}
+        disabled={restore.isPending}
+        onClick={() => restore.mutate({ userId: d.id })}
+      >
+        <RotateCcw className="mr-2 size-4" />
+        {t("restore")}
+      </Button>
+      {new Date(d.purgeAvailableAt) <= new Date() ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 md:h-9"
+          data-testid="admin-purge-user"
+          aria-label={`${t("admin_purge")} ${d.username}`}
+          onClick={() => setPurgeFor(d)}
+        >
+          <Trash2 className="mr-2 size-4" />
+          {t("admin_purge")}
+        </Button>
+      ) : (
+        <p className="text-xs text-slate-500 md:whitespace-nowrap">{t("admin_purge_from").replace("{date}", dateOrDash(d.purgeAvailableAt))}</p>
+      )}
+    </div>
+  )
+
   const deletedColumns: Column<DeletedUserRow>[] = [
     { header: t("username"), cell: (d) => <span className="font-medium">{d.username}</span>, className: NOWRAP },
     { header: t("full_name"), cell: (d) => d.fullName ?? "-", className: "min-w-[8rem]" },
@@ -113,21 +148,8 @@ export function AdminAccounts() {
     { header: t("admin_col_deleted_by"), cell: (d) => d.deletedBy ?? "-", className: NOWRAP },
     {
       header: <span className="sr-only">{t("actions")}</span>,
-      cell: (d) => (
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 md:h-9"
-          data-testid="admin-restore-user"
-          aria-label={`${t("restore")} ${d.username}`}
-          disabled={restore.isPending}
-          onClick={() => restore.mutate({ userId: d.id })}
-        >
-          <RotateCcw className="mr-2 size-4" />
-          {t("restore")}
-        </Button>
-      ),
-      className: `w-32 ${NOWRAP} text-right`,
+      cell: deletedActions,
+      className: `w-[22rem] text-right`,
     },
   ]
 
@@ -222,10 +244,7 @@ export function AdminAccounts() {
           columns={deletedColumns}
           emptyText={t("admin_no_deleted")}
           renderCard={(d) => (
-            <div
-              data-testid="admin-deleted-user-card"
-              className="flex items-start justify-between gap-3 rounded-lg border bg-white p-4"
-            >
+            <div data-testid="admin-deleted-user-card" className="space-y-3 rounded-lg border bg-white p-4">
               <div className="min-w-0 space-y-1">
                 <p className="truncate font-medium text-foreground">{d.username}</p>
                 <p className="truncate text-sm text-slate-500">{d.fullName ?? "-"}</p>
@@ -234,18 +253,7 @@ export function AdminAccounts() {
                   {d.deletedBy ?? "-"}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 md:h-9"
-                data-testid="admin-restore-user"
-                aria-label={`${t("restore")} ${d.username}`}
-                disabled={restore.isPending}
-                onClick={() => restore.mutate({ userId: d.id })}
-              >
-                <RotateCcw className="mr-2 size-4" />
-                {t("restore")}
-              </Button>
+              {deletedActions(d)}
             </div>
           )}
         />
@@ -254,6 +262,9 @@ export function AdminAccounts() {
       {setPlanFor && <SetPlanDialog key={setPlanFor.id} user={setPlanFor} onClose={() => setSetPlanFor(null)} />}
       {trialFor && <TrialDaysDialog key={trialFor.id} user={trialFor} onClose={() => setTrialFor(null)} />}
       {resetFor && <ResetPasswordDialog key={resetFor.id} user={resetFor} onClose={() => setResetFor(null)} />}
+      {purgeFor && (
+        <PurgeAccountDialog key={purgeFor.id} user={purgeFor} onOpenChange={(o) => !o && setPurgeFor(null)} />
+      )}
       {deleteFor && (
         <DeleteAccountDialog key={deleteFor.id} user={deleteFor} onOpenChange={(o) => !o && setDeleteFor(null)} />
       )}
