@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { MANAGE_ITEMS, MORE_ITEMS, NAV_ITEMS, isMoreActive } from "@/components/layout/nav-items"
+import { MANAGE_ITEMS, MORE_ITEMS, NAV_ITEMS, filterByPlaces, isMoreActive, moreItems, tabItems } from "@/components/layout/nav-items"
 
 describe("isMoreActive", () => {
   it.each(["/reports", "/subjects", "/settings", "/settings/x", "/plan", "/trash"])("%s → true", (path) => {
@@ -12,8 +12,8 @@ describe("isMoreActive", () => {
 })
 
 describe("danh sách mục điều hướng", () => {
-  it("NAV_ITEMS giữ 5 mục; MANAGE_ITEMS và MORE_ITEMS đúng thứ tự, có mô tả", () => {
-    expect(NAV_ITEMS.map((i) => i.href)).toEqual(["/dashboard", "/calendar", "/students", "/tuition", "/reports"])
+  it("NAV_ITEMS 6 mục (Bảng công sau Học phí); MANAGE_ITEMS và MORE_ITEMS đúng thứ tự, có mô tả", () => {
+    expect(NAV_ITEMS.map((i) => i.href)).toEqual(["/dashboard", "/calendar", "/students", "/tuition", "/timesheet", "/reports"])
     expect(MANAGE_ITEMS.map((i) => [i.href, i.labelKey])).toEqual([
       ["/subjects", "subject"],
       ["/places", "places"],
@@ -23,6 +23,7 @@ describe("danh sách mục điều hướng", () => {
       ["/guide", "guide_nav"],
     ])
     expect(MORE_ITEMS.map((i) => [i.href, i.labelKey, i.descKey])).toEqual([
+      ["/timesheet", "timesheet", "more_timesheet_desc"],
       ["/reports", "reports", "more_reports_desc"],
       ["/subjects", "subject", "more_subjects_desc"],
       ["/places", "places", "more_places_desc"],
@@ -44,5 +45,29 @@ describe("danh sách mục điều hướng", () => {
     expect(guide.external).toBe(true)
     expect(guide.icon).not.toBe(subject.icon)
     expect(MORE_ITEMS.find((i) => i.href === "/guide")?.external).toBe(true)
+  })
+})
+
+describe("Bảng công theo nơi dạy (spec AM §4.1, RF 4)", () => {
+  const both = { hasPerStudent: true, hasPerSession: true }
+  const onlySession = { hasPerStudent: false, hasPerSession: true }
+  const onlyStudent = { hasPerStudent: true, hasPerSession: false }
+
+  it("không có nơi theo ca/giờ (hoặc chưa tải xong) → không có Bảng công", () => {
+    expect(filterByPlaces(NAV_ITEMS, onlyStudent).map((i) => i.href)).not.toContain("/timesheet")
+    expect(filterByPlaces(NAV_ITEMS, undefined).map((i) => i.href)).not.toContain("/timesheet")
+    expect(moreItems(onlyStudent).map((i) => i.href)).not.toContain("/timesheet")
+  })
+
+  it("chỉ theo ca/giờ: tab dưới có Bảng công thay chỗ Học phí; Thêm không lặp lại", () => {
+    expect(tabItems(onlySession).map((i) => i.href)).toEqual(["/dashboard", "/calendar", "/students", "/timesheet"])
+    expect(moreItems(onlySession).map((i) => i.href)).not.toContain("/timesheet")
+    expect(isMoreActive("/timesheet", onlySession)).toBe(false)
+  })
+
+  it("có cả 2 cách tính: tab dưới giữ Học phí, Bảng công nằm trong Thêm", () => {
+    expect(tabItems(both).map((i) => i.href)).toEqual(["/dashboard", "/calendar", "/students", "/tuition"])
+    expect(moreItems(both)[0].href).toBe("/timesheet")
+    expect(isMoreActive("/timesheet", both)).toBe(true)
   })
 })

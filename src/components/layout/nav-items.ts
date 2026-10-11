@@ -3,6 +3,7 @@ import {
   BookOpen,
   CalendarDays,
   CircleHelp,
+  ClipboardList,
   Crown,
   LayoutDashboard,
   MapPin,
@@ -21,8 +22,8 @@ export type NavItem = {
   icon: LucideIcon
   feature?: Feature
   external?: boolean
-  // Chỉ hiện khi GV có nơi tính tiền theo học sinh (spec AL §4.4).
-  requires?: "perStudent"
+  // Chỉ hiện khi GV có nơi tính tiền theo học sinh (spec AL §4.4) / theo ca/giờ (spec AM §4.1).
+  requires?: "perStudent" | "perSession"
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -30,13 +31,31 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/calendar", labelKey: "calendar", icon: CalendarDays },
   { href: "/students", labelKey: "students", icon: Users },
   { href: "/tuition", labelKey: "tuition", icon: Wallet, requires: "perStudent" },
+  { href: "/timesheet", labelKey: "timesheet", icon: ClipboardList, requires: "perSession" },
   { href: "/reports", labelKey: "reports", icon: BarChart3, feature: "monthlyReport", requires: "perStudent" },
 ]
 
-// Ẩn Học phí/Báo cáo khi chắc chắn không có nơi theo học sinh; chưa tải xong thì giữ như cũ.
-export function filterByPlaces<T extends NavItem>(items: T[], summary: { hasPerStudent: boolean } | undefined): T[] {
-  if (!summary || summary.hasPerStudent) return items
-  return items.filter((i) => i.requires !== "perStudent")
+type PlaceFlags = { hasPerStudent: boolean; hasPerSession: boolean }
+
+// Ẩn Học phí/Báo cáo khi chắc chắn không có nơi theo học sinh (chưa tải xong thì giữ như cũ);
+// Bảng công chỉ hiện khi chắc chắn có nơi theo ca/giờ (đa số GV không có, tránh nháy).
+export function filterByPlaces<T extends NavItem>(items: T[], summary: PlaceFlags | undefined): T[] {
+  return items.filter((i) => {
+    if (i.requires === "perStudent") return !summary || summary.hasPerStudent
+    if (i.requires === "perSession") return !!summary?.hasPerSession
+    return true
+  })
+}
+
+// Tab dưới mobile = 4 mục đầu còn hiện: chỉ dạy theo ca/giờ thì Bảng công vào chỗ của Học phí (spec AM RF 4).
+export function tabItems(summary: PlaceFlags | undefined): NavItem[] {
+  return filterByPlaces(NAV_ITEMS, summary).slice(0, 4)
+}
+
+// Sheet "Thêm": bỏ mục đã có tab riêng.
+export function moreItems(summary: PlaceFlags | undefined) {
+  const tabs = new Set(tabItems(summary).map((i) => i.href))
+  return filterByPlaces(MORE_ITEMS, summary).filter((i) => !tabs.has(i.href))
 }
 
 export function isNavActive(pathname: string, href: string) {
@@ -54,6 +73,7 @@ export const MANAGE_ITEMS: NavItem[] = [
 
 // Tab "Thêm" trên mobile gom các màn không có tab riêng.
 export const MORE_ITEMS: (NavItem & { descKey: keyof typeof vi })[] = [
+  { href: "/timesheet", labelKey: "timesheet", icon: ClipboardList, descKey: "more_timesheet_desc", requires: "perSession" },
   { href: "/reports", labelKey: "reports", icon: BarChart3, descKey: "more_reports_desc", feature: "monthlyReport", requires: "perStudent" },
   { href: "/subjects", labelKey: "subject", icon: BookOpen, descKey: "more_subjects_desc" },
   { href: "/places", labelKey: "places", icon: MapPin, descKey: "more_places_desc" },
@@ -63,6 +83,6 @@ export const MORE_ITEMS: (NavItem & { descKey: keyof typeof vi })[] = [
   { href: "/guide", labelKey: "guide_nav", icon: CircleHelp, descKey: "more_guide_desc", external: true },
 ]
 
-export function isMoreActive(pathname: string) {
-  return MORE_ITEMS.some((i) => isNavActive(pathname, i.href))
+export function isMoreActive(pathname: string, summary?: PlaceFlags) {
+  return (summary ? moreItems(summary) : MORE_ITEMS).some((i) => isNavActive(pathname, i.href))
 }
