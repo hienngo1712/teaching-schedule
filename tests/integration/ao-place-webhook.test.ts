@@ -1,5 +1,5 @@
 // Spec AO §3.2: webhook payOS học phí rẽ nhánh theo orderCode → ghi "Đã nhận" cho nơi dạy. Không gọi payOS thật.
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest"
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest"
 import { db } from "@/server/db"
 import { addDays } from "@/lib/plans"
 import { signWebhookData } from "@/server/payos"
@@ -126,13 +126,15 @@ describe("AO: webhook payOS cho phiếu nơi dạy", () => {
     expect(await db.placePayment.count({ where: { placeId, isDeleted: false } })).toBe(0)
   })
 
-  it("nơi dạy đã xoá: bỏ qua, có cảnh báo", async () => {
+  // FIX AO Task 2: tiền thật đã vào tài khoản GV → vẫn ghi dù nơi đã xoá mềm (tạo lại cùng tên thì hiện lại).
+  it("nơi dạy đã xoá mềm: vẫn ghi PlacePayment payOS; gửi lại vẫn 1 dòng", async () => {
     const l = await makeLink()
     await db.teachingPlace.update({ where: { id: placeId }, data: { isDeleted: true, deletedAt: new Date() } })
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    expect(await handleTuitionWebhook(db, HOOK, payload(l, 455000))).toEqual({ status: 200, note: "nơi đã xoá" })
-    expect(warn).toHaveBeenCalled()
-    warn.mockRestore()
-    expect(await payments()).toHaveLength(0)
+    expect(await handleTuitionWebhook(db, HOOK, payload(l, 455000, { reference: "DEL" }))).toEqual({ status: 200, note: "đã ghi" })
+    expect(await handleTuitionWebhook(db, HOOK, payload(l, 455000, { reference: "DEL" }))).toEqual({ status: 200, note: "gửi lặp" })
+    const ps = await payments()
+    expect(ps).toHaveLength(1)
+    expect(ps[0]).toMatchObject({ source: "payos", amount: 455000, isDeleted: false })
+    expect(await db.placePayLinkPayment.count({ where: { linkId: l.id } })).toBe(1)
   })
 })

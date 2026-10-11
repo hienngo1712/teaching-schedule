@@ -65,20 +65,14 @@ export async function ensurePlacePayLink(
 }
 
 // Webhook payOS đã kiểm chữ ký, orderCode ≥ PLACE_ORDER_OFFSET (spec AO §3.2). Ghi "Đã nhận" cho nơi dạy, tháng của link.
-// Không kiểm gói: QR đã phát thì tiền vào vẫn phải ghi (Review Focus 3).
+// Không kiểm gói: QR đã phát thì tiền vào vẫn phải ghi (Review Focus 3). Nơi đã xoá mềm cũng ghi: tiền thật đã vào
+// tài khoản GV, phải có dấu vết và chuông báo (FIX AO Task 2).
 export async function handlePlacePayment(
   db: PrismaClient, teacherUserId: number,
   d: { orderCode: number; amount: number; reference: string; paidAt: Date; paymentLinkId: unknown }
 ): Promise<{ status: 200; note: string }> {
-  const link = await db.placePayLink.findUnique({
-    where: { id: d.orderCode - PLACE_ORDER_OFFSET },
-    include: { place: { select: { isDeleted: true } } },
-  })
+  const link = await db.placePayLink.findUnique({ where: { id: d.orderCode - PLACE_ORDER_OFFSET } })
   if (!link || link.userId !== teacherUserId || link.payosLinkId !== d.paymentLinkId) return { status: 200, note: "không khớp" }
-  if (link.place.isDeleted) {
-    console.warn(`[payos] tiền nơi dạy vào nơi đã xoá, link ${link.id}`)
-    return { status: 200, note: "nơi đã xoá" }
-  }
   const existed = await db.placePayLinkPayment.findUnique({ where: { linkId_reference: { linkId: link.id, reference: d.reference } }, select: { id: true } })
   if (existed) return { status: 200, note: "gửi lặp" }
   try {
