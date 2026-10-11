@@ -13,6 +13,19 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.22.0",
+    date: "2026-10-11",
+    title: "Phiếu báo cho nơi dạy và Chuyên cần",
+    summary: "Gửi phiếu báo kèm mã QR cho nơi trả theo ca/giờ, xem chuyên cần theo tháng và năm học, biểu đồ thu nhập 12 tháng.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Phiếu báo theo nơi dạy", body: "Ở Thu nhập, mở Phiếu báo của từng nơi: số ca, số giờ, thành tiền, mã QR chuyển khoản. Sao chép link gửi cho nơi dạy hoặc tải ảnh phiếu." },
+      { kind: "new", title: "Trang xem phiếu cho người trả", body: "Link phiếu mở được không cần đăng nhập, chỉ có ngày giờ ca dạy và số học sinh có mặt, không có tên học sinh." },
+      { kind: "new", title: "Chuyên cần", body: "Tỉ lệ đi học của từng học sinh theo tháng; gói Pro xem cả năm học (tháng 9 đến tháng 5) và lọc theo lớp." },
+      { kind: "improve", title: "Thu nhập 12 tháng và lọc Báo cáo theo nơi học", body: "Gói Pro có biểu đồ học phí đã thu và tiền nơi dạy đã trả 12 tháng gần nhất. Báo cáo lọc được theo nơi học." },
+    ],
+  },
+  {
     version: "0.21.0",
     date: "2026-10-11",
     title: "Bảng công và thu nhập theo nơi dạy",
