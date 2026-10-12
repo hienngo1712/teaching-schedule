@@ -1,11 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { BadgeCheck, Clock, KeyRound, MoreHorizontal, RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FilterBar, type FilterChip } from "@/components/common/FilterBar"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ResponsiveList, type Column } from "@/components/common/ResponsiveList"
 import { useTranslation } from "@/components/providers/LanguageProvider"
@@ -18,6 +22,7 @@ import { ResetPasswordDialog } from "./ResetPasswordDialog"
 import { DeleteAccountDialog } from "./DeleteAccountDialog"
 import { PurgeAccountDialog } from "./PurgeAccountDialog"
 import { SOURCE_KEY, dateOrDash } from "./admin-format"
+import { DEFAULT_ACCOUNT_FILTER, filterAccounts, type AccountFilter, type AccountSort } from "./account-filter"
 import { cn } from "@/lib/utils"
 
 type UserRow = RouterOutputs["admin"]["overview"]["users"][number]
@@ -25,6 +30,8 @@ type DeletedUserRow = NonNullable<RouterOutputs["admin"]["deletedUsers"]>[number
 
 const NOWRAP = "whitespace-nowrap"
 const ITEM = "min-h-11 md:min-h-0"
+// "yyyy-MM-dd" → "dd/MM/yyyy" cho chip ngày.
+const chipDate = (d: string) => d.split("-").reverse().join("/")
 
 export function AdminAccounts() {
   const { t } = useTranslation()
@@ -49,11 +56,26 @@ export function AdminAccounts() {
     onError: (e) => toast.error(e.message),
   })
 
-  // Phân trang phía client cho tab active (spec P Q19).
+  // Lọc + sắp phía client (spec AR §1), rồi phân trang phía client cho tab active (spec P Q19).
+  const [filter, setFilter] = useState<AccountFilter>(DEFAULT_ACCOUNT_FILTER)
+  const users = useMemo(() => filterAccounts(query.data?.users ?? [], filter), [query.data, filter])
   const { paginatedData, currentPage, setCurrentPage, pageSize, setPageSize, totalItems, totalPages } = usePagination(
-    query.data?.users,
+    users,
     20
   )
+  // usePagination chỉ tự về trang 1 khi số dòng đổi; đổi sắp xếp thì không → tự về.
+  const updateFilter = (patch: Partial<AccountFilter>) => {
+    setFilter((f) => ({ ...f, ...patch }))
+    setCurrentPage(1)
+  }
+  const chips: FilterChip[] = [
+    ...(filter.from
+      ? [{ key: "from", label: t("admin_chip_from").replace("{date}", chipDate(filter.from)), onRemove: () => updateFilter({ from: null }) }]
+      : []),
+    ...(filter.to
+      ? [{ key: "to", label: t("admin_chip_to").replace("{date}", chipDate(filter.to)), onRemove: () => updateFilter({ to: null }) }]
+      : []),
+  ]
 
   const planCell = (u: UserRow) => `${PLAN_LABEL[u.plan]} · ${t(SOURCE_KEY[u.source])}`
   const expiry = (u: UserRow) => (u.expiresAt ? formatValidUntil(new Date(u.expiresAt)) : "-")
@@ -190,6 +212,47 @@ export function AdminAccounts() {
 
       {tab === "active" ? (
         <>
+          <FilterBar
+            search={{ value: filter.search, onChange: (search) => updateFilter({ search }), placeholder: t("admin_accounts_search") }}
+            primaryFilter={
+              <Select value={filter.sort} onValueChange={(v) => v && updateFilter({ sort: v as AccountSort })}>
+                <SelectTrigger aria-label={t("admin_sort")} className="h-11 w-auto gap-2 md:h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">{t("admin_sort_newest")}</SelectItem>
+                  <SelectItem value="oldest">{t("admin_sort_oldest")}</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+            filters={
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-created-from">{t("admin_created_from")}</Label>
+                  <Input
+                    id="admin-created-from"
+                    type="date"
+                    value={filter.from ?? ""}
+                    onChange={(e) => updateFilter({ from: e.target.value || null })}
+                    className="h-11 md:h-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-created-to">{t("admin_created_to")}</Label>
+                  <Input
+                    id="admin-created-to"
+                    type="date"
+                    value={filter.to ?? ""}
+                    onChange={(e) => updateFilter({ to: e.target.value || null })}
+                    className="h-11 md:h-10"
+                  />
+                </div>
+              </>
+            }
+            activeChips={chips}
+            onClearAll={() => updateFilter({ search: "", from: null, to: null })}
+          />
+
           <ResponsiveList
             isLoading={query.isPending}
             isError={query.isError}
@@ -199,7 +262,7 @@ export function AdminAccounts() {
             items={paginatedData}
             getKey={(u) => u.id}
             columns={activeColumns}
-            emptyText="-"
+            emptyText={query.data?.users.length ? t("admin_accounts_no_match") : "-"}
             renderCard={(u) => (
               <div data-testid="admin-user-card" className="space-y-2 rounded-lg border bg-white p-4">
                 <div className="flex items-start justify-between gap-2">
