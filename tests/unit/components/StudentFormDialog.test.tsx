@@ -106,18 +106,18 @@ describe("StudentFormDialog: cách thu học phí (Plan T)", () => {
     const monthlyInput = screen.getByLabelText(viText.fee_per_month_label) as HTMLInputElement
     fireEvent.change(monthlyInput, { target: { value: "400000" } })
 
-    // Bấm Theo buổi -> ô hiện lại giá/buổi cũ (50,000)
+    // Bấm Theo buổi -> ô hiện lại giá/buổi cũ (50.000)
     const perSessionRadio = screen.getByRole("radio", { name: viText.billing_per_session })
     fireEvent.click(perSessionRadio)
     expect(screen.getByText(viText.fee_per_session_label)).toBeTruthy()
     const perSessionInputAgain = screen.getByLabelText(viText.fee_per_session_label) as HTMLInputElement
-    expect(perSessionInputAgain.value).toBe("50,000")
+    expect(perSessionInputAgain.value).toBe("50.000")
 
-    // Bấm lại Trọn tháng -> hiện lại 400,000
+    // Bấm lại Trọn tháng -> hiện lại 400.000
     fireEvent.click(monthlyRadio)
     expect(screen.getByText(viText.fee_per_month_label)).toBeTruthy()
     const monthlyInputAgain = screen.getByLabelText(viText.fee_per_month_label) as HTMLInputElement
-    expect(monthlyInputAgain.value).toBe("400,000")
+    expect(monthlyInputAgain.value).toBe("400.000")
 
     // Tick consent và submit
     fireEvent.click(screen.getByRole("checkbox", { name: viText.consent_student }))

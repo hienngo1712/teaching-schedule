@@ -66,8 +66,8 @@ test('desktop: admin sửa giá Plus (xem trước, lỗi tại chỗ, xác nh�
   const plusInput = plus.getByRole('textbox', { name: 'Giá tháng Plus' });
   const proInput = pro.getByRole('textbox', { name: 'Giá tháng Pro' });
   const save = form.getByRole('button', { name: 'Lưu bảng giá' });
-  await expect(plusInput).toHaveValue('49,000');
-  await expect(proInput).toHaveValue('99,000');
+  await expect(plusInput).toHaveValue('49.000');
+  await expect(proInput).toHaveValue('99.000');
   await expect(plus).toContainText('12 tháng: 490.000 đ');
   await expect(plus).toContainText('24 tháng: 980.000 đ');
   await expect(save).toBeDisabled();
@@ -98,7 +98,7 @@ test('desktop: admin sửa giá Plus (xem trước, lỗi tại chỗ, xác nh�
   await confirm.getByRole('button', { name: 'Xác nhận đổi giá' }).click();
   await expect(admin.getByText('Đã cập nhật bảng giá')).toBeVisible();
   await expect(confirm).toBeHidden();
-  await expect(plusInput).toHaveValue('59,000');
+  await expect(plusInput).toHaveValue('59.000');
   await expect(save).toBeDisabled();
   const row = admin.getByRole('row').filter({ hasText: 'admin_test' }).first();
   await expect(row).toContainText('Plus');
@@ -133,7 +133,7 @@ test('390px: tab bar 7 tab ≥44px, form Pro trên Plus, ô/nút ≥44px, lịch
   const y = async (id: string) => (await admin.getByTestId(id).boundingBox())!.y;
   expect(await y('price-pro')).toBeLessThan(await y('price-plus'));
   const plusInput = admin.getByRole('textbox', { name: 'Giá tháng Plus' });
-  await expect(plusInput).toHaveValue('59,000');
+  await expect(plusInput).toHaveValue('59.000');
   for (const box of [plusInput, admin.getByRole('textbox', { name: 'Giá tháng Pro' })]) {
     expect((await box.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }

@@ -74,10 +74,10 @@ describe("AttendancePanel: hiển thị học phí theo cách thu (Plan T)", () 
     // HS trọn tháng hiện nhãn "Trọn tháng"
     expect(screen.getByText(viText.billing_monthly)).toBeTruthy()
 
-    // Chỉ có 1 ô CurrencyInput (cho HS theo buổi với giá 50,000)
+    // Chỉ có 1 ô CurrencyInput (cho HS theo buổi với giá 50.000)
     const inputs = screen.getAllByRole("textbox")
-    // CurrencyInput là textbox có value 50,000
-    const feeInputs = inputs.filter((inp) => (inp as HTMLInputElement).value === "50,000")
+    // CurrencyInput là textbox có value 50.000
+    const feeInputs = inputs.filter((inp) => (inp as HTMLInputElement).value === "50.000")
     expect(feeInputs).toHaveLength(1)
   })
 })

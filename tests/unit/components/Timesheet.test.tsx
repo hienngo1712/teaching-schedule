@@ -179,7 +179,7 @@ describe("IncomeTab", () => {
 describe("PlacePaymentDialog", () => {
   it("số tiền mặc định = còn thiếu; Ghi nhận gửi đúng", async () => {
     wrap(<PlacePaymentDialog placeId={2} placeName="TT Ánh Dương" year={2026} month={9} remaining={55000} onClose={() => {}} />)
-    expect((screen.getByLabelText("Số tiền đã nhận") as HTMLInputElement).value).toBe("55,000")
+    expect((screen.getByLabelText("Số tiền đã nhận") as HTMLInputElement).value).toBe("55.000")
     fireEvent.click(screen.getByRole("button", { name: "Ghi nhận đã nhận" }))
     await waitFor(() => expect(state.createMutate).toHaveBeenCalledTimes(1))
     expect(state.createMutate.mock.calls[0][0]).toMatchObject({ placeId: 2, year: 2026, month: 9, amount: 55000 })
