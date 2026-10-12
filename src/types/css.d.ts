@@ -1,2 +1,2 @@
-// import("….css") động (driver.css tải cùng driver.js) cần kiểu; Next xử lý file css lúc build.
-declare module "*.css"
+// import() động driver.css (tải cùng driver.js) cần kiểu; chỉ khai báo đúng file này (spec AR D4).
+declare module "driver.js/dist/driver.css"
