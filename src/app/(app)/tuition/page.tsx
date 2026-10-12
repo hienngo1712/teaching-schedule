@@ -118,6 +118,8 @@ export default function TuitionPage() {
 
   // Link từ Dashboard có studentId: mở sheet đúng HS một lần (tra theo id vì tên có thể trùng).
   useEffect(() => {
+    // URL hết studentId (đã đóng sheet) mới cho mở lại cùng HS lần sau (chuông/toast payOS).
+    if (!selectedStudentId) autoOpenedId.current = null
     if (!selectedStudentId || autoOpenedId.current === selectedStudentId) return
     const item = query.data?.items.find((i) => i.studentId === selectedStudentId)
     if (!item) return
@@ -429,9 +431,8 @@ export default function TuitionPage() {
         onOpenChange={(open) => {
           setIsSheetOpen(open)
           // Đóng sheet mà URL còn studentId (vào từ deep link) → bỏ đi, tránh Back mở lại.
+          // Không xoá autoOpenedId ở đây: URL chưa kịp bỏ studentId thì effect sẽ mở lại sheet (spec AR B1).
           if (!open && selectedStudentId) setStudentId(null, { replace: true })
-          // Chuông/toast payOS có thể mở lại đúng HS này khi vẫn ở /tuition (review AI).
-          if (!open) autoOpenedId.current = null
         }}
         data={selectedStudent}
         // TRPCProvider tự invalidate sau mutation

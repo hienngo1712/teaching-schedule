@@ -59,11 +59,14 @@ const getMonthlyStatusQuery = {
   refetch: vi.fn(),
 }
 
+const deepLinkQuery = { ...getMonthlyStatusQuery, data: { ...getMonthlyStatusQuery.data } }
+
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } } }),
     tuition: {
-      getMonthlyStatus: { useQuery: () => getMonthlyStatusQuery },
+      // Như react-query: mỗi bộ input (có/không studentId) là 1 cache riêng → đổi input thì data đổi tham chiếu.
+      getMonthlyStatus: { useQuery: (input: { studentId?: number }) => (input.studentId ? deepLinkQuery : getMonthlyStatusQuery) },
       getNotice: { useQuery: () => ({ data: undefined, isError: false, refetch: vi.fn() }) },
       ledgers: { useQuery: () => ({ data: [], isPending: false }) },
       updateSettlement: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
@@ -115,5 +118,19 @@ describe("TuitionPage - deep link studentId mở lại", () => {
     setQs("year=2026&month=8&studentId=1")
     rerender(page())
     await waitFor(() => expect(screen.queryAllByText("Chi tiết học phí").length).toBeGreaterThan(0))
+  })
+
+  // Spec AR B1 (dashboard-alerts:59): Escape đóng sheet khi URL chưa kịp bỏ studentId (router.replace chạy sau)
+  // → không được mở lại chỉ vì query đổi input.
+  it("Escape khi URL còn studentId → sheet đóng, không tự mở lại", async () => {
+    setQs("year=2026&month=8&studentId=1")
+    const { rerender } = render(page())
+    expect(screen.queryAllByText("Chi tiết học phí").length).toBeGreaterThan(0)
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" })
+    rerender(page())
+    await waitFor(() => expect(screen.queryByText("Chi tiết học phí")).toBeNull())
+    rerender(page())
+    expect(screen.queryByRole("dialog")).toBeNull()
   })
 })
