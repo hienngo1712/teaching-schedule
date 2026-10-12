@@ -117,6 +117,17 @@ test('giáo viên tạo link, phụ huynh xem không cần đăng nhập, tạo 
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth
   );
   expect(overflow).toBeLessThanOrEqual(0);
+
+  // Spec AR A1: ở 360px thẻ phiếu co theo khung, cách mép ≥16px 2 bên, không cuộn ngang; chụp 360 + 375.
+  for (const width of [360, 375]) {
+    await parent.page.setViewportSize({ width, height: 800 });
+    const card = (await parent.page.getByTestId('notice-card').boundingBox())!;
+    expect(card.x).toBeGreaterThanOrEqual(16);
+    expect(card.x + card.width).toBeLessThanOrEqual(width - 16);
+    expect(await parent.page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await parent.page.screenshot({ path: `../student-managerment/.superpowers/mockups/aj/that-ar/phieu-phu-huynh-${width}.png` });
+  }
+  await parent.page.setViewportSize({ width: 390, height: 844 });
   const prevLink = parent.page.getByRole('link', { name: /Tháng trước/ });
   expect((await prevLink.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 

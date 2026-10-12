@@ -61,14 +61,17 @@ describe("TuitionNoticeCard - variant wide (spec Y Task 7)", () => {
     expect(screen.getByTestId("notice-qr-side").className).toContain("grid")
   })
 
-  it("variant='default' -> có Ngày học, style width 360", () => {
+  // Spec AR A1: rộng tối đa 360px nhưng co theo khung (trang phụ huynh 360px không cuộn ngang), như PlaceNoticeCard.
+  it("variant='default' -> có Ngày học, w-full max-w-[360px], không width cố định", () => {
     render(
       <LanguageProvider forcedLanguage="vi">
         <TuitionNoticeCard notice={baseNotice} />
       </LanguageProvider>
     )
     const card = screen.getByTestId("notice-card")
-    expect(card.style.width).toBe("360px")
+    expect(card.style.width).toBe("")
+    expect(card.className).toContain("w-full")
+    expect(card.className).toContain("max-w-[360px]")
     expect(screen.getByText(/Ngày học/)).toBeDefined()
   })
 })
