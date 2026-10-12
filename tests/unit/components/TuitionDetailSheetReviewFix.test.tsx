@@ -270,6 +270,17 @@ describe("TuitionDetailSheet — Miễn có lý do", () => {
     expect(mockClientSettlement).not.toHaveBeenCalled()
   })
 
+  // Spec AR B2: blur rồi bấm X ngay (lần lưu blur chưa xong) → chỉ 1 lần lưu.
+  it("blur rồi đóng sheet ngay khi lần lưu chưa xong: chỉ gửi 1 lần", () => {
+    const { unmount } = renderSheet()
+    const box = screen.getByPlaceholderText("Nhập ghi chú thanh toán (nếu có)...")
+    fireEvent.change(box, { target: { value: "hẹn thứ 7" } })
+    fireEvent.blur(box)
+    unmount()
+    expect(mockUpdateSettlementMutate).toHaveBeenCalledTimes(1)
+    expect(mockClientSettlement).not.toHaveBeenCalled()
+  })
+
   it("Miễn có lý do giữ nguyên khoảng trắng của ghi chú cũ", () => {
     const spaced = { ...rowData, notes: "  dòng 1  " }
     currentRow = spaced

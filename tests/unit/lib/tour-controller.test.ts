@@ -157,6 +157,8 @@ describe("runTour", () => {
     calls[0].popover.onNextClick()
     expect(onEnd).toHaveBeenCalledTimes(1)
     expect(onStartTour).toHaveBeenCalledWith("session")
+    // Spec AR B3b: báo chuyển tour trước khi kết thúc để TourRunner giữ cờ đang chạy tour.
+    expect(onStartTour.mock.invocationCallOrder[0]).toBeLessThan(onEnd.mock.invocationCallOrder[0])
   })
 
   it("phần tử đang tô sáng bị gỡ khỏi trang (đóng hộp) thì tắt tour", async () => {

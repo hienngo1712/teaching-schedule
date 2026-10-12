@@ -165,12 +165,13 @@ function TuitionDetailBody({
   // row.notes chưa kịp refetch sau khi lưu (blur / Miễn) → so với giá trị vừa lưu, tránh gửi lại khi đóng sheet.
   const lastSaved = useRef<string | null>(null)
   // Đóng sheet bằng Esc/vuốt không bắn blur → lưu ghi chú còn dở khi unmount (client thường, không phụ thuộc component).
-  const pendingNotes = useRef({ notes, saved: row.notes ?? "" })
-  pendingNotes.current = { notes, saved: lastSaved.current ?? row.notes ?? "" }
+  const pendingNotes = useRef({ notes, rowNotes: row.notes ?? "" })
+  pendingNotes.current = { notes, rowNotes: row.notes ?? "" }
   useEffect(() => {
     return () => {
-      const { notes: n, saved } = pendingNotes.current
-      if (n !== saved) {
+      // Đọc lastSaved lúc unmount: blur vừa gửi mà chưa render lại vẫn thấy (spec AR B2).
+      const { notes: n, rowNotes } = pendingNotes.current
+      if (n !== (lastSaved.current ?? rowNotes)) {
         void utils.client.tuition.updateSettlement
           .mutate({ studentId, year, month, notes: n === "" ? null : n })
           .then(() => utils.tuition.invalidate())
@@ -188,13 +189,18 @@ function TuitionDetailBody({
   const handleBlurNotes = () => {
     if (notes !== (lastSaved.current ?? row.notes ?? "")) {
       const sent = notes
+      const prev = lastSaved.current
+      // Ghi nhận ngay lúc gửi: đóng sheet khi lần lưu chưa xong thì không gửi lại lần 2 (spec AR B2).
+      lastSaved.current = sent
       updateSettlementMut.mutate(
         { studentId, year, month, notes: sent === "" ? null : sent },
         {
           onSuccess: () => {
-            lastSaved.current = sent
             setNotesSaved(true)
             setTimeout(() => setNotesSaved(false), 2000)
+          },
+          onError: () => {
+            if (lastSaved.current === sent) lastSaved.current = prev
           },
         }
       )

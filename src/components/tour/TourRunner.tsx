@@ -7,7 +7,7 @@ import { useTranslation } from "@/components/providers/LanguageProvider"
 import { trpc } from "@/lib/trpc"
 import { MISSING_STEPS, TOURS, TOUR_FIRST_WAIT_MS, TOUR_PARAM, parseTourParam, tourHref, type TourStep } from "@/lib/tours"
 import { runTour, type TourHandle } from "@/lib/tour-controller"
-import { setTourActive } from "@/lib/tour-store"
+import { OPEN_DIALOG_SELECTOR, setTourActive } from "@/lib/tour-store"
 
 // Chạy tour khi URL có ?tour=<id> (nút "Chỉ cho tôi"), spec AD §4.2.
 export function TourRunner() {
@@ -19,6 +19,8 @@ export function TourRunner() {
   const handle = useRef<TourHandle | null>(null)
   // Mỗi lần chạy 1 số; đổi trang / lần chạy mới / StrictMode unmount làm lần cũ còn đang tải tự bỏ.
   const runId = useRef(0)
+  // Bước báo thiếu vừa chuyển sang tour khác: giữ cờ đang chạy tour qua lúc chuyển trang (spec AR B3b).
+  const chaining = useRef(false)
   const raw = params.get(TOUR_PARAM)
 
   // Chuyển trang thì tắt tour đang chạy, kể cả lần còn đang tải (chưa có handle).
@@ -39,10 +41,12 @@ export function TourRunner() {
     const qs = rest.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
 
+    const chained = chaining.current
+    chaining.current = false
     const id = parseTourParam(raw)
-    if (!id) return
-    if (document.querySelector('[role="dialog"][data-state="open"]')) {
-      toast(t("tour_close_dialog_first"))
+    if (!id || document.querySelector(OPEN_DIALOG_SELECTOR)) {
+      if (chained) setTourActive(false)
+      if (id) toast(t("tour_close_dialog_first"))
       return
     }
     const my = ++runId.current
@@ -51,7 +55,7 @@ export function TourRunner() {
     const end = () => {
       if (my !== runId.current) return
       handle.current = null
-      setTourActive(false)
+      if (!chaining.current) setTourActive(false)
     }
 
     void (async () => {
@@ -87,7 +91,10 @@ export function TourRunner() {
           steps,
           t,
           onMissingClickTarget: () => toast(t("tour_target_missing")),
-          onStartTour: (next) => router.push(tourHref(next)),
+          onStartTour: (next) => {
+            chaining.current = true
+            router.push(tourHref(next))
+          },
           onEnd: end,
           firstWaitMs: TOUR_FIRST_WAIT_MS,
         })

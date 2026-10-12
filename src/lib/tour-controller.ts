@@ -147,8 +147,9 @@ export function runTour(opts: RunTourOptions): TourHandle {
     const onNext = () => {
       if (step.nextTour) {
         const next = step.nextTour
-        stop()
+        // Báo chuyển tour trước stop() → onEnd biết đang nối tour, không tắt cờ (spec AR B3b).
         opts.onStartTour(next)
+        stop()
         return
       }
       void show(i + 1)

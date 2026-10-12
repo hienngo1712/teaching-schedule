@@ -72,6 +72,40 @@ describe("TourRunner", () => {
     expect(run.runTour).not.toHaveBeenCalled()
   })
 
+  // Spec AR B3a: hộp xác nhận (AlertDialog) cũng là hộp đang mở.
+  it("đang có hộp xác nhận (alertdialog) mở: báo và không chạy", async () => {
+    const d = document.createElement("div")
+    d.setAttribute("role", "alertdialog")
+    d.setAttribute("data-state", "open")
+    document.body.appendChild(d)
+    renderVi()
+    expect(toast).toHaveBeenCalledWith("Đóng hộp đang mở rồi bấm Chỉ cho tôi lại nhé.")
+    await new Promise((r) => setTimeout(r, 0))
+    expect(run.runTour).not.toHaveBeenCalled()
+  })
+
+  // Spec AR B3b: tour nối tour → trong lúc chuyển trang cờ vẫn bật, Có gì mới không chen vào.
+  it("bước báo thiếu chuyển tour: cờ đang chạy tour vẫn bật tới khi tour sau chạy", async () => {
+    nav.search = "tour=attendance"
+    nav.pathname = "/calendar"
+    status.fetch.mockResolvedValue({ steps: { student: true, session: false } })
+    const { rerender } = renderVi()
+    await waitFor(() => expect(run.runTour).toHaveBeenCalled())
+    const opts = (run.runTour.mock.calls[0] as unknown as [{ onStartTour: (id: string) => void; onEnd: () => void }])[0]
+    opts.onStartTour("session")
+    opts.onEnd()
+    expect(nav.push).toHaveBeenCalled()
+    expect(isTourActive()).toBe(true)
+
+    nav.search = "tour=session"
+    rerender(<LanguageProvider forcedLanguage="vi"><TourRunner /></LanguageProvider>)
+    await waitFor(() => expect(run.runTour).toHaveBeenCalledTimes(2))
+    expect(isTourActive()).toBe(true)
+    const next = (run.runTour.mock.calls[1] as unknown as [{ onEnd: () => void }])[0]
+    next.onEnd()
+    expect(isTourActive()).toBe(false)
+  })
+
   it("Điểm danh khi chưa có ca: chạy bước báo thiếu", async () => {
     nav.search = "tour=attendance"
     nav.pathname = "/calendar"
