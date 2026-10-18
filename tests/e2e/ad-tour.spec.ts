@@ -68,7 +68,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     // driver.css tải động vẫn áp dụng.
     await expect(popover(page)).toHaveCSS('position', 'fixed');
     await page.locator('[data-tour="student-add"]:visible').click();
-    const dialog = page.getByRole('dialog');
+    // Popover tour cũng có role="dialog" (bước 2 hiện ~240ms sau khi hộp mở) → gọi đúng tên hộp, kẻo khớp 2 phần tử.
+    const dialog = page.getByRole('dialog', { name: 'Thêm học sinh', exact: true });
     await expect(dialog).toBeVisible();
     await expect(popover(page)).toContainText('Họ tên và lớp');
     // Phím mũi tên khi focus không ở ô nhập: phải = Tiếp, trái = Quay lại.
