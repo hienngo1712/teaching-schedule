@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { CONSENT_ACCEPTED } from '../../src/lib/consent';
 
 // Spec AR A2 + A3 ở 375: tên môn dài hiện đủ (không "…"); nút X của hộp/sheet vùng chạm ≥44px, không đè tiêu đề.
 test.use({ viewport: { width: 375, height: 812 } });
@@ -66,5 +67,30 @@ test('375px: tên môn dài hiện đủ; nút X hộp Thêm học sinh và shee
     await page.screenshot({ path: `${SHOTS}/sheet-bo-loc-375.png` });
   } finally {
     await page.request.post('/api/trpc/subject.delete', { data: { id: subjectId } });
+  }
+});
+
+// Nút X 44px không được đè nút ⋯ ở đầu sheet Chi tiết học phí (lỗi lộ ra khi chụp lại ảnh HD).
+test('375px: sheet Chi tiết học phí, nút ⋯ không bị nút X đè, bấm mở được menu', async ({ page }) => {
+  await login(page);
+  const res = await page.request.post('/api/trpc/student.create', {
+    data: { consent: CONSENT_ACCEPTED, fullName: `E2E AR Sheet ${Date.now()}`, grade: 5, tuitionFee: 100000 },
+  });
+  expect(res.ok(), await res.text()).toBeTruthy();
+  const id = (await res.json()).result.data.id as number;
+  try {
+    await page.goto(`/tuition?studentId=${id}`);
+    const sheet = page.getByRole('dialog');
+    await expect(sheet).toBeVisible();
+    await sheet.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+    const more = sheet.getByTestId('tuition-sheet-more');
+    const [m, x] = [(await more.boundingBox())!, (await sheet.getByRole('button', { name: 'Close' }).boundingBox())!];
+    // 2 nút không chồng nhau.
+    expect(m.x + m.width <= x.x || m.y >= x.y + x.height).toBe(true);
+    await page.screenshot({ path: `${SHOTS}/sheet-hoc-phi-375.png` });
+    await more.click();
+    await expect(page.getByRole('menu')).toBeVisible();
+  } finally {
+    await page.request.post('/api/trpc/student.delete', { data: { id } });
   }
 });

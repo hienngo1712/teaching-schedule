@@ -242,8 +242,8 @@ function TuitionDetailBody({
     <>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex flex-col gap-6 p-6">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2">
+          {/* Header; pr-8 chừa chỗ nút X 44px ở góc (spec AR A3), không đè nút ⋯. */}
+          <div className="flex items-start justify-between gap-2 pr-8">
             <div className="flex flex-col gap-1 min-w-0">
               <h2 className="text-xl font-bold text-slate-900 truncate">{row.fullName}</h2>
               <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
@@ -256,7 +256,7 @@ function TuitionDetailBody({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-9 shrink-0">
+                <Button variant="ghost" size="icon" className="size-9 shrink-0" data-testid="tuition-sheet-more">
                   <MoreHorizontal className="size-5" />
                 </Button>
               </DropdownMenuTrigger>
