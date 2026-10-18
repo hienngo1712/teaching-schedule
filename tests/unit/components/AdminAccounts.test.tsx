@@ -132,8 +132,22 @@ function openMenu(username: string) {
   fireEvent.keyDown(within(table()).getByRole("button", { name: `Menu hành động ${username}` }), { key: "Enter" })
 }
 
+// Radix Select cần các API con trỏ/cuộn mà jsdom không có.
+Object.assign(window.HTMLElement.prototype, {
+  hasPointerCapture: () => false,
+  releasePointerCapture: () => {},
+  scrollIntoView: () => {},
+})
+
 beforeEach(() => {
   vi.clearAllMocks()
+  // FilterBar dùng useMediaQuery; jsdom không có matchMedia → khổ điện thoại.
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  })) as unknown as typeof window.matchMedia
   state.users = [user(1), user(2, { username: "admin_test", isAdmin: true })]
   state.deletedUsers = []
 })
@@ -238,5 +252,52 @@ describe("AdminAccounts — cột Hành động, tab Đã xoá, phân trang", ()
     expect(purge.textContent).toContain("Xoá vĩnh viễn")
     fireEvent.click(purge)
     expect(screen.getByTestId("purge-dialog").textContent).toBe("gv_xoa_lau")
+  })
+})
+
+// Spec AR §1: tìm, sắp Mới nhất/Cũ nhất, khoảng ngày tạo; lọc phía client.
+describe("AdminAccounts — bộ lọc tab Đang dùng", () => {
+  const firstUsername = () => within(within(table()).getAllByRole("row")[1]).getAllByRole("cell")[0].textContent
+
+  it("gõ 'suiu' → chỉ còn dòng khớp (không phân biệt hoa thường)", () => {
+    state.users = [user(1), user(2, { username: "Suiuoi" }), user(3, { fullName: null })]
+    renderPage()
+    fireEvent.change(screen.getByPlaceholderText("Tìm tên đăng nhập hoặc họ tên"), { target: { value: "suiu" } })
+    const rows = within(table()).getAllByRole("row").slice(1)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].textContent).toContain("Suiuoi")
+  })
+
+  it("mặc định dòng đầu là tài khoản tạo mới nhất", () => {
+    state.users = [
+      user(1, { createdAt: "2026-05-01T03:00:00.000Z" }),
+      user(2, { username: "moi_nhat", createdAt: "2026-10-11T18:30:00.000Z" }),
+      user(3, { createdAt: "2026-08-01T03:00:00.000Z" }),
+    ]
+    renderPage()
+    expect(firstUsername()).toBe("moi_nhat")
+  })
+
+  it("đang ở trang 2, đổi Sắp xếp → Cũ nhất về trang 1", () => {
+    state.users = Array.from({ length: 25 }, (_, i) => user(i + 1, { createdAt: new Date(Date.UTC(2026, 0, i + 1)).toISOString() }))
+    renderPage()
+    fireEvent.click(screen.getByRole("button", { name: "Trang sau" }))
+    expect(within(table()).getAllByRole("row")).toHaveLength(6)
+    fireEvent.pointerDown(screen.getByRole("combobox", { name: "Sắp xếp" }), { button: 0, ctrlKey: false, pointerType: "mouse" })
+    fireEvent.click(screen.getByRole("option", { name: "Cũ nhất" }))
+    expect(within(table()).getAllByRole("row")).toHaveLength(21)
+    expect(firstUsername()).toBe("gv1")
+  })
+
+  it("lọc không khớp → 'Không có tài khoản phù hợp'", () => {
+    renderPage()
+    fireEvent.change(screen.getByPlaceholderText("Tìm tên đăng nhập hoặc họ tên"), { target: { value: "khong-ai-ten-vay" } })
+    expect(screen.getAllByText("Không có tài khoản phù hợp").length).toBeGreaterThan(0)
+  })
+
+  it("chưa có tài khoản nào → vẫn '-'", () => {
+    state.users = []
+    renderPage()
+    expect(screen.queryByText("Không có tài khoản phù hợp")).toBeNull()
   })
 })

@@ -140,15 +140,7 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
           {/* Cột phải: Phiếu báo — không có khi HS ở nơi tính theo ca/giờ (spec AL §4.6). */}
           {view.notice && (
           <aside className="order-first space-y-2 lg:order-last lg:sticky lg:top-4">
-            {isWide ? (
-              <TuitionNoticeCard notice={view.notice} variant="wide" />
-            ) : (
-              <div className="overflow-x-auto">
-                <div className="mx-auto w-fit">
-                  <TuitionNoticeCard notice={view.notice} variant="default" />
-                </div>
-              </div>
-            )}
+            <TuitionNoticeCard notice={view.notice} variant={isWide ? "wide" : "default"} />
             {view.notice.qr && (
               <p className="mt-2 text-center text-xs text-slate-500">{t("parent_qr_hint")}</p>
             )}

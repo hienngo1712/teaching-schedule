@@ -66,8 +66,8 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
     <div
       ref={ref}
       data-testid="notice-card"
-      style={isWide ? undefined : { width: 360 }}
-      className={cn("space-y-4 border border-slate-200 bg-white p-5 text-sm text-slate-900", isWide && "w-full")}
+      // Rộng tối đa 360px nhưng co theo khung: trang phụ huynh 360px không cuộn ngang (spec AR A1, như PlaceNoticeCard).
+      className={cn("w-full space-y-4 border border-slate-200 bg-white p-5 text-sm text-slate-900", !isWide && "mx-auto max-w-[360px]")}
     >
       <h2 className="text-center text-base font-bold">
         {t("tuition_notice_title")} {notice.month}/{notice.year}

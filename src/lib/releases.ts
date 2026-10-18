@@ -13,6 +13,20 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    // Đợt dọn lỗi (spec AR): không tự mở ô Có gì mới, chỉ hiện ở /updates.
+    version: "0.26.0",
+    date: "2026-10-18",
+    title: "Ô tiền dấu chấm, sửa vài lỗi nhỏ",
+    summary: "Ô nhập tiền dùng dấu chấm (185.000); phiếu học phí trang phụ huynh vừa màn điện thoại; tên môn dài hiện đủ; nút đóng hộp dễ bấm hơn; sửa vài lỗi nhỏ.",
+    notify: false,
+    items: [
+      { kind: "improve", title: "Ô nhập tiền dùng dấu chấm", body: "Mọi ô nhập tiền hiện kiểu Việt Nam: 185.000 thay cho 185,000." },
+      { kind: "improve", title: "Vừa màn điện thoại hơn", body: "Phiếu học phí ở trang phụ huynh vừa khung điện thoại nhỏ, không phải kéo ngang; tên môn dài xuống dòng hiện đủ; nút X đóng hộp to hơn, dễ bấm." },
+      { kind: "fix", title: "Sửa vài lỗi nhỏ", body: "Bấm Esc đóng được bảng Chi tiết học phí mở từ Tổng quan; ghi chú học phí không còn bị lưu 2 lần; hướng dẫn Chỉ cho tôi không còn bị ô Có gì mới chen vào giữa." },
+      { kind: "new", title: "Tìm và lọc tài khoản (quản trị)", body: "Ở Tài khoản & gói có ô tìm theo tên đăng nhập hoặc họ tên, lọc theo ngày tạo và sắp Mới nhất hoặc Cũ nhất." },
+    ],
+  },
+  {
     // Tính năng của quản trị viên (spec AQ §7): giáo viên không thấy thay đổi nên không tự mở ô Có gì mới.
     version: "0.25.0",
     date: "2026-10-11",

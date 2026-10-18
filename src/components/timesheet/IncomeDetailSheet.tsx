@@ -95,7 +95,8 @@ function IncomeDetailBody({ target, onOpenNotice }: { target: Target; onOpenNoti
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="income-detail">
       <div className="border-b px-5 pb-4 pt-5">
-        <div className="flex items-center gap-2">
+        {/* pr-10 chừa chỗ nút X 44px ở góc (spec AR A3): tên nơi dài không chạy xuống dưới nút X. */}
+        <div className="flex items-center gap-2 pr-10">
           <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: target.color }} />
           <h2 className="truncate text-lg font-semibold text-slate-900">{target.name}</h2>
         </div>

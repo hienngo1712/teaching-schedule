@@ -26,20 +26,20 @@ describe("CurrencyInput", () => {
     fireEvent.change(input, { target: { value: "12" } })
     expect(input.value).toBe("12")
     fireEvent.change(input, { target: { value: "1234" } })
-    expect(input.value).toBe("1,234")
+    expect(input.value).toBe("1.234")
   })
 
-  it("gõ liên tục 400000 → 400,000", async () => {
+  it("gõ liên tục 400000 → 400.000", async () => {
     render(<Currency />)
     const input = screen.getByLabelText("tiền") as HTMLInputElement
     await userEvent.type(input, "400000")
-    expect(input.value).toBe("400,000")
+    expect(input.value).toBe("400.000")
   })
 
   it("prop value đổi từ ngoài (reset form) vẫn cập nhật ô", () => {
     const { rerender } = render(<CurrencyInput aria-label="tiền" value={5000} onChange={() => {}} />)
     rerender(<CurrencyInput aria-label="tiền" value={70000} onChange={() => {}} />)
-    expect((screen.getByLabelText("tiền") as HTMLInputElement).value).toBe("70,000")
+    expect((screen.getByLabelText("tiền") as HTMLInputElement).value).toBe("70.000")
   })
 })
 

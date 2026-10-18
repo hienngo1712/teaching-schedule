@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import pkg from "../../../package.json"
+import { TX_OPTIONS } from "./payment.service"
 
 export const FEEDBACK_DAILY_LIMIT = 5
 export const FEEDBACK_PROMPT_MIN_DAYS = 7
@@ -26,7 +27,8 @@ export async function submitFeedback(
     })
     await tx.user.updateMany({ where: { id: userId, feedbackPromptAt: null }, data: { feedbackPromptAt: new Date() } })
     return { ok: true as const }
-  })
+    // Chờ khoá advisory khi gửi dồn: 10s như giao dịch tiền, không để mặc định 5s (spec AR D3).
+  }, TX_OPTIONS)
 }
 
 export async function getFeedbackPromptStatus(db: PrismaClient, userId: number) {

@@ -415,4 +415,15 @@ describe("TuitionNoticeDialog", () => {
     )
     expect(screen.getByText(/Chưa cài tài khoản ngân hàng/)).toBeTruthy()
   })
+
+  // Spec AR A1 / RF 5: thẻ tự co theo khung nên hộp tải ảnh giữ khung 360px → ảnh xuất vẫn rộng 360.
+  it("thẻ phiếu nằm trong khung cố định 360px để ảnh tải về không đổi kích thước", () => {
+    queryReturn = { data: notice(), isError: false, dataUpdatedAt: 1000, refetch: vi.fn() }
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionNoticeDialog studentId={1} year={2026} month={5} onClose={() => {}} />
+      </LanguageProvider>
+    )
+    expect(screen.getByTestId("notice-card").parentElement!.className).toContain("w-[360px]")
+  })
 })

@@ -12,7 +12,8 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
 
     const format = (val: number | undefined) => {
       if (val === undefined || isNaN(val)) return ""
-      return val.toLocaleString("en-US")
+      // Dấu chấm nghìn kiểu VN: 185.000 (spec AR C1).
+      return val.toLocaleString("vi-VN")
     }
 
     React.useEffect(() => {
@@ -20,7 +21,8 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
     }, [value])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const rawValue = e.target.value.replace(/,/g, "")
+      // Bỏ mọi ký tự không phải số (dấu chấm nghìn) trước khi đọc số.
+      const rawValue = e.target.value.replace(/\D/g, "")
       if (rawValue === "") {
         setDisplayValue("")
         onChange(undefined)

@@ -103,9 +103,9 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
               </Link>
             </div>
           )}
-          {/* Phiếu rộng cố định 360px; màn hẹp hơn thì cuộn ngang trong khung, không tràn trang. */}
+          {/* Khung cố định 360px để ảnh tải về giữ rộng 360 (thẻ tự co theo khung); màn hẹp hơn thì cuộn ngang trong khung. */}
           <div className="overflow-x-auto">
-            <div className="mx-auto w-fit">
+            <div className="mx-auto w-[360px]">
               {/* key = dataUpdatedAt → mount lại khi refetch đổi dữ liệu (kể cả khi payload QR vẫn null), chụp lại ảnh đúng dữ liệu mới. */}
               <TuitionNoticeCard
                 key={query.dataUpdatedAt}

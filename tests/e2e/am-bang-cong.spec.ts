@@ -68,7 +68,7 @@ test('Bảng công 2 ca 3 giờ → Thu nhập 555.000 → nhận 500.000 → Nh
   await expect(detail).toContainText('555.000 đ');
   await detail.getByRole('button', { name: 'Ghi nhận đã nhận' }).click();
   const dialog = page.getByRole('dialog', { name: 'Ghi nhận đã nhận' });
-  await expect(dialog.getByLabel('Số tiền đã nhận')).toHaveValue('555,000');
+  await expect(dialog.getByLabel('Số tiền đã nhận')).toHaveValue('555.000');
   await dialog.getByLabel('Số tiền đã nhận').fill('500000');
   await dialog.getByRole('button', { name: 'Ghi nhận đã nhận' }).click();
   await expect(dialog).toHaveCount(0);

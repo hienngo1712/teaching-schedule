@@ -57,8 +57,8 @@ describe("AdminPrices", () => {
   it("hiện giá hiện hành + xem trước 12/24 tháng; chưa đổi thì nút Lưu khóa", () => {
     renderPrices()
     expect(screen.getByRole("heading", { level: 1, name: "Bảng giá" })).toBeTruthy()
-    expect(plusInput().value).toBe("49,000")
-    expect(proInput().value).toBe("99,000")
+    expect(plusInput().value).toBe("49.000")
+    expect(proInput().value).toBe("99.000")
     expect(block("plus")).toContain("12 tháng: 490.000 đ")
     expect(block("plus")).toContain("24 tháng: 980.000 đ")
     expect(block("pro")).toContain("12 tháng: 990.000 đ")
@@ -75,9 +75,13 @@ describe("AdminPrices", () => {
     expect(saveButton().disabled).toBe(false)
   })
 
-  it("Review Focus 1: gõ 59.000 có dấu chấm → thành 59, báo lỗi khoảng, nút Lưu khóa; để trống cũng lỗi", () => {
+  // Spec AR C1: dấu chấm là dấu nghìn (ô hiện 59.000) nên gõ "59.000" là 59000, không còn cắt thành 59.
+  it("Review Focus 1: gõ 59.000 có dấu chấm → 59000; gõ 59 → báo lỗi khoảng, nút Lưu khóa; để trống cũng lỗi", () => {
     renderPrices()
     type(plusInput(), "59.000")
+    expect(plusInput().value).toBe("59.000")
+    expect(block("plus")).toContain("12 tháng: 590.000 đ")
+    type(plusInput(), "59")
     expect(plusInput().value).toBe("59")
     expect(block("plus")).toContain("Giá tháng từ 10.000 đến 1.000.000")
     expect(saveButton().disabled).toBe(true)
