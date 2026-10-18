@@ -71,7 +71,9 @@ test('logout successfully', async ({ page }) => {
   await page.fill('input[name="password"]', 'teacher123');
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/.*dashboard/);
-  
+  // AR Task 7: như test lệch epoch, /api/auth/session còn chạy dở sẽ gắn lại cookie sau khi đăng xuất → về /dashboard.
+  await page.waitForLoadState('networkidle');
+
   // Click logout (it's in a dropdown)
   await page.click('button[aria-label="Mở menu tài khoản"]');
   await page.click('text=Đăng xuất');
@@ -106,6 +108,9 @@ test('không tick → token remember=false (cắt 8h đã phủ ở unit auth-jw
 
 test('token lệch epoch → về /login?expired=1, thấy thông báo, cookie bị xóa', async ({ page, context }) => {
   await loginForm(page, false);
+  // AR Task 7: Dashboard vừa mở còn gọi /api/auth/session, mỗi lần trả Set-Cookie token hợp lệ ký lại; về sau lúc
+  // đã thay cookie giả thì đè mất cookie giả / việc xoá cookie. Chờ hết request rồi mới thay.
+  await page.waitForLoadState('networkidle');
   const { payload } = await sessionPayload(context);
   const forged = await encode({ token: { ...payload, epoch: '0.0-old' }, secret: SECRET, salt: COOKIE });
   await context.addCookies([{ name: COOKIE, value: forged, domain: 'localhost', path: '/', httpOnly: true, sameSite: 'Lax' }]);

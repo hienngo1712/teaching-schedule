@@ -19,10 +19,14 @@ for (const path of ['/students', '/tuition']) {
     const filter = page.getByRole('button', { name: /^Bộ lọc/ });
     await expect(search).toBeVisible();
     await expect(filter).toBeVisible();
-    const [sb, fb] = [(await search.boundingBox())!, (await filter.boundingBox())!];
-    expect(Math.abs(sb.y + sb.height / 2 - (fb.y + fb.height / 2))).toBeLessThanOrEqual(4);
-    expect(fb.x).toBeGreaterThan(sb.x + sb.width);
-    expect(Math.abs(sb.height - fb.height)).toBeLessThanOrEqual(1);
+    // AR Task 7: useMediaQuery render đầu là false (khớp SSR) → FilterBar dựng nút Bộ lọc kiểu Sheet rồi effect đổi sang
+    // Popover, nút bị thay sau khi đã hiện → đo 1 lần có thể ra null. Đo lại tới khi bố cục ổn định.
+    await expect(async () => {
+      const [sb, fb] = [(await search.boundingBox())!, (await filter.boundingBox())!];
+      expect(Math.abs(sb.y + sb.height / 2 - (fb.y + fb.height / 2))).toBeLessThanOrEqual(4);
+      expect(fb.x).toBeGreaterThan(sb.x + sb.width);
+      expect(Math.abs(sb.height - fb.height)).toBeLessThanOrEqual(1);
+    }).toPass();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
@@ -36,8 +40,11 @@ test('/reports 1280px: Bộ lọc, kỳ báo cáo, Xuất Excel cùng 1 hàng; c
   const excel = page.getByRole('button', { name: /Xuất Excel/ });
   await expect(filter).toBeVisible();
   await expect(excel).toBeVisible();
-  const [fb, eb] = [(await filter.boundingBox())!, (await excel.boundingBox())!];
-  expect(Math.abs(fb.y - eb.y)).toBeLessThanOrEqual(4);
+  // Như trên: nút Bộ lọc có thể bị thay ngay sau khi hiện (Sheet → Popover).
+  await expect(async () => {
+    const [fb, eb] = [(await filter.boundingBox())!, (await excel.boundingBox())!];
+    expect(Math.abs(fb.y - eb.y)).toBeLessThanOrEqual(4);
+  }).toPass();
   await filter.click();
   await page.getByRole('dialog').getByRole('combobox', { name: 'Lớp' }).click();
   await page.getByRole('option', { name: 'Lớp 5' }).click();
