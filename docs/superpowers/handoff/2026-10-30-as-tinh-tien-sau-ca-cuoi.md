@@ -44,6 +44,8 @@ Tháng được tính tiền **ngay sau khi kết thúc ca cuối cùng của th
 
 _(DEV ghi: các file đã sửa, cách làm, commit hash, kết quả lint/test, điểm cần QA chú ý)_
 
+Commit code + test: `be375da` (nhánh `feat/as-tinh-tien-sau-ca-cuoi`, chưa push/merge).
+
 ### Cách làm
 - `src/lib/tuition-display.ts`:
   - Thêm hàm thuần `lastSessionEnd(sessions)`: bỏ ca `cancelled`/`isDeleted`, trả mốc kết thúc muộn nhất (Date UTC) hoặc `null`. Ghép mốc: `sessionDate` (@db.Date, đọc ra 0h UTC của ngày VN) + phần giờ của `endTime` (@db.Time(0), đọc ra giờ VN trên ngày 1970-01-01 UTC) − 7h. Cách lưu này khớp `parseTimeToDate`/`formatTime`/`formatDate` trong `src/lib/utils.ts`.
