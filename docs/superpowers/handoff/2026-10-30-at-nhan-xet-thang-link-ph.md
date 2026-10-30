@@ -111,7 +111,7 @@ Hiện muốn lấy link phụ huynh phải sang màn Học sinh (`ParentLinkDia
 **Lưu ý cho LEADER:** nhánh AS (đang QA) nếu cũng nâng lên 0.27.0 thì khi merge sẽ đụng `package.json` + `releases.ts`; bên merge sau đổi số bản.
 
 ### Vòng 3 — sửa lỗi QA (QA-1..4) + merge main
-**Commit:** merge `6a6a14f` (Merge branch 'main', không xung đột) · sửa lỗi `__HASH3__`.
+**Commit:** merge `6a6a14f` (Merge branch 'main', không xung đột) · sửa lỗi `1ea1b92`.
 
 **0. Merge main** (gói AS): git tự gộp, **không có xung đột**. `tuition-notice.service.ts` sau merge dùng `status.inProgress` + truyền `inProgress` cho `ensureTuitionPayLink` (của AS), phần AT (`parentComment`, `getTeacherTuitionNotice`, `saveParentComment`) giữ nguyên. Main vẫn ở `0.26.0`, nhánh AT `0.27.0` → không đụng số bản.
 
