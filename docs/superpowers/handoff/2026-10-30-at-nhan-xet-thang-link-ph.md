@@ -126,7 +126,7 @@ Mọi sửa trong `src/components/tuition/TuitionNoticeDialog.tsx`:
 **Kiểm tra vòng 3 (chạy thật 2026-10-30, sau merge main):** `node_modules/.bin/tsc --noEmit` exit 0 · `pnpm lint` `ESLint: No issues found` · unit toàn bộ `tests/unit` (config tạm, không chạm DB): **193 file / 1335 test pass, 0 fail**. Không chạy integration / `pnpm test` / migrate (để LEADER chạy).
 
 ### Vòng 4 — QA-5 (footer desktop tràn hộp 460px)
-**Commit:** `__HASH4__`.
+**Commit:** `b14c8d7`.
 - `src/components/tuition/TuitionNoticeDialog.tsx`: bỏ `md:flex-nowrap` ở footer và `md:w-auto` ở cụm link phụ huynh → **desktop cũng 2 hàng như mobile**: hàng 1 "Link phụ huynh" + nút sao chép, hàng 2 Chia sẻ + Tải ảnh. Cả 2 hàng canh phải trên desktop (`md:justify-end`). Không nới bề rộng hộp (vẫn `sm:max-w-[460px]`).
 - TDD: test `[QA-2/QA-5]` trong `tests/unit/components/TuitionNoticeDialogAT.test.tsx` đổi sang kiểm footer **không** có `md:flex-nowrap`, cụm link **không** có `md:w-auto` (vẫn `w-full`, `flex-wrap`, `h-11`); đỏ trước khi sửa, xanh sau khi sửa. jsdom không đo được bề rộng → nhờ QA đo lại thật.
 - Kiểm tra (chạy thật): vitest config tạm cho `tests/unit/components/TuitionNoticeDialog*` → **3 file / 31 test pass**; `node_modules/.bin/tsc --noEmit` exit 0; `pnpm lint` `ESLint: No issues found`. Không chạy toàn bộ unit/integration/migrate (LEADER đang chạy nền).
