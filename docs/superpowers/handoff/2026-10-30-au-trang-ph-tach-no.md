@@ -101,7 +101,7 @@ Hiện tại nợ cũ hiện gộp, ví dụ "Nợ 2 tháng trước 480.000 đ"
 4. Ảnh phiếu tải về vẫn đúng bố cục cũ, chỉ khác dòng nợ.
 
 ### Vòng 2 — sửa AU-1, AU-2, AU-3
-**Commit:** `__HASH2__`.
+**Commit:** `3d2424d`.
 
 - **AU-1** `src/components/parent/ParentPayBlock.tsx`: trên web (`useMediaQuery("(min-width: 1024px)")`, cùng breakpoint `lg`):
   - Nợ cũ ≥ 2 dòng tháng → thu vào `<details>` đóng sẵn, tiêu đề "Nợ cũ N tháng · tổng" (có dòng "Trước tháng" thì "N+"), bên trong là từng tháng.
