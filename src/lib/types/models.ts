@@ -1,5 +1,6 @@
 import type { Student, Subject, TeachingSession, SessionStudent } from "@prisma/client"
 import type { StoredPaymentMethod } from "@/lib/schemas/payment"
+import type { DebtPart } from "@/lib/debt-breakdown"
 
 export type { Student, Subject, TeachingSession, SessionStudent }
 
@@ -95,6 +96,8 @@ export interface TuitionStatusDTO {
   payosPaidAmount: number | null
   inProgress: boolean
   debtMonths: number
+  // Nợ cũ từng tháng cũ → mới (spec AU B); null = không tách được, hiện dòng gộp.
+  debtBreakdown?: DebtPart[] | null
   // Nơi học hiện tại (spec AL §4.5): nhãn tên nơi + Bộ lọc Nơi học.
   placeId?: number | null
 }
@@ -162,6 +165,7 @@ export interface TuitionNoticeDTO {
   overpaid: number
   inProgress: boolean
   debtMonths: number
+  debtBreakdown?: DebtPart[] | null
   teacherName: string
   bankConfigured: boolean
   qr: {

@@ -332,3 +332,27 @@ describe("tuition.saveParentComment (AT)", () => {
     expect((await caller.tuition.getNotice({ studentId: st.id, ...MAY })).parentLinkToken).toBe(token)
   })
 })
+
+describe("tách nợ cũ từng tháng (AU)", () => {
+  beforeEach(async () => {
+    await cleanup()
+    nextHour = 7
+  })
+
+  it("✓ nợ T3 + T4, trả một phần → FIFO trừ T3 trước; getNotice + getMonthlyStatus có debtBreakdown, tổng = previousBalance", async () => {
+    const caller = await getAuthedCaller()
+    const st = await createStudent(caller)
+    await addSession(caller, st.id, "2026-03-09", ATTENDANCE_STATUS.PRESENT, 100000)
+    await addSession(caller, st.id, "2026-04-06", ATTENDANCE_STATUS.PRESENT, 100000)
+    await pay(caller, st.id, 4, 50000, "2026-04-20")
+
+    const n = await caller.tuition.getNotice({ studentId: st.id, ...MAY })
+    expect(n.previousBalance).toBe(150000)
+    expect(n.debtBreakdown).toEqual([
+      { year: 2026, month: 3, amount: 50000 },
+      { year: 2026, month: 4, amount: 100000 },
+    ])
+    const { items: [row] } = await caller.tuition.getMonthlyStatus({ ...MAY, studentId: st.id })
+    expect(row.debtBreakdown).toEqual(n.debtBreakdown)
+  })
+})

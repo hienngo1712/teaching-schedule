@@ -1,11 +1,12 @@
 "use client"
 
-import { forwardRef, useEffect, useState } from "react"
+import { Fragment, forwardRef, useEffect, useState } from "react"
 import { toDataURL } from "qrcode"
 import type { TuitionNoticeDTO } from "@/lib/types/models"
 import { cn, formatCurrency, formatDate } from "@/lib/utils"
 import { formatVnDate } from "@/lib/payment-notes"
 import { noticeFeePerSession, noticePaymentState } from "@/lib/tuition-notice"
+import { debtLines } from "@/lib/debt-breakdown"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 
 type Props = {
@@ -127,13 +128,10 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
               "text-slate-400 italic"
             )
           : row(t("notice_month_fee"), formatCurrency(notice.currentMonthFee))}
-        {notice.previousBalance > 0 &&
-          row(
-            notice.debtMonths > 1
-              ? t("debt_n_months_label").replace("{n}", String(notice.debtMonths))
-              : t("debt_prev_month_label").replace("{m}", String(notice.month === 1 ? 12 : notice.month - 1)),
-            formatCurrency(notice.previousBalance)
-          )}
+        {/* Nợ cũ từng tháng + tổng (spec AU B); không tách được thì 1 dòng gộp. */}
+        {debtLines(t, notice).map((l) => (
+          <Fragment key={l.label}>{row(l.label, formatCurrency(l.amount), l.kind === "month" ? "pl-3 text-xs text-slate-500" : undefined)}</Fragment>
+        ))}
         {notice.previousBalance < 0 && row(t("notice_prev_credit"), formatCurrency(notice.previousBalance))}
         {!(notice.inProgress && notice.billingMode === "per_session") &&
           row(t("total_amount_due"), formatCurrency(notice.totalAmountDue), "font-semibold")}

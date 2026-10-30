@@ -118,10 +118,10 @@ test('giáo viên tạo link, phụ huynh xem không cần đăng nhập, tạo 
   );
   expect(overflow).toBeLessThanOrEqual(0);
 
-  // Spec AR A1: ở 360px thẻ phiếu co theo khung, cách mép ≥16px 2 bên, không cuộn ngang; chụp 360 + 375.
+  // Spec AR A1 + AU: ở 360px khối thanh toán co theo khung, cách mép ≥16px 2 bên, không cuộn ngang; chụp 360 + 375.
   for (const width of [360, 375]) {
     await parent.page.setViewportSize({ width, height: 800 });
-    const card = (await parent.page.getByTestId('notice-card').boundingBox())!;
+    const card = (await parent.page.getByTestId('parent-pay').boundingBox())!;
     expect(card.x).toBeGreaterThanOrEqual(16);
     expect(card.x + card.width).toBeLessThanOrEqual(width - 16);
     expect(await parent.page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
@@ -137,13 +137,13 @@ test('giáo viên tạo link, phụ huynh xem không cần đăng nhập, tạo 
   await expect(parent.page).toHaveURL(/\?thang=\d{4}-\d{2}$/);
   await expect(parent.page.getByTestId('parent-month')).not.toHaveText(monthBefore ?? '');
 
-  // 1280px: layout 2 cột, section điểm danh và thẻ phiếu đều nằm trong màn đầu (y < 800)
+  // 1280px: layout 2 cột, điểm danh và khối thanh toán đều nằm trong màn đầu (y < 800)
   const desktopContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const desktopPage = await desktopContext.newPage();
   await hideDevBadge(desktopPage);
   await desktopPage.goto(url1);
   const attendanceBox = await desktopPage.getByRole('heading', { name: /Điểm danh tháng/ }).boundingBox();
-  const noticeCardBox = await desktopPage.getByTestId('notice-card').boundingBox();
+  const noticeCardBox = await desktopPage.getByTestId('parent-pay').boundingBox();
   expect(attendanceBox).not.toBeNull();
   expect(noticeCardBox).not.toBeNull();
   expect(attendanceBox!.y).toBeLessThan(800);

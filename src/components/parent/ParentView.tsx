@@ -1,33 +1,17 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslation } from "@/components/providers/LanguageProvider"
-import { TuitionNoticeCard } from "@/components/tuition/TuitionNoticeCard"
-import { ATTENDANCE_LABEL } from "@/lib/constants"
-import { cn, formatDate, formatDayOfWeek, vnDateParts } from "@/lib/utils"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
-import type { ParentSessionDTO, ParentViewDTO } from "@/lib/types/models"
-
-const ATTENDANCE_STYLE: Record<ParentSessionDTO["attendance"], string> = {
-  present: "bg-green-100 text-green-700",
-  late: "bg-amber-100 text-amber-700",
-  absent: "bg-red-100 text-red-700",
-  pending: "bg-slate-100 text-slate-600",
-}
-
-function todayVn(): string {
-  const { year, month, day } = vnDateParts()
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-}
-
-function sessionLine(s: ParentSessionDTO): string {
-  // Tên nơi chỉ có khi GV dạy ≥ 2 nơi (spec AL §4.6).
-  return `${formatDayOfWeek(s.date)} · ${formatDate(s.date).slice(0, 5)} · ${s.startTime}–${s.endTime} · ${s.subjectName}${s.placeName ? ` · ${s.placeName}` : ""}`
-}
+import { cn, formatCurrency } from "@/lib/utils"
+import type { ParentViewDTO } from "@/lib/types/models"
+import { ParentPayBlock, isProvisionalNotice } from "./ParentPayBlock"
+import { ParentComment } from "./ParentComment"
+import { ParentAttendance, ParentUpcoming } from "./ParentSessions"
 
 function MonthLink({ href, label }: { href: string | null; label: string }) {
-  const base = "flex min-h-11 items-center px-3 text-sm"
+  const base = "flex min-h-11 items-center whitespace-nowrap px-2 text-sm sm:px-3"
   if (!href) return <span className={cn(base, "text-slate-300")}>{label}</span>
   return (
     <Link href={href} className={cn(base, "font-medium text-primary")}>
@@ -36,138 +20,127 @@ function MonthLink({ href, label }: { href: string | null; label: string }) {
   )
 }
 
+// Trang link phụ huynh (spec AU A). Web (lg): 2 cột, khối thanh toán dính cột phải.
+// Điện thoại: thẻ tiền → nhận xét → thanh toán → điểm danh → lịch, thanh dính đáy khi đã cuộn qua số tiền.
+// Ảnh phiếu tải về vẫn dùng TuitionNoticeCard, không đổi.
 export function ParentView({ view }: { view: ParentViewDTO }) {
   const { t } = useTranslation()
   const pathname = usePathname()
-  const today = todayVn()
-  const isWide = useMediaQuery("(min-width: 1024px)")
   const monthHref = (ym: string | null) => (ym ? `${pathname}?thang=${ym}` : null)
+  const notice = view.notice
+  const owing = !!notice && notice.remaining > 0
+  const amountLabel = notice && isProvisionalNotice(notice)
+    ? t("due_now")
+    : t("parent_remaining_month").replace("{m}", String(view.month))
 
-  const presentCount = view.attendance.filter(
-    (s) => s.attendance === "present" || s.attendance === "late"
-  ).length
-  const absentCount = view.attendance.filter((s) => s.attendance === "absent").length
-  const totalCount = view.attendance.length
+  const summaryRef = useRef<HTMLDivElement>(null)
+  const payRef = useRef<HTMLElement>(null)
+  const [barVisible, setBarVisible] = useState(false)
+
+  // Thanh dính đáy chỉ hiện khi không thấy cả thẻ tiền lẫn khối thanh toán (tránh hiện số tiền 2 lần).
+  useEffect(() => {
+    if (!owing || typeof IntersectionObserver === "undefined") return
+    const targets = [summaryRef.current, payRef.current].filter((el): el is HTMLElement => !!el)
+    const seen = new Set<Element>(targets)
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) seen.add(e.target)
+          else seen.delete(e.target)
+        }
+        setBarVisible(seen.size === 0)
+      },
+      { threshold: 0.1 }
+    )
+    targets.forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [owing])
+
+  const gotoPay = () => payRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
 
   return (
-    <main className="min-h-screen bg-page">
-      <div className="mx-auto max-w-md space-y-6 px-4 py-6 lg:max-w-6xl lg:px-8">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold text-slate-900">{view.student.fullName}</h1>
-            <p className="hidden text-sm text-slate-600 lg:block">
+    <main className={cn("min-h-screen bg-page", owing && "pb-24 lg:pb-0")}>
+      <div className="mx-auto max-w-md px-4 py-6 lg:max-w-6xl lg:px-8">
+        <header className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 space-y-1">
+            <h1 className="text-xl font-bold text-slate-900 lg:text-2xl">{view.student.fullName}</h1>
+            <p className="text-sm text-slate-600">
               {`${t("grade")} ${view.student.grade} · ${t("teacher_fallback")}: ${view.teacherName}`}
             </p>
-            <p className="text-sm text-slate-600 lg:hidden">{`${t("grade")} ${view.student.grade}`}</p>
-            <p className="text-sm text-slate-600 lg:hidden">{`${t("teacher_fallback")}: ${view.teacherName}`}</p>
           </div>
-
           <nav className="flex items-center justify-between rounded-lg border border-slate-200 bg-white lg:min-w-[360px]">
             <MonthLink href={monthHref(view.prevMonth)} label={`‹ ${t("prev_month")}`} />
-            <span className="text-sm font-semibold text-slate-900" data-testid="parent-month">
+            <span className="whitespace-nowrap text-sm font-semibold text-slate-900" data-testid="parent-month">
               {`${t("month")} ${view.month}/${view.year}`}
             </span>
             <MonthLink href={monthHref(view.nextMonth)} label={`${t("next_month")} ›`} />
           </nav>
         </header>
 
-        <div className={cn("grid grid-cols-1 gap-6 lg:items-start", view.notice && "lg:grid-cols-[minmax(0,1fr)_400px]")}>
-          {/* Cột trái: Điểm danh & Lịch sắp tới */}
-          <div className="min-w-0 space-y-6">
-            <section className="rounded-lg border border-slate-200 bg-white p-4">
-              <h2 className="font-semibold text-slate-900">{`${t("parent_attendance")} ${view.month}`}</h2>
-
-              {/* Điện thoại giữ dòng tóm tắt cũ (spec Y §4.5); 3 ô chỉ cho máy tính. */}
-              {view.attendance.length > 0 && (
-                <p className="mt-1 text-sm text-slate-600 lg:hidden">
-                  {t("parent_present_summary")
-                    .replace("{n}", String(presentCount))
-                    .replace("{total}", String(totalCount))}
-                </p>
-              )}
-              <div className="mt-3 hidden grid-cols-3 gap-2 lg:grid">
-                <div data-testid="parent-stat" className="rounded-md bg-slate-50 p-2.5 text-center">
-                  <p className="text-xs text-slate-500">{t("parent_stat_present")}</p>
-                  <p className="mt-1 text-lg font-bold text-emerald-700">{presentCount}</p>
-                </div>
-                <div data-testid="parent-stat" className="rounded-md bg-slate-50 p-2.5 text-center">
-                  <p className="text-xs text-slate-500">{t("parent_stat_absent")}</p>
-                  <p className="mt-1 text-lg font-bold text-rose-600">{absentCount}</p>
-                </div>
-                <div data-testid="parent-stat" className="rounded-md bg-slate-50 p-2.5 text-center">
-                  <p className="text-xs text-slate-500">{t("parent_stat_total")}</p>
-                  <p className="mt-1 text-lg font-bold text-slate-800">{totalCount}</p>
-                </div>
+        <div className={cn("grid grid-cols-1 gap-4 lg:items-start", notice && "lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6")}>
+          {owing && (
+            <div
+              ref={summaryRef}
+              data-testid="parent-summary"
+              className="flex items-center justify-between gap-3 rounded-xl bg-primary p-4 text-white lg:hidden"
+            >
+              <div className="min-w-0">
+                <p className="text-sm opacity-90">{amountLabel}</p>
+                <p className="text-2xl font-bold">{formatCurrency(notice.remaining)}</p>
               </div>
-
-              {view.attendance.length === 0 ? (
-                <p className="mt-4 text-sm text-slate-500">{t("parent_no_sessions")}</p>
-              ) : (
-                <ul className="mt-4 divide-y divide-slate-100">
-                  {view.attendance.map((s) => (
-                    <li key={`${s.date}-${s.startTime}`} className="flex items-center justify-between gap-3 py-2 text-sm">
-                      <span className="min-w-0 truncate text-slate-700">{sessionLine(s)}</span>
-                      <span className={cn("shrink-0 rounded px-2 py-0.5 text-xs font-medium", ATTENDANCE_STYLE[s.attendance])}>
-                        {ATTENDANCE_LABEL[s.attendance]}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            <section className="rounded-lg border border-slate-200 bg-white p-4">
-              <h2 className="font-semibold text-slate-900">{t("parent_upcoming")}</h2>
-              {view.upcoming.length === 0 ? (
-                <p className="mt-2 text-sm text-slate-500">{t("parent_no_upcoming")}</p>
-              ) : (
-                <ul className="mt-2 divide-y divide-slate-100">
-                  {view.upcoming.map((s) => (
-                    <li key={`${s.date}-${s.startTime}`} className="flex items-center justify-between gap-3 py-2 text-sm">
-                      <span className="min-w-0 truncate text-slate-700">{sessionLine(s)}</span>
-                      {s.date === today && (
-                        <span className="shrink-0 rounded bg-primary/[0.08] px-2 py-0.5 text-xs font-medium text-primary">
-                          {t("today_badge")}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </div>
-
-          {/* Cột phải: Phiếu báo — không có khi HS ở nơi tính theo ca/giờ (spec AL §4.6). */}
-          {view.notice && (
-          <aside className="order-first space-y-2 lg:order-last lg:sticky lg:top-4">
-            <TuitionNoticeCard notice={view.notice} variant={isWide ? "wide" : "default"} />
-            {view.notice.qr && (
-              <p className="mt-2 text-center text-xs text-slate-500">{t("parent_qr_hint")}</p>
-            )}
-            {/* payOS: trang thanh toán của payOS (spec AH §5); ảnh phiếu không cần nút này. */}
-            {view.notice.qr?.checkoutUrl && (
-              <div className="text-center">
-                <a
-                  href={view.notice.qr.checkoutUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-white md:w-auto"
-                >
-                  {t("payos_open_checkout")}
-                </a>
-              </div>
-            )}
-            <footer className="hidden pt-4 text-center text-xs text-slate-500 lg:block">
-              {t("parent_footer")}
-            </footer>
-          </aside>
+              <button
+                type="button"
+                onClick={gotoPay}
+                className="h-11 shrink-0 whitespace-nowrap rounded-lg bg-white px-4 text-sm font-semibold text-primary"
+              >
+                {notice.qr ? t("parent_goto_qr") : t("parent_goto_detail")}
+              </button>
+            </div>
           )}
+
+          {notice?.parentComment && (
+            <ParentComment text={notice.parentComment} month={view.month} teacherName={notice.teacherName} />
+          )}
+
+          {/* Không có khi HS ở nơi tính theo ca/giờ (spec AL §4.6). */}
+          {notice && (
+            <ParentPayBlock
+              ref={payRef}
+              notice={notice}
+              className="scroll-mt-4 lg:sticky lg:top-4 lg:col-start-2 lg:row-span-3 lg:row-start-1"
+            />
+          )}
+
+          <ParentAttendance month={view.month} sessions={view.attendance} />
+          <ParentUpcoming sessions={view.upcoming} />
         </div>
 
-        <footer className={cn("pb-4 text-center text-xs text-slate-500", view.notice && "lg:hidden")}>
-          {t("parent_footer")}
-        </footer>
+        <footer className="pb-4 pt-6 text-center text-xs text-slate-500">{t("parent_footer")}</footer>
       </div>
+
+      {owing && (
+        <div
+          data-testid="parent-sticky-bar"
+          aria-hidden={!barVisible}
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-10 flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shadow-[0_-6px_20px_rgba(15,23,42,0.08)] transition-transform lg:hidden",
+            !barVisible && "pointer-events-none translate-y-full"
+          )}
+        >
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500">{amountLabel}</p>
+            <p className="text-lg font-bold text-slate-900">{formatCurrency(notice.remaining)}</p>
+          </div>
+          <button
+            type="button"
+            tabIndex={barVisible ? 0 : -1}
+            onClick={gotoPay}
+            className="h-11 shrink-0 rounded-lg bg-primary px-5 text-sm font-semibold text-white"
+          >
+            {t("parent_pay_now")}
+          </button>
+        </div>
+      )}
     </main>
   )
 }

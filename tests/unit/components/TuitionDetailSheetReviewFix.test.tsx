@@ -318,3 +318,25 @@ describe("TuitionDetailSheet — Miễn có lý do", () => {
   })
 })
 
+
+describe("TuitionDetailSheet — tách nợ cũ từng tháng (AU)", () => {
+  it("nợ 2 tháng có debtBreakdown → hiện Tháng 7, Tháng 8 còn thiếu + Tổng nợ cũ", () => {
+    const debt = {
+      ...rowData, previousBalance: 480_000, totalAmountDue: 1_080_000, debtMonths: 2,
+      debtBreakdown: [{ year: 2026, month: 7, amount: 200_000 }, { year: 2026, month: 8, amount: 280_000 }],
+    }
+    currentRow = debt
+    renderSheet(debt)
+    expect(screen.getByText("Tháng 7 còn thiếu")).toBeTruthy()
+    expect(screen.getByText("Tháng 8 còn thiếu")).toBeTruthy()
+    expect(screen.getByText("Tổng nợ cũ")).toBeTruthy()
+    expect(screen.queryByText("Nợ 2 tháng trước")).toBeNull()
+  })
+
+  it("không có debtBreakdown → dòng gộp như cũ", () => {
+    const debt = { ...rowData, previousBalance: 480_000, totalAmountDue: 1_080_000, debtMonths: 2 }
+    currentRow = debt
+    renderSheet(debt)
+    expect(screen.getByText("Nợ 2 tháng trước")).toBeTruthy()
+  })
+})
