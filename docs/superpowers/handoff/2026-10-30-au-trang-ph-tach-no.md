@@ -185,6 +185,15 @@ Cần sửa:
 
 AU-3 tuỳ LEADER.
 
+### Vòng 2 — kiểm lại trên `3d2424d` (chạy 2026-10-30)
+- `node_modules/.bin/tsc --noEmit` exit 0 · `pnpm lint` 0 lỗi (2 cảnh báo có sẵn) · unit `tests/unit` (config tạm, không nối DB, có nạp khoá mã hoá của `.env.test`): **197 file / 1379 test pass**.
+- Review diff vòng 2: dòng "Trước tháng N" là `kind: "month"` nên vẫn nằm trong `<details>`, tổng không lệch; nút Sao chép / QR / "Còn phải trả" ngoài `<details>`.
+- Đo bằng Playwright (trang tạm `src/app/p/qa-au2`, `next dev -p 3996`, `DATABASE_URL` cổng chết; **đã xoá trang tạm, đã tắt server**), ca nợ 14 tháng (13 dòng) + 5 lần thu + nhận xét 12 dòng:
+  - 1280×720: khối thanh toán cao **636px**, 2 `<details>` đóng ("Nợ cũ 12+ tháng · 1.400.000 đ", "Đã trả 500.000 đ · 5 lần"); cuộn hết trang khối ở top 4 → bottom 640, thấy "Còn phải trả" + QR + số TK. `scrollWidth` 1280.
+  - 1280×800: 636px, cuộn thì dính top 16 → bottom 652.
+  - 390×844 / 360×780: không `<details>`, đủ 12 dòng "còn thiếu", có "Đọc tiếp", `scrollWidth` = bề ngang, không nút chạm < 44px.
+- AU-1, AU-2, AU-3: **ĐẠT**.
+
 ---
 
 ## 4. Trao đổi
@@ -204,4 +213,9 @@ AU-3 tuỳ LEADER.
 ---
 
 ## 5. LEADER — Kết luận
+
+- Integration `tests/integration` trên `3d2424d` (DB test `localhost:5433`): **102 file / 802 test pass**.
+- E2E học phí / trang PH / payOS / điện thoại (24 file, gồm `parent-link.spec.ts`, `tuition-notice.spec.ts`): **76/76 pass**.
+- QA vòng 2 đạt. **Duyệt merge vào `main`.**
+- Còn lại: chụp lại ảnh hướng dẫn `link-phu-huynh`; gói riêng (AV) cho lỗi `allocatePayment` chia tiền vào tháng trước tháng miễn (QA mục 3).
 
