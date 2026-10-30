@@ -89,7 +89,7 @@ Hiện muốn lấy link phụ huynh phải sang màn Học sinh (`ParentLinkDia
 8. Footer mobile có thêm 1–2 nút: kiểm không tràn ở 360px.
 
 ### Vòng 2 — làm theo LEADER trả lời (điểm 3, 4, 5; điểm 1, 2 giữ nguyên)
-**Commit:** `__HASH2__`.
+**Commit:** `780c0ec`.
 
 **(4) Sao lưu Excel** — `src/server/services/backup.service.ts`: query `monthlyTuition` select thêm `parentComment`; sheet "Học phí tháng" thêm cột **"Nhận xét gửi phụ huynh"** ngay sau "Ghi chú". App **không có** chức năng khôi phục/nhập lại từ file sao lưu (chỉ có nhập học sinh từ Excel, và "khôi phục" ở Thùng rác là khôi phục bản ghi đã xoá mềm), nên không có chỗ đọc lại cột này. Test: unit mới `tests/unit/services/backup-parent-comment.test.ts` (đỏ trước khi sửa); integration `tests/integration/backup.test.ts` cập nhật danh sách cột (chưa chạy, không có DB).
 
