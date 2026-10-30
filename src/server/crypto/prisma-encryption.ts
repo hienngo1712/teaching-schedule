@@ -7,7 +7,7 @@ export const ENCRYPTED_FIELDS = {
   Student: ["fullName", "parentName", "parentPhone", "notes", "parentLinkToken"],
   SessionStudent: ["note"],
   TeachingSession: ["notes", "cancelReason"],
-  MonthlyTuition: ["notes"],
+  MonthlyTuition: ["notes", "parentComment"],
   Payment: ["note"],
   PlacePayment: ["note"],
   PlaceShareLink: ["token"],

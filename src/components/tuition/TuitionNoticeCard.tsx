@@ -150,6 +150,14 @@ export const TuitionNoticeCard = forwardRef<HTMLDivElement, Props>(function Tuit
         )}
       </div>
 
+      {/* Nhận xét tháng (AT): text thường (React tự escape), giữ xuống dòng; đặt trước QR. */}
+      {notice.parentComment && (
+        <div data-testid="notice-comment" className="space-y-1 border-t border-slate-200 pt-3">
+          <p className="font-semibold">{t("notice_comment")}</p>
+          <p className="whitespace-pre-wrap break-words">{notice.parentComment}</p>
+        </div>
+      )}
+
       {state === "qr" && notice.qr && (
         isWide ? (
           <div data-testid="notice-qr-side" className="grid grid-cols-[160px_1fr] items-center gap-4 border-t border-slate-200 pt-3 text-left">

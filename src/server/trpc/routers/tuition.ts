@@ -1,8 +1,8 @@
 import { createTRPCRouter, planProcedure, protectedProcedure } from "@/server/trpc"
-import { monthlyTuitionFilterSchema, updateSettlementSchema, tuitionNoticeSchema, setNoticeSentSchema } from "@/lib/schemas/tuition"
+import { monthlyTuitionFilterSchema, updateSettlementSchema, tuitionNoticeSchema, setNoticeSentSchema, parentCommentSchema } from "@/lib/schemas/tuition"
 import { paymentListSchema } from "@/lib/schemas/payment"
 import { ensureMonthlyTuition, getMonthlyTuitionStatus, loadMonthLedgers, updateSettlement, setNoticeSent } from "@/server/services/tuition.service"
-import { getTuitionNotice } from "@/server/services/tuition-notice.service"
+import { getTeacherTuitionNotice, saveParentComment } from "@/server/services/tuition-notice.service"
 
 export const tuitionRouter = createTRPCRouter({
   getMonthlyStatus: protectedProcedure
@@ -21,7 +21,12 @@ export const tuitionRouter = createTRPCRouter({
   // Phiếu báo: chỉ đọc, không ghi snapshot.
   getNotice: planProcedure("tuitionNotice")
     .input(tuitionNoticeSchema)
-    .query(({ ctx, input }) => getTuitionNotice(ctx.db, ctx.userId, input, { origin: ctx.origin, returnPath: "/da-thanh-toan" })),
+    .query(({ ctx, input }) => getTeacherTuitionNotice(ctx.db, ctx.userId, input, { origin: ctx.origin, returnPath: "/da-thanh-toan" })),
+
+  // Nhận xét tháng gửi phụ huynh (AT): cùng chốt gói với phiếu.
+  saveParentComment: planProcedure("tuitionNotice")
+    .input(parentCommentSchema)
+    .mutation(({ ctx, input }) => saveParentComment(ctx.db, ctx.userId, input)),
 
   setNoticeSent: protectedProcedure
     .input(setNoticeSentSchema)

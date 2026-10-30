@@ -147,7 +147,7 @@ export async function buildBackupWorkbook(
       select: {
         id: true, studentId: true, year: true, month: true, totalSessions: true, presentSessions: true,
         previousBalance: true, currentMonthFee: true, totalAmountDue: true, paidAmount: true,
-        isFullPaid: true, notes: true, updatedAt: true,
+        isFullPaid: true, notes: true, parentComment: true, updatedAt: true,
         student: { select: { fullName: true } },
       },
     }),
@@ -289,6 +289,7 @@ export async function buildBackupWorkbook(
     { header: "Đã trả", width: 13, kind: "money", value: (t) => t.paidAmount },
     { header: "Đã tất toán", width: 11, value: (t) => yesNo(t.isFullPaid) },
     { header: "Ghi chú", width: 30, value: (t) => t.notes },
+    { header: "Nhận xét gửi phụ huynh", width: 40, value: (t) => t.parentComment },
     { header: "Cập nhật lần cuối", width: 17, kind: "datetime", value: (t) => vnTime(t.updatedAt) },
   ])])
 

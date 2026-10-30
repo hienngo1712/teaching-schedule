@@ -277,3 +277,58 @@ describe("tuition.getNotice", () => {
     expect(n.totalSessions).toBe(2)
   })
 })
+
+describe("tuition.saveParentComment (AT)", () => {
+  beforeEach(async () => {
+    await cleanup()
+    nextHour = 7
+  })
+
+  it("✓ lưu theo HS × tháng: phiếu đúng tháng có nhận xét; tháng khác + HS khác không dính; notes nội bộ không lộ", async () => {
+    const caller = await getAuthedCaller()
+    const a = await createStudent(caller, "HS Nhận Xét")
+    const b = await createStudent(caller, "HS Khác")
+    await addSession(caller, a.id, "2026-05-04", ATTENDANCE_STATUS.PRESENT)
+    await caller.tuition.updateSettlement({ studentId: a.id, ...MAY, notes: "GhiChuNoiBoBiMat" })
+
+    await caller.tuition.saveParentComment({ studentId: a.id, ...MAY, parentComment: "  Con ngoan.\nCố lên!  " })
+
+    const n = await caller.tuition.getNotice({ studentId: a.id, ...MAY })
+    expect(n.parentComment).toBe("Con ngoan.\nCố lên!")
+    expect(JSON.stringify(n)).not.toContain("GhiChuNoiBoBiMat")
+    expect((await caller.tuition.getNotice({ studentId: a.id, year: 2026, month: 6 })).parentComment).toBeNull()
+    expect((await caller.tuition.getNotice({ studentId: b.id, ...MAY })).parentComment).toBeNull()
+  })
+
+  it("✓ chuỗi rỗng xoá nhận xét; đổi nhận xét không làm phiếu thành 'cần gửi lại'", async () => {
+    const caller = await getAuthedCaller()
+    const st = await createStudent(caller)
+    await addSession(caller, st.id, "2026-05-04", ATTENDANCE_STATUS.PRESENT)
+    await caller.tuition.setNoticeSent({ studentId: st.id, ...MAY, sent: true })
+
+    await caller.tuition.saveParentComment({ studentId: st.id, ...MAY, parentComment: "Tốt" })
+    const { items: [row] } = await caller.tuition.getMonthlyStatusReadOnly({ ...MAY, studentId: st.id, limit: 1 })
+    expect(row.noticeStatus).toBe("sent")
+
+    await caller.tuition.saveParentComment({ studentId: st.id, ...MAY, parentComment: "" })
+    expect((await caller.tuition.getNotice({ studentId: st.id, ...MAY })).parentComment).toBeNull()
+  })
+
+  it("✗ HS của user khác → không ghi được", async () => {
+    const caller = await getAuthedCaller()
+    const caller2 = await getAuthedCaller("teacher2")
+    const st = await createStudent(caller)
+    await expect(
+      caller2.tuition.saveParentComment({ studentId: st.id, ...MAY, parentComment: "x" })
+    ).rejects.toBeTruthy()
+    expect((await caller.tuition.getNotice({ studentId: st.id, ...MAY })).parentComment).toBeNull()
+  })
+
+  it("✓ getNotice (màn Học phí) trả parentLinkToken của HS để mở link PH", async () => {
+    const caller = await getAuthedCaller()
+    const st = await createStudent(caller)
+    expect((await caller.tuition.getNotice({ studentId: st.id, ...MAY })).parentLinkToken).toBeNull()
+    const { token } = await caller.student.generateParentLink({ id: st.id })
+    expect((await caller.tuition.getNotice({ studentId: st.id, ...MAY })).parentLinkToken).toBe(token)
+  })
+})

@@ -20,6 +20,7 @@ export const FIELD_TARGETS: readonly FieldTarget[] = [
   { model: "TeachingSession", table: "teaching_sessions", column: "notes", field: "notes" },
   { model: "TeachingSession", table: "teaching_sessions", column: "cancel_reason", field: "cancelReason" },
   { model: "MonthlyTuition", table: "monthly_tuition", column: "notes", field: "notes" },
+  { model: "MonthlyTuition", table: "monthly_tuition", column: "parent_comment", field: "parentComment" },
   { model: "Payment", table: "payments", column: "note", field: "note" },
   { model: "PlacePayment", table: "place_payments", column: "note", field: "note" },
   { model: "PlaceShareLink", table: "place_share_links", column: "token", field: "token", idColumn: "place_id" },

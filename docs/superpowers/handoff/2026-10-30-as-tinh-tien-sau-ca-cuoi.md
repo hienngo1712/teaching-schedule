@@ -147,3 +147,4 @@ File mới `tests/unit/lib/tuition-in-progress-edges.test.ts` (10 ca, đều PAS
 
 ## 5. LEADER — Kết luận
 
+- 2026-10-30: QA ĐẠT CÓ ĐIỀU KIỆN, L1 đã sửa (`fd18423`). LEADER chạy với DB test: `pnpm test:unit` 186 file / 1295 pass; `pnpm test:integration` 793/794 → test `tuition-notice-sent` giả định tháng hiện tại luôn đang học, đã thêm ca cuối tháng chưa diễn ra (`d92b235`), chạy lại 3/3 pass. Đã merge `main` + push (`d9c21aa`). L2–L5 không sửa. E2e Playwright chưa chạy.

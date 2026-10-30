@@ -3,9 +3,9 @@ import { TRPCError } from "@trpc/server"
 import { ATTENDANCE_STATUS } from "@/lib/constants"
 import { buildTransferContent, buildVietQrPayload } from "@/lib/vietqr"
 import { findBank } from "@/lib/vn-banks"
-import type { TuitionNoticeInput } from "@/lib/schemas/tuition"
+import type { ParentCommentInput, TuitionNoticeInput } from "@/lib/schemas/tuition"
 import type { TuitionNoticeDTO } from "@/lib/types/models"
-import { getMonthlyTuitionStatus } from "./tuition.service"
+import { ensureMonthlyTuition, getMonthlyTuitionStatus } from "./tuition.service"
 import { listPayments } from "./payment.service"
 import { getBankAccount } from "./settings.service"
 import { dueNow } from "@/lib/tuition-display"
@@ -31,7 +31,7 @@ export async function getTuitionNotice(
   const startDate = new Date(Date.UTC(year, month - 1, 1))
   const endDate = new Date(Date.UTC(year, month, 1))
 
-  const [attended, payments, bank, user] = await Promise.all([
+  const [attended, payments, bank, user, mt] = await Promise.all([
     // Cùng điều kiện với currentAttendance trong getMonthlyTuitionStatus để tổng fee khớp.
     db.sessionStudent.findMany({
       where: {
@@ -45,6 +45,11 @@ export async function getTuitionNotice(
     listPayments(db, userId, { studentId, year, month }),
     getBankAccount(db, userId),
     db.user.findUniqueOrThrow({ where: { id: userId }, select: { fullName: true, username: true } }),
+    // Chỉ lấy nhận xét gửi PH, không lấy `notes` (nội bộ).
+    db.monthlyTuition.findUnique({
+      where: { studentId_year_month: { studentId, year, month } },
+      select: { parentComment: true },
+    }),
   ])
 
   // Phiếu liệt kê các lần thu tăng dần theo thời gian (khác listPayments/sheet chi tiết, vẫn desc).
@@ -120,5 +125,36 @@ export async function getTuitionNotice(
     // BIN không còn trong VN_BANKS → coi như chưa cài để không tạo QR sai ngân hàng.
     bankConfigured: Boolean(bankInfo),
     qr,
+    parentComment: mt?.parentComment ?? null,
   }
+}
+
+// Phiếu ở màn Học phí: kèm token link PH để mở ParentLinkDialog ngay tại đây (AT).
+// Tách khỏi TuitionNoticeDTO để trang phụ huynh không nhận token.
+export async function getTeacherTuitionNotice(
+  db: PrismaClient,
+  userId: number,
+  input: TuitionNoticeInput,
+  opts: { origin?: string | null; returnPath?: string } = {}
+): Promise<TuitionNoticeDTO & { parentLinkToken: string | null; placeId: number | null }> {
+  const [notice, student] = await Promise.all([
+    getTuitionNotice(db, userId, input, opts),
+    db.student.findFirst({ where: { id: input.studentId, userId }, select: { parentLinkToken: true, placeId: true } }),
+  ])
+  return { ...notice, parentLinkToken: student?.parentLinkToken ?? null, placeId: student?.placeId ?? null }
+}
+
+// Lưu nhận xét tháng; không đụng noticeSentAmount nên không làm phiếu thành "cần gửi lại" (AT).
+export async function saveParentComment(
+  db: PrismaClient,
+  userId: number,
+  { studentId, year, month, parentComment }: ParentCommentInput
+): Promise<{ parentComment: string | null }> {
+  // ensureMonthlyTuition kiểm quyền sở hữu HS + tạo dòng tháng đúng carry-over.
+  const mt = await ensureMonthlyTuition(db, userId, studentId, year, month)
+  return db.monthlyTuition.update({
+    where: { id: mt.id },
+    data: { parentComment: parentComment || null },
+    select: { parentComment: true },
+  })
 }

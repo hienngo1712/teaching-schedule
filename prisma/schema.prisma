@@ -158,6 +158,8 @@ model MonthlyTuition {
   notes            String?   @db.Text
   noticeSentAt     DateTime? @map("notice_sent_at")
   noticeSentAmount Int?      @map("notice_sent_amount")
+  // Nhận xét tháng gửi phụ huynh (AT): hiện trên phiếu + trang /p; khác `notes` (nội bộ).
+  parentComment    String?   @map("parent_comment") @db.Text
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
