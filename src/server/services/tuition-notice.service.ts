@@ -121,6 +121,7 @@ export async function getTuitionNotice(
     overpaid,
     inProgress,
     debtMonths: status.debtMonths,
+    debtBreakdown: status.debtBreakdown,
     teacherName: user.fullName ?? user.username,
     // BIN không còn trong VN_BANKS → coi như chưa cài để không tạo QR sai ngân hàng.
     bankConfigured: Boolean(bankInfo),

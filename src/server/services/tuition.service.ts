@@ -9,6 +9,7 @@ import { byGradeThenName, nameMatches } from "@/lib/name-search"
 import { monthFee, monthKey, resolveBilling, type Billing, type BillingChange } from "@/lib/billing"
 import { loadBillingChanges } from "./billing.service"
 import type { MonthLedger } from "@/lib/payment-allocation"
+import { splitDebt } from "@/lib/debt-breakdown"
 import { dueNow, getRowStatus, isInProgressMonth, lastSessionEnd } from "@/lib/tuition-display"
 
 type AttendanceRecord = SessionStudent & { session: { sessionDate: Date; endTime: Date; status: string; isDeleted: boolean } }
@@ -62,6 +63,36 @@ export async function computeClosingBalances(
   month: number,
   billingMap?: Map<number, BillingChange[]>
 ): Promise<Map<number, Map<number, number>>> {
+  const ledgers = await loadLedgersBefore(db, userId, studentIds, year, month, billingMap)
+  const lastKey = year * 12 + month - 2
+  return new Map([...ledgers].map(([studentId, l]) => [studentId, closingsFromLedgers(l, lastKey)]))
+}
+
+// Dư nợ cuối từng tháng từ sổ (tháng đầu có dữ liệu → lastKey). Tháng trống mang nguyên dư nợ.
+function closingsFromLedgers(ledgers: MonthLedger[], lastKey: number): Map<number, number> {
+  const byKey = new Map(ledgers.map((l) => [l.key, l]))
+  const closing = new Map<number, number>()
+  let balance = 0
+  for (let key = Math.min(...byKey.keys()); key <= lastKey; key++) {
+    const d = byKey.get(key)
+    if (d) {
+      const residual = balance + d.fee - d.paid
+      balance = d.fullPaid ? Math.min(0, residual) : residual
+    }
+    closing.set(key, balance)
+  }
+  return closing
+}
+
+// Sổ các tháng TRƯỚC tháng `month` của nhiều HS (1 lượt truy vấn), dùng cho dư nợ cuối + tách nợ (spec AU B4).
+async function loadLedgersBefore(
+  db: PrismaClient,
+  userId: number,
+  studentIds: number[],
+  year: number,
+  month: number,
+  billingMap?: Map<number, BillingChange[]>
+): Promise<Map<number, MonthLedger[]>> {
   const startDate = new Date(Date.UTC(year, month - 1, 1))
   const resolvedBillingMap = billingMap ?? (await loadBillingChanges(db, studentIds))
 
@@ -99,23 +130,15 @@ export async function computeClosingBalances(
     slot(l.studentId, key).links.push({ attendance: l.attendance, fee: l.fee })
   }
 
-  const lastKey = year * 12 + month - 2
-  const result = new Map<number, Map<number, number>>()
+  const result = new Map<number, MonthLedger[]>()
   for (const [studentId, months] of byStudent) {
-    const closing = new Map<number, number>()
-    let balance = 0
     const changes = resolvedBillingMap.get(studentId) ?? []
-    for (let key = Math.min(...months.keys()); key <= lastKey; key++) {
-      const d = months.get(key)
-      if (d) {
-        const billing = resolveBilling(changes, key)
-        const fee = monthFee(billing, d.links)
-        const residual = balance + fee - d.paid
-        balance = d.fullPaid ? Math.min(0, residual) : residual
-      }
-      closing.set(key, balance)
-    }
-    result.set(studentId, closing)
+    result.set(
+      studentId,
+      [...months]
+        .sort(([a], [b]) => a - b)
+        .map(([key, d]) => ({ key, fee: monthFee(resolveBilling(changes, key), d.links), paid: d.paid, fullPaid: d.fullPaid }))
+    )
   }
   return result
 }
@@ -229,7 +252,7 @@ export async function getMonthlyTuitionStatus(
 
   // 2. Fetch song song: billing changes + điểm danh tháng hiện tại + snapshot tháng này + nợ đầu tháng
   const billingMapPromise = loadBillingChanges(db, studentIds)
-  const [billingMap, currentAttendance, existingSnapshots, closingBalances, payosPaid] = await Promise.all([
+  const [billingMap, currentAttendance, existingSnapshots, ledgersBefore, payosPaid] = await Promise.all([
     billingMapPromise,
     db.sessionStudent.findMany({
       where: {
@@ -241,7 +264,7 @@ export async function getMonthlyTuitionStatus(
     db.monthlyTuition.findMany({
       where: { studentId: { in: studentIds }, year, month },
     }),
-    billingMapPromise.then((bMap) => computeClosingBalances(db, userId, studentIds, year, month, bMap)),
+    billingMapPromise.then((bMap) => loadLedgersBefore(db, userId, studentIds, year, month, bMap)),
     loadPayosPaid(db, studentIds, year, month),
   ])
 
@@ -256,12 +279,14 @@ export async function getMonthlyTuitionStatus(
 
   // 5. Tính kết quả cho từng học sinh
   const targetKey = monthKey(year, month)
+  const lastKey = year * 12 + month - 2
   const results = students.map(student => {
     const attendance = attendanceMap.get(student.id) ?? []
     const snapshot = snapshotMap.get(student.id)
     const changes = billingMap.get(student.id) ?? []
     const billing = resolveBilling(changes, targetKey)
-    const studentClosing = closingBalances.get(student.id)
+    const studentLedgers = ledgersBefore.get(student.id)
+    const studentClosing = studentLedgers && closingsFromLedgers(studentLedgers, lastKey)
     const inProgress = isInProgressMonth(year, month, lastSessionEnd(attendance.map((a) => a.session)))
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
       calcStudentTuition(attendance, snapshot, studentClosing?.get(year * 12 + month - 2) ?? 0, billing)
@@ -274,6 +299,9 @@ export async function getMonthlyTuitionStatus(
         else break
       }
     }
+
+    // Nợ cũ từng tháng (spec AU B); null = hiện dòng gộp như cũ.
+    const debtBreakdown = studentLedgers ? splitDebt(studentLedgers, lastKey, previousBalance) : null
 
     const paidAmount = snapshot?.paidAmount ?? 0
     const isFullPaid = snapshot?.isFullPaid ?? false
@@ -317,6 +345,7 @@ export async function getMonthlyTuitionStatus(
       payosPaidAmount: payosPaid.get(student.id)?.amount ?? null,
       inProgress,
       debtMonths,
+      debtBreakdown,
       placeFree: !!billing.free,
       placeId: student.placeId,
     }
@@ -416,6 +445,7 @@ export async function getMonthlyTuitionStatus(
       payosPaidAmount: item.payosPaidAmount,
       inProgress: item.inProgress,
       debtMonths: item.debtMonths,
+      debtBreakdown: item.debtBreakdown,
       placeId: item.placeId,
     })),
     totalCount,

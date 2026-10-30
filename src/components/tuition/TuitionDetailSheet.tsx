@@ -49,6 +49,7 @@ import { WaiveDialog } from "./WaiveDialog"
 import { LockedSection } from "@/components/plan/LockedSection"
 import { openUpgrade } from "@/components/plan/upgrade-store"
 import { dueNow, isProvisional, noticeAgeDays, NOTICE_OVERDUE_DAYS } from "@/lib/tuition-display"
+import { debtLines } from "@/lib/debt-breakdown"
 
 type TuitionStatus = RouterOutputs["tuition"]["getMonthlyStatus"]["items"][number]
 type SheetData = TuitionStatus & { year: number; month: number }
@@ -181,7 +182,6 @@ function TuitionDetailBody({
   }, [utils, studentId, year, month])
 
   const due = dueNow(row)
-  const prevM = month === 1 ? 12 : month - 1
   const isProv = isProvisional(row)
   const today = vnDateParts()
   // Tháng hiện tại có thể đã xong sau ca cuối (spec AS): xem tháng tương lai thì gợi ý tháng hiện tại.
@@ -285,25 +285,25 @@ function TuitionDetailBody({
               {t("fee_breakdown")}
             </h3>
             <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
-              {row.previousBalance !== 0 && (
+              {row.previousBalance < 0 && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">
-                    {row.previousBalance < 0
-                      ? t("prepaid_label")
-                      : row.debtMonths > 1
-                      ? t("debt_n_months_label").replace("{n}", String(row.debtMonths))
-                      : t("debt_prev_month_label").replace("{m}", String(prevM))}
-                  </span>
-                  <span
-                    className={cn(
-                      "font-medium tabular-nums",
-                      row.previousBalance > 0 ? "text-debt" : "text-green-600"
-                    )}
-                  >
-                    {row.previousBalance > 0 ? "+" : ""}
-                    {formatCurrency(row.previousBalance)}
-                  </span>
+                  <span className="text-slate-500">{t("prepaid_label")}</span>
+                  <span className="font-medium tabular-nums text-green-600">{formatCurrency(row.previousBalance)}</span>
                 </div>
+              )}
+              {/* Nợ cũ từng tháng + tổng (spec AU B); không tách được thì 1 dòng gộp như cũ. */}
+              {debtLines(t, { ...row, year, month }).map((l) =>
+                l.kind === "month" ? (
+                  <div key={l.label} className="flex items-center justify-between pl-3 text-xs text-slate-500">
+                    <span>{l.label}</span>
+                    <span className="tabular-nums">{formatCurrency(l.amount)}</span>
+                  </div>
+                ) : (
+                  <div key={l.label} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">{l.label}</span>
+                    <span className="font-medium tabular-nums text-debt">+{formatCurrency(l.amount)}</span>
+                  </div>
+                )
               )}
 
               <div className="flex items-center justify-between text-sm">

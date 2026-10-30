@@ -13,6 +13,17 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.28.0",
+    date: "2026-10-30",
+    title: "Trang phụ huynh dễ trả tiền hơn, tách nợ từng tháng",
+    summary: "Trang link phụ huynh bố cục mới: số tiền và mã QR luôn dễ thấy, có nút sao chép số tài khoản. Nợ nhiều tháng ghi rõ từng tháng còn thiếu.",
+    notify: true,
+    items: [
+      { kind: "improve", title: "Trang link phụ huynh mới", body: "Máy tính: nhận xét, điểm danh bên trái, khối Thanh toán (QR, số tài khoản) luôn hiện bên phải. Điện thoại: số tiền ngay đầu trang, nhận xét dài thu gọn, thanh Thanh toán dính đáy. Số tài khoản, số tiền, nội dung chuyển khoản có nút Sao chép.", guideId: "hoc-phi" },
+      { kind: "improve", title: "Tách nợ cũ từng tháng", body: "Chi tiết học phí, phiếu báo và trang phụ huynh ghi Tháng 7 còn thiếu…, Tháng 8 còn thiếu… và Tổng nợ cũ, thay cho một dòng Nợ 2 tháng trước.", guideId: "hoc-phi" },
+    ],
+  },
+  {
     version: "0.27.0",
     date: "2026-10-30",
     title: "Nhận xét tháng trên phiếu học phí",

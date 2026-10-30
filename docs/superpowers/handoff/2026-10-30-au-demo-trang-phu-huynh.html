@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo trang phụ huynh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #fff; --line: #e5e9ef; --text: #0f172a; --muted: #64748b; --soft: #94a3b8;
+    --teal: #0f766e; --teal-soft: #e6f4f2; --amber: #b45309; --amber-soft: #fef3c7;
+    --red: #b91c1c; --red-soft: #fee2e2; --green: #15803d; --green-soft: #dcfce7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Be Vietnam Pro", system-ui, sans-serif; color: var(--text); background: #1e293b; }
+  button { font: inherit; cursor: pointer; }
+
+  /* Thanh điều khiển demo (không thuộc trang thật) */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; padding: 10px 16px; background: #0f172a; color: #cbd5e1; font-size: 13px; }
+  .toolbar b { color: #fff; font-weight: 600; }
+  .seg { display: inline-flex; background: #1e293b; border-radius: 8px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: transparent; color: #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 13px; }
+  .seg button[aria-pressed="true"] { background: #fff; color: #0f172a; font-weight: 600; }
+
+  .stage { display: flex; justify-content: center; height: calc(100vh - 52px); }
+  .screen { width: 100%; height: 100%; overflow-y: auto; background: var(--bg); container-type: inline-size; position: relative; }
+  .stage.phone { padding: 20px 0; }
+  .stage.phone .screen { width: 390px; height: min(844px, 100%); border-radius: 36px; border: 10px solid #0b1220; box-shadow: 0 20px 60px rgba(0,0,0,.5); scrollbar-width: none; overflow-x: hidden; }
+
+  /* ===== Trang phụ huynh ===== */
+  .page { max-width: 1120px; margin: 0 auto; padding: 20px 16px 0; }
+  .head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .head h1 { margin: 0; font-size: 22px; }
+  .head p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .monthnav { display: flex; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  .monthnav button { border: 0; background: none; padding: 10px 12px; color: var(--teal); font-size: 14px; min-height: 44px; }
+  .monthnav button:disabled { color: var(--soft); cursor: default; }
+  .monthnav strong { padding: 0 6px; font-size: 15px; white-space: nowrap; }
+  .monthnav button { white-space: nowrap; }
+  @container (max-width: 899px) {
+    .monthnav { width: 100%; justify-content: space-between; }
+    .monthnav button { padding: 10px 8px; font-size: 13px; }
+    .monthnav strong { font-size: 14px; padding: 0 2px; }
+  }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+
+  .layout { display: grid; gap: 16px; grid-template-columns: 1fr;
+    grid-template-areas: "summary" "comment" "pay" "att" "sched"; }
+  .a-summary { grid-area: summary; } .a-comment { grid-area: comment; } .a-pay { grid-area: pay; }
+  .a-att { grid-area: att; } .a-sched { grid-area: sched; }
+
+  @container (min-width: 900px) {
+    .page { padding: 32px 24px 0; }
+    .layout { grid-template-columns: minmax(0, 1fr) 380px; align-items: start;
+      grid-template-areas: "comment pay" "att pay" "sched pay"; }
+    .layout .a-summary { display: none; }
+    .a-pay { grid-row: 1 / span 3; position: sticky; top: 16px; }
+    /* Web: khối thanh toán gọn trong 1 màn để luôn thấy cả QR lẫn số tài khoản */
+    .layout .pay .big { font-size: 28px; margin-bottom: 8px; }
+    .layout .pay .rows { margin-bottom: 10px; padding-top: 6px; }
+    .layout .pay .row { padding: 2px 0; }
+    .layout .pay .qrbox { padding: 12px; }
+    .layout .pay .qr { width: 156px; height: 156px; }
+    .layout .pay .bank .b-row { padding: 5px 0; }
+    .stickybar { display: none !important; }
+    .head h1 { font-size: 26px; }
+  }
+
+  /* Tóm tắt tiền ở đầu trang (chỉ điện thoại) */
+  .summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--teal); color: #fff; border: 0; }
+  .summary .lbl { font-size: 13px; opacity: .85; }
+  .summary .amt { font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+  .summary button { background: #fff; color: var(--teal); border: 0; border-radius: 10px; padding: 0 16px; min-height: 44px; font-weight: 600; white-space: nowrap; }
+
+  /* Nhận xét */
+  .teacher { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--teal-soft); color: var(--teal); display: grid; place-items: center; font-weight: 700; flex: none; }
+  .teacher .t1 { font-weight: 600; font-size: 15px; }
+  .teacher .t2 { color: var(--muted); font-size: 13px; }
+  .comment { position: relative; font-size: 15px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; color: #1e293b; }
+  .comment.clamped { max-height: calc(1.7em * 7); overflow: hidden; }
+  .comment.clamped::after { content: ""; position: absolute; inset: auto 0 0 0; height: 3.4em; background: linear-gradient(transparent, var(--card)); }
+  .more { margin-top: 8px; border: 0; background: none; color: var(--teal); font-weight: 600; padding: 10px 0; min-height: 44px; }
+  .empty-comment { color: var(--soft); font-style: italic; font-size: 14px; }
+
+  /* Thanh toán */
+  .pay .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+  .pill.unpaid { background: var(--amber-soft); color: var(--amber); }
+  .pay .big { font-size: 32px; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 12px; }
+  .rows { border-top: 1px dashed var(--line); padding-top: 10px; margin-bottom: 14px; font-size: 14px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+  .row span:first-child { color: var(--muted); }
+  .row span:last-child { white-space: nowrap; }
+  .row.debt span:last-child { color: var(--red); font-weight: 600; }
+  .qrbox { background: #f8fafc; border: 1px solid var(--line); border-radius: 14px; padding: 16px; text-align: center; }
+  .qr { width: 200px; height: 200px; margin: 0 auto; display: block; background: #fff; padding: 8px; border-radius: 8px; }
+  .qrnote { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+  .bank { margin-top: 12px; font-size: 14px; }
+  .bank .b-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .bank .b-row:last-child { border-bottom: 0; }
+  .bank .k { color: var(--muted); font-size: 12px; }
+  .bank .v { font-weight: 600; overflow-wrap: anywhere; }
+  .copy { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 0 12px; min-height: 36px; font-size: 13px; color: var(--teal); font-weight: 600; flex: none; }
+  .foot { margin-top: 12px; font-size: 12px; color: var(--soft); display: flex; justify-content: space-between; }
+
+  /* Điểm danh */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .stat { background: #f8fafc; border-radius: 12px; padding: 10px; text-align: center; }
+  .stat .n { font-size: 22px; font-weight: 700; }
+  .stat .l { font-size: 12px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--green-soft); color: var(--green); font-weight: 500; }
+  .chip.absent { background: var(--red-soft); color: var(--red); text-decoration: line-through; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; color: var(--teal); font-weight: 600; font-size: 14px; padding: 10px 0; min-height: 44px; display: flex; align-items: center; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  .list { font-size: 14px; }
+  .list div { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--line); gap: 8px; }
+  .list div:last-child { border-bottom: 0; }
+  .list .tag { font-size: 12px; font-weight: 600; }
+
+  .pagefoot { text-align: center; color: var(--soft); font-size: 12px; padding: 24px 16px 28px; }
+
+  /* Thanh dính đáy (chỉ điện thoại, ẩn khi đang thấy khối thanh toán) */
+  .stickybar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: #fff; border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgba(15,23,42,.08);
+    transition: transform .2s; }
+  .stickybar.hide { transform: translateY(110%); }
+  .stickybar .lbl { font-size: 12px; color: var(--muted); }
+  .stickybar .amt { font-size: 18px; font-weight: 700; }
+  .stickybar button { background: var(--teal); color: #fff; border: 0; border-radius: 10px; padding: 0 18px; min-height: 44px; font-weight: 600; }
+
+  .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <b>Demo trang link phụ huynh</b>
+  <span>Khung xem
+    <span class="seg" id="viewSeg">
+      <button data-v="web" aria-pressed="true">Web</button>
+      <button data-v="phone" aria-pressed="false">Điện thoại</button>
+    </span>
+  </span>
+  <span>Nhận xét
+    <span class="seg" id="cmtSeg">
+      <button data-c="long" aria-pressed="true">Dài</button>
+      <button data-c="short" aria-pressed="false">Ngắn</button>
+      <button data-c="none" aria-pressed="false">Không có</button>
+    </span>
+  </span>
+</div>
+
+<div class="stage" id="stage">
+  <div class="screen" id="screen">
+    <div class="page">
+      <div class="head">
+        <div>
+          <h1>Nguyễn Bảo Hân</h1>
+          <p>Lớp 2 · Giáo viên: Ms Ly</p>
+        </div>
+        <div class="monthnav">
+          <button>‹ Tháng trước</button>
+          <strong>Tháng 10/2026</strong>
+          <button disabled>Tháng sau ›</button>
+        </div>
+      </div>
+
+      <div class="layout">
+        <!-- Điện thoại: số tiền lên đầu, bấm là nhảy tới QR -->
+        <div class="card summary a-summary">
+          <div>
+            <div class="lbl">Còn phải trả tháng 10</div>
+            <div class="amt">760.000 đ</div>
+          </div>
+          <button data-goto-pay>Mã QR ↓</button>
+        </div>
+
+        <section class="card a-comment" id="commentCard">
+          <div class="teacher">
+            <div class="avatar">L</div>
+            <div>
+              <div class="t1">Nhận xét tháng 10</div>
+              <div class="t2">Ms Ly · 30/10/2026</div>
+            </div>
+          </div>
+          <div class="comment" id="comment"></div>
+          <button class="more" id="moreBtn" hidden>Đọc tiếp ▾</button>
+        </section>
+
+        <aside class="card pay a-pay" id="pay">
+          <div class="top">
+            <h2 style="margin:0">Học phí tháng 10</h2>
+            <span class="pill unpaid">Chưa đóng</span>
+          </div>
+          <div class="row" style="padding:0"><span>Còn phải trả</span></div>
+          <div class="big">760.000 đ</div>
+          <div class="rows">
+            <div class="row"><span>Học phí tháng 10 (7 buổi × 40.000 đ)</span><span>280.000 đ</span></div>
+            <div class="row debt"><span>Nợ 2 tháng trước</span><span>480.000 đ</span></div>
+            <div class="row"><span>Đã trả</span><span>0 đ</span></div>
+          </div>
+          <div class="qrbox">
+            <svg class="qr" id="qr" viewBox="0 0 29 29" shape-rendering="crispEdges" aria-label="Mã QR minh hoạ"></svg>
+            <p class="qrnote">Mở app ngân hàng → Quét QR. Trên điện thoại: chụp màn hình rồi chọn ảnh QR.</p>
+          </div>
+          <div class="bank">
+            <div class="b-row"><div><div class="k">Ngân hàng · Chủ tài khoản</div><div class="v">TPBank · NGUYEN CAM LY</div></div></div>
+            <div class="b-row"><div><div class="k">Số tài khoản</div><div class="v">88226122002</div></div><button class="copy" data-copy="88226122002">Sao chép</button></div>
+            <div class="b-row"><div><div class="k">Số tiền</div><div class="v">760.000 đ</div></div><button class="copy" data-copy="760000">Sao chép</button></div>
+            <div class="b-row"><div><div class="k">Nội dung chuyển khoản</div><div class="v">HP T10 Nguyen Bao Han</div></div><button class="copy" data-copy="HP T10 Nguyen Bao Han">Sao chép</button></div>
+          </div>
+          <div class="foot"><span>Giáo viên: Ms Ly</span><span>Ngày lập: 30/10/2026</span></div>
+        </aside>
+
+        <section class="card a-att">
+          <h2>Điểm danh tháng 10</h2>
+          <div class="stats">
+            <div class="stat"><div class="n" style="color:var(--green)">7</div><div class="l">Có mặt</div></div>
+            <div class="stat"><div class="n" style="color:var(--red)">1</div><div class="l">Vắng</div></div>
+            <div class="stat"><div class="n">8</div><div class="l">Tổng buổi</div></div>
+          </div>
+          <div class="chips">
+            <span class="chip">CN 04/10</span><span class="chip">T4 07/10</span><span class="chip absent">CN 11/10</span><span class="chip">T4 14/10</span>
+            <span class="chip">CN 18/10</span><span class="chip">T4 21/10</span><span class="chip">CN 25/10</span><span class="chip">T4 28/10</span>
+          </div>
+          <div class="legend"><span><i style="background:var(--green-soft)"></i>Có mặt</span><span><i style="background:var(--red-soft)"></i>Vắng</span></div>
+          <details>
+            <summary>Xem giờ học từng buổi ▾</summary>
+            <div class="list" id="attList"></div>
+          </details>
+        </section>
+
+        <section class="card a-sched">
+          <h2>Lịch sắp tới</h2>
+          <div class="list" id="schedTop"></div>
+          <details>
+            <summary>Xem thêm 6 buổi ▾</summary>
+            <div class="list" id="schedMore"></div>
+          </details>
+        </section>
+      </div>
+
+      <div class="pagefoot">Trang chỉ để xem. Có thắc mắc, vui lòng liên hệ giáo viên.</div>
+    </div>
+
+    <div class="stickybar" id="stickybar">
+      <div><div class="lbl">Còn phải trả tháng 10</div><div class="amt">760.000 đ</div></div>
+      <button data-goto-pay>Thanh toán</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Đã sao chép</div>
+
+<script>
+  const COMMENTS = {
+    long: `Cô ơi, cháu xin phép nhận xét tình hình học tập của Hân trong thời gian qua ạ.
+
+Thời gian gần đây cháu thấy Hân học kém hơn hẳn so với thời gian đầu cô ạ. Khi cháu dạy trên lớp thì em vẫn đọc được bài, nhưng về nhà lại quên gần như hết. Đến khi lên lớp, cháu cho em đọc lại bài cũ thì em cũng không nhớ gì cả. Hôm nay cháu cho Hân đọc lại bài của buổi trước mà em cũng không nhớ.
+
+Trong quá trình học, cháu đã nhắc và đọc lại cho em rất nhiều lần, đồng thời yêu cầu em tự đọc lại để ghi nhớ nhưng nhiều lúc em không chịu đọc. Phần viết bài cũng đang có khá nhiều vấn đề, em viết thiếu và sai rất nhiều. Cháu bảo em nhìn bài trên bảng để viết lại thì em lại chép nguyên phần bài sai trong vở xuống mà không kiểm tra lại.
+
+Nếu tình trạng này tiếp tục kéo dài thì khả năng tiếp thu của Hân sẽ ngày càng giảm, và cháu cũng khá lo vì chất lượng buổi học và hiệu quả cháu dạy cho em sẽ bị ảnh hưởng. Cháu có thể hướng dẫn và nhắc em rất nhiều trên lớp, nhưng việc ôn lại và tự giác học ở nhà cũng rất quan trọng. Nếu ở lớp cháu đã dạy và sửa nhiều lần nhưng về nhà em không ôn lại thì buổi sau gần như cháu lại phải dạy lại từ đầu, rất khó để đảm bảo tiến độ học của em.
+
+Vì vậy cháu mong cô ở nhà nhắc nhở và sát sao với Hân hơn giúp cháu ạ. Cô có thể dành thời gian kiểm tra em đọc lại bài, từ mới và phần viết đã học sau mỗi buổi học. Cháu cũng sẽ tiếp tục theo sát và nhắc nhở em trên lớp, nhưng cháu mong gia đình phối hợp cùng cháu để Hân có ý thức học tập và tiến bộ trở lại như thời gian đầu ạ.
+
+Cháu nói điều này cũng vì muốn Hân học tốt hơn và để công sức của cả cô, cháu và em trong quá trình học đạt được hiệu quả tốt nhất ạ.`,
+    short: `Unit 3: My friends
++ Hân đọc to, rõ các từ vựng về bạn bè.
++ Cần luyện thêm phần viết câu hoàn chỉnh.`,
+    none: ""
+  };
+
+  const commentEl = document.getElementById("comment");
+  const moreBtn = document.getElementById("moreBtn");
+  const screen = document.getElementById("screen");
+  let expanded = false;
+
+  function isPhone() { return screen.clientWidth < 900; }
+
+  function renderComment(kind) {
+    expanded = false;
+    const text = COMMENTS[kind];
+    document.getElementById("commentCard").hidden = !text;
+    commentEl.textContent = text;
+    applyClamp();
+  }
+  // Điện thoại: nhận xét dài thu gọn 7 dòng; web: hiện đủ vì khối thanh toán đã dính bên phải.
+  function applyClamp() {
+    commentEl.classList.remove("clamped");
+    moreBtn.hidden = true;
+    if (!isPhone() || expanded) return;
+    const lineH = parseFloat(getComputedStyle(commentEl).lineHeight);
+    if (commentEl.scrollHeight > lineH * 9) {
+      commentEl.classList.add("clamped");
+      moreBtn.hidden = false;
+      moreBtn.textContent = "Đọc tiếp ▾";
+    }
+  }
+  moreBtn.onclick = () => { expanded = true; applyClamp(); };
+
+  // Danh sách buổi
+  const att = [["CN","04/10","Có mặt"],["T4","07/10","Có mặt"],["CN","11/10","Vắng"],["T4","14/10","Có mặt"],["CN","18/10","Có mặt"],["T4","21/10","Có mặt"],["CN","25/10","Có mặt"],["T4","28/10","Có mặt"]];
+  document.getElementById("attList").innerHTML = att.map(([d,dt,s]) =>
+    `<div><span>${d} · ${dt} · 17:30–19:00 · Tiếng Anh</span><span class="tag" style="color:${s==="Vắng"?"var(--red)":"var(--green)"}">${s}</span></div>`).join("");
+  const sched = ["CN · 01/11","T4 · 04/11","CN · 08/11","T4 · 11/11","CN · 15/11","T4 · 18/11","CN · 22/11","T4 · 25/11","CN · 29/11"]
+    .map(s => `<div><span>${s}</span><span style="color:var(--muted)">17:30–19:00 · Tiếng Anh</span></div>`);
+  document.getElementById("schedTop").innerHTML = sched.slice(0,3).join("");
+  document.getElementById("schedMore").innerHTML = sched.slice(3).join("");
+
+  // QR minh hoạ (không phải mã thật)
+  (function drawQr() {
+    const n = 29, svg = document.getElementById("qr"); let seed = 7, out = "";
+    const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    const finder = (x, y) => `<rect x="${x}" y="${y}" width="7" height="7"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3"/>`;
+    const inF = (x, y) => (x < 8 && y < 8) || (x > n-9 && y < 8) || (x < 8 && y > n-9);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (!inF(x,y) && rnd() > .52) out += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+    svg.innerHTML = out + finder(0,0) + finder(n-7,0) + finder(0,n-7);
+  })();
+
+  // Nút nhảy tới khối thanh toán + thanh dính đáy ẩn khi khối thanh toán đang hiện
+  const pay = document.getElementById("pay"), bar = document.getElementById("stickybar");
+  document.querySelectorAll("[data-goto-pay]").forEach(b => b.onclick = () => pay.scrollIntoView({ behavior: "smooth", block: "start" }));
+  // Ẩn khi đang thấy thẻ tiền ở đầu trang hoặc khối thanh toán, tránh hiện số tiền 2 lần.
+  const summaryCard = document.querySelector(".a-summary"), seen = new Set();
+  new IntersectionObserver((entries) => {
+    for (const e of entries) e.isIntersecting ? seen.add(e.target) : seen.delete(e.target);
+    bar.classList.toggle("hide", seen.size > 0);
+  }, { root: screen, threshold: 0.1 }).observe(pay);
+  new IntersectionObserver((entries) => {
+    for (const e of entries) e.isIntersecting ? seen.add(e.target) : seen.delete(e.target);
+    bar.classList.toggle("hide", seen.size > 0);
+  }, { root: screen, threshold: 0.1 }).observe(summaryCard);
+
+  // Sao chép
+  const toast = document.getElementById("toast");
+  document.querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); } catch {}
+    toast.textContent = "Đã sao chép: " + b.dataset.copy; toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 1400);
+  });
+
+  // Điều khiển demo
+  function seg(id, attr, fn) {
+    document.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
+      document.querySelectorAll(`#${id} button`).forEach(x => x.setAttribute("aria-pressed", x === b));
+      fn(b.dataset[attr]);
+    });
+  }
+  seg("viewSeg", "v", v => { document.getElementById("stage").classList.toggle("phone", v === "phone"); screen.scrollTop = 0; requestAnimationFrame(applyClamp); });
+  seg("cmtSeg", "c", renderComment);
+  new ResizeObserver(() => applyClamp()).observe(screen);
+  renderComment("long");
+</script>
+</body>
+</html>
