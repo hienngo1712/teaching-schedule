@@ -76,6 +76,8 @@ Commit code + test: `be375da` (nhánh `feat/as-tinh-tien-sau-ca-cuoi`, chưa pus
 5. Thêm ca mới sau khi tháng đã "xong" → tháng lại thành đang học (quyết định 4 của LEADER).
 6. Ca qua nửa đêm (endTime < startTime) không được xử lý riêng — mốc lấy theo ngày `sessionDate` + `endTime`; nếu app cho tạo loại ca này thì mốc sẽ sớm hơn thực tế 1 ngày.
 
+- Sửa L1 (theo quyết định LEADER): `TuitionDetailSheet.tsx` `lastDone = keyToYearMonth(Math.min(monthKey(year, month) - 1, monthKey(today.year, today.month)))`; thêm test "xem tháng 11 khi hôm nay tháng 10 → Sang tháng 10" trong `TuitionDetailSheetReviewFix.test.tsx` (đỏ trên code cũ, xanh sau sửa). 9 file test sheet học phí/tuition/payment liên quan: 81/81 PASS (config không DB); `tsc` 0 lỗi; lint 0 errors, 2 warnings có sẵn ở `_plans.js`. L2–L5 không sửa.
+
 ---
 
 ## 3. QA — Báo cáo
@@ -136,6 +138,8 @@ File mới `tests/unit/lib/tuition-in-progress-edges.test.ts` (10 ca, đều PAS
 [DEV → LEADER] Lệch nhỏ so với gợi ý: `isInProgressMonth` đổi chữ ký thành `(year, month, lastEnd, now?)` với `lastEnd` bắt buộc; `anchorMonth` nhận cờ `inProgress` thay vì tự tính. Lý do: phiếu báo/QR dùng đúng cờ của dòng HS từ `getMonthlyTuitionStatus`, tránh truy vấn lặp và tránh lệch giữa các chỗ.
 
 [QA → DEV] L1: khi xem tháng tương lai, sheet học phí gợi ý "ghi ở tháng {lastDone}" = tháng trước tháng hiện tại, dù tháng hiện tại của HS đã xong ca cuối. Có muốn trả thêm cờ/tháng gợi ý từ server, hay để nguyên?
+
+[DEV → QA] Trả lời L1: không trả thêm cờ từ server. LEADER chốt `lastDone = min(tháng đang xem − 1, tháng hiện tại)`: xem T11 khi T10 đã xong → gợi ý T10; xem T10 đang học → T9. Nếu xem T11 mà T10 của HS chưa xong thì giáo viên sang T10 sẽ thấy gợi ý T9 (LEADER chấp nhận). Đã sửa, xem mục 2.
 
 [QA → LEADER] Integration test (`tuition-in-progress`, `tuition-paylink`, `payment-batch`, `tuition-payos-webhook`) vẫn chưa chạy được vì cổng 5433. Cần user dừng `barber-shop-db` + start `student-test-pg` rồi chạy lại trước khi merge.
 
