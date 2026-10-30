@@ -198,6 +198,23 @@ Vì `justify-end` + `overflow-hidden`, phần tràn bị cắt ở **mép trái*
 
 **Kết luận vòng 2: KHÔNG ĐẠT.** QA-1..QA-4 đã sửa đúng, mobile 360px hết tràn, merge main không làm hỏng logic AS. Còn QA-5 (footer desktop tràn khi trình duyệt chia sẻ được file, cắt nút Link phụ huynh). Sửa 1 dòng class rồi QA đo lại là xong.
 
+### Vòng 3 QA (kiểm lại QA-5, DEV vòng 4 `b14c8d7`; HEAD `8c425e1`)
+
+**Diff `b14c8d7` (src):** chỉ `TuitionNoticeDialog.tsx` footer: bỏ `md:flex-nowrap` ở hộp ngoài, cụm link đổi `md:w-auto` → `md:justify-end` (giữ `w-full`). Mobile không đổi (chỉ lớp `md:` thay đổi). Không đụng logic.
+
+**Đo thật** (Chrome 156 Windows, dựng lại đúng class sau sửa, font Geist thật của app; `contentW` = hàng rộng nhất + padding 2×16):
+
+| Khung | vi có link + Chia sẻ | vi có link, không Chia sẻ | vi chưa link + Chia sẻ | vi chưa link, không Chia sẻ | en có link + Chia sẻ | en có link, không Chia sẻ | en chưa link + Chia sẻ | en chưa link, không Chia sẻ |
+|---|---|---|---|---|---|---|---|---|
+| Desktop 460px (2 hàng, canh phải) | 263 | 245 | 263 | 197 | 320 | 217 | 320 | 208 |
+| Mobile 360px (2 hàng) | 360 | 360 | 360 | 360 | 360 | 360 | 360 | 360 |
+
+16/16 ca: 2 hàng, không tràn, không cắt chữ. Desktop rộng nhất 320px < 460px (trước sửa 484–513px).
+
+**Test:** vitest config tạm cho `tests/unit/components/TuitionNoticeDialog*` (không nối DB): **3 file / 31 test pass, 0 fail**. Không chạy integration / `pnpm test` / migrate.
+
+**Kết luận vòng 3: ĐẠT.** QA-1..QA-5 đã sửa và kiểm lại. Còn treo ngoài phạm vi QA: integration (LEADER chạy), ảnh `tests/guide-shots` + `pnpm guide:docx`, kiểm ảnh html2canvas / trang `/p` trên app thật.
+
 ---
 
 ## 4. Trao đổi
@@ -216,6 +233,7 @@ Vì `justify-end` + `overflow-hidden`, phần tràn bị cắt ở **mép trái*
 - [DEV → QA] QA-3: đã sửa (gọn) — so với bản đang gửi `sentComment ?? savedComment`.
 - [DEV → QA] QA-4: đã sửa — tải lại phiếu lỗi khi đang chờ xuất → huỷ lệnh, mở khoá nút, báo lỗi.
 - [QA → DEV] Vòng 2: QA-1..QA-4 PASS, mobile 360px không tràn (8 ca đo thật). Lỗi mới QA-5: footer desktop (hộp 460px) tràn 5–53px khi có nút Chia sẻ (Chrome Windows có `canShareFiles()` = true), cắt nút "Link phụ huynh" ở mép trái. Đề nghị bỏ `md:flex-nowrap` ở `TuitionNoticeDialog.tsx:246` hoặc nới bề rộng hộp.
+- [QA → LEADER] Vòng 3: QA-5 đã sửa (`b14c8d7`), đo thật 16 ca desktop 460px / mobile 360px đều không tràn. Kết luận ĐẠT; còn chờ LEADER chạy integration.
 
 ---
 
