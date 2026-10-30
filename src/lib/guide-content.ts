@@ -130,7 +130,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       { text: "Mở **Học phí**: app mở sẵn **tháng trước** (tháng vừa học xong). Mỗi học sinh có số cần đóng, ghi rõ phần nợ tháng cũ và tiền tháng đó.", shot: "hoc-phi-danh-sach" },
       { text: "Phụ huynh đóng đủ: bấm **Đã đóng đủ** trên dòng học sinh. Lỡ tay thì bấm **Hoàn tác** trên thông báo.", shot: "hoc-phi-da-dong-du" },
       { text: "Đóng thiếu hoặc đóng nhiều tháng: bấm vào học sinh → **Đóng một phần**, nhập số tiền. Tiền tự trừ vào tháng cũ nhất trước, có dòng xem trước trừ tháng nào.", shot: "hoc-phi-dong-mot-phan" },
-      "Tháng đang học (chưa học xong) chỉ **tạm tính** và **không ghi được tiền**, kể cả học sinh đóng trọn tháng. Phụ huynh đóng trước thì ghi ở tháng trước, phần dư tự trừ sang tháng sau.",
+      "Tháng đang học chỉ **tạm tính** và **không ghi được tiền**, kể cả học sinh đóng trọn tháng. Ngay khi **ca cuối của học sinh trong tháng kết thúc** (vd ca 28/10 từ 17:00 đến 18:30 thì từ 18:30) là tháng đó tính tiền được, không phải chờ sang tháng sau. Phụ huynh đóng trước thì ghi ở tháng trước, phần dư tự trừ sang tháng sau.",
       { text: "Muốn miễn phần còn thiếu: mở học sinh ở tháng đã học xong → menu ⋮ → **Miễn phần còn thiếu**.", shot: "hoc-phi-mien" },
       { text: "Bấm **Phiếu báo** để tạo phiếu học phí có mã QR, rồi lưu ảnh hoặc chia sẻ cho phụ huynh.", shot: "hoc-phi-phieu-bao" },
       "Trong hộp phiếu, viết **Nhận xét tháng (phụ huynh sẽ thấy)**: nhận xét tự lưu khi bạn bấm ra ngoài ô (hoặc bấm **Lưu nhận xét**) và hiện ở mục **Nhận xét** trên phiếu, ngay trước mã QR, cả ở ảnh phiếu lẫn link phụ huynh. Mỗi tháng một nhận xét riêng; để trống thì phiếu không có mục này.",

@@ -20,6 +20,7 @@ export const RELEASES: Release[] = [
     notify: true,
     items: [
       { kind: "new", title: "Nhận xét tháng gửi phụ huynh", body: "Trong hộp Phiếu báo có ô Nhận xét tháng. Nhận xét tự lưu, hiện ở mục Nhận xét trên phiếu (trước mã QR) và trên link phụ huynh. Mỗi tháng một nhận xét riêng; ghi chú nội bộ của bạn không hiện cho phụ huynh.", guideId: "hoc-phi" },
+      { kind: "improve", title: "Tính tiền ngay sau ca cuối", body: "Tháng hiện tại tính tiền được ngay khi ca cuối của học sinh trong tháng kết thúc, không phải chờ sang ngày 1 tháng sau.", guideId: "hoc-phi" },
       { kind: "improve", title: "Link phụ huynh ngay ở hộp phiếu", body: "Hộp Phiếu báo có nút Link phụ huynh để tạo/sao chép link, không phải sang màn Học sinh.", guideId: "hoc-phi" },
     ],
   },
