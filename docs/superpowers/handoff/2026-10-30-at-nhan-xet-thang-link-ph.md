@@ -88,6 +88,28 @@ Hiện muốn lấy link phụ huynh phải sang màn Học sinh (`ParentLinkDia
 7. ParentLinkDialog mở chồng trên hộp phiếu (Dialog desktop / Sheet mobile): đóng ParentLinkDialog không đóng luôn hộp phiếu.
 8. Footer mobile có thêm 1–2 nút: kiểm không tràn ở 360px.
 
+### Vòng 2 — làm theo LEADER trả lời (điểm 3, 4, 5; điểm 1, 2 giữ nguyên)
+**Commit:** `__HASH2__`.
+
+**(4) Sao lưu Excel** — `src/server/services/backup.service.ts`: query `monthlyTuition` select thêm `parentComment`; sheet "Học phí tháng" thêm cột **"Nhận xét gửi phụ huynh"** ngay sau "Ghi chú". App **không có** chức năng khôi phục/nhập lại từ file sao lưu (chỉ có nhập học sinh từ Excel, và "khôi phục" ở Thùng rác là khôi phục bản ghi đã xoá mềm), nên không có chỗ đọc lại cột này. Test: unit mới `tests/unit/services/backup-parent-comment.test.ts` (đỏ trước khi sửa); integration `tests/integration/backup.test.ts` cập nhật danh sách cột (chưa chạy, không có DB).
+
+**(5) Không mất nhận xét** — `src/components/tuition/TuitionNoticeDialog.tsx`:
+- Rời ô (blur) → tự lưu (giống ô Ghi chú ở `TuitionDetailSheet`). Vẫn giữ nút "Lưu nhận xét". Có ref nhớ bản vừa gửi để blur + bấm nút / bấm xuất không lưu 2 lần.
+- Bấm Chia sẻ / Tải ảnh / Lưu ảnh khi nhận xét chưa lưu (hoặc đang lưu): lưu trước, các nút tạm khoá, **chỉ xuất khi phiếu đã tải lại có nhận xét mới VÀ ảnh đã chụp lại theo nhận xét đó** (ảnh nhớ kèm nhận xét lúc chụp, nên ảnh cũ không bị xuất nhầm). Lưu lỗi → huỷ lệnh xuất, báo lỗi.
+- Hạn chế đã biết: Chia sẻ sau khi phải lưu là gọi sau tác vụ bất đồng bộ, Safari có thể chặn `navigator.share`; khi đó `shareOrDownloadPng` có sẵn đường lùi là tải file về. Không có nhận xét chưa lưu thì Chia sẻ chạy ngay như cũ.
+- Test: thêm 4 test vào `tests/unit/components/TuitionNoticeDialogAT.test.tsx` (blur tự lưu + không lưu lặp; không đổi thì xuất ngay; còn chưa lưu thì lưu trước, chỉ xuất sau khi phiếu có nhận xét mới; lưu lỗi thì không xuất). 3 test đỏ trước khi sửa.
+
+**(3) Hướng dẫn đi kèm**
+- `src/lib/guide-content.ts` mục "Học phí": thêm 2 bước chữ (Nhận xét tháng; lấy link phụ huynh ngay trong hộp phiếu). Không thêm shot mới.
+- `src/lib/releases.ts`: bản **0.27.0** (2026-10-30, `notify: true`), 2 mục trỏ `guideId: "hoc-phi"`. `package.json` nâng `0.26.0 → 0.27.0` (test `releases.test.ts` bắt bản đầu = version package).
+- `public/guide/huong-dan-su-dung.docx`: chạy lại `pnpm guide:docx` (script chỉ đọc `guide-content.ts` + ảnh sẵn có, không chạm DB) → test `guide-docx-file` khớp.
+- Tour: **không thêm**. Tour "tuition" đã có bước chỉ nút Phiếu báo; thao tác mới (gõ nhận xét → tự lưu → gửi phiếu) chỉ 1 bước trong hộp, không cần tour nhiều bước.
+- **Còn treo:** chụp lại ảnh `hoc-phi-phieu-bao` (và nếu muốn thì `link-phu-huynh`) qua `tests/guide-shots` cần app + DB, chưa chạy được → ảnh hướng dẫn hiện chưa có ô nhận xét / nút link. Sau khi chụp lại phải chạy lại `pnpm guide:docx`.
+
+**Kiểm tra vòng 2 (chạy thật 2026-10-30):** `npx tsc --noEmit` 0 lỗi · `pnpm lint` sạch · unit test toàn bộ `tests/unit` (cùng config tạm, không chạm DB): **189 file / 1302 test pass, 0 fail**. Integration vẫn chưa chạy (5433 `ECONNREFUSED`).
+
+**Lưu ý cho LEADER:** nhánh AS (đang QA) nếu cũng nâng lên 0.27.0 thì khi merge sẽ đụng `package.json` + `releases.ts`; bên merge sau đổi số bản.
+
 ---
 
 ## 3. QA — Báo cáo

@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
 import { LanguageProvider } from "@/components/providers/LanguageProvider"
+import { saveAs } from "file-saver"
 
 vi.mock("file-saver", () => ({ saveAs: vi.fn() }))
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }))
@@ -31,13 +32,20 @@ vi.mock("@/components/students/ParentLinkDialog", () => ({
 }))
 
 let data: Record<string, unknown>
+let updatedAt = 1
+let saveOpts: { onSuccess?: () => void; onError?: () => void } = {}
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } }, client: { tuition: { setNoticeSent: { mutate: vi.fn() } } } }),
     tuition: {
-      getNotice: { useQuery: () => ({ data, isError: false, dataUpdatedAt: 1, refetch: vi.fn() }) },
+      getNotice: { useQuery: () => ({ data, isError: false, dataUpdatedAt: updatedAt, refetch: vi.fn() }) },
       setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
-      saveParentComment: { useMutation: () => ({ mutate: h.saveMutate, isPending: false }) },
+      saveParentComment: {
+        useMutation: (opts?: typeof saveOpts) => {
+          saveOpts = opts ?? {}
+          return { mutate: h.saveMutate, isPending: false }
+        },
+      },
     },
   },
 }))
@@ -51,17 +59,19 @@ function notice(over: Record<string, unknown> = {}) {
   }
 }
 
-const renderDialog = () =>
-  render(
-    <LanguageProvider forcedLanguage="vi">
-      <TuitionNoticeDialog studentId={1} year={2026} month={10} onClose={() => {}} />
-    </LanguageProvider>
-  )
+const ui = () => (
+  <LanguageProvider forcedLanguage="vi">
+    <TuitionNoticeDialog studentId={1} year={2026} month={10} onClose={() => {}} />
+  </LanguageProvider>
+)
+const renderDialog = () => render(ui())
 
 beforeEach(() => {
   vi.clearAllMocks()
   h.gate = { locked: false, allowed: true, openUpgrade: vi.fn() }
   h.linkProps = []
+  updatedAt = 1
+  saveOpts = {}
   window.URL.createObjectURL = vi.fn().mockReturnValue("blob:x")
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
@@ -87,6 +97,66 @@ describe("TuitionNoticeDialog: nhận xét tháng (AT)", () => {
     data = notice()
     renderDialog()
     expect((screen.getByLabelText(/Nhận xét tháng/) as HTMLTextAreaElement).maxLength).toBe(2000)
+  })
+})
+
+describe("TuitionNoticeDialog: không mất nhận xét (AT, LEADER điểm 5)", () => {
+  it("rời ô (blur) có thay đổi → tự lưu (đã cắt khoảng trắng); blur lại không đổi gì → không lưu lần 2", () => {
+    data = notice({ parentComment: "Cũ" })
+    renderDialog()
+    const box = screen.getByLabelText(/Nhận xét tháng/)
+    fireEvent.blur(box)
+    expect(h.saveMutate).not.toHaveBeenCalled()
+
+    fireEvent.change(box, { target: { value: "  Mới  " } })
+    fireEvent.blur(box)
+    expect(h.saveMutate).toHaveBeenCalledTimes(1)
+    expect(h.saveMutate).toHaveBeenCalledWith({ studentId: 1, year: 2026, month: 10, parentComment: "Mới" })
+    fireEvent.blur(box)
+    expect(h.saveMutate).toHaveBeenCalledTimes(1)
+  })
+
+  it("không có thay đổi → bấm Tải ảnh xuất ngay, không lưu", async () => {
+    data = notice({ parentComment: "Cũ" })
+    renderDialog()
+    const dl = screen.getByRole("button", { name: /Tải ảnh/ })
+    await waitFor(() => expect(dl.hasAttribute("disabled")).toBe(false))
+    fireEvent.click(dl)
+    expect(saveAs).toHaveBeenCalledTimes(1)
+    expect(h.saveMutate).not.toHaveBeenCalled()
+  })
+
+  it("còn nhận xét chưa lưu → bấm Tải ảnh: lưu trước, chỉ xuất khi phiếu đã có nhận xét mới", async () => {
+    data = notice({ parentComment: null })
+    const { rerender } = renderDialog()
+    const dl = screen.getByRole("button", { name: /Tải ảnh/ })
+    await waitFor(() => expect(dl.hasAttribute("disabled")).toBe(false))
+
+    fireEvent.change(screen.getByLabelText(/Nhận xét tháng/), { target: { value: "Con ngoan" } })
+    fireEvent.click(dl)
+    expect(h.saveMutate).toHaveBeenCalledWith({ studentId: 1, year: 2026, month: 10, parentComment: "Con ngoan" })
+    expect(saveAs).not.toHaveBeenCalled()
+
+    // Lưu xong → TRPCProvider refetch → phiếu có nhận xét mới, card chụp lại → mới xuất.
+    saveOpts.onSuccess?.()
+    data = notice({ parentComment: "Con ngoan" })
+    updatedAt = 2
+    rerender(ui())
+    await waitFor(() => expect(saveAs).toHaveBeenCalledTimes(1))
+    expect(screen.getByTestId("notice-comment").textContent).toContain("Con ngoan")
+  })
+
+  it("lưu lỗi → không xuất ảnh cũ", async () => {
+    data = notice({ parentComment: null })
+    const { rerender } = renderDialog()
+    const dl = screen.getByRole("button", { name: /Tải ảnh/ })
+    await waitFor(() => expect(dl.hasAttribute("disabled")).toBe(false))
+    fireEvent.change(screen.getByLabelText(/Nhận xét tháng/), { target: { value: "X" } })
+    fireEvent.click(dl)
+    saveOpts.onError?.()
+    rerender(ui())
+    await new Promise((r) => setTimeout(r, 20))
+    expect(saveAs).not.toHaveBeenCalled()
   })
 })
 

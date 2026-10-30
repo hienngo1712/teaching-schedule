@@ -34,7 +34,7 @@ const HEADERS: Record<string, string[]> = {
   ],
   "Học phí tháng": [
     "ID", "ID học sinh", "Học sinh", "Năm", "Tháng", "Tổng buổi", "Buổi có mặt", "Nợ trước",
-    "Học phí tháng", "Tổng phải đóng", "Đã trả", "Đã tất toán", "Ghi chú", "Cập nhật lần cuối",
+    "Học phí tháng", "Tổng phải đóng", "Đã trả", "Đã tất toán", "Ghi chú", "Nhận xét gửi phụ huynh", "Cập nhật lần cuối",
   ],
   "Lần thu": [
     "ID", "ID học phí tháng", "ID học sinh", "Học sinh", "Năm", "Tháng", "Ngày thu", "Số tiền",

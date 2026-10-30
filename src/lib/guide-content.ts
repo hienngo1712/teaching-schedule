@@ -133,8 +133,10 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       "Tháng đang học (chưa học xong) chỉ **tạm tính** và **không ghi được tiền**, kể cả học sinh đóng trọn tháng. Phụ huynh đóng trước thì ghi ở tháng trước, phần dư tự trừ sang tháng sau.",
       { text: "Muốn miễn phần còn thiếu: mở học sinh ở tháng đã học xong → menu ⋮ → **Miễn phần còn thiếu**.", shot: "hoc-phi-mien" },
       { text: "Bấm **Phiếu báo** để tạo phiếu học phí có mã QR, rồi lưu ảnh hoặc chia sẻ cho phụ huynh.", shot: "hoc-phi-phieu-bao" },
+      "Trong hộp phiếu, viết **Nhận xét tháng (phụ huynh sẽ thấy)**: nhận xét tự lưu khi bạn bấm ra ngoài ô (hoặc bấm **Lưu nhận xét**) và hiện ở mục **Nhận xét** trên phiếu, ngay trước mã QR, cả ở ảnh phiếu lẫn link phụ huynh. Mỗi tháng một nhận xét riêng; để trống thì phiếu không có mục này.",
       "Gửi xong, bấm **Đánh dấu đã gửi** để lọc được học sinh chưa gửi phiếu. Số tiền đổi sau khi gửi sẽ có nhãn báo; phiếu gửi từ 7 ngày mà chưa đóng có nhãn màu cam.",
       { text: "**Link phụ huynh**: phụ huynh mở link là xem được học phí, điểm danh và lịch học của con, không cần đăng nhập.", shot: "link-phu-huynh" },
+      "Lấy link phụ huynh ngay trong hộp phiếu: bấm **Link phụ huynh** để tạo hoặc quản lý link, hoặc bấm nút sao chép cạnh đó (khi học sinh đã có link) để chép nhanh rồi dán gửi phụ huynh.",
     ],
     tips: [
       "Lọc **Trạng thái** nằm ngoài. Các lọc khác (lớp, **Nơi học** khi có nhiều nơi) nằm trong **Bộ lọc**; bấm dấu x trên nhãn để bỏ từng lọc, **Xoá lọc** để bỏ hết.",

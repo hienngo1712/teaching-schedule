@@ -13,6 +13,17 @@ export type Release = {
 // Mới nhất đầu tiên. Mỗi lần nâng version (kể cả patch) phải thêm 1 mục (test releases.test.ts canh).
 export const RELEASES: Release[] = [
   {
+    version: "0.27.0",
+    date: "2026-10-30",
+    title: "Nhận xét tháng trên phiếu học phí",
+    summary: "Viết nhận xét tháng cho từng học sinh ngay trong hộp phiếu học phí, phụ huynh đọc trên ảnh phiếu và link phụ huynh. Lấy link phụ huynh ngay ở hộp phiếu.",
+    notify: true,
+    items: [
+      { kind: "new", title: "Nhận xét tháng gửi phụ huynh", body: "Trong hộp Phiếu báo có ô Nhận xét tháng. Nhận xét tự lưu, hiện ở mục Nhận xét trên phiếu (trước mã QR) và trên link phụ huynh. Mỗi tháng một nhận xét riêng; ghi chú nội bộ của bạn không hiện cho phụ huynh.", guideId: "hoc-phi" },
+      { kind: "improve", title: "Link phụ huynh ngay ở hộp phiếu", body: "Hộp Phiếu báo có nút Link phụ huynh để tạo/sao chép link, không phải sang màn Học sinh.", guideId: "hoc-phi" },
+    ],
+  },
+  {
     // Đợt dọn lỗi (spec AR): không tự mở ô Có gì mới, chỉ hiện ở /updates.
     version: "0.26.0",
     date: "2026-10-18",
