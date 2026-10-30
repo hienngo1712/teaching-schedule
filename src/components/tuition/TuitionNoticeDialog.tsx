@@ -242,9 +242,9 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
   )
 
   const footer = (
-    // Mobile: cụm link phụ huynh 1 hàng riêng, nút ảnh hàng dưới (360px không tràn, QA-2); desktop 1 hàng.
-    <div className="flex flex-wrap gap-2 border-t border-slate-200 p-4 md:flex-nowrap md:justify-end">
-      <div className="flex w-full gap-2 md:w-auto">
+    // 2 hàng cả mobile lẫn desktop: cụm link phụ huynh 1 hàng, nút ảnh hàng dưới (360px / hộp 460px không tràn, QA-2, QA-5).
+    <div className="flex flex-wrap gap-2 border-t border-slate-200 p-4 md:justify-end">
+      <div className="flex w-full gap-2 md:justify-end">
         <Button variant="outline" className="h-11 flex-1 md:h-10 md:flex-none" disabled={!notice} onClick={openParentLink}>
           <Link2 className="mr-2 size-4" />
           {t("parent_link")}

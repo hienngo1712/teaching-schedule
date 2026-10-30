@@ -239,17 +239,18 @@ describe("TuitionNoticeDialog: sửa lỗi QA vòng 3 (AT)", () => {
     expect(h.saveMutate).toHaveBeenLastCalledWith({ studentId: 1, year: 2026, month: 10, parentComment: "A" })
   })
 
-  it("[QA-2] mobile: cụm link phụ huynh nằm hàng riêng (w-full), footer cho xuống dòng; desktop gọn 1 hàng", () => {
+  it("[QA-2/QA-5] cụm link phụ huynh nằm hàng riêng (w-full) cả mobile lẫn desktop, footer cho xuống dòng", () => {
     data = notice({ parentLinkToken: "tok" })
     renderDialog()
     const linkBtn = screen.getByRole("button", { name: "Link phụ huynh" })
     const group = linkBtn.parentElement!
     expect(group.contains(screen.getByRole("button", { name: "Sao chép link phụ huynh" }))).toBe(true)
     expect(group.className).toMatch(/\bw-full\b/)
-    expect(group.className).toMatch(/md:w-auto/)
+    // QA-5: desktop cũng 2 hàng (hộp 460px không chứa nổi 4 nút 1 hàng).
+    expect(group.className).not.toMatch(/md:w-auto/)
     const footer = group.parentElement!
     expect(footer.className).toMatch(/\bflex-wrap\b/)
-    expect(footer.className).toMatch(/md:flex-nowrap/)
+    expect(footer.className).not.toMatch(/md:flex-nowrap/)
     // Nút chạm ≥ 44px trên mobile.
     expect(linkBtn.className).toMatch(/\bh-11\b/)
   })
