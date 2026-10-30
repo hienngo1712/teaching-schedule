@@ -9,9 +9,9 @@ import { byGradeThenName, nameMatches } from "@/lib/name-search"
 import { monthFee, monthKey, resolveBilling, type Billing, type BillingChange } from "@/lib/billing"
 import { loadBillingChanges } from "./billing.service"
 import type { MonthLedger } from "@/lib/payment-allocation"
-import { dueNow, getRowStatus, isInProgressMonth } from "@/lib/tuition-display"
+import { dueNow, getRowStatus, isInProgressMonth, lastSessionEnd } from "@/lib/tuition-display"
 
-type AttendanceRecord = SessionStudent & { session: { sessionDate: Date } }
+type AttendanceRecord = SessionStudent & { session: { sessionDate: Date; endTime: Date; status: string; isDeleted: boolean } }
 
 function calcStudentTuition(
   attendance: AttendanceRecord[],
@@ -256,13 +256,13 @@ export async function getMonthlyTuitionStatus(
 
   // 5. Tính kết quả cho từng học sinh
   const targetKey = monthKey(year, month)
-  const inProgress = isInProgressMonth(year, month)
   const results = students.map(student => {
     const attendance = attendanceMap.get(student.id) ?? []
     const snapshot = snapshotMap.get(student.id)
     const changes = billingMap.get(student.id) ?? []
     const billing = resolveBilling(changes, targetKey)
     const studentClosing = closingBalances.get(student.id)
+    const inProgress = isInProgressMonth(year, month, lastSessionEnd(attendance.map((a) => a.session)))
     const { totalSessions, presentSessions, currentMonthFee, previousBalance, totalAmountDue, needsUpsert } =
       calcStudentTuition(attendance, snapshot, studentClosing?.get(year * 12 + month - 2) ?? 0, billing)
 

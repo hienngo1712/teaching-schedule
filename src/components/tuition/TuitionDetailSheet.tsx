@@ -184,7 +184,8 @@ function TuitionDetailBody({
   const prevM = month === 1 ? 12 : month - 1
   const isProv = isProvisional(row)
   const today = vnDateParts()
-  const lastDone = keyToYearMonth(monthKey(today.year, today.month) - 1)
+  // Tháng hiện tại có thể đã xong sau ca cuối (spec AS): xem tháng tương lai thì gợi ý tháng hiện tại.
+  const lastDone = keyToYearMonth(Math.min(monthKey(year, month) - 1, monthKey(today.year, today.month)))
 
   const handleBlurNotes = () => {
     if (notes !== (lastSaved.current ?? row.notes ?? "")) {
