@@ -186,6 +186,20 @@ describe("TuitionDetailSheet — khoá thu tiền tháng đang học (cả trọ
     expect(onGoToMonth).toHaveBeenCalledWith(2026, 9)
   })
 
+  it("xem tháng tương lai (11) khi hôm nay tháng 10: gợi ý Sang tháng 10 (spec AS)", () => {
+    const future = { ...monthlyInProgress, month: 11 }
+    currentRow = future
+    const onGoToMonth = vi.fn()
+    render(
+      <LanguageProvider forcedLanguage="vi">
+        <TuitionDetailSheet open data={future} onOpenChange={() => {}} onSuccess={() => {}} onGoToMonth={onGoToMonth} />
+      </LanguageProvider>
+    )
+    expect(screen.getByTestId("pay-month-in-progress").textContent).toContain("Tháng 11 chưa học xong")
+    fireEvent.click(screen.getByRole("button", { name: "Sang tháng 10" }))
+    expect(onGoToMonth).toHaveBeenCalledWith(2026, 10)
+  })
+
   it("tháng đang học: menu ⋮ không có Miễn (kể cả trọn tháng)", () => {
     currentRow = monthlyInProgress
     renderSheet(monthlyInProgress)

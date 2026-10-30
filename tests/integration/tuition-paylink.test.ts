@@ -153,9 +153,10 @@ describe("QR payOS trên phiếu (spec AH §5)", () => {
     expect(f).not.toHaveBeenCalled()
   })
   it("anchorMonth: tháng đang học → tháng trước; tháng đã qua → giữ", () => {
-    // dùng tháng hiện tại theo giờ VN; isInProgressMonth là nguồn sự thật
+    // cờ inProgress lấy từ getMonthlyTuitionStatus (theo ca cuối của HS, spec AS)
     const now = vnDateParts()
-    expect(anchorMonth(now.year, now.month)).toEqual(now.month === 1 ? { year: now.year - 1, month: 12 } : { year: now.year, month: now.month - 1 })
-    expect(anchorMonth(2026, 8)).toEqual({ year: 2026, month: 8 })
+    expect(anchorMonth(now.year, now.month, true)).toEqual(now.month === 1 ? { year: now.year - 1, month: 12 } : { year: now.year, month: now.month - 1 })
+    expect(anchorMonth(now.year, now.month, false)).toEqual({ year: now.year, month: now.month })
+    expect(anchorMonth(2026, 8, false)).toEqual({ year: 2026, month: 8 })
   })
 })

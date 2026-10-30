@@ -75,6 +75,16 @@ describe("Tuition in-progress & provisional logic (spec Y Task 3)", () => {
     })
     await db.sessionStudent.updateMany({ where: { sessionId: sCur.id }, data: { attendance: "present", fee: 0 } })
 
+    // Ca cuối tháng chưa diễn ra (ngày cuối tháng 23:00–23:59 VN) → tháng hiện tại vẫn đang học (spec AS)
+    const lastDay = new Date(Date.UTC(curY, curM, 0)).getUTCDate()
+    await caller.session.create({
+      sessionDate: `${curY}-${String(curM).padStart(2, "0")}-${lastDay}`,
+      startTime: "23:00",
+      endTime: "23:59",
+      subjectId,
+      studentIds: [st1.id, st2.id],
+    })
+
     // Kiểm tra getMonthlyStatus tháng hiện tại cho st1
     const stat1 = await caller.tuition.getMonthlyStatus({ year: curY, month: curM, studentId: st1.id })
     const it1 = stat1.items[0]

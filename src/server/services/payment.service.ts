@@ -7,7 +7,7 @@ import { softDeleteData } from "@/server/soft-delete"
 import { allocatePayment, keyToYearMonth } from "@/lib/payment-allocation"
 import { vnTodayIso } from "@/lib/payment-summary"
 import { monthKey } from "@/lib/billing"
-import { isInProgressMonth } from "@/lib/tuition-display"
+import { isInProgressMonth, lastSessionEnd } from "@/lib/tuition-display"
 import type {
   PaymentCreateInput,
   PaymentListInput,
@@ -66,7 +66,15 @@ async function ensureLedgerMonths(db: PrismaClient, userId: number, studentId: n
 
 export async function recordPayment(db: PrismaClient, userId: number, input: PaymentRecordInput) {
   // Tháng chưa học xong (cả HS trọn tháng) không ghi tiền, tránh giáo viên tính nhầm; đóng trước thì ghi dư ở tháng trước.
-  if (isInProgressMonth(input.year, input.month)) {
+  const sessions = await db.teachingSession.findMany({
+    where: {
+      userId,
+      sessionDate: { gte: new Date(Date.UTC(input.year, input.month - 1, 1)), lt: new Date(Date.UTC(input.year, input.month, 1)) },
+      sessionStudents: { some: { studentId: input.studentId } },
+    },
+    select: { sessionDate: true, endTime: true, status: true, isDeleted: true },
+  })
+  if (isInProgressMonth(input.year, input.month, lastSessionEnd(sessions))) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "Tháng này chưa học xong, hãy ghi khoản thu ở tháng trước" })
   }
   await ensureMonthlyTuition(db, userId, input.studentId, input.year, input.month) // kiểm quyền + HS còn sống
