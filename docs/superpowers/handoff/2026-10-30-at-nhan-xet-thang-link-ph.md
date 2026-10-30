@@ -43,7 +43,7 @@ Hiện muốn lấy link phụ huynh phải sang màn Học sinh (`ParentLinkDia
 
 ## 2. DEV — Báo cáo
 
-**Commit:** `__HASH__` (code + test + migration). Nhánh `feat/at-nhan-xet-thang-link-ph`, chưa push/merge.
+**Commit:** `3986c2d` (code + test + migration). Nhánh `feat/at-nhan-xet-thang-link-ph`, chưa push/merge.
 
 ### Migration (chỉ viết file, CHƯA áp lên DB nào)
 - `prisma/migrations/20261030120000_at_parent_comment/migration.sql`: `ALTER TABLE "monthly_tuition" ADD COLUMN "parent_comment" TEXT;` (nullable, không destructive).
