@@ -265,6 +265,14 @@ test("capture-25-shots", async ({ page, browser }, testInfo) => {
   await noticeBtn.click()
   const qrImg = page.locator('img[alt="VietQR"]').locator("visible=true").first()
   await expect(qrImg).toBeVisible()
+  // Nhận xét tháng (spec AT): gõ rồi rời ô để tự lưu, chờ phiếu xem trước hiện nhận xét.
+  const commentBox = page.locator("#parent-comment")
+  await commentBox.fill("Con tiến bộ rõ phần nghe, làm bài đầy đủ.")
+  await commentBox.blur()
+  await expect(page.getByTestId("tuition-notice").locator("visible=true").getByText("Con tiến bộ rõ phần nghe")).toBeVisible()
+  // Chờ dựng lại ảnh phiếu xong (nút xuất hết quay) rồi mới viền, không thì viền mất khi phiếu render lại.
+  await expect(page.locator("[role='dialog']").getByRole("button", { name: /Tải ảnh|Lưu ảnh/ }).locator("visible=true").first()).toBeEnabled()
+  await expect(qrImg).toBeVisible()
   await mark(qrImg)
   await shot(page, "hoc-phi-phieu-bao", kind)
   await page.keyboard.press("Escape")

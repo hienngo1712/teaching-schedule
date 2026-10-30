@@ -9,6 +9,8 @@ import { handleTuitionWebhook } from "@/server/services/tuition-payos-webhook.se
 import { getAuthedCaller } from "../helpers/trpc"
 import { EXPECTED_TEST_ENDPOINT } from "../env-setup"
 
+export const DEMO_PARENT_COMMENT = "Con chăm chỉ, làm bài đầy đủ.\n+ Nắm chắc phân số và số thập phân.\n+ Cần luyện thêm bài toán có lời văn."
+
 export function getDemoMonths() {
   const now = new Date()
   const formatter = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "numeric", day: "numeric" })
@@ -369,6 +371,11 @@ export async function seedDemo(): Promise<string> {
       return { studentId: ss.studentId, attendance }
     })
     await caller.attendance.update({ sessionId: s.id, attendances })
+  }
+
+  // Nhận xét tháng (spec AT) cho HS có link phụ huynh: ảnh /p có mục Nhận xét.
+  for (const m of [months.prev, months.current]) {
+    await caller.tuition.saveParentComment({ studentId: s1.id, year: m.year, month: m.month, parentComment: DEMO_PARENT_COMMENT })
   }
 
   return parentLinkRes.token
