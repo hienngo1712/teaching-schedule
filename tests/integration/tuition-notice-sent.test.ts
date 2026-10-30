@@ -62,6 +62,16 @@ describe("Đánh dấu đã gửi phiếu học phí (spec V)", () => {
       attendances: [{ studentId: st.id, attendance: "present", fee: 100_000 }],
     })
 
+    // Ca cuối tháng chưa diễn ra (ngày cuối tháng 23:00–23:59 VN) → tháng hiện tại vẫn đang học (spec AS)
+    const lastDay = new Date(Date.UTC(curYear, curMonth, 0)).getUTCDate()
+    await caller.session.create({
+      sessionDate: `${curYear}-${String(curMonth).padStart(2, "0")}-${lastDay}`,
+      startTime: "23:00",
+      endTime: "23:59",
+      subjectId,
+      studentIds: [st.id],
+    })
+
     // 1. Chưa có dòng monthly_tuition cho tháng hiện tại -> gọi setNoticeSent(sent: true)
     const resSent1 = await caller.tuition.setNoticeSent({
       studentId: st.id,
