@@ -59,7 +59,7 @@ Hiện tại nợ cũ hiện gộp, ví dụ "Nợ 2 tháng trước 480.000 đ"
 
 ## 2. DEV — Báo cáo
 
-**Commit:** `__HASH__`. Nhánh `feat/au-trang-ph-tach-no`, chưa push/merge. Không migration. Không chạy integration / `pnpm test` / migrate / build.
+**Commit:** `0a9cbe3`. Nhánh `feat/au-trang-ph-tach-no`, chưa push/merge. Không migration. Không chạy integration / `pnpm test` / migrate / build.
 
 ### B — Tách nợ cũ từng tháng
 - `src/lib/debt-breakdown.ts` (mới):
