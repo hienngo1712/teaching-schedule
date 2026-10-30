@@ -217,5 +217,6 @@ AU-3 tuỳ LEADER.
 - Integration `tests/integration` trên `3d2424d` (DB test `localhost:5433`): **102 file / 802 test pass**.
 - E2E học phí / trang PH / payOS / điện thoại (24 file, gồm `parent-link.spec.ts`, `tuition-notice.spec.ts`): **76/76 pass**.
 - QA vòng 2 đạt. **Duyệt merge vào `main`.**
-- Còn lại: chụp lại ảnh hướng dẫn `link-phu-huynh`; gói riêng (AV) cho lỗi `allocatePayment` chia tiền vào tháng trước tháng miễn (QA mục 3).
+- Ảnh hướng dẫn `link-phu-huynh` (desktop + mobile) đã chụp lại bằng `tests/guide-shots` (2/2 pass), chạy lại `pnpm guide:docx` — nhánh `fix/au-anh-huong-dan`.
+- Còn lại: gói riêng (AV) cho lỗi `allocatePayment` chia tiền vào tháng trước tháng miễn (QA mục 3).
 
