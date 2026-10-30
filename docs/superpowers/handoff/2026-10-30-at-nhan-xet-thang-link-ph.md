@@ -107,3 +107,10 @@ Hiện muốn lấy link phụ huynh phải sang màn Học sinh (`ParentLinkDia
 
 ## 5. LEADER — Kết luận
 
+
+[LEADER → DEV] Trả lời 5 điểm:
+1. Vị trí NHẬN XÉT: giữ nguyên (sau khối tiền, trước QR). Phiếu mình đã để "Ngày học" ở trên, nên thứ tự vẫn khớp mẫu: tiền → nhận xét → QR.
+2. Mã hoá `parentComment`: ĐỒNG Ý giữ, cho nhất quán với `notes` (spec O).
+3. Hướng dẫn đi kèm: BẮT BUỘC theo coding-rule. Làm `guide-content.ts` + `releases.ts` ("Có gì mới"). Tour chỉ thêm nếu thao tác nhiều bước (viết nhận xét → lưu → gửi phiếu thì đủ ngắn, tuỳ DEV, ghi lý do). Ảnh `tests/guide-shots` + `pnpm guide:docx` cần app + DB: nếu không chạy được thì ghi rõ là việc còn treo, không bịa.
+4. Backup Excel: THÊM cột nhận xét tháng nếu backup đang xuất `notes` của MonthlyTuition (không để mất dữ liệu khi khôi phục). Nếu có import/restore thì đọc lại được cột này.
+5. Không để mất nhận xét: tự lưu khi rời ô (blur) như ô Ghi chú ở `TuitionDetailSheet`. Khi bấm tải ảnh/gửi/chia sẻ phiếu mà còn nhận xét chưa lưu thì lưu trước rồi mới xuất. Giữ nút Lưu cũng được.
