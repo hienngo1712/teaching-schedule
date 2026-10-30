@@ -104,6 +104,66 @@ Hiện tại nợ cũ hiện gộp, ví dụ "Nợ 2 tháng trước 480.000 đ"
 
 ## 3. QA — Báo cáo
 
+Kiểm trên HEAD `49f0b53` (code DEV `0a9cbe3`), chạy 2026-10-30. Không chạy integration / e2e / `pnpm test` / migrate, không đụng DB 5433 / Docker, không dùng cổng 3000.
+
+### Lệnh (chạy thật)
+- `node_modules/.bin/tsc --noEmit`: exit 0.
+- `pnpm lint`: exit 0, 0 lỗi, 2 cảnh báo có sẵn ở `.superpowers/mockups/aj/_plans.js` (không thuộc gói).
+- Unit toàn bộ `tests/unit` (config tạm, `DATABASE_URL` cổng chết 5999, không nối DB): **197 file / 1377 test pass, 0 fail** (gồm 6 test QA mới).
+- Test QA mới: `tests/unit/qa/au-debt-breakdown-edge.test.ts` (6 test):
+  - 2000 bộ sổ ngẫu nhiên (tháng trống, trả một phần, trả dư, miễn, 21 tháng): dư nợ > 0 thì luôn tách được, tổng = dư nợ, mỗi dòng > 0, tăng dần, ≤ học phí tháng đó, tối đa 13 dòng, "Trước tháng N" chỉ ở đầu và N = tháng đầu cửa sổ.
+  - 1000 bộ: ghi thêm khoản thu qua `allocatePayment` → bảng tách mới đúng bằng bảng cũ trừ FIFO từ tháng cũ nhất (khớp cách hệ thống chia tiền).
+  - Miễn khi đang có tín dụng; trả đủ → null; số thu âm → null.
+  - `computeClosingBalances` sau refactor (4 HS × 18 tháng ngẫu nhiên, có vắng / chưa điểm danh / miễn / trả dư) khớp bản tính tay theo vòng lặp cũ trên main → `report.service` nhận kết quả không đổi.
+
+### Ca kiểm thử
+| # | Ca | Kết quả |
+|---|----|---------|
+| 1 | Tách nợ FIFO, tổng = `previousBalance`, miễn / trả dư / qua năm / quá 12 tháng gộp "Trước tháng N" / dữ liệu lạ → dòng gộp | PASS (review + test DEV + test QA) |
+| 2 | Refactor `computeClosingBalances` (`loadLedgersBefore` + `closingsFromLedgers`) giữ kết quả; vẫn 2 truy vấn gom, không N+1 | PASS |
+| 3 | Riêng tư: `ParentViewDTO` không đổi ngoài `debtBreakdown`; trang `/p` không có `notes` / token (quét chữ trang ở 8 ca: không có) | PASS |
+| 4 | Web 1280×800, nhận xét dài, nợ 2 tháng, 1 lần thu: 2 cột, khối thanh toán 380×**696px** (top 96), cuộn thì dính top 16 → bottom 712, thấy cả QR + số TK; không có thanh dính đáy | PASS |
+| 5 | Web 1280×800, nợ 14 tháng (13 dòng) + 5 lần thu | **FAIL — AU-1** |
+| 6 | Điện thoại 390×844, nhận xét dài: thứ tự thẻ tiền → nhận xét → thanh toán → điểm danh → lịch; `scrollWidth` 390; "Đọc tiếp" có, bấm thì mở 179 → 612px và nút biến mất; "Mã QR ↓" cuộn khối thanh toán về top 16; thanh dính đáy ẩn ở đầu trang và khi khối thanh toán đang hiện, hiện khi cuộn qua hết | PASS |
+| 7 | 360×780: nhận xét ngắn / không có / không QR ("Chi tiết ↓", không ô QR, không nút sao chép) / đã đóng đủ + trả dư (không thẻ tiền, không thanh dính đáy, "Trả dư 50.000 đ") / đã tất toán / payOS (nút "Mở trang thanh toán") / nơi tính theo ca (chỉ điểm danh + lịch) / nợ 14 tháng: tất cả `scrollWidth` = 360, nav tháng 1 dòng (46px), không nút chạm nào < 44px | PASS |
+| 8 | Nút Sao chép: chép đúng `0123456789012`, `1000000` (số thuần), nội dung CK; chữ đổi "Đã chép" | PASS (lỗi clipboard → AU-3) |
+| 9 | Chip điểm danh: đủ 4 trạng thái thật (`present` xanh, `late` vàng, `absent` đỏ gạch ngang, `pending` xám), có `sr-only`; 3 ô số; "Xem giờ học từng buổi"; lịch 3 buổi + "Xem thêm 2 buổi" | PASS |
+| 10 | Ảnh phiếu (`TuitionNoticeCard` mặc định): bố cục cũ giữ nguyên (tiêu đề, ngày học, Tổng tiền cần đóng, Nhận xét, QR), chỉ thay dòng nợ bằng "Tháng 8 còn thiếu / Tháng 9 còn thiếu / Tổng nợ cũ" | PASS |
+| 11 | i18n vi/en đủ khoá mới; releases 0.28.0 + `package.json` | PASS |
+
+Cách dựng: trang tạm `src/app/p/qa-au` (dữ liệu giả, không import DB), `next dev -p 3997` với `DATABASE_URL` cổng chết, đo bằng Chrome DevTools. **Đã xoá trang tạm + `.next/types` sinh ra, không commit, đã tắt server.**
+
+### Lỗi
+- **AU-1 (Trung bình)** `src/components/parent/ParentPayBlock.tsx:103-112` (dòng nợ + từng lần thu) cùng với `ParentView.tsx:110` (`lg:sticky`).
+  - Khối thanh toán web không có giới hạn cao. Đo: mỗi dòng nợ 20px, mỗi lần thu 16px, ca cơ bản (nợ 2 tháng, 1 lần thu) đã 696px.
+  - Nợ ≥ 4 tháng hoặc ≥ 3 lần thu trong tháng là vượt 720px (yêu cầu LEADER: "nằm gọn trong 1 màn laptop ~720px").
+  - Ca nợ 14 tháng + 5 lần thu: cao **1010px**. Khi cuộn, sticky không giữ được (cuộn 400px thì top −290), tức là đang xem QR thì số "Còn phải trả" và tiêu đề đã trôi mất.
+  - Tái hiện: HS nợ nhiều tháng, mở `/p/<token>` ở 1280×800 (hoặc màn cao 720) rồi cuộn.
+  - Gợi ý: trên web thu dòng tách nợ / lần thu vào `<details>` (giữ dòng "Tổng nợ cũ"), hoặc giới hạn số dòng.
+- **AU-2 (Thấp, dọn code chết do gói tạo ra)**
+  - `src/components/tuition/TuitionNoticeCard.tsx`: `variant="wide"` (dòng 14, 24, 28, 71, 100, 111, nhánh 160–223) không còn nơi dùng trong `src/` (trang `/p` thôi dùng card). Chỉ còn test giữ: `tests/unit/components/TuitionNoticeCardVariant.test.tsx`, `TuitionNoticeCardComment.test.tsx:61`.
+  - Khoá i18n `parent_present_summary` (`vi.json` / `en.json` dòng 518) không còn dùng.
+  - Đề nghị DEV xoá.
+- **AU-3 (Thấp)** `ParentPayBlock.tsx:23`: trình duyệt chặn clipboard thì `catch {}` im lặng, phụ huynh bấm "Sao chép" không thấy gì. Nên báo ngắn (vd "Không chép được, hãy giữ để chọn chữ").
+
+### Ghi nhận ngoài phạm vi AU (có từ trước, không do gói này)
+- `src/lib/payment-allocation.ts:16`: `allocatePayment` xét `residual > 0` từng tháng trước khi gặp tháng miễn phía sau, nên có thể chia khoản thu mới vào tháng **trước tháng đã miễn**. Tiền đó bị miễn mất, tháng sau vẫn nợ.
+- Ví dụ: T7 nợ 100k, T8 GV bấm Miễn, T9 học 100k, phụ huynh trả 100k → khoản thu ghi vào T7, T9 vẫn còn thiếu 100k.
+- Test ngẫu nhiên của QA phát hiện điều này, nên ca so khớp `allocatePayment` đã bỏ tháng miễn. Nhờ LEADER xem có giao gói riêng không.
+
+### Chưa kiểm
+- Integration (`tuition-notice` + tuition / report) và e2e `parent-link.spec.ts`: LEADER chạy.
+- Safari iOS thật (`env(safe-area-inset-bottom)`), clipboard trên điện thoại thật.
+
+### Kết luận: **KHÔNG ĐẠT**
+Tách nợ đúng, refactor `computeClosingBalances` giữ nguyên kết quả, bố cục điện thoại và các trạng thái trang `/p` đúng, ảnh phiếu giữ bố cục.
+
+Cần sửa:
+- AU-1: khối thanh toán web vượt 720px, sticky mất số tiền khi nợ nhiều tháng hoặc nhiều lần thu.
+- AU-2: dọn code chết theo yêu cầu LEADER.
+
+AU-3 tuỳ LEADER.
+
 ---
 
 ## 4. Trao đổi
@@ -112,6 +172,10 @@ Hiện tại nợ cũ hiện gộp, ví dụ "Nợ 2 tháng trước 480.000 đ"
 - [DEV → LEADER] Trên trang `/p` bỏ dòng "Tổng phải đóng" (demo chỉ có học phí tháng / nợ cũ / đã trả, số to là "Còn phải trả"). Ảnh phiếu vẫn giữ dòng này.
 - [DEV → LEADER] Demo có ngày ở dưới tên GV trong thẻ Nhận xét; app không lưu ngày viết nhận xét nên chỉ hiện tên GV.
 - [DEV → LEADER] `TuitionNoticeCard` `variant="wide"` không còn chỗ dùng; giữ lại (có test riêng). Muốn dọn thì giao thêm.
+- [QA → DEV] AU-1: khối thanh toán web cao 696px ở ca cơ bản, mỗi dòng nợ +20px, mỗi lần thu +16px. Nợ ≥ 4 tháng hoặc ≥ 3 lần thu là vượt 720px; ca 14 tháng là 1010px, sticky trôi mất số tiền. Đề nghị thu chi tiết vào `<details>` trên web.
+- [QA → DEV] AU-2: xoá nhánh `variant="wide"` của `TuitionNoticeCard` + test đi kèm + khoá `parent_present_summary`.
+- [QA → LEADER] Ngoài phạm vi: `allocatePayment` chia tiền vào tháng nằm trước tháng miễn, nên tiền bị miễn mất (ví dụ ở mục 3). Cân nhắc giao gói riêng.
+- [QA → LEADER] Nhờ chạy integration `tuition-notice` + tuition/report và e2e `parent-link.spec.ts`.
 
 ---
 
