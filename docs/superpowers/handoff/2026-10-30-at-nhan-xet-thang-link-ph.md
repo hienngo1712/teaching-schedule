@@ -114,6 +114,47 @@ Hiện muốn lấy link phụ huynh phải sang màn Học sinh (`ParentLinkDia
 
 ## 3. QA — Báo cáo
 
+Kiểm trên HEAD `3f08e14` (code DEV `3986c2d` + `780c0ec`), chạy 2026-10-30. Không chạy integration / `pnpm test` / prisma / build (DB 5433 đang dùng cho nhánh khác).
+
+### Kết quả lệnh (chạy thật)
+- `npx tsc --noEmit`: exit 0, 0 lỗi.
+- `pnpm lint`: exit 0, sạch.
+- Unit toàn bộ `tests/unit` (config tạm của DEV, `DATABASE_URL` cổng chết 5999, khoá mã hoá ngẫu nhiên): **191 file pass, 1312 test pass + 1 expected fail** (ca `it.fails` ghi lỗi QA-1 bên dưới), 0 fail.
+- Test QA mới (đã commit): `tests/unit/qa/at-parent-comment-edge.test.ts` (7 test: schema chỉ khoảng trắng → rỗng, cắt trước khi đếm 2000, thiếu/null bị chặn, giữ thẻ HTML dạng chữ; mã hoá `parentComment` khi update + đọc lại giữ xuống dòng, null không mã hoá, ciphertext không giải mã chéo sang `notes`) và `tests/unit/components/TuitionNoticeDialogAT.qa.test.tsx` (3 test + 1 `it.fails`: blur rồi bấm Tải ảnh chỉ lưu 1 lần và nút xuất khoá khi chờ; xoá hết → gửi chuỗi rỗng; lưu lỗi rồi blur lại thì được gửi lại; ca lỗi QA-1).
+
+### Ca kiểm thử (review code + test)
+| # | Ca | Kết quả |
+|---|----|---------|
+| 1 | `notes` nội bộ không lộ: `getTuitionNotice` chỉ `select: { parentComment }` | PASS |
+| 2 | `parentLinkToken` không ra trang `/p`: trang PH gọi `getTuitionNotice` (không phải `getTeacherTuitionNotice`), `TuitionNoticeDTO` không có token | PASS |
+| 3 | `saveParentComment`: `planProcedure("tuitionNotice")` + `ensureMonthlyTuition` → `assertOwnership` | PASS |
+| 4 | XSS: render `{notice.parentComment}` text thường, không `dangerouslySetInnerHTML` | PASS |
+| 5 | Giới hạn 2000 (Zod trim rồi max; textarea `maxLength=2000`) | PASS |
+| 6 | Mã hoá: `ENCRYPTED_FIELDS.MonthlyTuition` + `FIELD_TARGETS` khớp (bảng `monthly_tuition`, cột `parent_comment`); extension mã hoá theo tên khoá nên update/upsert/findUnique đều đi qua | PASS |
+| 7 | Đúng HS × tháng (`studentId_year_month`); update theo `mt.id` | PASS |
+| 8 | Đổi nhận xét không đụng `noticeSentAt/noticeSentAmount` → không thành "cần gửi lại" | PASS (review; integration chưa chạy) |
+| 9 | Blur tự lưu, không lưu đôi khi blur + bấm xuất; lưu lỗi huỷ xuất; không xuất ảnh cũ (ảnh nhớ `blobComment`, card `key=dataUpdatedAt` chụp lại sau refetch) | PASS |
+| 10 | Đóng hộp bằng Esc khi nhận xét chưa lưu | **FAIL — QA-1** |
+| 11 | Nút Link phụ huynh: chốt gói giống `StudentList.tsx:172`, `canGenerate={linkGate.allowed}`; sao chép `origin/p/<token>` giống `ParentLinkDialog`; tạo link → invalidate toàn cục → refetch → nút sao chép hiện | PASS |
+| 12 | Footer mobile 360px khi có thêm nút | **FAIL — QA-2** |
+| 13 | Migration: `ALTER TABLE "monthly_tuition" ADD COLUMN "parent_comment" TEXT;` nullable, không destructive; schema `@map("parent_comment") @db.Text`, `@@map("monthly_tuition")` | PASS |
+| 14 | Backup Excel: select + cột "Nhận xét gửi phụ huynh" sau "Ghi chú" | PASS |
+| 15 | i18n: 6 khoá mới có đủ vi/en; vi.json/en.json cùng bộ khoá (so bằng script, 0 lệch) | PASS |
+| 16 | guide-content (2 bước chữ), releases 0.27.0 + `package.json` 0.27.0 | PASS (ảnh guide-shots còn treo như DEV ghi) |
+
+### Lỗi
+- **QA-1 (Trung bình — mất dữ liệu)** `src/components/tuition/TuitionNoticeDialog.tsx:54-57, 210`: chỉ lưu khi `onBlur`, không lưu lúc unmount. Đóng hộp bằng **Esc** (hoặc kiểu đóng nào gỡ ô mà không bắn blur) thì nhận xét đang gõ bị mất. Mẫu LEADER chỉ định `TuitionDetailSheet.tsx:165-180` có `useEffect` cleanup lưu ghi chú còn dở khi unmount (comment ghi rõ "Đóng sheet bằng Esc/vuốt không bắn blur", spec AR B2); hộp phiếu thiếu phần này. Tái hiện: mở Phiếu báo → gõ nhận xét (không bấm ra ngoài) → nhấn Esc → mở lại phiếu: nhận xét không còn. Test tái hiện: `TuitionNoticeDialogAT.qa.test.tsx` ca `[BUG QA-1]` (đang `it.fails`; sửa xong đổi thành `it`).
+- **QA-2 (Trung bình — UI mobile)** `src/components/tuition/TuitionNoticeDialog.tsx:229-243`: footer `flex gap-2` + nút `whitespace-nowrap`, thêm "Link phụ huynh" + nút sao chép 44px. Đo trong Chrome (dựng lại đúng class: 360px, padding 16, gap 8, chữ 14px, px-4, icon 16 + mr-2): máy chia sẻ được (`canShareFiles` = true, thường là điện thoại) có link → nội dung rộng **475px**; chưa có link → **423px**; không có nút Chia sẻ → 360px vừa. Tức trên điện thoại thật footer tràn ngang/bị cắt nút. Gợi ý: cho footer xuống 2 hàng trên mobile (`flex-wrap`/grid) hoặc rút nút link thành icon.
+- **QA-3 (Thấp)** `TuitionNoticeDialog.tsx:118-123`: lưu B đang chạy, người dùng sửa về đúng bản đã lưu A rồi blur → bị bỏ qua (`text === savedComment`), B ghi đè; sau refetch ô hiện A nhưng phiếu là B (ô báo "chưa lưu", bấm Lưu được). Không mất dữ liệu, chỉ ghi nhận.
+- **QA-4 (Thấp)** Bấm xuất khi chờ lưu, nếu lưu thành công nhưng refetch phiếu lỗi thì `pendingExport` treo, 3 nút xuất khoá tới khi đóng hộp. Hiếm.
+
+### Chưa kiểm (cần LEADER chạy)
+- Integration: `tests/integration/tuition-notice.test.ts`, `parent-link.test.ts`, `plan-gating.test.ts`, `backup.test.ts`, `crypto-backfill.test.ts` (cần áp migration lên 5433).
+- html2canvas vẽ `white-space: pre-wrap` trong ảnh thật; trang `/p` thật; ParentLinkDialog chồng lên Sheet trên mobile thật.
+
+### Kết luận: **KHÔNG ĐẠT** (vòng này)
+Bảo mật/riêng tư, mã hoá, migration, chốt gói đều đúng. Cần sửa QA-1 (yêu cầu LEADER điểm 5 "không để mất nhận xét", có mẫu sẵn ở `TuitionDetailSheet`) và QA-2 (footer tràn trên điện thoại). QA-3/QA-4 tuỳ LEADER.
+
 ---
 
 ## 4. Trao đổi
@@ -124,6 +165,9 @@ Hiện muốn lấy link phụ huynh phải sang màn Học sinh (`ParentLinkDia
 - [DEV → LEADER] Chưa làm quy tắc coding-rule "Hướng dẫn đi cùng tính năng" (guide-content, ảnh guide, tours, releases "Có gì mới") vì đề AT không giao. Cần trước khi phát hành thì giao thêm.
 - [DEV → LEADER] Bản sao lưu Excel (`backup.service.ts`) chưa xuất cột nhận xét tháng; ngoài phạm vi, ghi lại để cân nhắc.
 - [DEV → LEADER] Nhận xét lưu bằng nút "Lưu nhận xét" (không tự lưu). Gõ mà chưa Lưu rồi tải ảnh thì ảnh chưa có nhận xét mới.
+- [QA → DEV] QA-1: thêm lưu-khi-unmount như `TuitionDetailSheet.tsx:165-180` (đọc ref nội dung + bản đã gửi, gọi `utils.client.tuition.saveParentComment.mutate`). Sửa xong đổi `it.fails` ca `[BUG QA-1]` trong `tests/unit/components/TuitionNoticeDialogAT.qa.test.tsx` thành `it`.
+- [QA → DEV] QA-2: footer hộp phiếu tràn ở 360px khi có nút Chia sẻ (đo 423–475px). Đề nghị chia 2 hàng trên mobile.
+- [QA → LEADER] Integration chưa chạy (theo lệnh không đụng 5433); nhờ LEADER chạy 5 file liệt kê ở mục 3 sau khi áp migration lên DB test.
 
 ---
 
