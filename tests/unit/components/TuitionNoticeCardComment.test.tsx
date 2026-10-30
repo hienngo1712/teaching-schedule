@@ -22,10 +22,10 @@ const base: TuitionNoticeDTO = {
   parentComment: null,
 }
 
-const renderCard = (notice: TuitionNoticeDTO, variant?: "default" | "wide") =>
+const renderCard = (notice: TuitionNoticeDTO) =>
   render(
     <LanguageProvider forcedLanguage="vi">
-      <TuitionNoticeCard notice={notice} variant={variant} />
+      <TuitionNoticeCard notice={notice} />
     </LanguageProvider>
   )
 
@@ -55,10 +55,5 @@ describe("TuitionNoticeCard: mục Nhận xét tháng (AT)", () => {
     expect(screen.getByTestId("notice-comment").textContent).toContain("<b>đậm</b>")
     expect(container.querySelector("b")).toBeNull()
     expect(container.querySelector("img[src='x']")).toBeNull()
-  })
-
-  it("bản rộng (trang phụ huynh) cũng hiện nhận xét", () => {
-    renderCard({ ...base, parentComment: "Tốt" }, "wide")
-    expect(screen.getByTestId("notice-comment").textContent).toContain("Tốt")
   })
 })

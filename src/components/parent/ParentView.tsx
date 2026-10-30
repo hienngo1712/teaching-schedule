@@ -77,7 +77,7 @@ export function ParentView({ view }: { view: ParentViewDTO }) {
           </nav>
         </header>
 
-        <div className={cn("grid grid-cols-1 gap-4 lg:items-start", notice && "lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6")}>
+        <div className={cn("grid grid-cols-1 gap-4 lg:items-start", notice && "lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-[auto_auto_1fr] lg:gap-6")}>
           {owing && (
             <div
               ref={summaryRef}

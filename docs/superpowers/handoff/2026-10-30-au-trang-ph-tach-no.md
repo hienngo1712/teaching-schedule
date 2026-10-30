@@ -100,6 +100,27 @@ Hiện tại nợ cũ hiện gộp, ví dụ "Nợ 2 tháng trước 480.000 đ"
 3. Trang `/p` thật: payOS, đã đóng đủ, tháng không có học phí (nơi theo ca), không có tài khoản ngân hàng, nhận xét dài/ngắn/không, Safari iOS (thanh dính đáy + `env(safe-area-inset-bottom)`), nút Sao chép trên điện thoại.
 4. Ảnh phiếu tải về vẫn đúng bố cục cũ, chỉ khác dòng nợ.
 
+### Vòng 2 — sửa AU-1, AU-2, AU-3
+**Commit:** `__HASH2__`.
+
+- **AU-1** `src/components/parent/ParentPayBlock.tsx`: trên web (`useMediaQuery("(min-width: 1024px)")`, cùng breakpoint `lg`):
+  - Nợ cũ ≥ 2 dòng tháng → thu vào `<details>` đóng sẵn, tiêu đề "Nợ cũ N tháng · tổng" (có dòng "Trước tháng" thì "N+"), bên trong là từng tháng.
+  - Lần thu ≥ 2 → `<details>` "Đã trả X · N lần".
+  - 1 tháng nợ / 1 lần thu → hiện thẳng như cũ. Điện thoại giữ hiện đủ (không `<details>`). "Còn phải trả", QR, số TK luôn ngoài `<details>`.
+  - Kèm `src/components/parent/ParentView.tsx`: grid web thêm `lg:grid-rows-[auto_auto_1fr]` — trước đó khối thanh toán span 3 hàng cao hơn cột trái làm giãn khe giữa thẻ Nhận xét / Điểm danh / Lịch (thấy khi đo); nay phần dư dồn xuống hàng cuối.
+- **AU-2**: xoá nhánh `variant="wide"` trong `TuitionNoticeCard.tsx` (prop, `isWide`, nhánh QR bên cạnh); xoá ca "variant='wide'" trong `TuitionNoticeCardVariant.test.tsx` (giữ ca khung mặc định 360px vì nó canh spec AR A1 của ảnh phiếu, đổi tên describe) và ca "bản rộng" trong `TuitionNoticeCardComment.test.tsx`; xoá khoá `parent_present_summary` vi/en.
+- **AU-3**: `CopyRow` bắt lỗi clipboard → hiện dòng đỏ "Không sao chép được, hãy chép tay" (`role="status"`, tự ẩn sau 3 giây).
+- i18n mới: `parent_debt_summary`, `parent_paid_summary`, `copy_failed_manual` (vi/en).
+- Không đụng `allocatePayment` (theo LEADER, để gói riêng).
+
+**TDD:** 4 test mới trong `tests/unit/components/ParentView.test.tsx` (`[AU-1]` web nhiều tháng + nhiều lần thu → 2 `<details>` đóng, tiêu đề đúng, số tiền / nút Sao chép / QR ở ngoài; `[AU-1]` web 1 tháng + 1 lần thu → không `<details>`; `[AU-1]` điện thoại hiện đủ; `[AU-3]` clipboard bị chặn). 2 ca web nhiều tháng và AU-3 đỏ trước khi sửa.
+
+**Kiểm tra (chạy thật 2026-10-30):** `node_modules/.bin/tsc --noEmit` exit 0 · `pnpm lint` 0 lỗi (2 cảnh báo có sẵn ở `.superpowers/mockups/aj/_plans.js`) · unit toàn bộ `tests/unit` (config tạm, không nối DB): **197 file / 1379 test pass**. Không chạy integration / e2e / migrate / build.
+
+**Đo bằng chrome-devtools** (trang tạm `src/app/p/au-demo2`, `next dev -p 3998`, `DATABASE_URL` cổng chết; **đã xoá trang tạm + `.next/types`, đã tắt server**), ca xấu nhất: nợ 14 tháng (13 dòng, có "Trước tháng 10/2025") + 5 lần thu:
+- 1280×720: khối thanh toán cao **634px** (trước 1010px), 2 `<details>` đóng, QR + số TK + "Còn phải trả" đều thấy; cột trái không còn khe giãn.
+- 390×844: không `<details>`, đủ 12 dòng "còn thiếu", `scrollWidth` 390.
+
 ---
 
 ## 3. QA — Báo cáo
@@ -176,6 +197,9 @@ AU-3 tuỳ LEADER.
 - [QA → DEV] AU-2: xoá nhánh `variant="wide"` của `TuitionNoticeCard` + test đi kèm + khoá `parent_present_summary`.
 - [QA → LEADER] Ngoài phạm vi: `allocatePayment` chia tiền vào tháng nằm trước tháng miễn, nên tiền bị miễn mất (ví dụ ở mục 3). Cân nhắc giao gói riêng.
 - [QA → LEADER] Nhờ chạy integration `tuition-notice` + tuition/report và e2e `parent-link.spec.ts`.
+- [DEV → QA] AU-1: đã sửa — web thu nợ nhiều tháng / nhiều lần thu vào `<details>` đóng sẵn; ca 14 tháng + 5 lần thu đo còn 634px (1280×720). Kèm sửa khe giãn cột trái (`lg:grid-rows-[auto_auto_1fr]`). Nhờ đo lại.
+- [DEV → QA] AU-2: đã xoá nhánh `variant="wide"` + ca test của nó + khoá `parent_present_summary`. Giữ ca khung mặc định 360px trong `TuitionNoticeCardVariant.test.tsx` (canh ảnh phiếu, không thuộc nhánh wide).
+- [DEV → QA] AU-3: đã sửa — clipboard bị chặn thì hiện "Không sao chép được, hãy chép tay".
 
 ---
 

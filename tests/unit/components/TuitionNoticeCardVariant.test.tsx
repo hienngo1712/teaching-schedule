@@ -47,23 +47,9 @@ const baseNotice: TuitionNoticeDTO = {
   },
 }
 
-describe("TuitionNoticeCard - variant wide (spec Y Task 7)", () => {
-  it("variant='wide' -> không có Ngày học, width full, qr-side grid", () => {
-    render(
-      <LanguageProvider forcedLanguage="vi">
-        <TuitionNoticeCard notice={baseNotice} variant="wide" />
-      </LanguageProvider>
-    )
-    const card = screen.getByTestId("notice-card")
-    expect(card.className).toContain("w-full")
-    expect(card.style.width).toBe("")
-    expect(screen.queryByText(/Ngày học/)).toBeNull()
-    expect(screen.getByTestId("notice-qr-side")).toBeDefined()
-    expect(screen.getByTestId("notice-qr-side").className).toContain("grid")
-  })
-
+describe("TuitionNoticeCard - khung phiếu (spec AR A1)", () => {
   // Spec AR A1: rộng tối đa 360px nhưng co theo khung (trang phụ huynh 360px không cuộn ngang), như PlaceNoticeCard.
-  it("variant='default' -> có Ngày học, w-full max-w-[360px], không width cố định", () => {
+  it("có Ngày học, w-full max-w-[360px], không width cố định", () => {
     render(
       <LanguageProvider forcedLanguage="vi">
         <TuitionNoticeCard notice={baseNotice} />

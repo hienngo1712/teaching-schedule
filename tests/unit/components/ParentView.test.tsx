@@ -248,3 +248,61 @@ describe("ParentView: điểm danh chip + lịch thu gọn (AU A3)", () => {
     expect(screen.getByText("Tháng này chưa có buổi học.")).toBeTruthy()
   })
 })
+
+describe("ParentView vòng 2 (AU-1, AU-3)", () => {
+  const wide = () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("1024px"), media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia
+  }
+  const pay = (id: number, amount: number) => ({ id, amount, paidAt: `2026-05-0${id + 1}`, method: "cash" as const, note: null })
+  const many: TuitionNoticeDTO = {
+    ...notice, previousBalance: 300000, totalAmountDue: 500000, paidAmount: 150000, remaining: 350000, debtMonths: 3,
+    debtBreakdown: [{ year: 2026, month: 2, amount: 100000 }, { year: 2026, month: 3, amount: 100000 }, { year: 2026, month: 4, amount: 100000 }],
+    payments: [pay(0, 50000), pay(1, 50000), pay(2, 50000)] as TuitionNoticeDTO["payments"],
+  }
+
+  it("[AU-1] web: nợ nhiều tháng + nhiều lần thu thu vào <details> (đóng sẵn); số tiền, QR, số TK vẫn ngoài", async () => {
+    wide()
+    renderView({ ...baseView, notice: many })
+    const block = screen.getByTestId("parent-pay")
+    const details = block.querySelectorAll("details")
+    expect(details).toHaveLength(2)
+    details.forEach((d) => expect(d.open).toBe(false))
+    expect(details[0].querySelector("summary")!.textContent).toContain("Nợ cũ 3 tháng")
+    expect(details[0].querySelector("summary")!.textContent).toContain("300.000")
+    expect(details[0].textContent).toContain("Tháng 2 còn thiếu")
+    expect(details[1].querySelector("summary")!.textContent).toContain("Đã trả 150.000 đ · 3 lần")
+    for (const d of details) {
+      expect(d.contains(within(block).getByTestId("parent-pay-remaining"))).toBe(false)
+      for (const b of within(block).getAllByRole("button", { name: /Sao chép/ })) expect(d.contains(b)).toBe(false)
+    }
+    await waitFor(() => expect(within(block).getByAltText("VietQR")).toBeTruthy())
+  })
+
+  it("[AU-1] web: 1 tháng nợ + 1 lần thu → hiện thẳng, không <details>", () => {
+    wide()
+    renderView({
+      ...baseView,
+      notice: { ...many, previousBalance: 100000, debtMonths: 1, debtBreakdown: [{ year: 2026, month: 4, amount: 100000 }], payments: [pay(0, 50000)] as TuitionNoticeDTO["payments"] },
+    })
+    const block = screen.getByTestId("parent-pay")
+    expect(block.querySelector("details")).toBeNull()
+    expect(within(block).getByText("Tháng 4 còn thiếu")).toBeTruthy()
+  })
+
+  it("[AU-1] điện thoại: vẫn hiện đủ từng tháng + từng lần thu, không <details>", () => {
+    renderView({ ...baseView, notice: many })
+    const block = screen.getByTestId("parent-pay")
+    expect(block.querySelector("details")).toBeNull()
+    expect(within(block).getByText("Tháng 2 còn thiếu")).toBeTruthy()
+    expect(within(block).getByText("Tổng nợ cũ")).toBeTruthy()
+  })
+
+  it("[AU-3] trình duyệt chặn clipboard → báo 'Không sao chép được, hãy chép tay'", async () => {
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) } })
+    renderView(baseView)
+    fireEvent.click(within(screen.getByTestId("parent-pay")).getAllByRole("button", { name: /Sao chép/ })[0])
+    await waitFor(() => expect(screen.getByText("Không sao chép được, hãy chép tay")).toBeTruthy())
+  })
+})

@@ -8,27 +8,34 @@ import { formatVnDate } from "@/lib/payment-notes"
 import { noticeFeePerSession, noticePaymentState } from "@/lib/tuition-notice"
 import { debtLines } from "@/lib/debt-breakdown"
 import { useTranslation } from "@/components/providers/LanguageProvider"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 
 // Tháng đang học theo buổi: số tạm tính, "Cần đóng ngay" thay "Còn phải trả" (như TuitionNoticeCard).
 export const isProvisionalNotice = (n: TuitionNoticeDTO) => n.inProgress && n.billingMode === "per_session"
 
 function CopyRow({ label, value, copyValue }: { label: string; value: string; copyValue: string }) {
   const { t } = useTranslation()
-  const [copied, setCopied] = useState(false)
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle")
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(copyValue)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      setStatus("copied")
     } catch {
-      // Trình duyệt chặn clipboard: người dùng tự chọn chữ để chép.
+      // Trình duyệt chặn clipboard: báo để phụ huynh tự chọn chữ chép (AU-3).
+      setStatus("failed")
     }
+    setTimeout(() => setStatus("idle"), 3000)
   }
   return (
     <div className="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0 lg:py-1">
       <div className="min-w-0">
         <p className="text-xs text-slate-500">{label}</p>
         <p className="break-all font-semibold text-slate-900">{value}</p>
+        {status === "failed" && (
+          <p role="status" className="text-xs text-red-600">
+            {t("copy_failed_manual")}
+          </p>
+        )}
       </div>
       <button
         type="button"
@@ -36,7 +43,7 @@ function CopyRow({ label, value, copyValue }: { label: string; value: string; co
         aria-label={`${t("copy_link")} ${label}`}
         className="h-11 shrink-0 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-primary lg:h-8"
       >
-        {copied ? t("copied_short") : t("copy_link")}
+        {status === "copied" ? t("copied_short") : t("copy_link")}
       </button>
     </div>
   )
@@ -61,6 +68,8 @@ export const ParentPayBlock = forwardRef<HTMLElement, { notice: TuitionNoticeDTO
       }
     }, [payload])
 
+    // Web: khối dính cột phải phải gọn ~720px → nhiều tháng nợ / nhiều lần thu thu vào <details> (AU-1).
+    const isWide = useMediaQuery("(min-width: 1024px)")
     const provisional = isProvisionalNotice(notice)
     const fee = notice.billingMode === "per_session" ? noticeFeePerSession(notice.presentDates) : null
     const pill =
@@ -69,6 +78,17 @@ export const ParentPayBlock = forwardRef<HTMLElement, { notice: TuitionNoticeDTO
         : state === "settled"
           ? { text: t("notice_settled"), cls: "bg-emerald-50 text-emerald-700" }
           : { text: notice.paidAmount > 0 ? t("partial_paid") : t("unpaid"), cls: "bg-amber-50 text-amber-700" }
+
+    const debtRows = debtLines(t, notice)
+    const debtMonthLines = debtRows.filter((l) => l.kind === "month")
+    const hasOlderDebt = !!notice.debtBreakdown?.some((p) => p.before)
+    const debtMonthCount = notice.debtBreakdown?.filter((p) => !p.before).length ?? 0
+    const summaryCls = "flex cursor-pointer list-none justify-between gap-3 py-0.5 font-medium text-debt [&::-webkit-details-marker]:hidden"
+    const paymentLines = notice.payments.map((p) => (
+      <p key={p.id} className="pl-3 text-xs text-slate-500">
+        {formatDate(p.paidAt)} · {formatCurrency(p.amount)}
+      </p>
+    ))
 
     const row = (label: string, value: string, cls?: string, key?: string) => (
       <div key={key} className={cn("flex justify-between gap-3 py-0.5", cls)}>
@@ -100,16 +120,41 @@ export const ParentPayBlock = forwardRef<HTMLElement, { notice: TuitionNoticeDTO
                 fee !== null ? `${t("notice_month_fee")} (${notice.presentSessions} × ${formatCurrency(fee)})` : t("notice_month_fee"),
                 formatCurrency(notice.currentMonthFee)
               )}
-          {debtLines(t, notice).map((l) =>
-            row(l.label, formatCurrency(l.amount), l.kind === "month" ? "pl-3 text-xs" : "font-medium text-debt", l.label)
+          {isWide && debtMonthLines.length > 1 ? (
+            <details>
+              <summary className={summaryCls}>
+                <span className="text-slate-500">
+                  {t("parent_debt_summary").replace("{n}", `${debtMonthCount}${hasOlderDebt ? "+" : ""}`)}
+                  <span aria-hidden className="ml-1">▾</span>
+                </span>
+                <span className="whitespace-nowrap tabular-nums">{formatCurrency(notice.previousBalance)}</span>
+              </summary>
+              {debtMonthLines.map((l) => row(l.label, formatCurrency(l.amount), "pl-3 text-xs", l.label))}
+            </details>
+          ) : (
+            debtRows.map((l) =>
+              row(l.label, formatCurrency(l.amount), l.kind === "month" ? "pl-3 text-xs" : "font-medium text-debt", l.label)
+            )
           )}
           {notice.previousBalance < 0 && row(t("notice_prev_credit"), formatCurrency(notice.previousBalance))}
-          {row(t("paid_total"), formatCurrency(notice.paidAmount))}
-          {notice.payments.map((p) => (
-            <p key={p.id} className="pl-3 text-xs text-slate-500">
-              {formatDate(p.paidAt)} · {formatCurrency(p.amount)}
-            </p>
-          ))}
+          {isWide && notice.payments.length > 1 ? (
+            <details>
+              <summary className={summaryCls}>
+                <span className="text-slate-500">
+                  {t("parent_paid_summary")
+                    .replace("{amount}", formatCurrency(notice.paidAmount))
+                    .replace("{n}", String(notice.payments.length))}
+                  <span aria-hidden className="ml-1">▾</span>
+                </span>
+              </summary>
+              {paymentLines}
+            </details>
+          ) : (
+            <>
+              {row(t("paid_total"), formatCurrency(notice.paidAmount))}
+              {paymentLines}
+            </>
+          )}
         </div>
 
         {state === "qr" && notice.qr && (
