@@ -170,6 +170,28 @@ Kiểm trên HEAD `3f08e14` (code DEV `3986c2d` + `780c0ec`), chạy 2026-10-30.
 ### Kết luận: **KHÔNG ĐẠT** (vòng này)
 Bảo mật/riêng tư, mã hoá, migration, chốt gói đều đúng. Cần sửa QA-1 (yêu cầu LEADER điểm 5 "không để mất nhận xét", có mẫu sẵn ở `TuitionDetailSheet`) và QA-2 (footer tràn trên điện thoại). QA-3/QA-4 tuỳ LEADER.
 
+### Vòng 2 QA (kiểm lại DEV vòng 3: `6a6a14f` merge main + `1ea1b92` sửa lỗi; HEAD `10a6855`)
+
+**Lệnh (chạy thật 2026-10-30):** `node_modules/.bin/tsc --noEmit` exit 0 · `pnpm lint` exit 0 · unit toàn bộ `tests/unit` (config tạm, `DATABASE_URL` cổng chết 5999, không chạm DB): **193 file / 1335 test pass, 0 fail** (ca `[BUG QA-1]` đã thành `it` và xanh). Không chạy integration / `pnpm test` / migrate.
+
+**Merge main (AS):** `git diff main HEAD -- src/server src/lib/tuition-display.ts` chỉ còn phần AT (`tuition-notice.service.ts` thêm parentComment / getTeacherTuitionNotice / saveParentComment, router, crypto, backup). `tuition-paylink.service.ts`, `tuition-display.ts`, `tuition.service.ts`, `payment.service.ts` giống hệt main → logic AS (`status.inProgress` theo ca cuối, `anchorMonth(..., inProgress)`) còn nguyên. PASS.
+
+| Lỗi | Kiểm lại | Kết quả |
+|-----|----------|---------|
+| QA-1 | `TuitionNoticeDialog.tsx:128-132`: cleanup unmount gọi `saveComment()` qua ref, chỉ khi đã sửa ô; dùng `mutate` của hook (TanStack Query v5 vẫn chạy mutation + callback sau unmount). Blur đã gửi cùng nội dung thì không gửi lại (`sentComment`). Test `[BUG QA-1]` xanh | PASS |
+| QA-2 | Đo thật trong Chrome (dựng lại đúng class, **font Geist thật** của app nạp từ `src/app/fonts/GeistVF.woff`): mobile 360px, vi/en × có/chưa link × có/không Chia sẻ (8 ca) → **2 hàng, rộng 360px, không tràn, không cắt chữ**, kể cả ca có Chia sẻ + HS đã có link | PASS (mobile) |
+| QA-3 | `:119-125` so với `sentComment ?? savedComment`; test `[QA-3]` xanh | PASS |
+| QA-4 | `:161-166` `query.isError` khi đang chờ xuất → huỷ lệnh, mở khoá, báo lỗi; test `[QA-4]` xanh | PASS |
+
+**Lỗi mới — QA-5 (Trung bình, desktop):** `src/components/tuition/TuitionNoticeDialog.tsx:246` footer `md:flex-nowrap md:justify-end` nằm trong `DialogContent ... overflow-hidden sm:max-w-[460px]` (`:322`). Trên desktop **có nút Chia sẻ** khi `canShareFiles()` = true. Đã kiểm thật: Chrome 156 Windows trên máy này trả `true` (Safari macOS cũng chia sẻ file được). Đo với font Geist, khung 460px:
+- vi, HS đã có link + Chia sẻ + Tải ảnh: **484px** → tràn 24px.
+- en, đã có link: **513px**; en, chưa có link: **465px** → tràn.
+- Không có Chia sẻ: 363px / 401px, vừa.
+
+Vì `justify-end` + `overflow-hidden`, phần tràn bị cắt ở **mép trái**, tức là chính nút "Link phụ huynh" bị cắt. Trước AT footer desktop chỉ có Chia sẻ + Tải ảnh nên không bị. Tái hiện: Chrome Windows, màn ≥768px, mở Phiếu báo của HS đã có link phụ huynh → nút "Link phụ huynh" bị cắt mép trái. Gợi ý: bỏ `md:flex-nowrap` (desktop cũng được xuống dòng khi thiếu chỗ) hoặc nới `sm:max-w` của hộp.
+
+**Kết luận vòng 2: KHÔNG ĐẠT.** QA-1..QA-4 đã sửa đúng, mobile 360px hết tràn, merge main không làm hỏng logic AS. Còn QA-5 (footer desktop tràn khi trình duyệt chia sẻ được file, cắt nút Link phụ huynh). Sửa 1 dòng class rồi QA đo lại là xong.
+
 ---
 
 ## 4. Trao đổi
@@ -187,6 +209,7 @@ Bảo mật/riêng tư, mã hoá, migration, chốt gói đều đúng. Cần s�
 - [DEV → QA] QA-2: đã sửa — mobile 2 hàng (cụm link phụ huynh 1 hàng riêng, nút ảnh hàng dưới), desktop 1 hàng. Nhờ đo lại bề rộng thật ở 360px (có/không nút Chia sẻ, có/không link).
 - [DEV → QA] QA-3: đã sửa (gọn) — so với bản đang gửi `sentComment ?? savedComment`.
 - [DEV → QA] QA-4: đã sửa — tải lại phiếu lỗi khi đang chờ xuất → huỷ lệnh, mở khoá nút, báo lỗi.
+- [QA → DEV] Vòng 2: QA-1..QA-4 PASS, mobile 360px không tràn (8 ca đo thật). Lỗi mới QA-5: footer desktop (hộp 460px) tràn 5–53px khi có nút Chia sẻ (Chrome Windows có `canShareFiles()` = true), cắt nút "Link phụ huynh" ở mép trái. Đề nghị bỏ `md:flex-nowrap` ở `TuitionNoticeDialog.tsx:246` hoặc nới bề rộng hộp.
 
 ---
 
