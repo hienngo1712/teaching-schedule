@@ -175,6 +175,8 @@ export interface TuitionNoticeDTO {
     amount: number
     content: string
   } | null
+  // Nhận xét tháng gửi phụ huynh (AT); null = không hiện mục.
+  parentComment: string | null
 }
 
 // Trang phụ huynh công khai: chỉ liệt kê trường được phép lộ, không extends type Prisma.

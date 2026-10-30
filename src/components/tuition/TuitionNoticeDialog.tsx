@@ -3,19 +3,22 @@
 import { useCallback, useRef, useState } from "react"
 import Link from "next/link"
 import { saveAs } from "file-saver"
-import { Download, ImageDown, Loader2, Share2 } from "lucide-react"
+import { Copy, Download, ImageDown, Link2, Loader2, Share2 } from "lucide-react"
 import { trpc } from "@/lib/trpc"
 import { removeVietnameseTones } from "@/lib/utils"
 import { toast } from "sonner"
 import { canShareFiles, elementToPngBlob, shareOrDownloadPng } from "@/lib/share-image"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
+import { useFeatureGate } from "@/hooks/useFeatureGate"
 import { useTranslation } from "@/components/providers/LanguageProvider"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { TuitionNoticeCard } from "./TuitionNoticeCard"
 import { NoticeImageViewer } from "./NoticeImageViewer"
+import { ParentLinkDialog } from "@/components/students/ParentLinkDialog"
 
 type Props = { studentId: number; year: number; month: number; onClose: () => void }
 
@@ -43,6 +46,18 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
     },
     onError: () => toast.error(t("generic_error")),
   })
+  // Nhận xét tháng (AT): null = chưa sửa, hiện bản đã lưu. Lưu xong TRPCProvider tự refetch phiếu → xem trước cập nhật.
+  const [comment, setComment] = useState<string | null>(null)
+  const saveCommentMutation = trpc.tuition.saveParentComment.useMutation({
+    onSuccess: () => {
+      setComment(null)
+      toast.success(t("comment_saved"))
+    },
+    onError: () => toast.error(t("generic_error")),
+  })
+  // Chốt gói link PH như StudentList: khoá + chưa có link → mở nâng cấp.
+  const linkGate = useFeatureGate("parentLink")
+  const [linkOpen, setLinkOpen] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
   const [captureFailed, setCaptureFailed] = useState(false)
@@ -77,6 +92,21 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
 
   const notice = query.data
   const title = `${t("tuition_notice_title")} ${month}/${year}`
+  const savedComment = notice?.parentComment ?? ""
+  const commentValue = comment ?? savedComment
+  const commentDirty = commentValue.trim() !== savedComment
+  const parentToken = notice?.parentLinkToken ?? null
+
+  const openParentLink = () => (linkGate.locked && !parentToken ? linkGate.openUpgrade() : setLinkOpen(true))
+  const copyParentLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/p/${parentToken}`)
+      toast.success(t("link_copied"))
+    } catch {
+      toast.error(t("link_copy_failed"))
+    }
+  }
+
   const filename = notice
     ? `phieu-bao-hoc-phi-T${month}-${year}-${removeVietnameseTones(notice.fullName)}.png`
     : ""
@@ -117,6 +147,30 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
             </div>
           </div>
           {captureFailed && <p className="text-center text-sm text-red-600">{t("load_error")}</p>}
+          <div className="space-y-2">
+            <label htmlFor="parent-comment" className="text-sm font-medium text-slate-700">
+              {t("parent_comment_label")}
+            </label>
+            <Textarea
+              id="parent-comment"
+              className="min-h-[88px] text-sm"
+              maxLength={2000}
+              placeholder={t("parent_comment_placeholder")}
+              value={commentValue}
+              onChange={(e) => setComment(e.target.value)}
+            />
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                className="h-11 md:h-10"
+                disabled={!commentDirty || saveCommentMutation.isPending}
+                onClick={() => saveCommentMutation.mutate({ studentId, year, month, parentComment: commentValue })}
+              >
+                {saveCommentMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+                {t("save_comment")}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -124,6 +178,22 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
 
   const footer = (
     <div className="flex gap-2 border-t border-slate-200 p-4 md:justify-end">
+      <Button variant="outline" className="h-11 flex-1 md:h-10 md:flex-none" disabled={!notice} onClick={openParentLink}>
+        <Link2 className="mr-2 size-4" />
+        {t("parent_link")}
+      </Button>
+      {parentToken && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-11 shrink-0 md:size-10"
+          aria-label={t("copy_parent_link")}
+          title={t("copy_parent_link")}
+          onClick={copyParentLink}
+        >
+          <Copy className="size-4" />
+        </Button>
+      )}
       {shareable && (
         <Button
           variant="outline"
@@ -217,6 +287,13 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
             {footer}
           </SheetContent>
         </Sheet>
+      )}
+      {linkOpen && notice && (
+        <ParentLinkDialog
+          student={{ id: studentId, fullName: notice.fullName, parentLinkToken: parentToken, placeId: notice.placeId }}
+          onOpenChange={(open) => !open && setLinkOpen(false)}
+          canGenerate={linkGate.allowed}
+        />
       )}
       {viewerBlob && (
         <NoticeImageViewer

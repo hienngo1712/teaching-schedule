@@ -50,6 +50,7 @@ const baseView: ParentViewDTO = {
     debtMonths: 0,
     teacherName: "Giáo viên A",
     bankConfigured: true,
+    parentComment: null,
     qr: null,
   },
 }

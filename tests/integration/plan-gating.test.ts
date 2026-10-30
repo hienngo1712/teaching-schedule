@@ -46,6 +46,7 @@ const PLUS_CASES: [string, Call][] = [
   ["payment.delete", (c) => c.payment.delete({ id: 999999 })],
   ["tuition.updateSettlement", (c, sid) => c.tuition.updateSettlement({ studentId: sid, year: Y, month: M, isFullPaid: false })],
   ["tuition.getNotice", (c, sid) => c.tuition.getNotice({ studentId: sid, year: Y, month: M })],
+  ["tuition.saveParentComment", (c, sid) => c.tuition.saveParentComment({ studentId: sid, year: Y, month: M, parentComment: "x" })],
   ["report.monthlySummary 1 tháng", (c) => c.report.monthlySummary({ year: Y, month: M })],
   ["report.monthlySummary toMonth trùng tháng đầu", (c) => c.report.monthlySummary({ year: Y, month: M, toYear: Y, toMonth: M })],
   ["report.student 1 tháng", (c, sid) => c.report.student({ studentId: sid, year: Y, month: M })],

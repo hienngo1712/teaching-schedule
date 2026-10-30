@@ -59,6 +59,11 @@ function notice(overrides: Partial<Record<string, unknown>> = {}) {
   }
 }
 
+// AT: hộp phiếu có nút link PH dùng chốt gói; ở đây không kiểm phần đó.
+vi.mock("@/hooks/useFeatureGate", () => ({
+  useFeatureGate: () => ({ locked: false, allowed: true, openUpgrade: vi.fn() }),
+}))
+
 let queryReturn: { data: unknown; isError: boolean; dataUpdatedAt: number; refetch: () => void }
 const mockSetNoticeSentMutate = vi.fn()
 const mockInvalidate = vi.fn()
@@ -83,6 +88,7 @@ vi.mock("@/lib/trpc", () => ({
           return { mutate: mockSetNoticeSentMutate, isPending: false }
         },
       },
+      saveParentComment: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }))

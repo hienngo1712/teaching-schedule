@@ -1,0 +1,137 @@
+/**
+ * @vitest-environment jsdom
+ */
+// AT: ô nhận xét tháng + nút link phụ huynh trong hộp phiếu học phí.
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import { TuitionNoticeDialog } from "@/components/tuition/TuitionNoticeDialog"
+import { LanguageProvider } from "@/components/providers/LanguageProvider"
+
+vi.mock("file-saver", () => ({ saveAs: vi.fn() }))
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }))
+vi.mock("@/lib/share-image", () => ({
+  canShareFiles: vi.fn(() => false),
+  elementToPngBlob: vi.fn(() => Promise.resolve(new Blob(["x"]))),
+  shareOrDownloadPng: vi.fn(),
+}))
+vi.mock("qrcode", () => ({ toDataURL: () => Promise.resolve("data:image/png;base64,x") }))
+
+const h = vi.hoisted(() => ({
+  saveMutate: vi.fn(),
+  gate: { locked: false, allowed: true, openUpgrade: vi.fn() },
+  linkProps: [] as unknown[],
+}))
+
+vi.mock("@/hooks/useFeatureGate", () => ({ useFeatureGate: () => h.gate }))
+vi.mock("@/components/students/ParentLinkDialog", () => ({
+  ParentLinkDialog: (props: { student: unknown; canGenerate?: boolean }) => {
+    h.linkProps.push(props)
+    return <div data-testid="parent-link-dialog" />
+  },
+}))
+
+let data: Record<string, unknown>
+vi.mock("@/lib/trpc", () => ({
+  trpc: {
+    useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } }, client: { tuition: { setNoticeSent: { mutate: vi.fn() } } } }),
+    tuition: {
+      getNotice: { useQuery: () => ({ data, isError: false, dataUpdatedAt: 1, refetch: vi.fn() }) },
+      setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      saveParentComment: { useMutation: () => ({ mutate: h.saveMutate, isPending: false }) },
+    },
+  },
+}))
+
+function notice(over: Record<string, unknown> = {}) {
+  return {
+    studentId: 1, fullName: "Nguyễn Văn A", grade: 5, year: 2026, month: 10, presentSessions: 0, totalSessions: 0,
+    billingMode: "per_session", currentMonthFee: 0, previousBalance: 0, totalAmountDue: 0, paidAmount: 0,
+    isFullPaid: false, presentDates: [], payments: [], remaining: 0, overpaid: 0, teacherName: "GV",
+    bankConfigured: false, qr: null, parentComment: null, parentLinkToken: null, placeId: null, ...over,
+  }
+}
+
+const renderDialog = () =>
+  render(
+    <LanguageProvider forcedLanguage="vi">
+      <TuitionNoticeDialog studentId={1} year={2026} month={10} onClose={() => {}} />
+    </LanguageProvider>
+  )
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  h.gate = { locked: false, allowed: true, openUpgrade: vi.fn() }
+  h.linkProps = []
+  window.URL.createObjectURL = vi.fn().mockReturnValue("blob:x")
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+  })) as unknown as typeof window.matchMedia
+})
+
+describe("TuitionNoticeDialog: nhận xét tháng (AT)", () => {
+  it("ô nhận xét điền sẵn nội dung đã lưu; nút Lưu chỉ bật khi có thay đổi; bấm Lưu gửi đúng HS × tháng", () => {
+    data = notice({ parentComment: "Cũ" })
+    renderDialog()
+    const box = screen.getByLabelText(/Nhận xét tháng/) as HTMLTextAreaElement
+    expect(box.value).toBe("Cũ")
+    const save = screen.getByRole("button", { name: "Lưu nhận xét" })
+    expect(save.hasAttribute("disabled")).toBe(true)
+
+    fireEvent.change(box, { target: { value: "Con ngoan.\nCố lên" } })
+    expect(save.hasAttribute("disabled")).toBe(false)
+    fireEvent.click(save)
+    expect(h.saveMutate).toHaveBeenCalledWith({ studentId: 1, year: 2026, month: 10, parentComment: "Con ngoan.\nCố lên" })
+  })
+
+  it("giới hạn 2000 ký tự trên ô nhập", () => {
+    data = notice()
+    renderDialog()
+    expect((screen.getByLabelText(/Nhận xét tháng/) as HTMLTextAreaElement).maxLength).toBe(2000)
+  })
+})
+
+describe("TuitionNoticeDialog: link phụ huynh (AT)", () => {
+  it("bấm Link phụ huynh → mở ParentLinkDialog với token + placeId của HS", () => {
+    data = notice({ parentLinkToken: "tok", placeId: 3 })
+    renderDialog()
+    fireEvent.click(screen.getByRole("button", { name: "Link phụ huynh" }))
+    expect(screen.getByTestId("parent-link-dialog")).toBeTruthy()
+    expect(h.linkProps.at(-1)).toMatchObject({
+      student: { id: 1, fullName: "Nguyễn Văn A", parentLinkToken: "tok", placeId: 3 },
+      canGenerate: true,
+    })
+  })
+
+  it("gói không có tính năng + HS chưa có link → mở hộp nâng cấp, không mở ParentLinkDialog", () => {
+    h.gate = { locked: true, allowed: false, openUpgrade: vi.fn() }
+    data = notice({ parentLinkToken: null })
+    renderDialog()
+    fireEvent.click(screen.getByRole("button", { name: "Link phụ huynh" }))
+    expect(h.gate.openUpgrade).toHaveBeenCalled()
+    expect(screen.queryByTestId("parent-link-dialog")).toBeNull()
+  })
+
+  it("gói bị khoá nhưng HS đã có link → vẫn mở dialog (canGenerate=false)", () => {
+    h.gate = { locked: true, allowed: false, openUpgrade: vi.fn() }
+    data = notice({ parentLinkToken: "tok" })
+    renderDialog()
+    fireEvent.click(screen.getByRole("button", { name: "Link phụ huynh" }))
+    expect(h.gate.openUpgrade).not.toHaveBeenCalled()
+    expect(h.linkProps.at(-1)).toMatchObject({ canGenerate: false })
+  })
+
+  it("đã có link → nút Sao chép link phụ huynh chép ngay vào clipboard", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+    data = notice({ parentLinkToken: "tok" })
+    renderDialog()
+    fireEvent.click(screen.getByRole("button", { name: "Sao chép link phụ huynh" }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/p/tok`))
+  })
+
+  it("chưa có link → không có nút sao chép nhanh", () => {
+    data = notice({ parentLinkToken: null })
+    renderDialog()
+    expect(screen.queryByRole("button", { name: "Sao chép link phụ huynh" })).toBeNull()
+  })
+})

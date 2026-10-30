@@ -34,6 +34,7 @@ const baseNotice: TuitionNoticeDTO = {
   debtMonths: 0,
   teacherName: "Giáo viên A",
   bankConfigured: true,
+  parentComment: null,
   qr: {
     provider: "vietqr",
     checkoutUrl: null,

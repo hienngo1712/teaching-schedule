@@ -154,10 +154,14 @@ describe("getParentView", () => {
       studentId: a.id, year, month, amount: 50000, paidAt: vnDay(0), method: "cash", note: "GhiChuLanThuBiMat",
     })
     await caller.tuition.updateSettlement({ studentId: a.id, year, month, isFullPaid: false, notes: "GhiChuThangBiMat" })
+    await caller.tuition.saveParentComment({ studentId: a.id, year, month, parentComment: "NhanXetChoPH" })
     const { token } = await caller.student.generateParentLink({ id: a.id })
 
     const view = await getParentView(db, token)
     expect(view).not.toBeNull()
+    // AT: nhận xét tháng tới được trang PH; token link không nằm trong phiếu.
+    expect(view!.notice!.parentComment).toBe("NhanXetChoPH")
+    expect(view!.notice).not.toHaveProperty("parentLinkToken")
     expect(Object.keys(view!).sort()).toEqual(
       ["attendance", "month", "nextMonth", "notice", "prevMonth", "student", "teacherName", "upcoming", "year"]
     )

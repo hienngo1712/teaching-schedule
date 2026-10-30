@@ -34,6 +34,13 @@ export const tuitionNoticeSchema = z.object({
 
 export type TuitionNoticeInput = z.infer<typeof tuitionNoticeSchema>
 
+// Nhận xét tháng gửi phụ huynh (AT). Chuỗi rỗng = xoá nhận xét.
+export const parentCommentSchema = tuitionNoticeSchema.extend({
+  parentComment: z.string().trim().max(2000),
+})
+
+export type ParentCommentInput = z.infer<typeof parentCommentSchema>
+
 export const setNoticeSentSchema = z.object({
   studentId: z.number().int().positive(),
   year: z.number().int(),
