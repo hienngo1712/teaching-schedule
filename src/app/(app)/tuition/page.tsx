@@ -20,7 +20,7 @@ import { GRADES } from "@/lib/constants"
 import { cn, formatCurrency } from "@/lib/utils"
 import { monthKey } from "@/lib/billing"
 import { vnDateParts } from "@/lib/utils"
-import { dueNow, isInProgressMonth } from "@/lib/tuition-display"
+import { dueNow } from "@/lib/tuition-display"
 import { useRecordPayment } from "@/hooks/useRecordPayment"
 import { TuitionAmountCell } from "@/components/tuition/TuitionAmountCell"
 import { TuitionDetailSheet } from "@/components/tuition/TuitionDetailSheet"
@@ -243,7 +243,8 @@ export default function TuitionPage() {
   const prevMonthKey = monthKey(nowVn.year, nowVn.month) - 1
   const viewingMonthKey = monthKey(year, month)
   const isViewingPrev = viewingMonthKey === prevMonthKey
-  const isCurrentOrFuture = isInProgressMonth(year, month)
+  // Theo cờ từng dòng từ server: tháng hiện tại có thể đã xong với HS đã học ca cuối (spec AS).
+  const anyInProgress = items.some((i) => i.inProgress)
 
   // Chỉ dạy nơi tính theo ca/giờ: không có Học phí (spec AL §4.4).
   if (summary?.hasPerStudent === false) return <NoPerStudentPlace title={t("manage_tuition")} />
@@ -351,7 +352,7 @@ export default function TuitionPage() {
         </div>
       )}
 
-      {!isViewingPrev && isCurrentOrFuture && (
+      {!isViewingPrev && anyInProgress && (
         <div className="rounded-lg bg-primary/[0.06] px-3 py-2 text-sm text-primary">
           {t("tuition_viewing_current")}
         </div>

@@ -8,7 +8,7 @@ import type { TuitionNoticeDTO } from "@/lib/types/models"
 import { getMonthlyTuitionStatus } from "./tuition.service"
 import { listPayments } from "./payment.service"
 import { getBankAccount } from "./settings.service"
-import { dueNow, isInProgressMonth } from "@/lib/tuition-display"
+import { dueNow } from "@/lib/tuition-display"
 import { ensureTuitionPayLink } from "./tuition-paylink.service"
 
 // Chỉ đọc MonthlyTuition/Payment; có origin thì có thể ghi bảng tuition_pay_links (spec AH §5).
@@ -52,8 +52,7 @@ export async function getTuitionNotice(
     a.paidAt === b.paidAt ? a.id - b.id : a.paidAt < b.paidAt ? -1 : 1
   )
 
-  const { totalAmountDue, paidAmount, isFullPaid } = status
-  const inProgress = isInProgressMonth(year, month)
+  const { totalAmountDue, paidAmount, isFullPaid, inProgress } = status
   // Khớp số cần đóng ngay theo spec Y D9 (tháng đang học không cộng tạm tính).
   const remaining = dueNow(status)
   const surplus = paidAmount - Math.max(0, totalAmountDue)
@@ -62,7 +61,7 @@ export async function getTuitionNotice(
   const bankInfo = bank ? findBank(bank.bankBin) : undefined
   const content = buildTransferContent(status.fullName, month)
   const payLink = opts.origin && remaining > 0
-    ? await ensureTuitionPayLink(db, userId, studentId, { year, month }, remaining, { origin: opts.origin, returnPath: opts.returnPath ?? "/" })
+    ? await ensureTuitionPayLink(db, userId, studentId, { year, month, inProgress }, remaining, { origin: opts.origin, returnPath: opts.returnPath ?? "/" })
     : null
   const qr: TuitionNoticeDTO["qr"] = payLink
     ? {

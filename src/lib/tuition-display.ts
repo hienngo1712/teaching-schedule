@@ -14,9 +14,27 @@ export type DisplayRow = {
 
 export const NOTICE_OVERDUE_DAYS = 7
 
-export function isInProgressMonth(year: number, month: number, now: Date = new Date()): boolean {
+type SessionEndInput = { sessionDate: Date; endTime: Date; status: string; isDeleted: boolean }
+
+// Mốc kết thúc ca cuối (bỏ ca huỷ/đã xoá). sessionDate lưu 0h UTC của ngày VN, endTime lưu giờ VN
+// trên ngày 1970-01-01 UTC → ghép lại rồi trừ 7h ra mốc UTC thật.
+export function lastSessionEnd(sessions: SessionEndInput[]): Date | null {
+  let last: number | null = null
+  for (const s of sessions) {
+    if (s.isDeleted || s.status === "cancelled") continue
+    const end = s.sessionDate.getTime() + (s.endTime.getTime() % 86_400_000) - 7 * 60 * 60 * 1000
+    if (last === null || end > last) last = end
+  }
+  return last === null ? null : new Date(last)
+}
+
+// Tháng hiện tại xong ngay khi ca cuối của HS trong tháng kết thúc (spec AS); chưa có ca thì đang học tới hết tháng.
+export function isInProgressMonth(year: number, month: number, lastEnd: Date | null, now: Date = new Date()): boolean {
   const t = vnDateParts(now)
-  return monthKey(year, month) >= monthKey(t.year, t.month)
+  const key = monthKey(year, month)
+  const cur = monthKey(t.year, t.month)
+  if (key !== cur) return key > cur
+  return lastEnd === null || now < lastEnd
 }
 
 // Tháng đang học của HS theo buổi chỉ là tạm tính: chưa cộng vào số phải đóng (spec Y D9).

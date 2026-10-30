@@ -1,7 +1,6 @@
 import type { PrismaClient } from "@prisma/client"
 import { createPaymentLink } from "@/server/payos"
 import { activeTeacherPayos } from "./payos-teacher.service"
-import { isInProgressMonth } from "@/lib/tuition-display"
 import { TX_OPTIONS } from "./payment.service"
 
 // Khoá riêng (2 số, ns 8) để 2 lần mở phiếu cùng lúc không tạo 2 link; ns 7 là khoá ghi tiền của payment.service.
@@ -9,19 +8,20 @@ const LINK_LOCK_NS = 8
 // payOS bắt expiredAt; QR trên ảnh phiếu có thể quét muộn nên để 1 năm.
 const LINK_TTL_SECONDS = 365 * 24 * 3600
 
-export function anchorMonth(year: number, month: number) {
-  if (!isInProgressMonth(year, month)) return { year, month }
+// inProgress: cờ tháng đang học của HS (theo ca cuối, spec AS) lấy từ getMonthlyTuitionStatus.
+export function anchorMonth(year: number, month: number, inProgress: boolean) {
+  if (!inProgress) return { year, month }
   return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 }
 }
 
 export async function ensureTuitionPayLink(
   db: PrismaClient, userId: number, studentId: number,
-  notice: { year: number; month: number }, amount: number,
+  notice: { year: number; month: number; inProgress: boolean }, amount: number,
   opts: { origin: string; returnPath: string }
 ) {
   const cfg = await activeTeacherPayos(db, userId)
   if (!cfg || amount <= 0) return null
-  const anchor = anchorMonth(notice.year, notice.month)
+  const anchor = anchorMonth(notice.year, notice.month, notice.inProgress)
   try {
     return await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${LINK_LOCK_NS}::int, ${studentId}::int)`
