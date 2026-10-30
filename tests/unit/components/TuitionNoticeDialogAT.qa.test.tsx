@@ -115,8 +115,8 @@ describe("TuitionNoticeDialog — ca biên QA (AT)", () => {
 
   // [BUG QA-1] Đóng hộp bằng Esc (Radix không bắn blur khi gỡ ô) → nhận xét chưa lưu bị mất.
   // TuitionDetailSheet (mẫu LEADER chỉ định) có lưu lúc unmount (spec AR B2); hộp phiếu thì không.
-  // Đang là it.fails để ghi nhận lỗi; DEV sửa xong thì đổi thành it.
-  it.fails("[BUG QA-1] gõ nhận xét rồi đóng hộp (unmount, không có blur) → vẫn lưu nhận xét", () => {
+  // DEV vòng 3 đã sửa (lưu khi unmount) → đổi it.fails thành it.
+  it("[BUG QA-1] gõ nhận xét rồi đóng hộp (unmount, không có blur) → vẫn lưu nhận xét", () => {
     data = notice({ parentComment: null })
     const { unmount } = renderDialog()
     fireEvent.change(screen.getByLabelText(/Nhận xét tháng/), { target: { value: "Chưa kịp lưu" } })

@@ -33,12 +33,13 @@ vi.mock("@/components/students/ParentLinkDialog", () => ({
 
 let data: Record<string, unknown>
 let updatedAt = 1
+let isError = false
 let saveOpts: { onSuccess?: () => void; onError?: () => void } = {}
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ tuition: { getMonthlyStatus: { invalidate: vi.fn() } }, client: { tuition: { setNoticeSent: { mutate: vi.fn() } } } }),
     tuition: {
-      getNotice: { useQuery: () => ({ data, isError: false, dataUpdatedAt: updatedAt, refetch: vi.fn() }) },
+      getNotice: { useQuery: () => ({ data, isError, dataUpdatedAt: updatedAt, refetch: vi.fn() }) },
       setNoticeSent: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       saveParentComment: {
         useMutation: (opts?: typeof saveOpts) => {
@@ -71,6 +72,7 @@ beforeEach(() => {
   h.gate = { locked: false, allowed: true, openUpgrade: vi.fn() }
   h.linkProps = []
   updatedAt = 1
+  isError = false
   saveOpts = {}
   window.URL.createObjectURL = vi.fn().mockReturnValue("blob:x")
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -203,5 +205,52 @@ describe("TuitionNoticeDialog: link phụ huynh (AT)", () => {
     data = notice({ parentLinkToken: null })
     renderDialog()
     expect(screen.queryByRole("button", { name: "Sao chép link phụ huynh" })).toBeNull()
+  })
+})
+
+describe("TuitionNoticeDialog: sửa lỗi QA vòng 3 (AT)", () => {
+  it("[QA-4] lưu xong nhưng tải lại phiếu lỗi → huỷ lệnh xuất đang chờ, mở khoá nút, báo lỗi", async () => {
+    const { toast } = await import("sonner")
+    data = notice({ parentComment: null })
+    const { rerender } = renderDialog()
+    const dl = screen.getByRole("button", { name: /Tải ảnh/ })
+    await waitFor(() => expect(dl.hasAttribute("disabled")).toBe(false))
+    fireEvent.change(screen.getByLabelText(/Nhận xét tháng/), { target: { value: "Mới" } })
+    fireEvent.click(dl)
+    expect(screen.getByRole("button", { name: /Tải ảnh/ }).hasAttribute("disabled")).toBe(true)
+
+    saveOpts.onSuccess?.()
+    isError = true
+    rerender(ui())
+    await waitFor(() => expect(screen.getByRole("button", { name: /Tải ảnh/ }).hasAttribute("disabled")).toBe(false))
+    expect(toast.error).toHaveBeenCalled()
+    expect(saveAs).not.toHaveBeenCalled()
+  })
+
+  it("[QA-3] đang lưu B, sửa về đúng bản đã lưu A rồi blur → vẫn gửi A (so với bản đang gửi)", () => {
+    data = notice({ parentComment: "A" })
+    renderDialog()
+    const box = screen.getByLabelText(/Nhận xét tháng/)
+    fireEvent.change(box, { target: { value: "B" } })
+    fireEvent.blur(box)
+    fireEvent.change(box, { target: { value: "A" } })
+    fireEvent.blur(box)
+    expect(h.saveMutate).toHaveBeenCalledTimes(2)
+    expect(h.saveMutate).toHaveBeenLastCalledWith({ studentId: 1, year: 2026, month: 10, parentComment: "A" })
+  })
+
+  it("[QA-2] mobile: cụm link phụ huynh nằm hàng riêng (w-full), footer cho xuống dòng; desktop gọn 1 hàng", () => {
+    data = notice({ parentLinkToken: "tok" })
+    renderDialog()
+    const linkBtn = screen.getByRole("button", { name: "Link phụ huynh" })
+    const group = linkBtn.parentElement!
+    expect(group.contains(screen.getByRole("button", { name: "Sao chép link phụ huynh" }))).toBe(true)
+    expect(group.className).toMatch(/\bw-full\b/)
+    expect(group.className).toMatch(/md:w-auto/)
+    const footer = group.parentElement!
+    expect(footer.className).toMatch(/\bflex-wrap\b/)
+    expect(footer.className).toMatch(/md:flex-nowrap/)
+    // Nút chạm ≥ 44px trên mobile.
+    expect(linkBtn.className).toMatch(/\bh-11\b/)
   })
 })

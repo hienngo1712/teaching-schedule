@@ -115,12 +115,21 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
   const commentValue = comment ?? savedComment
   const commentDirty = commentValue.trim() !== savedComment
 
+  // Bản server sẽ có: đang/vừa gửi thì là bản gửi đi, chưa gửi thì là bản đã lưu (QA-3).
+  const needsSave = (text: string) => text !== (sentComment.current ?? savedComment)
   const saveComment = () => {
     const text = commentValue.trim()
-    if (text === savedComment || text === sentComment.current) return
+    if (!needsSave(text)) return
     sentComment.current = text
     saveCommentMutation.mutate({ studentId, year, month, parentComment: text })
   }
+
+  // Đóng hộp bằng Esc/nút X/bấm ngoài có thể không bắn blur → lưu nhận xét còn dở khi unmount (như TuitionDetailSheet, spec AR B2).
+  const unmountSave = useRef<() => void>(() => {})
+  unmountSave.current = () => {
+    if (comment !== null) saveComment()
+  }
+  useEffect(() => () => unmountSave.current(), [])
 
   const exportImage = async (kind: ExportKind, b: Blob) => {
     if (kind === "download") saveAs(b, filename)
@@ -148,6 +157,12 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
     void exportImage(pendingExport.kind, blob)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- exportImage tạo mới mỗi render
   }, [pendingExport, blob, blobComment, savedComment])
+  // Lưu xong mà tải lại phiếu lỗi → không chờ ảnh mới mãi: huỷ lệnh xuất, mở khoá nút (QA-4).
+  useEffect(() => {
+    if (!pendingExport || !query.isError) return
+    setPendingExport(null)
+    toast.error(t("load_error"))
+  }, [pendingExport, query.isError, t])
   const parentToken = notice?.parentLinkToken ?? null
 
   const openParentLink = () => (linkGate.locked && !parentToken ? linkGate.openUpgrade() : setLinkOpen(true))
@@ -227,23 +242,26 @@ export function TuitionNoticeDialog({ studentId, year, month, onClose }: Props) 
   )
 
   const footer = (
-    <div className="flex gap-2 border-t border-slate-200 p-4 md:justify-end">
-      <Button variant="outline" className="h-11 flex-1 md:h-10 md:flex-none" disabled={!notice} onClick={openParentLink}>
-        <Link2 className="mr-2 size-4" />
-        {t("parent_link")}
-      </Button>
-      {parentToken && (
-        <Button
-          variant="outline"
-          size="icon"
-          className="size-11 shrink-0 md:size-10"
-          aria-label={t("copy_parent_link")}
-          title={t("copy_parent_link")}
-          onClick={copyParentLink}
-        >
-          <Copy className="size-4" />
+    // Mobile: cụm link phụ huynh 1 hàng riêng, nút ảnh hàng dưới (360px không tràn, QA-2); desktop 1 hàng.
+    <div className="flex flex-wrap gap-2 border-t border-slate-200 p-4 md:flex-nowrap md:justify-end">
+      <div className="flex w-full gap-2 md:w-auto">
+        <Button variant="outline" className="h-11 flex-1 md:h-10 md:flex-none" disabled={!notice} onClick={openParentLink}>
+          <Link2 className="mr-2 size-4" />
+          {t("parent_link")}
         </Button>
-      )}
+        {parentToken && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-11 shrink-0 md:size-10"
+            aria-label={t("copy_parent_link")}
+            title={t("copy_parent_link")}
+            onClick={copyParentLink}
+          >
+            <Copy className="size-4" />
+          </Button>
+        )}
+      </div>
       {shareable && (
         <Button
           variant="outline"

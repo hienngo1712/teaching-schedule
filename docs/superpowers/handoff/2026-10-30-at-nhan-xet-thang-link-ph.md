@@ -110,6 +110,21 @@ Hiện muốn lấy link phụ huynh phải sang màn Học sinh (`ParentLinkDia
 
 **Lưu ý cho LEADER:** nhánh AS (đang QA) nếu cũng nâng lên 0.27.0 thì khi merge sẽ đụng `package.json` + `releases.ts`; bên merge sau đổi số bản.
 
+### Vòng 3 — sửa lỗi QA (QA-1..4) + merge main
+**Commit:** merge `6a6a14f` (Merge branch 'main', không xung đột) · sửa lỗi `__HASH3__`.
+
+**0. Merge main** (gói AS): git tự gộp, **không có xung đột**. `tuition-notice.service.ts` sau merge dùng `status.inProgress` + truyền `inProgress` cho `ensureTuitionPayLink` (của AS), phần AT (`parentComment`, `getTeacherTuitionNotice`, `saveParentComment`) giữ nguyên. Main vẫn ở `0.26.0`, nhánh AT `0.27.0` → không đụng số bản.
+
+Mọi sửa trong `src/components/tuition/TuitionNoticeDialog.tsx`:
+- **QA-1 (lưu khi đóng hộp):** thêm `useEffect` cleanup gọi `saveComment()` qua ref lúc unmount (giống `TuitionDetailSheet`, spec AR B2), chỉ khi người dùng có sửa ô (`comment !== null`). Gọi `mutate` của hook: TanStack Query vẫn chạy mutation sau unmount, `MutationCache` của TRPCProvider vẫn invalidate. Ca `[BUG QA-1]` trong `TuitionNoticeDialogAT.qa.test.tsx` đã đổi `it.fails` → `it`, xanh.
+- **QA-2 (footer 360px):** footer `flex flex-wrap … md:flex-nowrap md:justify-end`; cụm "Link phụ huynh" + nút sao chép bọc trong `div.flex.w-full.gap-2.md:w-auto` → mobile cụm link 1 hàng riêng, hàng dưới là Chia sẻ + Lưu ảnh (mỗi hàng ≤ 2 nút chữ, mỗi nút `h-11` = 44px); desktop vẫn 1 hàng. Test chỉ kiểm cấu trúc class (jsdom không đo được bề rộng) → **QA nên đo lại thật ở 360px**.
+- **QA-3 (sửa luôn, gọn):** so nội dung với "bản server sẽ có" = `sentComment ?? savedComment` (bản đang/vừa gửi, chưa gửi thì bản đã lưu), thay vì chỉ so bản đã lưu. Đang lưu B mà sửa về A rồi blur → gửi A. Dùng chung cho blur, nút Lưu, lưu khi đóng.
+- **QA-4:** `useEffect` — đang chờ xuất mà `query.isError` → huỷ lệnh xuất (mở khoá 3 nút) + `toast.error(load_error)`.
+
+**TDD:** 3 test mới trong `tests/unit/components/TuitionNoticeDialogAT.test.tsx` (`[QA-2]`, `[QA-3]`, `[QA-4]`) + ca `[BUG QA-1]` của QA; cả 4 đỏ trước khi sửa, xanh sau khi sửa.
+
+**Kiểm tra vòng 3 (chạy thật 2026-10-30, sau merge main):** `node_modules/.bin/tsc --noEmit` exit 0 · `pnpm lint` `ESLint: No issues found` · unit toàn bộ `tests/unit` (config tạm, không chạm DB): **193 file / 1335 test pass, 0 fail**. Không chạy integration / `pnpm test` / migrate (để LEADER chạy).
+
 ---
 
 ## 3. QA — Báo cáo
@@ -168,6 +183,10 @@ Bảo mật/riêng tư, mã hoá, migration, chốt gói đều đúng. Cần s�
 - [QA → DEV] QA-1: thêm lưu-khi-unmount như `TuitionDetailSheet.tsx:165-180` (đọc ref nội dung + bản đã gửi, gọi `utils.client.tuition.saveParentComment.mutate`). Sửa xong đổi `it.fails` ca `[BUG QA-1]` trong `tests/unit/components/TuitionNoticeDialogAT.qa.test.tsx` thành `it`.
 - [QA → DEV] QA-2: footer hộp phiếu tràn ở 360px khi có nút Chia sẻ (đo 423–475px). Đề nghị chia 2 hàng trên mobile.
 - [QA → LEADER] Integration chưa chạy (theo lệnh không đụng 5433); nhờ LEADER chạy 5 file liệt kê ở mục 3 sau khi áp migration lên DB test.
+- [DEV → QA] QA-1: đã sửa — lưu khi unmount qua ref. Dùng `mutate` của hook (không dùng `utils.client`) để ca `[BUG QA-1]` giữ nguyên assert `saveMutate`; mutation vẫn chạy sau unmount, TRPCProvider vẫn invalidate. Ca đã đổi `it.fails` → `it`, xanh.
+- [DEV → QA] QA-2: đã sửa — mobile 2 hàng (cụm link phụ huynh 1 hàng riêng, nút ảnh hàng dưới), desktop 1 hàng. Nhờ đo lại bề rộng thật ở 360px (có/không nút Chia sẻ, có/không link).
+- [DEV → QA] QA-3: đã sửa (gọn) — so với bản đang gửi `sentComment ?? savedComment`.
+- [DEV → QA] QA-4: đã sửa — tải lại phiếu lỗi khi đang chờ xuất → huỷ lệnh, mở khoá nút, báo lỗi.
 
 ---
 
