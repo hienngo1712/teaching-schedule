@@ -29,6 +29,13 @@ describe("allocatePayment (spec Y §3.2)", () => {
     // T9 trả dư 100k → T10 chỉ còn 200k thiếu.
     expect(allocatePayment([L(9, 800_000, 900_000), L(10, 300_000)], 200_000)).toEqual([{ key: k(10), amount: 200_000 }])
   })
+  it("tiền ghi gộp ở tháng sau đã trả nợ tháng trước → không chia lại vào tháng cũ (ca prod 31/10)", () => {
+    // 760k ghi cả vào T7 = trả T5+T6+T7; còn nợ thật là T8, T9, T10 (khớp splitDebt).
+    const months = [L(5, 280_000), L(6, 280_000), L(7, 200_000, 760_000), L(8, 240_000), L(9, 240_000), L(10, 280_000)]
+    expect(allocatePayment(months, 760_000)).toEqual([
+      { key: k(8), amount: 240_000 }, { key: k(9), amount: 240_000 }, { key: k(10), amount: 280_000 },
+    ])
+  })
   it("không có nợ → toàn bộ vào tháng cuối", () => {
     expect(allocatePayment([L(9, 0), L(10, 0)], 100_000)).toEqual([{ key: k(10), amount: 100_000 }])
   })

@@ -1,4 +1,4 @@
-import type { MonthLedger } from "./payment-allocation"
+import { outstandingDebts, type MonthLedger } from "./payment-allocation"
 
 // Một dòng nợ cũ: tháng còn thiếu bao nhiêu. before = gộp mọi tháng cũ hơn (year, month) ("Trước tháng N").
 export type DebtPart = { year: number; month: number; amount: number; before?: true }
@@ -15,28 +15,9 @@ const toYm = (key: number) => ({ year: Math.floor(key / 12), month: (key % 12) +
  */
 export function splitDebt(ledgers: MonthLedger[], lastKey: number, previousBalance: number): DebtPart[] | null {
   if (previousBalance <= 0) return null
-  const queue: { key: number; amount: number }[] = []
-  let credit = 0
-  for (const m of [...ledgers].sort((a, b) => a.key - b.key)) {
-    if (m.key > lastKey) break
-    if (m.fee < 0 || m.paid < 0) return null
-    let fee = m.fee
-    const used = Math.min(credit, fee)
-    credit -= used
-    fee -= used
-    if (fee > 0) queue.push({ key: m.key, amount: fee })
-    let paid = m.paid
-    while (paid > 0 && queue.length > 0) {
-      const head = queue[0]
-      const take = Math.min(paid, head.amount)
-      head.amount -= take
-      paid -= take
-      if (head.amount === 0) queue.shift()
-    }
-    credit += paid
-    // Miễn: dư nợ dương về 0, tín dụng giữ nguyên (Math.min(0, residual)).
-    if (m.fullPaid) queue.length = 0
-  }
+  const upTo = ledgers.filter((m) => m.key <= lastKey)
+  if (upTo.some((m) => m.fee < 0 || m.paid < 0)) return null
+  const queue = outstandingDebts(upTo)
   if (queue.reduce((s, q) => s + q.amount, 0) !== previousBalance) return null
 
   const start = lastKey - WINDOW + 1
